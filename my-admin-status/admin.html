@@ -11,7 +11,7 @@
     input, button { width: 100%; margin-bottom: 1rem; padding: 0.75rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1rem; }
     button { background-color: #0066cc; color: white; border: none; font-weight: bold; cursor: pointer; }
     button:hover { background-color: #0052a3; }
-    #error { color: #d93025; text-align: center; font-size: 0.9rem; }
+    #error { color: #d93025; text-align: center; font-size: 0.9rem; margin-top: 0.5rem; }
   </style>
 </head>
 <body>
@@ -23,44 +23,49 @@
     <p id="error"></p>
   </div>
 
- <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDJrsKAjWqz0AmjEtBzz4CeswiskdQqASw",
-    authDomain: "admin-status-c3bdb.firebaseapp.com",
-    databaseURL: "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "admin-status-c3bdb",
-    storageBucket: "admin-status-c3bdb.firebasestorage.app",
-    messagingSenderId: "377694458194",
-    appId: "1:377694458194:web:71a78ba5dbed4df1b1aa8b",
-    measurementId: "G-2PYNH16Y9R"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJrsKAjWqz0AmjEtBzz4CeswiskdQqASw",
+      authDomain: "admin-status-c3bdb.firebaseapp.com",
+      databaseURL: "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "admin-status-c3bdb",
+      storageBucket: "admin-status-c3bdb.firebasestorage.app",
+      messagingSenderId: "377694458194",
+      appId: "1:377694458194:web:71a78ba5dbed4df1b1aa8b",
+      measurementId: "G-2PYNH16Y9R"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
 
-  document.getElementById('loginBtn').addEventListener('click', async () => {
-    const email = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
-    const errorEl = document.getElementById('error');
-    errorEl.innerText = "";
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('password').value;
+      const errorEl = document.getElementById('error');
+      errorEl.innerText = "登录中...";
 
-    window.location.href = "my-admin-status/index.html";
-} catch (err) {
-  errorEl.innerText = "登录失败: " + err.message;
-}
-      
-      // ✅ 修正方式 1（推荐）：直接跳转到子文件夹路径（带有末尾斜杠，更稳定）
-      window.location.href = "./my-admin-status/";
-      
-      // 或者使用明确相对路径：
-      // window.location.href = "./my-admin-status/index.html";
-    } catch (err) {
-      errorEl.innerText = "登录失败: " + err.message;
-    } 
-  });
-</script>
+      if (!email || !pass) {
+        errorEl.innerText = "请输入邮箱和密码！";
+        return;
+      }
+
+      try {
+        // 执行 Firebase 登录验证
+        await signInWithEmailAndPassword(auth, email, pass);
+        
+        // 登录成功，跳转至 my-admin-status 子文件夹（使用绝对路径最稳定）
+        window.location.href = "https://themochiishop.github.io/admin/my-admin-status/";
+      } catch (err) {
+        if (err.code === 'auth/invalid-credential') {
+          errorEl.innerText = "登录失败：邮箱或密码错误，或用户不存在！";
+        } else {
+          errorEl.innerText = "登录失败: " + err.message;
+        }
+      } 
+    });
+  </script>
 </body>
 </html>
