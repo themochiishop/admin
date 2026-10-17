@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Mochii Shop - COD 面单打印系统 (单页锁定版)</title>
+  <title>The Mochii Shop - COD 面单打印系统 (单页紧凑版)</title>
   <!-- Barcode 条形码生成库 -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
@@ -191,7 +191,7 @@
     }
     .preview-actions {
       width: 100%;
-      max-width: 500px;
+      max-width: 480px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -271,48 +271,46 @@
     }
 
     /* ========================================== */
-    /* 🎯 解决分页超出的紧凑高质感 AWB 面单样式   */
+    /* 🎯 整体字号缩小一号、间距紧凑的 AWB 面单   */
     /* ========================================== */
     .awb-paper {
       width: 100%;
       max-width: 480px;
       background: #ffffff;
-      padding: 20px 24px 16px 24px; /* 适当收紧内边距 */
+      padding: 14px 18px 12px 18px; /* 大幅收紧内边距 */
       box-shadow: 0 12px 35px rgba(0,0,0,0.45);
       font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
       color: #000;
       box-sizing: border-box;
       border-radius: 4px;
       border: 1px solid #ddd;
-      page-break-inside: avoid; /* 禁止内部分页 */
-      break-inside: avoid;
     }
 
-    /* 页眉 */
+    /* 页眉 (Logo 尺寸缩小至 36px，标题与条码同步紧凑) */
     .awb-header-official {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2px solid #000;
-      padding-bottom: 6px;
-      margin-bottom: 10px;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
     }
     .awb-brand-box {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .awb-logo-img {
-      width: 42px;
-      height: 42px;
+      width: 36px;
+      height: 36px;
       object-fit: contain;
       border-radius: 50%;
     }
     .awb-page-title {
-      font-size: 1.4rem;
+      font-size: 1.2rem; /* 字号缩小一号 */
       font-weight: 900;
       font-family: Georgia, "Times New Roman", serif;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       color: #000;
     }
     
@@ -322,35 +320,35 @@
       justify-content: flex-end;
     }
     .awb-top-barcode svg {
-      height: 36px;
-      max-width: 150px;
+      height: 30px; /* 条码高度微调紧凑 */
+      max-width: 130px;
     }
 
-    /* 官方表格化网格布局 */
+    /* 官方表格化网格布局 (字号与行高缩小一号) */
     .awb-meta-grid {
       display: grid;
-      grid-template-columns: 105px 12px 1fr;
-      row-gap: 4px; /* 缩小行距 */
+      grid-template-columns: 95px 10px 1fr;
+      row-gap: 2px; /* 大幅缩小每行缝隙 */
       align-items: center;
-      font-size: 0.85rem;
-      margin-bottom: 6px;
+      font-size: 0.78rem; /* 字体整体缩小 */
+      margin-bottom: 4px;
     }
     .awb-meta-label {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: #444;
       text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
     }
     .awb-meta-colon { font-weight: bold; text-align: center; }
     .awb-meta-value { font-weight: 800; color: #000; word-break: break-all; }
 
     .awb-divider-line {
       border-top: 1px dashed #888;
-      margin: 8px 0;
+      margin: 5px 0;
     }
 
-    /* 商品项目块美化 */
+    /* 商品项目块 (字体与内边距紧凑) */
     .awb-products-container {
       margin-top: 2px;
     }
@@ -358,14 +356,14 @@
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 4px;
-      padding: 6px 8px; /* 紧凑商品边距 */
-      margin-bottom: 6px;
+      padding: 4px 6px; /* 极紧凑商品卡片边距 */
+      margin-bottom: 4px;
     }
     .awb-product-card:last-child { margin-bottom: 0; }
     
     .awb-prod-header {
       font-weight: 800;
-      font-size: 0.82rem;
+      font-size: 0.78rem; /* 字体缩小 */
       color: #0f172a;
       margin-bottom: 2px;
       display: flex;
@@ -376,33 +374,32 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.88rem;
+      font-size: 0.82rem; /* 字体缩小 */
       font-weight: 700;
       color: #334155;
-      padding-left: 10px;
+      padding-left: 8px;
     }
 
-    /* 🎯 官方灰色页脚 */
+    /* 🎯 官方灰色页脚 (紧贴内容下方) */
     .awb-official-footer {
       border-top: 1px solid #eaeaea;
-      padding-top: 8px;
-      margin-top: 12px;
+      padding-top: 5px;
+      margin-top: 8px;
       text-align: center;
     }
     .awb-footer-text {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 0.68rem;
-      color: #888888; /* 灰色调 */
-      letter-spacing: 0.5px;
+      font-size: 0.65rem; /* 字号缩小一号 */
+      color: #888888; /* 优雅微灰色 */
+      letter-spacing: 0.3px;
       font-weight: 500;
-      line-height: 1.2;
+      line-height: 1.1;
     }
 
-    /* 打印媒体查询 */
+    /* 打印控制 */
     @media print {
       @page {
-        margin: 0;
-        size: auto;
+        margin: 0 !important; /* 强制抹除打印机的上下默认页边距 */
       }
       body { background: #fff; }
       body * { visibility: hidden; }
@@ -413,8 +410,7 @@
         top: 0;
         box-shadow: none;
         border: none;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        padding: 4mm 4mm !important; /* 打印时极小内边距 */
       }
       .top-header, .form-card, .preview-actions { display: none !important; }
     }
@@ -422,14 +418,12 @@
     /* 格式 1: AWB 热敏纸 (100mm x 150mm) */
     body.format-awb .awb-paper {
       width: 100mm;
-      max-height: 148mm; /* 限制最大高度，防止超出 150mm 热敏纸 */
-      padding: 6mm 6mm;
     }
     
     /* 格式 2: 标准 A4 纸格式 */
     body.format-a4 .awb-paper {
       width: 210mm;
-      padding: 15mm 20mm;
+      padding: 12mm 15mm;
     }
   </style>
 </head>
@@ -450,7 +444,7 @@
     <div class="form-card">
       <div class="form-title">
         <span>📝 订单高效处理录入台</span>
-        <span style="font-size:0.75rem; color:#ec4899; font-weight:normal;">⚡ 单页锁高版</span>
+        <span style="font-size:0.75rem; color:#ec4899; font-weight:normal;">⚡ 紧凑单页版</span>
       </div>
       
       <div class="form-split-grid">
@@ -537,7 +531,7 @@
         </div>
       </div>
 
-      <!-- ✨ 完美单页 AWB 主结构 -->
+      <!-- ✨ 单页紧凑型 AWB 面单结构 -->
       <div class="awb-paper" id="awbPaper">
         
         <div>
@@ -729,8 +723,8 @@
       if (orderId) {
         JsBarcode("#barcode", orderId, {
           format: "CODE128",
-          width: 1.6,
-          height: 34,
+          width: 1.4,
+          height: 30,
           displayValue: false
         });
       }
@@ -752,7 +746,7 @@
           <div class="awb-prod-header">📦 Product: ${prodName}</div>
           <div class="awb-var-flex">
             <span>Variation: ${varName}</span>
-            <b style="font-size:1rem;">${qty}</b>
+            <b style="font-size:0.95rem;">${qty}</b>
           </div>
         `;
         productsArea.appendChild(block);
