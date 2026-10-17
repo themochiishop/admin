@@ -1,282 +1,463 @@
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, updateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Status 社交圈管理后台</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 650px;
+      margin: 1rem auto;
+      padding: 0 0.8rem;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+    .card { 
+      background: white;
+      border: 1px solid #e0e0e0;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+    }
+    h2, h3 { color: #111; margin-top: 0; }
+    h2 { border-bottom: 2px solid #0066cc; padding-bottom: 0.4rem; font-size: 1.15rem; }
+    textarea, input[type="text"], input[type="email"], input[type="password"] { 
+      display: block;
+      width: 100%;
+      margin: 0.6rem 0;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 0.9rem;
+    }
+    button { 
+      padding: 0.55rem 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.88rem;
+    }
+    .btn-primary { background-color: #0066cc; color: white; }
+    .btn-danger { background-color: #d93025; color: white; }
+    .btn-secondary { background-color: #5f6368; color: white; }
+    .btn-cancel { background-color: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; }
+    .btn-group { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+    .img-preview-grid { display: flex; flex-direction: row; gap: 6px; margin-top: 6px; overflow-x: auto; }
+    img.preview { width: 80px; height: 80px; border-radius: 6px; object-fit: cover; border: 1px solid #eee; flex-shrink: 0; }
+    img.avatar-preview { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+    .profile-bar { 
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: white;
+      padding: 0.8rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      border: 1px solid #e0e0e0;
+    }
+    .profile-info { flex-grow: 1; }
+    .btn-toggle { background: #e8f0fe; color: #1a73e8; padding: 5px 10px; border-radius: 6px; border: 1px solid #aecbfa; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+    .file-btn { 
+      display: inline-block;
+      background: #f0f4f9;
+      color: #0066cc;
+      border: 1px dashed #0066cc;
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      text-align: center;
+      margin: 0.4rem 0;
+    }
+    .msg-item-card { background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 0.75rem 0.9rem; margin-bottom: 0.6rem; }
+    .msg-text-display { font-size: 0.9rem; line-height: 1.45; color: #222; white-space: pre-wrap; margin-bottom: 6px; word-break: break-word; }
+    .msg-meta-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f2f2f2; padding-top: 6px; margin-top: 6px; font-size: 0.78rem; color: #666; }
+    .like-badge { background: #fff0f2; color: #e63946; font-weight: bold; padding: 2px 6px; border-radius: 10px; font-size: 0.78rem; }
+    .author-badge { background: #f0f4f9; color: #0066cc; font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; }
+    .gear-btn { background: #f0f4f9; border: 1px solid #d0d7de; color: #444; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .action-popover { display: none; gap: 6px; margin-top: 6px; justify-content: flex-end; }
+    .pagination-bar { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 1rem; padding: 0.5rem 0; }
+    .page-btn { padding: 4px 10px; background: #ffffff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .page-info { font-size: 0.82rem; color: #555; font-weight: 500; }
+  </style>
+</head>
+<body>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDJrsKAjWqz0AmjEtBzz4CeswiskdQqASw",
-  authDomain: "admin-status-c3bdb.firebaseapp.com",
-  databaseURL: "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "admin-status-c3bdb",
-  storageBucket: "admin-status-c3bdb.firebasestorage.app",
-  messagingSenderId: "377694458194",
-  appId: "1:377694458194:web:71a78ba5dbed4df1b1aa8b",
-  measurementId: "G-2PYNH16Y9R"
-};
+  <!-- 顶部标题与退出按钮 -->
+  <div class="header-bar">
+    <h2 style="margin:0; border:none;">社交动态管理中心 (Admin Status)</h2>
+    <button id="logoutBtn" class="btn-secondary" style="padding: 4px 10px; font-size:0.8rem;">退出登录</button>
+  </div>
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
+  <!-- Profile 个人信息条 -->
+  <div class="profile-bar">
+    <img id="currentAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=admin" class="avatar-preview" alt="Avatar" />
+    <div class="profile-info">
+      <strong id="currentName" style="font-size:0.95rem;">加载中...</strong>
+      <div id="currentEmail" style="font-size:0.8em; color:#666;">加载中...</div>
+    </div>
+    <button id="toggleProfileBtn" class="btn-toggle">✏️ 修改 Profile / 密码</button>
+  </div>
 
-let currentUserUID = null;
-let defaultAvatar = "";
-let defaultName = "";
-let uploadedImages = [];
-let allMessages = [];
-let currentPage = 1;
-const PAGE_SIZE = 10;
+  <!-- 修改 Profile 卡片 (默认隐藏) -->
+  <div id="profileCard" class="card" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+      <h3 style="margin: 0; font-size:1rem;">修改个人 Profile 与登录凭证</h3>
+      <button id="cancelProfileTopBtn" class="btn-cancel" style="padding: 3px 8px; font-size: 0.8rem;">✖ 退出修改</button>
+    </div>
+    
+    <label style="font-size:0.85rem;"><strong>显示昵称：</strong></label>
+    <input type="text" id="profileNameInput" placeholder="例如：The Mochii Shop" />
+    
+    <label style="font-size:0.85rem;"><strong>默认 Profile 头像：</strong></label>
+    <input type="text" id="profileAvatarInput" placeholder="图片 URL 或选择本地文件" />
+    <label class="file-btn" for="avatarFileInput">📁 选择本地头像文件</label>
+    <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" />
+    
+    <div style="display: flex; gap: 8px; margin-top: 0.6rem; margin-bottom: 0.8rem;">
+      <button id="saveProfileBtn" class="btn-primary">保存 Profile 设置</button>
+      <button id="cancelProfileBottomBtn" class="btn-cancel">取消 / 退出修改</button>
+    </div>
+    
+    <hr style="border:0; border-top:1px solid #eee; margin:0.8rem 0;" />
+    
+    <label style="font-size:0.85rem;"><strong>新登录邮箱：</strong></label>
+    <input type="email" id="newEmailInput" placeholder="新邮箱地址" />
+    <button id="updateEmailBtn" class="btn-secondary" style="margin-bottom: 0.8rem;">修改邮箱</button>
+    
+    <label style="font-size:0.85rem;"><strong>新登录密码：</strong></label>
+    <input type="password" id="newPasswordInput" placeholder="新密码（至少6位）" />
+    <button id="updatePasswordBtn" class="btn-secondary">修改密码</button>
+  </div>
 
-function formatDate(timestamp) {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  return (date.getMonth() + 1) + '/' + date.getDate() + ' ' + String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
-}
+  <!-- 发布动态与历史记录区域 -->
+  <div id="mainPostsContent">
+    <div class="card">
+      <h3 style="font-size:1rem; margin-bottom:0.5rem;">✨ 发布新动态</h3>
+      <textarea id="msgContent" rows="3" placeholder="分享今天的最新动态或想法..."></textarea>
+      
+      <label style="font-size:0.85rem;"><strong>📷 添加图片（支持多图，最多上传3张）：</strong></label>
+      <label class="file-btn" for="imgFileInput">➕ 选择本地图片 (最多3张)</label>
+      <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none;" />
+      
+      <div id="imgPreviewGrid" class="img-preview-grid"></div>
+      <button id="postBtn" class="btn-primary" style="width:100%; margin-top:0.8rem; padding:0.6rem;">🚀 立即发布到社交圈</button>
+    </div>
 
-function toggleProfileEdit(showEdit) {
-  document.getElementById('profileCard').style.display = showEdit ? 'block' : 'none';
-  document.getElementById('mainPostsContent').style.display = showEdit ? 'none' : 'block';
-  document.getElementById('toggleProfileBtn').style.display = showEdit ? 'none' : 'inline-block';
-}
+    <h2>📜 历史动态管理</h2>
+    <div id="messagesList">正在加载历史动态...</div>
 
-document.getElementById('toggleProfileBtn').addEventListener('click', () => toggleProfileEdit(true));
-document.getElementById('cancelProfileTopBtn').addEventListener('click', () => toggleProfileEdit(false));
-document.getElementById('cancelProfileBottomBtn').addEventListener('click', () => toggleProfileEdit(false));
+    <!-- 分页控件 -->
+    <div class="pagination-bar" id="paginationControls" style="display: none;">
+      <button id="prevPageBtn" class="page-btn">◀ 上一页</button>
+      <span id="pageIndicator" class="page-info">第 1 页 / 共 1 页</span>
+      <button id="nextPageBtn" class="page-btn">下一页 ▶</button>
+    </div>
+  </div>
 
-function fileToBase64(file, maxWidth = 800) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width, height = img.height;
-        if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
-        canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
+  <!-- Firebase 核心逻辑脚本 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, updateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJrsKAjWqz0AmjEtBzz4CeswiskdQqASw",
+      authDomain: "admin-status-c3bdb.firebaseapp.com",
+      databaseURL: "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "admin-status-c3bdb",
+      storageBucket: "admin-status-c3bdb.firebasestorage.app",
+      messagingSenderId: "377694458194",
+      appId: "1:377694458194:web:71a78ba5dbed4df1b1aa8b",
+      measurementId: "G-2PYNH16Y9R"
     };
-  });
-}
 
-document.getElementById('imgFileInput').addEventListener('change', async (e) => {
-  let files = Array.from(e.target.files);
-  if (files.length > 3) { alert("最多只能上传 3 张图片！"); files = files.slice(0, 3); }
-  const grid = document.getElementById('imgPreviewGrid');
-  grid.innerHTML = ''; uploadedImages = [];
-  for (const file of files) {
-    const base64 = await fileToBase64(file);
-    uploadedImages.push(base64);
-    const img = document.createElement('img'); img.src = base64; img.className = 'preview';
-    grid.appendChild(img);
-  }
-});
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
 
-document.getElementById('avatarFileInput').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (file) { document.getElementById('profileAvatarInput').value = await fileToBase64(file, 200); }
-});
+    let currentUserUID = null;
+    let defaultAvatar = "";
+    let defaultName = "";
+    let uploadedImages = [];
+    let allMessages = [];
+    let currentPage = 1;
+    const PAGE_SIZE = 10;
 
-// 🔒 登录状态监听与校验 (核心修复)
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    // 未登录时重定向回根目录登录页 (使用完整绝对路径避免 404)
-    window.location.href = "https://themochiishop.github.io/admin/";
-  } else {
-    currentUserUID = user.uid;
-    document.getElementById('currentEmail').innerText = user.email;
-    loadProfile(user); 
-    loadMessages();
-  }
-});
-
-function loadProfile(user) {
-  onValue(ref(db, `users/${user.uid}/profile`), (snapshot) => {
-    const data = snapshot.val() || {};
-    defaultAvatar = data.defaultAvatar || "https://api.dicebear.com/7.x/bottts/svg?seed=" + user.uid;
-    defaultName = data.displayName || user.email.split('@')[0];
-    document.getElementById('currentAvatar').src = defaultAvatar;
-    document.getElementById('currentName').innerText = defaultName;
-    document.getElementById('profileAvatarInput').value = defaultAvatar;
-    document.getElementById('profileNameInput').value = defaultName;
-  });
-}
-
-document.getElementById('saveProfileBtn').addEventListener('click', async () => {
-  if (!currentUserUID) return alert("鉴权失效，请重新登录！");
-  const url = document.getElementById('profileAvatarInput').value.trim();
-  const name = document.getElementById('profileNameInput').value.trim() || auth.currentUser.email.split('@')[0];
-  try {
-    await update(ref(db, `users/${currentUserUID}/profile`), { defaultAvatar: url, displayName: name });
-    alert("Profile 设置保存成功！"); toggleProfileEdit(false);
-  } catch (e) { alert("保存失败: " + e.message); }
-});
-
-document.getElementById('updateEmailBtn').addEventListener('click', async () => {
-  const newEmail = document.getElementById('newEmailInput').value.trim();
-  if (!newEmail) return alert("请输入新邮箱");
-  try { 
-    await updateEmail(auth.currentUser, newEmail); 
-    alert("邮箱修改成功！"); 
-    document.getElementById('newEmailInput').value = ''; 
-  } catch (e) { alert("修改失败: " + e.message); }
-});
-
-document.getElementById('updatePasswordBtn').addEventListener('click', async () => {
-  const newPass = document.getElementById('newPasswordInput').value.trim();
-  if (!newPass || newPass.length < 6) return alert("密码至少需要6位");
-  try { 
-    await updatePassword(auth.currentUser, newPass); 
-    alert("密码修改成功！"); 
-    document.getElementById('newPasswordInput').value = ''; 
-  } catch (e) { alert("修改失败: " + e.message); }
-});
-
-document.getElementById('logoutBtn').addEventListener('click', () => { 
-  signOut(auth).then(() => window.location.href = "https://themochiishop.github.io/admin/"); 
-});
-
-document.getElementById('postBtn').addEventListener('click', async () => {
-  const content = document.getElementById('msgContent').value.trim();
-  if (!currentUserUID) return alert("鉴权失效，请重新登录！");
-  if (!content && uploadedImages.length === 0) return alert("请输入动态内容或上传图片");
-  try {
-    await push(ref(db, 'messages'), {
-      uid: currentUserUID, 
-      content: content, 
-      avatarUrl: defaultAvatar,
-      authorName: defaultName, 
-      images: uploadedImages, 
-      likes: 0, 
-      timestamp: Date.now()
-    });
-    document.getElementById('msgContent').value = ''; 
-    document.getElementById('imgPreviewGrid').innerHTML = '';
-    uploadedImages = []; 
-    alert("动态发布成功！");
-  } catch (e) { alert("发布失败: " + e.message); }
-});
-
-function loadMessages() {
-  onValue(ref(db, 'messages'), (snapshot) => {
-    allMessages = [];
-    if (snapshot.exists()) {
-      snapshot.forEach((childSnap) => { allMessages.push({ id: childSnap.key, ...childSnap.val() }); });
-      allMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    function formatDate(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      return (date.getMonth() + 1) + '/' + date.getDate() + ' ' + String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
     }
-    renderPaginatedList();
-  });
-}
 
-function renderPaginatedList() {
-  const container = document.getElementById('messagesList');
-  const paginationControls = document.getElementById('paginationControls');
-  if (!container) return;
-  container.innerHTML = '';
-  if (allMessages.length === 0) {
-    container.innerHTML = '<p style="color:#999; text-align:center;">暂无历史动态</p>';
-    if (paginationControls) paginationControls.style.display = 'none';
-    return;
-  }
-  if (paginationControls) paginationControls.style.display = 'flex';
-  const totalPages = Math.ceil(allMessages.length / PAGE_SIZE) || 1;
-  if (currentPage > totalPages) currentPage = totalPages;
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const pageData = allMessages.slice(startIndex, startIndex + PAGE_SIZE);
-
-  pageData.forEach((item) => {
-    const id = item.id, timeStr = formatDate(item.timestamp), likes = item.likes || 0;
-    const rawText = item.content || '', authorName = item.authorName || '未知用户';
-    const isOwner = (item.uid && item.uid === currentUserUID);
-    const card = document.createElement('div'); card.className = 'msg-item-card';
-    const viewSection = document.createElement('div'); viewSection.id = `view-section-${id}`;
-    
-    if (rawText) {
-      const textDiv = document.createElement('div'); textDiv.className = 'msg-text-display'; textDiv.textContent = rawText;
-      viewSection.appendChild(textDiv);
+    function toggleProfileEdit(showEdit) {
+      const profileCard = document.getElementById('profileCard');
+      const mainContent = document.getElementById('mainPostsContent');
+      const toggleBtn = document.getElementById('toggleProfileBtn');
+      if (profileCard) profileCard.style.display = showEdit ? 'block' : 'none';
+      if (mainContent) mainContent.style.display = showEdit ? 'none' : 'block';
+      if (toggleBtn) toggleBtn.style.display = showEdit ? 'none' : 'inline-block';
     }
-    
-    let validImages = Array.isArray(item.images) ? item.images.slice(0, 3) : (item.imageUrl ? [item.imageUrl] : []);
-    if (validImages.length > 0) {
-      const imgGrid = document.createElement('div'); imgGrid.className = 'img-preview-grid';
-      validImages.forEach(src => {
-        const img = document.createElement('img'); img.src = src; img.className = 'preview'; imgGrid.appendChild(img);
+
+    document.getElementById('toggleProfileBtn')?.addEventListener('click', () => toggleProfileEdit(true));
+    document.getElementById('cancelProfileTopBtn')?.addEventListener('click', () => toggleProfileEdit(false));
+    document.getElementById('cancelProfileBottomBtn')?.addEventListener('click', () => toggleProfileEdit(false));
+
+    function fileToBase64(file, maxWidth = 800) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width, height = img.height;
+            if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+        };
       });
-      viewSection.appendChild(imgGrid);
     }
 
-    const gearButtonHtml = isOwner ? `<button class="gear-btn" data-id="${id}">⚙️</button>` : '';
-    const metaBar = document.createElement('div');
-    metaBar.className = 'msg-meta-bar';
-    metaBar.innerHTML = `<div><span class="author-badge">${authorName}</span><span class="like-badge">❤️ ${likes} 点赞</span><span style="margin-left: 6px;">🕒 ${timeStr}</span></div>${gearButtonHtml}`;
-    viewSection.appendChild(metaBar);
-
-    if (isOwner) {
-      const popover = document.createElement('div');
-      popover.id = `action-popover-${id}`; popover.className = 'action-popover';
-      popover.innerHTML = `<button class="btn-secondary edit-act-btn" data-id="${id}" style="padding:3px 8px; font-size:0.78rem;">✏️ 编辑</button><button class="btn-danger del-act-btn" data-id="${id}" style="padding:3px 8px; font-size:0.78rem;">🗑️ 删除</button>`;
-      viewSection.appendChild(popover);
-
-      const editSection = document.createElement('div');
-      editSection.id = `edit-section-${id}`; editSection.style.display = 'none';
-      editSection.innerHTML = `<label style="font-size:0.85rem;"><strong>编辑动态文本：</strong></label><textarea id="edit-text-${id}" rows="3">${rawText}</textarea><div class="btn-group"><button class="btn-primary save-act-btn" data-id="${id}" style="padding:4px 10px; font-size:0.8rem;">💾 保存修改</button><button class="btn-cancel cancel-act-btn" data-id="${id}" style="padding:4px 10px; font-size:0.8rem;">✖ 取消编辑</button></div>`;
-      card.appendChild(viewSection);
-      card.appendChild(editSection);
-    } else { 
-      card.appendChild(viewSection); 
-    }
-    container.appendChild(card);
-  });
-
-  container.querySelectorAll('.gear-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const p = document.getElementById(`action-popover-${e.currentTarget.getAttribute('data-id')}`);
-      if (p) p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
-    });
-  });
-
-  container.querySelectorAll('.edit-act-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = e.currentTarget.getAttribute('data-id');
-      document.getElementById(`view-section-${id}`).style.display = 'none';
-      document.getElementById(`edit-section-${id}`).style.display = 'block';
-    });
-  });
-
-  container.querySelectorAll('.cancel-act-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = e.currentTarget.getAttribute('data-id');
-      document.getElementById(`edit-section-${id}`).style.display = 'none';
-      document.getElementById(`view-section-${id}`).style.display = 'block';
-    });
-  });
-
-  container.querySelectorAll('.save-act-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.currentTarget.getAttribute('data-id');
-      try {
-        await update(ref(db, `messages/${id}`), { content: document.getElementById(`edit-text-${id}`).value, uid: currentUserUID });
-        alert("动态更新成功！");
-      } catch (err) { alert("更新失败: " + err.message); }
-    });
-  });
-
-  container.querySelectorAll('.del-act-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.currentTarget.getAttribute('data-id');
-      if (confirm("确定要删除这条社交动态吗？")) {
-        try { await remove(ref(db, `messages/${id}`)); } catch (err) { alert("删除失败: " + err.message); }
+    document.getElementById('imgFileInput')?.addEventListener('change', async (e) => {
+      let files = Array.from(e.target.files);
+      if (files.length > 3) { alert("最多只能上传 3 张图片！"); files = files.slice(0, 3); }
+      const grid = document.getElementById('imgPreviewGrid');
+      if (!grid) return;
+      grid.innerHTML = ''; uploadedImages = [];
+      for (const file of files) {
+        const base64 = await fileToBase64(file);
+        uploadedImages.push(base64);
+        const img = document.createElement('img'); img.src = base64; img.className = 'preview';
+        grid.appendChild(img);
       }
     });
-  });
 
-  document.getElementById('pageIndicator').innerText = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
-  document.getElementById('prevPageBtn').disabled = (currentPage === 1);
-  document.getElementById('nextPageBtn').disabled = (currentPage === totalPages);
-}
+    document.getElementById('avatarFileInput')?.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      const avatarInput = document.getElementById('profileAvatarInput');
+      if (file && avatarInput) { avatarInput.value = await fileToBase64(file, 200); }
+    });
 
-document.getElementById('prevPageBtn').addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPaginatedList(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
-document.getElementById('nextPageBtn').addEventListener('click', () => { if (currentPage < Math.ceil(allMessages.length / PAGE_SIZE)) { currentPage++; renderPaginatedList(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
-</script>
+    // 🔒 登录鉴权状态监听（重定向锁）
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        console.warn("未登录，跳转回登录页");
+        window.location.replace("https://themochiishop.github.io/admin/");
+      } else {
+        currentUserUID = user.uid;
+        const emailEl = document.getElementById('currentEmail');
+        if (emailEl) emailEl.innerText = user.email;
+        loadProfile(user); 
+        loadMessages();
+      }
+    });
+
+    function loadProfile(user) {
+      onValue(ref(db, `users/${user.uid}/profile`), (snapshot) => {
+        const data = snapshot.val() || {};
+        defaultAvatar = data.defaultAvatar || "https://api.dicebear.com/7.x/bottts/svg?seed=" + user.uid;
+        defaultName = data.displayName || user.email.split('@')[0];
+        
+        const avatarEl = document.getElementById('currentAvatar');
+        const nameEl = document.getElementById('currentName');
+        const inputAvatar = document.getElementById('profileAvatarInput');
+        const inputName = document.getElementById('profileNameInput');
+
+        if (avatarEl) avatarEl.src = defaultAvatar;
+        if (nameEl) nameEl.innerText = defaultName;
+        if (inputAvatar) inputAvatar.value = defaultAvatar;
+        if (inputName) inputName.value = defaultName;
+      });
+    }
+
+    document.getElementById('saveProfileBtn')?.addEventListener('click', async () => {
+      if (!currentUserUID) return alert("鉴权失效，请重新登录！");
+      const url = document.getElementById('profileAvatarInput')?.value.trim() || defaultAvatar;
+      const name = document.getElementById('profileNameInput')?.value.trim() || auth.currentUser.email.split('@')[0];
+      try {
+        await update(ref(db, `users/${currentUserUID}/profile`), { defaultAvatar: url, displayName: name });
+        alert("Profile 设置保存成功！"); toggleProfileEdit(false);
+      } catch (e) { alert("保存失败: " + e.message); }
+    });
+
+    document.getElementById('updateEmailBtn')?.addEventListener('click', async () => {
+      const newEmail = document.getElementById('newEmailInput')?.value.trim();
+      if (!newEmail) return alert("请输入新邮箱");
+      try { 
+        await updateEmail(auth.currentUser, newEmail); 
+        alert("邮箱修改成功！"); 
+        document.getElementById('newEmailInput').value = ''; 
+      } catch (e) { alert("修改失败: " + e.message); }
+    });
+
+    document.getElementById('updatePasswordBtn')?.addEventListener('click', async () => {
+      const newPass = document.getElementById('newPasswordInput')?.value.trim();
+      if (!newPass || newPass.length < 6) return alert("密码至少需要6位");
+      try { 
+        await updatePassword(auth.currentUser, newPass); 
+        alert("密码修改成功！"); 
+        document.getElementById('newPasswordInput').value = ''; 
+      } catch (e) { alert("修改失败: " + e.message); }
+    });
+
+    document.getElementById('logoutBtn')?.addEventListener('click', () => { 
+      signOut(auth).then(() => window.location.replace("https://themochiishop.github.io/admin/")); 
+    });
+
+    document.getElementById('postBtn')?.addEventListener('click', async () => {
+      const content = document.getElementById('msgContent')?.value.trim() || "";
+      if (!currentUserUID) return alert("鉴权失效，请重新登录！");
+      if (!content && uploadedImages.length === 0) return alert("请输入动态内容或上传图片");
+      try {
+        await push(ref(db, 'messages'), {
+          uid: currentUserUID, 
+          content: content, 
+          avatarUrl: defaultAvatar,
+          authorName: defaultName, 
+          images: uploadedImages, 
+          likes: 0, 
+          timestamp: Date.now()
+        });
+        if (document.getElementById('msgContent')) document.getElementById('msgContent').value = ''; 
+        if (document.getElementById('imgPreviewGrid')) document.getElementById('imgPreviewGrid').innerHTML = '';
+        uploadedImages = []; 
+        alert("动态发布成功！");
+      } catch (e) { alert("发布失败: " + e.message); }
+    });
+
+    function loadMessages() {
+      onValue(ref(db, 'messages'), (snapshot) => {
+        allMessages = [];
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnap) => { allMessages.push({ id: childSnap.key, ...childSnap.val() }); });
+          allMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        }
+        renderPaginatedList();
+      });
+    }
+
+    function renderPaginatedList() {
+      const container = document.getElementById('messagesList');
+      const paginationControls = document.getElementById('paginationControls');
+      if (!container) return;
+      container.innerHTML = '';
+      if (allMessages.length === 0) {
+        container.innerHTML = '<p style="color:#999; text-align:center;">暂无历史动态</p>';
+        if (paginationControls) paginationControls.style.display = 'none';
+        return;
+      }
+      if (paginationControls) paginationControls.style.display = 'flex';
+      const totalPages = Math.ceil(allMessages.length / PAGE_SIZE) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      const pageData = allMessages.slice(startIndex, startIndex + PAGE_SIZE);
+
+      pageData.forEach((item) => {
+        const id = item.id, timeStr = formatDate(item.timestamp), likes = item.likes || 0;
+        const rawText = item.content || '', authorName = item.authorName || '未知用户';
+        const isOwner = (item.uid && item.uid === currentUserUID);
+        const card = document.createElement('div'); card.className = 'msg-item-card';
+        const viewSection = document.createElement('div'); viewSection.id = `view-section-${id}`;
+        
+        if (rawText) {
+          const textDiv = document.createElement('div'); textDiv.className = 'msg-text-display'; textDiv.textContent = rawText;
+          viewSection.appendChild(textDiv);
+        }
+        
+        let validImages = Array.isArray(item.images) ? item.images.slice(0, 3) : (item.imageUrl ? [item.imageUrl] : []);
+        if (validImages.length > 0) {
+          const imgGrid = document.createElement('div'); imgGrid.className = 'img-preview-grid';
+          validImages.forEach(src => {
+            const img = document.createElement('img'); img.src = src; img.className = 'preview'; imgGrid.appendChild(img);
+          });
+          viewSection.appendChild(imgGrid);
+        }
+
+        const gearButtonHtml = isOwner ? `<button class="gear-btn" data-id="${id}">⚙️</button>` : '';
+        const metaBar = document.createElement('div');
+        metaBar.className = 'msg-meta-bar';
+        metaBar.innerHTML = `<div><span class="author-badge">${authorName}</span><span class="like-badge">❤️ ${likes} 点赞</span><span style="margin-left: 6px;">🕒 ${timeStr}</span></div>${gearButtonHtml}`;
+        viewSection.appendChild(metaBar);
+
+        if (isOwner) {
+          const popover = document.createElement('div');
+          popover.id = `action-popover-${id}`; popover.className = 'action-popover';
+          popover.innerHTML = `<button class="btn-secondary edit-act-btn" data-id="${id}" style="padding:3px 8px; font-size:0.78rem;">✏️ 编辑</button><button class="btn-danger del-act-btn" data-id="${id}" style="padding:3px 8px; font-size:0.78rem;">🗑️ 删除</button>`;
+          viewSection.appendChild(popover);
+
+          const editSection = document.createElement('div');
+          editSection.id = `edit-section-${id}`; editSection.style.display = 'none';
+          editSection.innerHTML = `<label style="font-size:0.85rem;"><strong>编辑动态文本：</strong></label><textarea id="edit-text-${id}" rows="3">${rawText}</textarea><div class="btn-group"><button class="btn-primary save-act-btn" data-id="${id}" style="padding:4px 10px; font-size:0.8rem;">💾 保存修改</button><button class="btn-cancel cancel-act-btn" data-id="${id}" style="padding:4px 10px; font-size:0.8rem;">✖ 取消编辑</button></div>`;
+          card.appendChild(viewSection);
+          card.appendChild(editSection);
+        } else { 
+          card.appendChild(viewSection); 
+        }
+        container.appendChild(card);
+      });
+
+      container.querySelectorAll('.gear-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const p = document.getElementById(`action-popover-${e.currentTarget.getAttribute('data-id')}`);
+          if (p) p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
+        });
+      });
+
+      container.querySelectorAll('.edit-act-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          document.getElementById(`view-section-${id}`).style.display = 'none';
+          document.getElementById(`edit-section-${id}`).style.display = 'block';
+        });
+      });
+
+      container.querySelectorAll('.cancel-act-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          document.getElementById(`edit-section-${id}`).style.display = 'none';
+          document.getElementById(`view-section-${id}`).style.display = 'block';
+        });
+      });
+
+      container.querySelectorAll('.save-act-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          try {
+            await update(ref(db, `messages/${id}`), { content: document.getElementById(`edit-text-${id}`).value, uid: currentUserUID });
+            alert("动态更新成功！");
+          } catch (err) { alert("更新失败: " + err.message); }
+        });
+      });
+
+      container.querySelectorAll('.del-act-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          if (confirm("确定要删除这条社交动态吗？")) {
+            try { await remove(ref(db, `messages/${id}`)); } catch (err) { alert("删除失败: " + err.message); }
+          }
+        });
+      });
+
+      const pageInd = document.getElementById('pageIndicator');
+      const prevBtn = document.getElementById('prevPageBtn');
+      const nextBtn = document.getElementById('nextPageBtn');
+      if (pageInd) pageInd.innerText = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+      if (prevBtn) prevBtn.disabled = (currentPage === 1);
+      if (nextBtn) nextBtn.disabled = (currentPage === totalPages);
+    }
+
+    document.getElementById('prevPageBtn')?.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPaginatedList(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+    document.getElementById('nextPageBtn')?.addEventListener('click', () => { if (currentPage < Math.ceil(allMessages.length / PAGE_SIZE)) { currentPage++; renderPaginatedList(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  </script>
+</body>
+</html>
