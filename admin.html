@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理员登录</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; max-width: 400px; margin: 50px auto; background-color: #f4f6f8; }
+    .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h2 { text-align: center; margin-bottom: 1.5rem; color: #333; }
+    input, button { width: 100%; margin-bottom: 1rem; padding: 0.75rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1rem; }
+    button { background-color: #0066cc; color: white; border: none; font-weight: bold; cursor: pointer; }
+    button:hover { background-color: #0052a3; }
+    #error { color: #d93025; text-align: center; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>管理员登录</h2>
+    <input type="email" id="email" placeholder="管理员邮箱" />
+    <input type="password" id="password" placeholder="密码" />
+    <button id="loginBtn">登录后台</button>
+    <p id="error"></p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJrsKAjWqz0AmjEtBzz4CeswiskdQqASw",
+      authDomain: "admin-status-c3bdb.firebaseapp.com",
+      databaseURL: "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "admin-status-c3bdb",
+      storageBucket: "admin-status-c3bdb.firebasestorage.app",
+      messagingSenderId: "377694458194",
+      appId: "1:377694458194:web:71a78ba5dbed4df1b1aa8b",
+      measurementId: "G-2PYNH16Y9R"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('email').value;
+      const pass = document.getElementById('password').value;
+      const errorEl = document.getElementById('error');
+      errorEl.innerText = "";
+
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        // 登录成功跳转至后台页面
+        window.location.href = "admin-status.html";
+      } catch (err) {
+        errorEl.innerText = "登录失败: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
