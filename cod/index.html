@@ -4,91 +4,146 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Mochii Shop - COD 面单打印系统</title>
-  <!-- Barcode 库 -->
+  <!-- Barcode 条形码生成库 -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #333333; /* 匹配预览背景颜色 */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: #262626;
       color: #333;
     }
 
-    /* 顶部控制栏 (打印时隐藏) */
+    /* 顶部导航控制栏 */
     .top-header {
-      background: #0f172a;
+      background: #18181b;
       color: #fff;
-      padding: 12px 24px;
+      padding: 12px 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 3px solid #ec4899;
+    }
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .brand-logo-mini {
+      height: 38px;
+      width: 38px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #ec4899;
     }
     .btn-back {
-      color: #cbd5e1;
+      color: #f472b6;
       text-decoration: none;
       font-size: 0.88rem;
-      border: 1px solid #475569;
-      padding: 5px 12px;
-      border-radius: 6px;
+      border: 1px solid #f472b6;
+      padding: 6px 14px;
+      border-radius: 20px;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    .btn-back:hover {
+      background: #ec4899;
+      color: #fff;
     }
 
     .main-container {
-      max-width: 1300px;
-      margin: 20px auto;
+      max-width: 1320px;
+      margin: 24px auto;
       padding: 0 20px;
       display: grid;
       grid-template-columns: 460px 1fr;
-      gap: 20px;
+      gap: 24px;
     }
 
     /* 左侧录入卡片 */
     .form-card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      background: #ffffff;
+      padding: 22px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
       height: fit-content;
     }
-    .form-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 2px solid #ff5722; }
+    .form-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #f472b6;
+    }
     .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 4px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 4px; }
     .form-control, .form-select {
       width: 100%;
-      padding: 8px 10px;
+      padding: 9px 12px;
       border: 1px solid #cbd5e1;
-      border-radius: 5px;
+      border-radius: 8px;
       font-size: 0.88rem;
     }
-
-    .item-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 8px;
-      margin-bottom: 8px;
+    .form-control:focus, .form-select:focus {
+      outline: none;
+      border-color: #ec4899;
+      box-shadow: 0 0 0 3px rgba(236,72,153,0.15);
     }
-    .item-card-header { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #64748b; margin-bottom: 4px; }
+
+    /* 商品选择卡片 */
+    .item-card {
+      background: #fdf2f8;
+      border: 1px solid #fbcfe8;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .item-card-header { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #db2777; margin-bottom: 6px; }
     .btn-remove-item { color: #ef4444; cursor: pointer; }
     .item-row-grid { display: grid; grid-template-columns: 1fr 1fr 65px; gap: 6px; }
 
     .btn-add-item {
-      background: #f1f5f9;
-      color: #475569;
-      border: 1px dashed #cbd5e1;
+      background: #fce7f3;
+      color: #db2777;
+      border: 1px dashed #f472b6;
       width: 100%;
-      padding: 8px;
-      border-radius: 6px;
+      padding: 9px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .btn-add-item:hover { background: #fbcfe8; }
+
+    .btn-action-group { display: flex; gap: 10px; }
+    .btn-primary {
+      flex: 1;
+      background: #ec4899;
+      color: #fff;
+      border: none;
+      padding: 11px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(236,72,153,0.3);
+    }
+    .btn-primary:hover { background: #db2777; }
+
+    .btn-copy {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 11px 14px;
+      border-radius: 8px;
       font-weight: 600;
-      margin-bottom: 14px;
+      cursor: pointer;
     }
 
-    .btn-action-group { display: flex; gap: 8px; }
-    .btn-primary { flex: 1; background: #ff5722; color: #fff; border: none; padding: 10px; border-radius: 6px; font-weight: 700; cursor: pointer; }
-    .btn-copy { background: #2563eb; color: #fff; border: none; padding: 10px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-
-    /* 右侧预览区 */
+    /* 右侧 A4 预览区 */
     .preview-card {
       display: flex;
       flex-direction: column;
@@ -100,112 +155,94 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
-    .btn-print { background: #16a34a; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; }
+    .btn-print {
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(22,163,74,0.3);
+    }
 
-    /* ========================================== */
-    /* 🎯 精确匹配截图排版的 CSS 样式               */
-    /* ========================================== */
+    /* A4 面单容器 */
     .awb-paper {
       width: 100%;
       max-width: 520px;
       background: #ffffff;
-      padding: 30px 35px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      font-family: "Times New Roman", Times, serif, Arial; /* 还原原生表格字体 */
+      padding: 32px 38px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      font-family: "Times New Roman", Times, serif, Arial;
       color: #000;
       box-sizing: border-box;
+      border-radius: 2px;
     }
 
-    /* 顶部 Logo & 标题 & 条形码 */
+    /* 页眉结构 */
     .awb-header-flex {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-    .awb-logo {
-      width: 55px;
-      height: auto;
+    .awb-logo-img {
+      width: 68px;
+      height: 68px;
+      object-fit: contain;
+      border-radius: 50%;
       display: block;
     }
     .awb-title {
-      font-size: 1.45rem;
+      font-size: 1.55rem;
       font-weight: 900;
       font-family: Georgia, "Times New Roman", serif;
       letter-spacing: 0.5px;
     }
     .awb-barcode-container svg {
-      height: 40px;
-      max-width: 180px;
+      height: 44px;
+      max-width: 170px;
     }
 
-    .awb-divider-thick {
-      border-top: 1.5px solid #000;
-      margin: 10px 0 14px 0;
-    }
-    .awb-divider-dashed {
-      border-top: 1px dashed #444;
-      margin: 14px 0;
-    }
+    .awb-divider-thick { border-top: 2px solid #000; margin: 10px 0 14px 0; }
+    .awb-divider-dashed { border-top: 1px dashed #555; margin: 12px 0; }
 
-    /* 基础字段信息表格排版 (两端打散对齐) */
+    /* 信息对齐表 */
     .awb-info-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .awb-info-table td {
       padding: 3px 0;
-      font-size: 0.92rem;
+      font-size: 0.93rem;
       vertical-align: top;
     }
-    .label-col {
-      width: 120px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .colon-col {
-      width: 15px;
-      text-align: center;
-      font-weight: bold;
-    }
-    .val-col {
-      font-weight: 700;
-      color: #000;
-    }
+    .label-col { width: 120px; font-weight: 700; white-space: nowrap; }
+    .colon-col { width: 15px; text-align: center; font-weight: bold; }
+    .val-col { font-weight: 700; color: #000; }
 
-    /* 商品与变体列表区 */
-    .awb-product-block {
-      margin-bottom: 12px;
-    }
-    .awb-product-row {
-      display: flex;
-      margin-bottom: 4px;
-      font-size: 0.9rem;
-    }
-    .awb-prod-title {
-      font-weight: 800;
-      font-size: 0.9rem;
-    }
+    .awb-product-block { margin-bottom: 10px; }
+    .awb-prod-title { font-weight: 800; font-size: 0.92rem; }
     .awb-var-row {
       display: flex;
       justify-content: space-between;
       font-weight: 800;
-      font-size: 1rem;
-      padding-right: 40px;
+      font-size: 1.02rem;
+      padding-right: 35px;
       margin-top: 2px;
     }
 
-    /* 底部标注与时间戳 */
     .awb-footer-note {
       text-align: center;
       font-family: "Courier New", Courier, monospace;
-      font-size: 0.72rem;
-      color: #000;
+      font-size: 0.75rem;
+      color: #111;
       margin-top: 28px;
-      line-height: 1.3;
+      line-height: 1.4;
+      font-weight: 600;
     }
 
     @media print {
@@ -227,14 +264,19 @@
 </head>
 <body>
 
+  <!-- 顶栏 -->
   <div class="top-header">
-    <h2>📦 COD 面单打印系统 (原版排版)</h2>
+    <div class="brand-title">
+      <!-- 双重路径保底：优先使用相对路径 logo.jpg，找不到则使用线上图片 -->
+      <img src="../logo.jpg" class="brand-logo-mini" alt="Mochii Logo" onerror="this.src='https://themochiishop.github.io/admin/logo.jpg'">
+      <span>The Mochii Shop — COD Express System</span>
+    </div>
     <a href="../" class="btn-back">⬅️ 返回管理控制台</a>
   </div>
 
   <div class="main-container">
     
-    <!-- 左侧表单录入区 -->
+    <!-- 左侧表单 -->
     <div class="form-card">
       <div class="form-title">📝 订单数据录入</div>
       
@@ -273,11 +315,11 @@
         <input type="text" id="inputInternalNote" class="form-control" placeholder="留空则不显示">
       </div>
 
-      <!-- 动态选择商品 -->
+      <!-- Excel 数据选择 -->
       <div class="form-group">
-        <label>商品及变体选择器 (联动 Excel 目录库)</label>
+        <label>商品及变体选择器 (自动匹配 Excel 目录库)</label>
         <div id="itemsContainer"></div>
-        <button class="btn-add-item" onclick="addItemCard()">+ 添加商品/变体行</button>
+        <button class="btn-add-item" onclick="addItemCard()">+ 添加新商品/变体行</button>
       </div>
 
       <div class="btn-action-group">
@@ -286,20 +328,19 @@
       </div>
     </div>
 
-    <!-- 右侧面单预览区 (完全匹配截图排版) -->
+    <!-- 右侧 A4 面单预览 -->
     <div class="preview-card">
       <div class="preview-actions">
-        <span style="color:#fff; font-weight:bold;">预览 View</span>
+        <span style="color:#f472b6; font-weight:700;">📄 面单实时预览 View</span>
         <button class="btn-print" onclick="window.print()">🖨️ 打印面单 AWB</button>
       </div>
 
       <div class="awb-paper" id="awbPaper">
         
-        <!-- 页眉：Logo + 标题 + 条码 -->
+        <!-- 页眉：店铺粉色 Logo + 标题 + 条码 -->
         <div class="awb-header-flex">
           <div>
-            <!-- 使用 Base64 或网络图片 Logo -->
-            <img class="awb-logo" src="https://themochiishop.github.io/favicon.png" alt="Logo" onerror="this.style.display='none'">
+            <img class="awb-logo-img" src="../logo.jpg" alt="Logo" onerror="this.src='https://themochiishop.github.io/admin/logo.jpg'">
           </div>
           <div class="awb-title">Order List</div>
           <div class="awb-barcode-container">
@@ -309,7 +350,7 @@
 
         <div class="awb-divider-thick"></div>
 
-        <!-- 基本字段信息 -->
+        <!-- 订单基本信息结构 -->
         <table class="awb-info-table">
           <tr>
             <td class="label-col">User Name</td>
@@ -333,14 +374,12 @@
           </tr>
         </table>
 
-        <!-- 商品区域 1 -->
-        <div id="awbProductsArea">
-          <!-- 动态渲染 Product(s) & Variation -->
-        </div>
+        <!-- 商品动态渲染区 -->
+        <div id="awbProductsArea"></div>
 
         <div class="awb-divider-dashed"></div>
 
-        <!-- 留言与备注表 -->
+        <!-- 买家留言与备注 -->
         <table class="awb-info-table">
           <tr>
             <td class="label-col">Buyer Message</td>
@@ -354,7 +393,7 @@
           </tr>
         </table>
 
-        <!-- 底部系统生成时间戳 -->
+        <!-- 底部生成时间戳 -->
         <div class="awb-footer-note">
           <div>Generated by The Mochii Shop System</div>
           <div id="awbTimestamp">18/10/2026 01:42</div>
@@ -366,7 +405,6 @@
   </div>
 
   <script>
-    // Excel 数据库列表
     const EXCEL_DATABASE = {
       products: [
         "[Live Play] Handmade Gelang Tangan",
@@ -395,7 +433,6 @@
     let itemCounter = 0;
 
     window.onload = function() {
-      // 默认加入截图上的两组商品
       addItemCard("[Live Play] Handmade Gelang Tangan", "Premium-10", "x1");
       addItemCard("[NOT FOR SALE] Free Gift Zone", "Premium Pro-Max", "x1");
       generateAWB();
@@ -418,7 +455,7 @@
 
       card.innerHTML = `
         <div class="item-card-header">
-          <span>商品及变体列表项 #${itemCounter}</span>
+          <span>商品及变体项 #${itemCounter}</span>
           <span class="btn-remove-item" onclick="removeItemCard(${itemCounter})">✕ 删除</span>
         </div>
         <div style="margin-bottom:4px;">
@@ -428,7 +465,7 @@
         </div>
         <div class="item-row-grid">
           <select class="form-select select-var"></select>
-          <input type="text" class="form-control custom-var-input" placeholder="自定义补充">
+          <input type="text" class="form-control custom-var-input" placeholder="补充变体">
           <select class="form-select select-qty">${qtyOptions}</select>
         </div>
       `;
@@ -455,7 +492,6 @@
     }
 
     function generateAWB() {
-      // 基础属性
       const username = document.getElementById('inputUsername').value || '';
       const orderId = document.getElementById('inputOrderId').value || '';
       const channel = document.getElementById('inputChannel').value;
@@ -470,7 +506,6 @@
       document.getElementById('awbBuyerMsg').innerText = buyerMsg;
       document.getElementById('awbInternalNote').innerText = internalNote;
 
-      // 生成条形码
       if (orderId) {
         JsBarcode("#barcode", orderId, {
           format: "CODE128",
@@ -480,7 +515,6 @@
         });
       }
 
-      // 渲染商品列表 (完全贴合截图排版)
       const itemCards = document.querySelectorAll('.item-card');
       const productsArea = document.getElementById('awbProductsArea');
       productsArea.innerHTML = '';
@@ -517,7 +551,6 @@
         productsArea.appendChild(block);
       });
 
-      // 自动生成当前实时时间戳 (例: 18/10/2026 01:42)
       const now = new Date();
       const dateStr = String(now.getDate()).padStart(2, '0') + '/' +
                       String(now.getMonth() + 1).padStart(2, '0') + '/' +
