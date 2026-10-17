@@ -50,7 +50,7 @@
       try {
         await signInWithEmailAndPassword(auth, email, pass);
         // 登录成功跳转至后台页面
-        window.location.href = "admin-status.html";
+        window.location.href = "my-admin-status/index.html";
       } catch (err) {
         errorEl.innerText = "登录失败: " + err.message;
       } 
