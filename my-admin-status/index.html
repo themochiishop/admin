@@ -272,15 +272,13 @@
     });
 
     onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "my-admin-status/index.html";
-      } else {
-        currentUserUID = user.uid;
-        document.getElementById('currentEmail').innerText = user.email;
-        loadProfile(user);
-        loadMessages();
-      }
-    });
+  if (!user) {
+    // 确保未登录时退回的登录页路径也是绝对路径，防止误报 404
+    window.location.href = "https://themochiishop.github.io/admin/"; 
+  } else {
+    // 已经登录，正常渲染后台数据
+  }
+});
 
     function loadProfile(user) {
       const userProfileRef = ref(db, `users/${user.uid}/profile`);
