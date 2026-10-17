@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Mochii Shop - Admin 管理控制台</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f4f6f9;
+      color: #333;
+      line-height: 1.6;
+    }
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .brand { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .nav-links a { color: #cbd5e1; text-decoration: none; font-size: 0.88rem; }
+    .nav-links a:hover { color: #fff; }
+    .admin-container { max-width: 1050px; margin: 30px auto; padding: 0 20px; }
+    .dashboard-header {
+      background: #ffffff;
+      padding: 24px 30px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 24px;
+    }
+    .dashboard-header h1 { font-size: 1.55rem; color: #0f172a; margin-bottom: 6px; }
+    .dashboard-header p { color: #64748b; font-size: 0.92rem; }
+    .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s ease;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+    .card-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 14px; }
+    .card-cod .card-icon { background: #fff3ed; color: #ff5722; }
+    .card-wheel .card-icon { background: #eff6ff; color: #2563eb; }
+    .card-search .card-icon { background: #f0fdf4; color: #16a34a; }
+    .card-status .card-icon { background: #faf5ff; color: #9333ea; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+    .card-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 18px; line-height: 1.5; }
+    .card-btn {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s;
+      text-decoration: none;
+      color: #fff;
+    }
+    .btn-orange { background: #ff5722; }
+    .btn-orange:hover { background: #f4511e; }
+    .btn-blue { background: #2563eb; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-green { background: #16a34a; }
+    .btn-green:hover { background: #15803d; }
+    .btn-purple { background: #9333ea; }
+    .btn-purple:hover { background: #7e22ce; }
+    footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">🍡 The Mochii Shop Admin</div>
+    <div class="nav-links">
+      <a href="https://www.themochiishop.com" target="_blank">返回官网主页 ➔</a>
+    </div>
+  </header>
+
+  <div class="admin-container">
+    <div class="dashboard-header">
+      <h1>管理控制台 Dashboard</h1>
+      <p>欢迎回来！处理 COD 手动 AWB 打印、直播大转盘、买家订单查询与动态更新。</p>
+    </div>
+
+    <div class="action-grid">
+      <!-- 1. COD 手动面单打印 -->
+      <div class="card card-cod">
+        <div>
+          <div class="card-icon">📦</div>
+          <div class="card-title">COD 手动 AWB 打印</div>
+          <div class="card-desc">解决 Shopee COD 2小时审核延迟，快速手动录入并生成/批量打印 AWB 面单。</div>
+        </div>
+        <a href="cod_print.html" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
+      </div>
+
+      <!-- 2. 幸运大转盘 Wheel -->
+      <div class="card card-wheel">
+        <div>
+          <div class="card-icon">🎡</div>
+          <div class="card-title">幸运大转盘 wheel</div>
+          <div class="card-desc">直播抽奖大转盘，支持现场同步名单与多时间段快照记忆。</div>
+        </div>
+        <a href="https://wheel.themochiishop.com" class="card-btn btn-blue" target="_blank">打开大转盘 🎡</a>
+      </div>
+
+      <!-- 3. 买家订单查询 buyer-order-search -->
+      <div class="card card-search">
+        <div>
+          <div class="card-icon">🔍</div>
+          <div class="card-title">订单查询 Order Search</div>
+          <div class="card-desc">快速检索全渠道买家订单详细信息、物流状态与记录。</div>
+        </div>
+        <a href="https://themochiishop.github.io/buyer-order-search" class="card-btn btn-green" target="_blank">买家订单查询 🔍</a>
+      </div>
+
+      <!-- 4. 社交圈动态 my-admin-status -->
+      <div class="card card-status">
+        <div>
+          <div class="card-icon">⚙️</div>
+          <div class="card-title">Admin Status Update</div>
+          <div class="card-desc">管理并发布店铺动态圈通知、更新个人 Profile 与系统状态。</div>
+        </div>
+        <a href="https://themochiishop.github.io/my-admin-status" class="card-btn btn-purple" target="_blank">状态动态管理 ⚙️</a>
+      </div>
+    </div>
+
+    <footer>© 2026 themochiishop. All rights reserved.</footer>
+  </div>
+</body>
+</html>
