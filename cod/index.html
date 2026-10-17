@@ -37,6 +37,7 @@
       border-radius: 50%;
       object-fit: cover;
       border: 2px solid #ec4899;
+      background-color: #fff;
     }
     .btn-back {
       color: #f472b6;
@@ -194,6 +195,7 @@
       object-fit: contain;
       border-radius: 50%;
       display: block;
+      background-color: #fff;
     }
     .awb-title {
       font-size: 1.55rem;
@@ -267,8 +269,8 @@
   <!-- 顶栏 -->
   <div class="top-header">
     <div class="brand-title">
-      <!-- 双重路径保底：优先使用相对路径 logo.jpg，找不到则使用线上图片 -->
-      <img src="../logo.jpg" class="brand-logo-mini" alt="Mochii Logo" onerror="this.src='https://themochiishop.github.io/admin/logo.jpg'">
+      <!-- 绝对路径：自动寻址根目录下的 logo.jpg -->
+      <img src="/logo.jpg" class="brand-logo-mini" alt="Mochii Logo">
       <span>The Mochii Shop — COD Express System</span>
     </div>
     <a href="../" class="btn-back">⬅️ 返回管理控制台</a>
@@ -340,7 +342,7 @@
         <!-- 页眉：店铺粉色 Logo + 标题 + 条码 -->
         <div class="awb-header-flex">
           <div>
-            <img class="awb-logo-img" src="../logo.jpg" alt="Logo" onerror="this.src='https://themochiishop.github.io/admin/logo.jpg'">
+            <img class="awb-logo-img" src="/logo.jpg" alt="Logo">
           </div>
           <div class="awb-title">Order List</div>
           <div class="awb-barcode-container">
