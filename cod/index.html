@@ -381,24 +381,27 @@
       padding-left: 8px;
     }
 
-   /* 🎯 官方打印机字体与微灰首字母大写页脚 */
+ /* 引入官方热敏打印机/物流面单专用等宽字体 */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
+
+/* 🎯 官方热敏打印机机打点阵字体与淡灰色页脚 */
 .awb-official-footer {
   position: absolute;
-  bottom: 8px; /* 强行贴紧最底端 */
+  bottom: 8px; /* 强行贴紧底端 */
   left: 18px;
   right: 18px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px dashed #e5e5e5;
   padding-top: 4px;
   text-align: center;
 }
 
 .awb-footer-line1, .awb-footer-line2 {
-  font-family: "Courier New", Courier, Consolas, "Liberation Mono", monospace; /* 官方打印机机打字体 */
+  font-family: 'Roboto Mono', 'Courier New', Courier, monospace !important; /* 真正的热敏纸机打字体 */
   font-size: 0.62rem;
-  color: #999999; /* 调整为更淡的打印机灰色 */
+  color: #aaaaaa; /* 调整为更淡的打印机灰色 */
   letter-spacing: 0.2px;
-  font-weight: 600;
-  line-height: 1.25;
+  font-weight: 500;
+  line-height: 1.3;
   text-align: center;
   text-transform: capitalize; /* 强制首字母大写，其余小写 */
 }
