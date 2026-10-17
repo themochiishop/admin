@@ -271,12 +271,28 @@
       }
     });
 
-    onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    // 确保未登录时退回的登录页路径也是绝对路径，防止误报 404
-    window.location.href = "https://themochiishop.github.io/admin/"; 
+   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+const auth = getAuth(app);
+
+// 使用 onAuthStateChanged 监听登录状态
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // 1. 用户已登录：正常显示后台主内容
+    console.log("管理员已登录:", user.email);
+    document.getElementById("mainPostsContent").style.display = "block";
+    // 可以在这里加载历史动态和 Profile 数据...
   } else {
-    // 已经登录，正常渲染后台数据
+    // 2. 用户未登录：不要直接用 window.location.href 强行跳转（容易造成无限循环跳回）
+    console.warn("未检测到登录状态！");
+    
+    // 方案 A（推荐）：隐藏后台内容，提示并提供手动登录按钮，避免死循环
+    document.getElementById("mainPostsContent").style.display = "none";
+    alert("您的登录状态已失效或未登录，请重新登录！");
+    window.location.href = "https://themochiishop.github.io/admin/"; 
+    
+    // 方案 B：如果是直接跳转，请确保跳转路径完全准确：
+    // window.location.href = "../index.html";
   }
 });
 
