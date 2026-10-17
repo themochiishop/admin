@@ -47,8 +47,10 @@
     const errorEl = document.getElementById('error');
     errorEl.innerText = "";
 
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
+    window.location.href = "https://themochiishop.github.io/admin/my-admin-status/";
+} catch (err) {
+  errorEl.innerText = "登录失败: " + err.message;
+}
       
       // ✅ 修正方式 1（推荐）：直接跳转到子文件夹路径（带有末尾斜杠，更稳定）
       window.location.href = "./my-admin-status/";
