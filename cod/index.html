@@ -14,7 +14,7 @@
       color: #333;
     }
 
-    /* 顶部导航与操作栏 */
+    /* 顶部导航 */
     .top-header {
       background: #0f172a;
       color: #fff;
@@ -36,15 +36,15 @@
     .btn-back:hover { background: #334155; color: #fff; }
 
     .main-container {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 24px auto;
       padding: 0 20px;
       display: grid;
-      grid-template-columns: 420px 1fr;
+      grid-template-columns: 480px 1fr;
       gap: 24px;
     }
 
-    /* 录入表单面板 */
+    /* 左侧表单区 */
     .form-card {
       background: #fff;
       padding: 20px;
@@ -56,27 +56,50 @@
     .form-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #ff5722; }
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 4px; }
-    .form-control {
+    .form-control, .form-select {
       width: 100%;
       padding: 9px 12px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       transition: border-color 0.2s;
     }
-    .form-control:focus { outline: none; border-color: #ff5722; }
+    .form-control:focus, .form-select:focus { outline: none; border-color: #ff5722; }
 
-    .item-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
+    /* 模拟 Excel 动态商品/变体行 */
+    .item-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      position: relative;
     }
+    .item-card-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .btn-remove-item {
+      color: #ef4444;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .item-row-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 70px;
+      gap: 6px;
+    }
+
     .btn-add-item {
       background: #f1f5f9;
       color: #475569;
       border: 1px dashed #cbd5e1;
       width: 100%;
-      padding: 8px;
+      padding: 9px;
       border-radius: 6px;
       cursor: pointer;
       font-size: 0.85rem;
@@ -98,19 +121,18 @@
       font-size: 0.92rem;
     }
     .btn-primary:hover { background: #f4511e; }
-
     .btn-copy {
       background: #2563eb;
       color: #fff;
       border: none;
-      padding: 11px 16px;
+      padding: 11px 14px;
       border-radius: 6px;
       font-weight: 600;
       cursor: pointer;
       font-size: 0.88rem;
     }
 
-    /* AWB 预览打印区 */
+    /* 右侧面单预览区 */
     .preview-card {
       background: #fff;
       padding: 24px;
@@ -139,7 +161,7 @@
     }
     .btn-print:hover { background: #15803d; }
 
-    /* Shopee AWB 标准面单 CSS */
+    /* Shopee AWB 标准面单渲染 */
     .awb-paper {
       width: 100%;
       max-width: 480px;
@@ -168,59 +190,53 @@
     }
     .awb-barcode-box {
       text-align: center;
-      padding: 12px 0;
+      padding: 10px 0;
       border-bottom: 1px solid #000;
     }
-    .awb-barcode-box svg { max-width: 100%; height: 60px; }
+    .awb-barcode-box svg { max-width: 100%; height: 55px; }
     .awb-grid-info {
       display: grid;
       grid-template-columns: 1fr 1fr;
       border-bottom: 1px solid #000;
       font-size: 0.85rem;
     }
-    .awb-info-cell { padding: 8px; border-right: 1px solid #000; }
+    .awb-info-cell { padding: 6px 8px; border-right: 1px solid #000; }
     .awb-info-cell:last-child { border-right: none; }
-    .awb-info-label { font-size: 0.75rem; font-weight: bold; color: #555; text-transform: uppercase; }
-    .awb-info-value { font-size: 0.9rem; font-weight: bold; margin-top: 2px; }
+    .awb-info-label { font-size: 0.72rem; font-weight: bold; color: #555; text-transform: uppercase; }
+    .awb-info-value { font-size: 0.88rem; font-weight: bold; margin-top: 2px; }
 
-    .awb-products-box { padding: 10px 8px; border-bottom: 1px solid #000; font-size: 0.82rem; }
-    .awb-product-title { font-weight: bold; margin-bottom: 4px; border-bottom: 1px dashed #ccc; padding-bottom: 2px; }
-    .awb-product-item { display: flex; justify-content: space-between; margin-bottom: 3px; }
+    .awb-products-box { padding: 8px; border-bottom: 1px solid #000; font-size: 0.82rem; }
+    .awb-product-group { margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 6px; }
+    .awb-product-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .awb-product-title { font-weight: bold; font-size: 0.85rem; margin-bottom: 3px; }
+    .awb-variation-item { display: flex; justify-content: space-between; padding-left: 8px; color: #222; }
 
     .awb-footer-collect {
-      padding: 10px 8px;
+      padding: 8px;
       text-align: right;
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 900;
       background: #f8f8f8;
     }
 
-    /* 打印机媒体查询规格 */
     @media print {
       body * { visibility: hidden; }
       .awb-paper, .awb-paper * { visibility: visible; }
-      .awb-paper {
-        position: absolute;
-        left: 0; top: 0;
-        width: 100%;
-        border: none;
-        padding: 0;
-      }
+      .awb-paper { position: absolute; left: 0; top: 0; width: 100%; border: none; padding: 0; }
       .top-header, .form-card, .preview-header { display: none !important; }
     }
   </style>
 </head>
 <body>
 
-  <!-- 顶栏 -->
   <div class="top-header">
-    <h2>📦 COD 手动 AWB 打印系统 Express</h2>
+    <h2>📦 COD 手动 AWB 打印系统 (集成 Excel 目录库)</h2>
     <a href="../" class="btn-back">⬅️ 返回管理控制台</a>
   </div>
 
   <div class="main-container">
     
-    <!-- 左侧表单 -->
+    <!-- 表单区 -->
     <div class="form-card">
       <div class="form-title">📝 录入 COD 订单信息</div>
       
@@ -235,48 +251,51 @@
       </div>
 
       <div class="form-group">
-        <label>店铺名称 (Store)</label>
+        <label>运输渠道 / Shipp Channel</label>
+        <select id="inputChannel" class="form-select">
+          <option value="COD" selected>COD</option>
+          <option value="Cash Payment at Physical Stores">Cash Payment at Physical Stores</option>
+          <option value="Dispatched By System(Virtual Goods)">Dispatched By System(Virtual Goods)</option>
+          <option value="Own Fleet (SPX)">Own Fleet (SPX)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>店铺名称 / Store</label>
         <input type="text" id="inputStore" class="form-control" value="The MoChii Shop@Shopee">
       </div>
 
       <div class="form-group">
         <label>COD 应收金额 (Collect Amount)</label>
-        <input type="text" id="inputAmount" class="form-control" value="RM 45.00" placeholder="RM 0.00">
+        <input type="text" id="inputAmount" class="form-control" value="RM 45.00">
       </div>
 
+      <!-- Excel 模拟下拉选单动态区 -->
       <div class="form-group">
-        <label>商品清单与变体 (Items & Variation)</label>
+        <label>商品与变体选择器 (数据抓取自 Excel 目录库)</label>
         <div id="itemsContainer">
-          <div class="item-row">
-            <input type="text" class="form-control item-name" value="[Live Play] Handmade Gelang" placeholder="商品/变体名">
-            <input type="text" class="form-control item-qty" style="width:70px;" value="x1" placeholder="数量">
-          </div>
-          <div class="item-row">
-            <input type="text" class="form-control item-name" value="Premium-10 (Kiwi)" placeholder="商品/变体名">
-            <input type="text" class="form-control item-qty" style="width:70px;" value="x1" placeholder="数量">
-          </div>
+          <!-- 动态渲染商品行 -->
         </div>
-        <button class="btn-add-item" onclick="addItemRow()">+ 添加新商品/变体</button>
+        <button class="btn-add-item" onclick="addItemCard()">+ 添加商品/变体行</button>
       </div>
 
       <div class="btn-action-group">
         <button class="btn-primary" onclick="generateAWB()">即时更新 AWB 面单</button>
-        <button class="btn-copy" onclick="copyWheelFormat()" title="复制为: 姓名 #订单号">📋 复制抽奖格式</button>
+        <button class="btn-copy" onclick="copyWheelFormat()">📋 复制抽奖格式</button>
       </div>
     </div>
 
-    <!-- 右侧 AWB 面单预览与打印 -->
+    <!-- 右侧面单预览 -->
     <div class="preview-card">
       <div class="preview-header">
         <h3 style="font-size:1.05rem;">📄 AWB 标准面单预览</h3>
         <button class="btn-print" onclick="window.print()">🖨️ 打印面单 AWB</button>
       </div>
 
-      <!-- 面单渲染区 -->
       <div class="awb-paper" id="awbPaper">
         <div class="awb-header-row">
           <div class="awb-brand">Shopee Express</div>
-          <div class="awb-badge-cod">COD</div>
+          <div class="awb-badge-cod" id="awbChannelBadge">COD</div>
         </div>
 
         <div class="awb-barcode-box">
@@ -302,15 +321,15 @@
         </div>
 
         <div class="awb-products-box">
-          <div class="awb-product-title">Product(s) & Variation Details:</div>
+          <div style="font-weight:bold; margin-bottom:6px; font-size:0.8rem; text-decoration:underline;">Product(s) & Variation Details:</div>
           <div id="awbProductList">
-            <!-- 动态生成 -->
+            <!-- 抓取列表渲染区 -->
           </div>
         </div>
 
         <div class="awb-footer-collect">
           <span>COD COLLECT AMOUNT: </span>
-          <span id="awbAmount" style="color:#d97706; font-size:1.2rem;">RM 45.00</span>
+          <span id="awbAmount" style="color:#d97706; font-size:1.15rem;">RM 45.00</span>
         </div>
       </div>
     </div>
@@ -318,36 +337,125 @@
   </div>
 
   <script>
-    // 页面加载时自动渲染一次
+    // 1. 抓取与整理来自 Excel《目录》工作表的完整下拉数据源
+    const EXCEL_DATABASE = {
+      products: [
+        "【Premium Series】Handmade Gelang Tangan",
+        "[NOT FOR SALE] Free Gift Zone",
+        "[Live Play] Bingo 49 Card Game",
+        "[Live Play] Ice Cube Challenge",
+        "HappyBoomBoom Game",
+        "Redeem-Redeem"
+      ],
+      variations: {
+        "【Premium Series】Handmade Gelang Tangan": [
+          "Premium-3", "Premium-5", "Premium-10", "Premium Pro-Max",
+          "Kiwi", "Durian", "Nanas", "Tembikai", "Strawbery", "Pisang", "Mangga", "Manggis",
+          "Oren", "Epal", "Broccoli", "Kubis", "Bendi", "Tomato", "Kentang", "Jagung", "Timun", "Labu", "Terung", "Lobak",
+          "1-white", "1-yellow", "1-green", "1-pink", "1-red", "1-orange", "1-blue", "1-light blue", "1-black", "1-purple",
+          "Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Keychain-1", "Keychain-3", "Keychain-5", "Keychain-10", "Keychain-20"
+        ],
+        "[NOT FOR SALE] Free Gift Zone": [
+          "Premium Pro-Max", "Random", "Keychain-1", "Cincin-1", "Cincin-3", "Cincin-5", "Cincin-10", "Cincin-20"
+        ],
+        "[Live Play] Bingo 49 Card Game": [
+          "Bingo 49 Card Game", "Ice Cube Game", "Card Game"
+        ],
+        "[Live Play] Ice Cube Challenge": [
+          "1 Game", "3 Game (Free 1)", "6 Game (Free 1)"
+        ],
+        "HappyBoomBoom Game": ["Normal-3", "Normal-5", "Normal-10", "Normal-20"],
+        "Redeem-Redeem": ["Redeem-Redeem"]
+      },
+      quantities: ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x18", "x19", "x20", "x21", "x23", "x24", "x25", "x26", "x27", "x96"]
+    };
+
+    let itemCounter = 0;
+
     window.onload = function() {
+      // 默认加载两组示范商品行 (匹配你的 Excel 默认数据)
+      addItemCard("【Premium Series】Handmade Gelang Tangan", "Premium-10", "x1");
+      addItemCard("[NOT FOR SALE] Free Gift Zone", "Premium Pro-Max", "x1");
       generateAWB();
     };
 
-    // 增加商品行
-    function addItemRow() {
+    // 动态添加 Excel 商品选择卡片
+    function addItemCard(defaultProd = "", defaultVar = "", defaultQty = "x1") {
+      itemCounter++;
       const container = document.getElementById('itemsContainer');
-      const div = document.createElement('div');
-      div.className = 'item-row';
-      div.innerHTML = `
-        <input type="text" class="form-control item-name" placeholder="商品/变体名">
-        <input type="text" class="form-control item-qty" style="width:70px;" value="x1" placeholder="数量">
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.id = `itemCard_${itemCounter}`;
+
+      // 构建 Product 下拉选项
+      let prodOptions = EXCEL_DATABASE.products.map(p => 
+        `<option value="${p}" ${p === defaultProd ? 'selected' : ''}>${p}</option>`
+      ).join('');
+
+      // 构建 Quantity 下拉选项
+      let qtyOptions = EXCEL_DATABASE.quantities.map(q => 
+        `<option value="${q}" ${q === defaultQty ? 'selected' : ''}>${q}</option>`
+      ).join('');
+
+      card.innerHTML = `
+        <div class="item-card-header">
+          <span>商品及变体列表项 #${itemCounter}</span>
+          <span class="btn-remove-item" onclick="removeItemCard(${itemCounter})">✕ 删除</span>
+        </div>
+        <div style="margin-bottom:6px;">
+          <select class="form-select select-prod" onchange="updateVariationDropdown(${itemCounter})">
+            ${prodOptions}
+          </select>
+        </div>
+        <div class="item-row-grid">
+          <select class="form-select select-var">
+            <!-- 动态级联加载 -->
+          </select>
+          <input type="text" class="form-control custom-var-input" placeholder="手动补充变体" value="">
+          <select class="form-select select-qty">
+            ${qtyOptions}
+          </select>
+        </div>
       `;
-      container.appendChild(div);
+
+      container.appendChild(card);
+      updateVariationDropdown(itemCounter, defaultVar);
     }
 
-    // 生成 AWB 面单与条形码
+    // 删除商品卡片
+    function removeItemCard(id) {
+      const card = document.getElementById(`itemCard_${id}`);
+      if (card) card.remove();
+    }
+
+    // 根据选中的 Product，自动抓取并更新对应的 Variation 变体下拉菜单（模拟 Excel 数据验证联动）
+    function updateVariationDropdown(id, defaultVar = "") {
+      const card = document.getElementById(`itemCard_${id}`);
+      const prodSelect = card.querySelector('.select-prod');
+      const varSelect = card.querySelector('.select-var');
+      const selectedProd = prodSelect.value;
+
+      const vars = EXCEL_DATABASE.variations[selectedProd] || ["Normal"];
+      varSelect.innerHTML = vars.map(v => 
+        `<option value="${v}" ${v === defaultVar ? 'selected' : ''}>${v}</option>`
+      ).join('');
+    }
+
+    // 渲染生成面单
     function generateAWB() {
       const username = document.getElementById('inputUsername').value || 'Buyer';
       const orderId = document.getElementById('inputOrderId').value || '00000000';
-      const store = document.getElementById('inputStore').value || 'The MoChii Shop';
-      const amount = document.getElementById('inputAmount').value || 'RM 0.00';
+      const channel = document.getElementById('inputChannel').value;
+      const store = document.getElementById('inputStore').value;
+      const amount = document.getElementById('inputAmount').value;
 
       document.getElementById('awbUserName').innerText = username;
       document.getElementById('awbOrderId').innerText = orderId;
+      document.getElementById('awbChannelBadge').innerText = channel === 'COD' ? 'COD' : 'ONLINE';
       document.getElementById('awbStore').innerText = store;
       document.getElementById('awbAmount').innerText = amount;
 
-      // 生成条形码
+      // 生成 CODE128 条形码
       JsBarcode("#barcode", orderId, {
         format: "CODE128",
         width: 2,
@@ -356,25 +464,42 @@
         fontSize: 14
       });
 
-      // 提取商品列表
-      const nameInputs = document.querySelectorAll('.item-name');
-      const qtyInputs = document.querySelectorAll('.item-qty');
+      // 抓取并按 Product 分组汇总 Variation
+      const itemCards = document.querySelectorAll('.item-card');
+      const productMap = {};
+
+      itemCards.forEach(card => {
+        const prodName = card.querySelector('.select-prod').value;
+        const varSelect = card.querySelector('.select-var').value;
+        const customVar = card.querySelector('.custom-var-input').value.trim();
+        const varName = customVar ? `${varSelect} (${customVar})` : varSelect;
+        const qty = card.querySelector('.select-qty').value;
+
+        if (!productMap[prodName]) {
+          productMap[prodName] = [];
+        }
+        productMap[prodName].push({ varName, qty });
+      });
+
+      // 渲染右侧面单商品区
       const productListDiv = document.getElementById('awbProductList');
       productListDiv.innerHTML = '';
 
-      nameInputs.forEach((input, index) => {
-        const nameVal = input.value.trim();
-        const qtyVal = qtyInputs[index] ? qtyInputs[index].value.trim() : 'x1';
-        if (nameVal) {
-          const itemDiv = document.createElement('div');
-          itemDiv.className = 'awb-product-item';
-          itemDiv.innerHTML = `<span>• ${nameVal}</span><b>${qtyVal}</b>`;
-          productListDiv.appendChild(itemDiv);
-        }
-      });
+      for (const [prodTitle, variations] of Object.entries(productMap)) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'awb-product-group';
+
+        let html = `<div class="awb-product-title">• Product(s): ${prodTitle}</div>`;
+        variations.forEach(v => {
+          html += `<div class="awb-variation-item"><span>Variation: ${v.varName}</span><b>${v.qty}</b></div>`;
+        });
+
+        groupDiv.innerHTML = html;
+        productListDiv.appendChild(groupDiv);
+      }
     }
 
-    // 复制转盘抽奖专用格式 (`姓名 #订单号`)
+    // 复制大转盘格式
     function copyWheelFormat() {
       const username = document.getElementById('inputUsername').value.trim();
       const orderId = document.getElementById('inputOrderId').value.trim();
@@ -384,7 +509,7 @@
       }
       const wheelText = `${username} #${orderId}`;
       navigator.clipboard.writeText(wheelText).then(() => {
-        alert(`已成功复制大转盘格式:\n"${wheelText}"\n可以直接粘贴至幸运大转盘啦！`);
+        alert(`已成功复制大转盘格式:\n"${wheelText}"\n可直接粘贴至幸运大转盘！`);
       });
     }
   </script>
