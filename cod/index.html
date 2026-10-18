@@ -91,7 +91,6 @@
     }
     .form-control:focus { border-color: var(--primary); }
 
-    /* 带齿轮的小组件输入框容器 */
     .input-gear-group {
       display: flex;
       gap: 4px;
@@ -202,10 +201,12 @@
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-    .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 800; color: #000; vertical-align: top; }
-    .awb-info-table .lbl { width: 100px; }
-    .awb-info-table .colon { width: 12px; text-align: center; }
-    .awb-info-table .val { word-break: break-all; }
+    .awb-info-table td { padding: 2px 0; font-size: 11.5px; color: #000; vertical-align: top; font-family: Arial, sans-serif; }
+    
+    /* ⚡ 核心修改：左侧字段名取消加粗，右侧内容保持加粗 */
+    .awb-info-table .lbl { width: 100px; font-weight: normal; }
+    .awb-info-table .colon { width: 12px; text-align: center; font-weight: bold; }
+    .awb-info-table .val { word-break: break-all; font-weight: 800; }
 
     .awb-divider-dashed { border-top: 1px dashed #777; margin: 6px 0 8px 0; }
 
@@ -225,7 +226,6 @@
     .modal-close { cursor: pointer; font-size: 18px; font-weight: bold; color: #9ca3af; }
     .modal-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11.5px; margin-bottom: 10px; }
 
-    /* 选项列表项样式 */
     .channel-list-item {
       display: flex;
       justify-content: space-between;
@@ -247,6 +247,36 @@
       border: none;
       background: none;
       cursor: pointer;
+    }
+
+    /* 打印选项单选框样式 */
+    .setting-option {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .setting-option:hover {
+      border-color: var(--primary);
+      background-color: #fdf2f8;
+    }
+    .setting-option input[type="radio"] {
+      margin-right: 10px;
+      accent-color: var(--primary);
+    }
+    .setting-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #1f2937;
+    }
+    .setting-desc {
+      font-size: 11px;
+      color: #6b7280;
+      margin-left: auto;
     }
 
     @media print {
@@ -286,7 +316,6 @@
           <input type="text" id="orderInput" class="form-control" value="261014HN714REB" oninput="renderAWB()">
         </div>
 
-        <!-- ⚙️ SHIPP CHANNEL 自带齿轮选择按钮 -->
         <div class="form-group">
           <label>SHIPP CHANNEL</label>
           <div class="input-gear-group">
@@ -377,12 +406,10 @@
       
       <p style="font-size:11px; color:#6b7280; margin:0 0 10px 0;">点击下方任意选项即可直接填入，或添加你自己的新渠道：</p>
 
-      <!-- 选项列表容器 -->
       <div id="channelListContainer" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px;">
         <!-- 动态渲染 -->
       </div>
 
-      <!-- 添加自定义新选项输入区 -->
       <div style="display:flex; gap:6px;">
         <input type="text" id="newChannelInput" class="form-control" placeholder="输入自定义的新渠道 (如: Self Pickup)" style="flex:1;">
         <button onclick="addNewCustomChannel()" style="padding:5px 10px; background:#8b5cf6; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">➕ 保存添加</button>
@@ -406,7 +433,7 @@
     </div>
   </div>
 
-  <!-- 打印设置弹窗 -->
+  <!-- ⚙️ 打印设置弹窗 Modal -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -414,9 +441,25 @@
         <span class="modal-close" onclick="closeSettingsModal()">&times;</span>
       </div>
       <p style="font-size:11px; color:#6b7280; margin:0 0 12px 0;">请选择打印面单时使用的纸张格式：</p>
-      <label style="display:block; margin-bottom:8px;"><input type="radio" name="printFormat" value="AWB" checked> AWB (100mm × 150mm)</label>
-      <label style="display:block; margin-bottom:8px;"><input type="radio" name="printFormat" value="A4"> A4 格式</label>
-      <label style="display:block; margin-bottom:8px;"><input type="radio" name="printFormat" value="A5"> A5 格式</label>
+
+      <label class="setting-option">
+        <input type="radio" name="printFormat" value="AWB" checked>
+        <span class="setting-label">AWB 格式</span>
+        <span class="setting-desc">100mm × 150mm (默认热敏单)</span>
+      </label>
+
+      <!-- ⚡ 核心修改 2：A4 文案修改 -->
+      <label class="setting-option">
+        <input type="radio" name="printFormat" value="A4">
+        <span class="setting-label">A4 格式 （210 × 297 mm）</span>
+      </label>
+
+      <!-- ⚡ 核心修改 3：A5 文案修改 -->
+      <label class="setting-option">
+        <input type="radio" name="printFormat" value="A5">
+        <span class="setting-label">A5 格式 （148 × 210 mm）</span>
+      </label>
+
       <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:14px;">
         <button onclick="closeSettingsModal()" style="padding:5px 10px; border:1px solid #ccc; background:#fff; border-radius:5px; cursor:pointer; font-size:11px;">取消</button>
         <button onclick="applyPrintSettings()" style="padding:5px 12px; background:var(--primary); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">确认应用</button>
@@ -425,9 +468,8 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYLt1EXJkkXT2RbXnXb78hv3fNi1VwAKwpgMXrGLoz0_0-ibz8bZrPEWQAEVb6YA/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyB-vzQ7khhXzuOdVT-WWDusEA6Ag7idlgVf30I1hAoYnAWcfuu6L4b59rMelfzUSeow/exec";
 
-    // 默认预设 Channel 列表
     const DEFAULT_CHANNELS = [
       "COD",
       "Cash Payment at Physical Stores",
@@ -441,17 +483,14 @@
       "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"]
     };
 
-   // 🌐 从 Google Sheets 实时加载【目录】与 C56:C62 的渠道选项
     function fetchLiveCatalog() {
       const syncBadge = document.getElementById('syncBadge');
       fetch(SCRIPT_URL + "?action=getCatalog")
         .then(res => res.json())
         .then(data => {
           if (data && (data.catalog || Object.keys(data).length > 0)) {
-            // 解析商品目录
             EXCEL_CATALOG = data.catalog || data;
             
-            // 如果后端返回了 C56:C62 的 Channel 选项，自动更新 LocalStorage 列表
             if (data.channels && data.channels.length > 0) {
               localStorage.setItem('custom_shipp_channels', JSON.stringify(data.channels));
             }
@@ -469,7 +508,6 @@
         });
     }
 
-    /* ⚙️ SHIPP CHANNEL 齿轮弹窗与自定义管理逻辑 */
     function getStoredChannels() {
       const saved = localStorage.getItem('custom_shipp_channels');
       if (saved) {
@@ -537,6 +575,7 @@
       } catch(e) { console.log(e); }
     }
 
+    // ⚡ 核心修改 1：添加虚线文案修改，默认 isDashed 为 false（不勾选）
     function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
       const container = document.getElementById('productContainer');
       const count = container.children.length + 1;
@@ -577,7 +616,7 @@
 
         <label class="dashed-check-label">
           <input type="checkbox" class="prod-dashed-check" ${isDashed ? 'checked' : ''} onchange="renderAWB()">
-          ✂️ 在此商品下方加一排虚线分割
+          ✂️ 添加虚线
         </label>
       `;
 
@@ -744,9 +783,9 @@
 
       if (productsFound.length > 0) {
         document.getElementById('productContainer').innerHTML = '';
-        productsFound.forEach((p, idx) => {
-          const isDashed = idx < productsFound.length - 1;
-          addProductRow(p.title, p.variation, p.qty, isDashed);
+        productsFound.forEach((p) => {
+          // 粘贴抓取默认全都不勾选虚线
+          addProductRow(p.title, p.variation, p.qty, false);
         });
       }
 
@@ -756,7 +795,8 @@
 
     window.onload = function() {
       fetchLiveCatalog();
-      addProductRow('[Live Play] Handmade Gelang Tangan', 'Premium-10', 'x1', true);
+      // 默认加载示例时不勾选虚线
+      addProductRow('[Live Play] Handmade Gelang Tangan', 'Premium-10', 'x1', false);
       addProductRow('[NOT FOR SALE] Free Gift Zone', 'Premium Pro-Max', 'x1', false);
       renderAWB();
     };
