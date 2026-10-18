@@ -57,12 +57,51 @@
     }
     .btn-add-main:hover { background: #7c3aed; }
 
-    .btn-move {
-      background: #6b7280;
+    .btn-gear {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
       padding: 4px 8px;
-      font-size: 11px;
+      font-size: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    .btn-move:hover { background: #4b5563; }
+    .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
+
+    .btn-move {
+      background: #8b5cf6;
+      color: white;
+      padding: 3px 7px;
+      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-move:hover { background: #7c3aed; }
+
+    .btn-save-item {
+      background: #10b981;
+      color: white;
+      padding: 3px 8px;
+      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-save-item:hover { background: #059669; }
+
+    .btn-cancel-item {
+      background: #9ca3af;
+      color: white;
+      padding: 3px 8px;
+      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-cancel-item:hover { background: #6b7280; }
 
     .btn-danger { background: #ef4444; }
     .btn-danger:hover { background: #dc2626; }
@@ -76,6 +115,12 @@
       border-radius: 8px;
       padding: 12px;
       margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+
+    .catalog-item.editing-mode {
+      background: #f0f9ff;
+      border: 1px dashed #0284c7;
     }
 
     .catalog-item-header {
@@ -149,7 +194,7 @@
     </div>
 
     <p style="font-size:12px; color:#6b7280; margin-bottom:15px;">
-      你可以通过下方界面调整商品主分类的显示顺序、修改名称或规格，修改完成后点击右上角的“保存并下载”，替换 GitHub 仓库里的 <code>catalog.json</code> 即可！
+      点击商品分类右侧的 ⚙️ 按钮可开启该分类的“上移/下移排序”与调整模式。修改完成后请点击“💾 保存并下载”，替换 GitHub 仓库里的 <code>catalog.json</code> 即可！
     </p>
 
     <button class="btn btn-add-main" onclick="addMainCategory()">➕ 添加新商品主分类</button>
@@ -159,7 +204,7 @@
     </div>
 
     <div class="actions-bar">
-      <span style="font-size:12px; color:#9ca3af;">修改排序后请记得替换 GitHub 中的 admin/cod/catalog.json</span>
+      <span style="font-size:12px; color:#9ca3af;">修改完成后请记得替换 GitHub 中的 admin/cod/catalog.json</span>
       <button class="btn" onclick="saveAndDownload()">💾 保存并下载 catalog.json</button>
     </div>
   </div>
@@ -170,6 +215,9 @@
       quantities: ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"],
       catalog: {}
     };
+
+    let editingCategoryIndex = null; // ⚡ 记录当前哪一行正在开启齿轮编辑模式
+    let tempCatalogBackup = null;   // ⚡ 备份数据用于“取消”功能还原
 
     // 页面加载时抓取当前的 catalog.json
     window.onload = function() {
@@ -192,8 +240,9 @@
       const keys = Object.keys(rawData.catalog);
 
       keys.forEach((mainTitle, index) => {
+        const isEditing = (editingCategoryIndex === index);
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'catalog-item';
+        itemDiv.className = `catalog-item ${isEditing ? 'editing-mode' : ''}`;
         
         let varsHTML = '';
         rawData.catalog[mainTitle].forEach((varItem, varIndex) => {
@@ -205,12 +254,26 @@
           `;
         });
 
+        // 根据是否点击齿轮，条件渲染“上移/下移/保存/取消”控制按纽
+        let controlControlsHTML = '';
+        if (isEditing) {
+          controlControlsHTML = `
+            <button class="btn-move" title="向上移动" onclick="moveCategory(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▲ 上移</button>
+            <button class="btn-move" title="向下移动" onclick="moveCategory(${index}, 1)" ${index === keys.length - 1 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▼ 下移</button>
+            <button class="btn-save-item" onclick="saveCategoryEdit()">取确定保存</button>
+            <button class="btn-cancel-item" onclick="cancelCategoryEdit()">取消</button>
+          `;
+        } else {
+          controlControlsHTML = `
+            <button class="btn-gear" onclick="openCategoryEdit(${index})" title="开启排序与排序设置">⚙️ 排序与编辑</button>
+          `;
+        }
+
         itemDiv.innerHTML = `
           <div class="catalog-item-header">
-            <span style="font-size:12px; font-weight:bold; color:var(--primary); width:24px;">#${index + 1}</span>
-            <button class="btn btn-move" title="向上移动" onclick="moveCategory(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▲ 上移</button>
-            <button class="btn btn-move" title="向下移动" onclick="moveCategory(${index}, 1)" ${index === keys.length - 1 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▼ 下移</button>
+            <span style="font-size:12px; font-weight:bold; color:${isEditing ? '#0284c7' : 'var(--primary)'}; width:24px;">#${index + 1}</span>
             <input type="text" class="input-main-title" value="${mainTitle}" onchange="updateMainTitle('${mainTitle}', this.value)">
+            ${controlControlsHTML}
             <button class="btn btn-sm" onclick="addVar('${mainTitle}')">+ 增加规格</button>
             <button class="btn btn-sm btn-danger" onclick="deleteMainCategory('${mainTitle}')">🗑️ 删除分类</button>
           </div>
@@ -223,7 +286,31 @@
       });
     }
 
-    // ⚡ 新增：移动商品主分类位置（上移/下移）
+    // ⚡ 开启齿轮编辑/排序模式
+    function openCategoryEdit(index) {
+      editingCategoryIndex = index;
+      tempCatalogBackup = JSON.parse(JSON.stringify(rawData.catalog)); // 备份原数据
+      renderCatalogUI();
+    }
+
+    // ⚡ 确定保存编辑/排序
+    function saveCategoryEdit() {
+      editingCategoryIndex = null;
+      tempCatalogBackup = null;
+      renderCatalogUI();
+    }
+
+    // ⚡ 取消编辑/排序，恢复旧数据
+    function cancelCategoryEdit() {
+      if (tempCatalogBackup) {
+        rawData.catalog = JSON.parse(JSON.stringify(tempCatalogBackup));
+      }
+      editingCategoryIndex = null;
+      tempCatalogBackup = null;
+      renderCatalogUI();
+    }
+
+    // ⚡ 移动商品主分类位置（上移/下移）
     function moveCategory(index, direction) {
       const entries = Object.entries(rawData.catalog);
       const targetIndex = index + direction;
@@ -234,6 +321,9 @@
       const temp = entries[index];
       entries[index] = entries[targetIndex];
       entries[targetIndex] = temp;
+
+      // 保持当前编辑焦点跟随移动
+      editingCategoryIndex = targetIndex;
 
       // 重构 rawData.catalog 保证 key 的顺序保持一致
       const newCatalog = {};
