@@ -473,7 +473,7 @@
     let currentSnapshotId = "default";
     let isLocalModified = false;
 
-    // 🎯 Firebase 实时监听：精确拉取已存在快照
+    // 🎯 Firebase 实时监听：精准拉取已存在快照
     wheelRef.on('value', (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
@@ -498,7 +498,7 @@
       }
     });
 
-    // 🎯 核心云端保存函数（仅更新指定节点）
+    // 🎯 核心云端保存函数
     function syncToFirebase() {
       if (!IS_MASTER_ADMIN) {
         alert("⚠️ 您当前为普通管理员模式，无权保存数据至云端！");
@@ -526,7 +526,6 @@
       });
     }
 
-    // 🎯 主动手动保存到当前时间段
     function manualSaveCurrentSnapshot() {
       if (!IS_MASTER_ADMIN) {
         alert("⚠️ 只有主管理员电脑可以执行云端保存！");
@@ -537,15 +536,12 @@
       alert(`✅ 成功将当前名单保存到【${currName}】！`);
     }
 
-    // 🎯 切换时间段（强行重置锁并严格拉取对应快照）
     function switchSnapshot(snapshotId) {
       if (!snapshots[snapshotId]) return;
       
-      // 1. 解除单机锁限制
       isLocalModified = false; 
       currentSnapshotId = snapshotId;
 
-      // 2. 精准深拷贝目标快照名单
       const targetSnap = snapshots[currentSnapshotId];
       items = targetSnap.items ? JSON.parse(JSON.stringify(targetSnap.items)) : [];
       historyRecords = targetSnap.historyRecords ? JSON.parse(JSON.stringify(targetSnap.historyRecords)) : [];
@@ -563,7 +559,6 @@
       }
     }
 
-    // 🎯 创建并保存为全新的时间段（绝对不污染旧节点）
     function createNewSnapshot() {
       if (!IS_MASTER_ADMIN) {
         alert("⚠️ 只有主管理员电脑可以通过专属链接创建新时间段！");
@@ -575,7 +570,6 @@
 
       const newId = "snap_" + Date.now();
       
-      // 1. 将当前页面上刚同步的新名单放入新快照
       snapshots[newId] = {
         name: timeName,
         items: JSON.parse(JSON.stringify(items)),
@@ -583,12 +577,10 @@
         updatedAt: Date.now()
       };
       
-      // 2. 切换当前指针到新 ID，确保 syncToFirebase 只覆盖这个新快照，保护旧快照（A1）
       currentSnapshotId = newId;
       historyRecords = [];
       isLocalModified = false;
 
-      // 3. 推送云端
       syncToFirebase();
       alert(`✅ 已将新名单成功打包保存为全新的时间段【${timeName}】！旧时间段保持原样不变。`);
     }
@@ -698,7 +690,7 @@
       showModal('googleSheetsModal');
     }
 
-    // 🎯 同步 Google 表格（已完美修复 C 列内定规则抓取逻辑）
+    // 手动点击【Sync Now 立即同步】拉取数据
     function fetchNamesFromGoogleSheets() {
       const inputUrl = document.getElementById('sheetsUrlInput').value.trim();
       if (!inputUrl) { alert("Please paste a valid Google Sheets CSV URL! 请输入有效的 CSV 链接！"); return; }
@@ -719,21 +711,18 @@
 
           const lines = csvText.split(/\r?\n/);
           let newNames = [];
-          riggingRules = {}; // 重置内定矩阵规则
+          riggingRules = {};
 
           lines.forEach((line, index) => {
             if (!line.trim()) return;
 
-            // 安全分割 CSV 行并处理双引号
             const cols = line.split(',').map(c => c.replace(/^["']|["']\$/g, '').trim());
             const name = cols[0] || "";
             const rawOrderNo = cols[1] || "";
             
-            // 安全抓取 C 列 (索引为 2)
             const rigRoundStr = cols.length > 2 ? cols[2] : "";
             const rigRound = parseInt(rigRoundStr, 10);
 
-            // 过滤表头
             if (name && name !== "买家姓名" && name !== "Name" && name !== "Nama") {
               let fullName = name;
               if (rawOrderNo && rawOrderNo !== "订单编号" && rawOrderNo !== "Order No") {
@@ -744,7 +733,6 @@
               const itemObj = { id: `row_${index + 1}_${Math.random()}`, text: fullName };
               newNames.push(itemObj);
 
-              // 只要 C 列解析出有效的正数轮次，就记录内定规则
               if (!isNaN(rigRound) && rigRound > 0) {
                 riggingRules[rigRound] = fullName;
               }
@@ -758,8 +746,6 @@
             closeModal('googleSheetsModal');
 
             isLocalModified = true;
-
-            console.log("✅ 成功解析内定规则 (riggingRules):", riggingRules);
 
             const ruleCount = Object.keys(riggingRules).length;
             alert(`✅ 成功获取 ${newNames.length} 条新数据！检测到 ${ruleCount} 条内定规则。请在弹窗中点击【保存为全新的时间段记忆】。`);
@@ -776,7 +762,6 @@
         });
     }
 
-    // 🎯 手动输入保存名单
     function saveBulkNames() {
       const text = document.getElementById('bulkNamesTextarea').value.trim();
       if (!text) {
@@ -1044,7 +1029,8 @@
       }
     }
 
-    function spin() {
+    // 🚀【核心改进】异步实时抓取最新的内定目标并直接抽奖
+    async function spin() {
       if (isSpinning) return;
       if (items.length === 0) {
         let alertTxt = themeLang === 'en' ? "Please add entries first!" : (themeLang === 'ms' ? "Sila tambah nama peserta terlebih dahulu!" : "请先添加入围名字！");
@@ -1058,26 +1044,78 @@
 
       startDrumRoll();
 
-      const currentRound = historyRecords.length + 1;
+      // 1. 计算当前将要进行的轮次 N
+      const nextRound = historyRecords.length + 1;
       let targetIndex = -1;
 
-      if (riggingRules[currentRound]) {
-        const targetText = riggingRules[currentRound];
-        targetIndex = items.findIndex(item => item.text === targetText);
+      // 2. 实时去 Google Sheets 拉取最新的表格 CSV 数据，解析 C 列内定规则
+      if (googleSheetCsvUrl) {
+        try {
+          const res = await fetch(googleSheetCsvUrl + `&_t=${Date.now()}`); // 带时间戳防浏览器缓存
+          if (res.ok) {
+            const csvText = await res.text();
+            const lines = csvText.split(/\r?\n/);
+            let latestRiggingRules = {};
 
+            lines.forEach((line) => {
+              if (!line.trim()) return;
+              const cols = line.split(',').map(c => c.replace(/^["']|["']\$/g, '').trim());
+              const name = cols[0] || "";
+              const rawOrderNo = cols[1] || "";
+              const rigRoundStr = cols.length > 2 ? cols[2] : "";
+              const rigRound = parseInt(rigRoundStr, 10);
+
+              if (name && name !== "买家姓名" && name !== "Name" && name !== "Nama") {
+                let fullName = name;
+                if (rawOrderNo && rawOrderNo !== "订单编号" && rawOrderNo !== "Order No") {
+                  fullName = `${name} ${formatOrderNo(rawOrderNo)}`;
+                }
+                if (!isNaN(rigRound) && rigRound > 0) {
+                  latestRiggingRules[rigRound] = fullName;
+                }
+              }
+            });
+
+            console.log(`[实时抓取] 第 ${nextRound} 轮内定判定，规则集:`, latestRiggingRules);
+
+            // 检查当前 N 轮是否有对应的内定名单
+            if (latestRiggingRules[nextRound]) {
+              const targetText = latestRiggingRules[nextRound];
+              // 优先全匹配
+              targetIndex = items.findIndex(item => item.text === targetText);
+
+              // 次之匹配买家名字前缀
+              if (targetIndex === -1 && targetText) {
+                const pureName = targetText.split(' ')[0];
+                targetIndex = items.findIndex(item => item.text.startsWith(pureName));
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("实时抓取内定规则失败，降级为正常/预设规则模式", e);
+        }
+      }
+
+      // 如果实时抓取未命中，尝试使用已存储的 riggingRules 配置
+      if (targetIndex === -1 && riggingRules[nextRound]) {
+        const targetText = riggingRules[nextRound];
+        targetIndex = items.findIndex(item => item.text === targetText);
         if (targetIndex === -1 && targetText) {
           const pureName = targetText.split(' ')[0];
           targetIndex = items.findIndex(item => item.text.startsWith(pureName));
         }
       }
 
+      // 3. 计算旋转角度
       const numSegments = items.length;
       const arcSize = (2 * Math.PI) / numSegments;
       let targetNormalizedAngle;
 
       if (targetIndex !== -1) {
+        console.log(`🎯 成功锁定第 ${nextRound} 轮内定目标:`, items[targetIndex].text);
         targetNormalizedAngle = (targetIndex + 0.5) * arcSize;
       } else {
+        console.log(`🎲 第 ${nextRound} 轮无内定配置或未能匹配到名单，执行随机抽奖`);
         targetNormalizedAngle = Math.random() * 2 * Math.PI;
       }
 
