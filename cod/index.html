@@ -107,6 +107,27 @@
     }
     .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
 
+    /* ⚡ BUYER MESSAGE 带核对复选框的标签行 */
+    .msg-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .check-msg-label {
+      font-size: 10.5px;
+      font-weight: bold;
+      color: #dc2626; /* 醒目的红色提醒 */
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      background: #fef2f2;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid #fca5a5;
+    }
+
     /* 商品行卡片样式 */
     .product-row {
       background-color: #fff5f8;
@@ -202,8 +223,6 @@
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
     .awb-info-table td { padding: 2px 0; font-size: 11.5px; color: #000; vertical-align: top; font-family: Arial, sans-serif; }
-    
-    /* ⚡ 核心修改：左侧字段名取消加粗，右侧内容保持加粗 */
     .awb-info-table .lbl { width: 100px; font-weight: normal; }
     .awb-info-table .colon { width: 12px; text-align: center; font-weight: bold; }
     .awb-info-table .val { word-break: break-all; font-weight: 800; }
@@ -328,10 +347,18 @@
           <label>STORE (店铺)</label>
           <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee" oninput="renderAWB()">
         </div>
+
+        <!-- ⚡ 关键修改：BUYER MESSAGE 框架右上角新增必选复选框 -->
         <div class="form-group">
-          <label>BUYER MESSAGE</label>
+          <div class="msg-label-row">
+            <label style="margin-bottom:0;">BUYER MESSAGE</label>
+            <label class="check-msg-label" title="请确认已打开 Shopee 订单详情页核对是否有买家留言">
+              <input type="checkbox" id="checkMsgBox"> 核对
+            </label>
+          </div>
           <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
         </div>
+
         <div class="form-group">
           <label>INTERNAL NOTE</label>
           <input type="text" id="noteInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
@@ -350,7 +377,7 @@
       <button class="btn-primary" onclick="renderAWB()">🔄 更新面单预览</button>
       
       <div class="print-btn-group">
-        <button class="btn-print" id="btnPrint" onclick="window.print()">🖨️ 打印面单 AWB</button>
+        <button class="btn-print" id="btnPrint" onclick="triggerPrint()">🖨️ 打印面单 AWB</button>
         <button class="btn-settings" onclick="openSettingsModal()">⚙️ 打印设置</button>
       </div>
     </div>
@@ -448,13 +475,11 @@
         <span class="setting-desc">100mm × 150mm (默认热敏单)</span>
       </label>
 
-      <!-- ⚡ 核心修改 2：A4 文案修改 -->
       <label class="setting-option">
         <input type="radio" name="printFormat" value="A4">
         <span class="setting-label">A4 格式 （210 × 297 mm）</span>
       </label>
 
-      <!-- ⚡ 核心修改 3：A5 文案修改 -->
       <label class="setting-option">
         <input type="radio" name="printFormat" value="A5">
         <span class="setting-label">A5 格式 （148 × 210 mm）</span>
@@ -482,6 +507,16 @@
       "[Live Play] Handmade Gelang Tangan": ["Normal-3", "Normal-5", "Normal-10", "Normal-20", "Premium-3", "Premium-5", "Premium-10"],
       "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"]
     };
+
+    // ⚡ 打印逻辑校验：检查是否勾选了“已核对”
+    function triggerPrint() {
+      const isChecked = document.getElementById('checkMsgBox').checked;
+      if (!isChecked) {
+        alert("⚠️ 请先打开订单核对 Shopee 详细页面是否有买家留言（BUYER MESSAGE），并勾选【核对】后再进行打印！");
+        return;
+      }
+      window.print();
+    }
 
     function fetchLiveCatalog() {
       const syncBadge = document.getElementById('syncBadge');
@@ -575,7 +610,6 @@
       } catch(e) { console.log(e); }
     }
 
-    // ⚡ 核心修改 1：添加虚线文案修改，默认 isDashed 为 false（不勾选）
     function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
       const container = document.getElementById('productContainer');
       const count = container.children.length + 1;
@@ -784,10 +818,12 @@
       if (productsFound.length > 0) {
         document.getElementById('productContainer').innerHTML = '';
         productsFound.forEach((p) => {
-          // 粘贴抓取默认全都不勾选虚线
           addProductRow(p.title, p.variation, p.qty, false);
         });
       }
+
+      // ⚡ 每次使用快捷粘贴抓取后，强行重置“已核对”复选框为未勾选，确保人工二次确认
+      document.getElementById('checkMsgBox').checked = false;
 
       closePasteModal();
       renderAWB();
@@ -795,7 +831,6 @@
 
     window.onload = function() {
       fetchLiveCatalog();
-      // 默认加载示例时不勾选虚线
       addProductRow('[Live Play] Handmade Gelang Tangan', 'Premium-10', 'x1', false);
       addProductRow('[NOT FOR SALE] Free Gift Zone', 'Premium Pro-Max', 'x1', false);
       renderAWB();
