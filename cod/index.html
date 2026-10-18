@@ -265,7 +265,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 8px;
-      break-inside: avoid;            /* ⚡ 防止商品卡片内部被分页撕裂 */
+      break-inside: avoid;
       page-break-inside: avoid;
     }
     .awb-product-left {
@@ -363,7 +363,7 @@
       margin-left: auto;
     }
 
-    /* ⚡ 打印优化：防止页面缩放，且严格控制跨页断开逻辑 */
+    /* 打印优化 */
     @media print {
       html, body { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; background: white !important; }
       .control-panel, .modal-overlay { display: none !important; }
@@ -371,7 +371,6 @@
       .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; }
       .awb-card { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; min-height: auto !important; position: relative !important; overflow: visible !important; }
       
-      /* 防截断关键规则 */
       .awb-product-box, .awb-divider-dashed {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
@@ -477,6 +476,8 @@
             <tr><td class="lbl">ORDER ID</td><td class="colon">:</td><td class="val" id="awbOrder">261014HN714REB</td></tr>
             <tr><td class="lbl">SHIPP CHANNEL</td><td class="colon">:</td><td class="val" id="awbChannel">COD</td></tr>
             <tr><td class="lbl">STORE</td><td class="colon">:</td><td class="val" id="awbStore">The MoChii Shop@Shopee</td></tr>
+            <!-- ⚡ 新增 TOTAL QTY 行 -->
+            <tr><td class="lbl">TOTAL QTY</td><td class="colon">:</td><td class="val" id="awbTotalQty">0</td></tr>
           </table>
 
           <div class="awb-divider-dashed"></div>
@@ -844,6 +845,7 @@
       prodContainer.innerHTML = '';
 
       const rows = document.querySelectorAll('.product-row');
+      let calculatedTotalQty = 0; // ⚡ 用于自动累计总数量
 
       rows.forEach((rowElem) => {
         const titleVal = rowElem.querySelector('.prod-title').value.trim();
@@ -856,6 +858,10 @@
         const isDashed = rowElem.querySelector('.prod-dashed-check').checked;
 
         if(titleVal) {
+          // ⚡ 解析数量并加总（提取数字）
+          const numericQty = parseInt(qtyVal.replace(/[^0-9]/g, '')) || 0;
+          calculatedTotalQty += numericQty;
+
           const box = document.createElement('div');
           box.className = 'awb-product-box';
           box.innerHTML = `
@@ -874,6 +880,9 @@
           }
         }
       });
+
+      // ⚡ 更新 TOTAL QTY 自动计算结果
+      document.getElementById('awbTotalQty').innerText = calculatedTotalQty;
 
       const now = new Date();
       const day = String(now.getDate()).padStart(2, '0');
