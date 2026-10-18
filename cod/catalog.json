@@ -6,22 +6,145 @@
     "Own Fleet (SPX)",
     "Pre-Order"
   ],
-  "quantities": ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"],
+  "quantities": [
+    "x1",
+    "x2",
+    "x3",
+    "x4",
+    "x5",
+    "x6",
+    "x7",
+    "x8",
+    "x9",
+    "x10"
+  ],
   "catalog": {
-    "[Live Play] Handmade Gelang Tangan": ["Normal-3", "Normal-5", "Normal-10", "Normal-20", "Premium-3", "Premium-5", "Premium-10"],
-    "Happy BoomBoom Game | Bingo 49 | Ice Cube Challenge": ["HappyBoomBoom Game", "Bingo 49 Card Game", "Ice Cube Game", "Card Game"],
-    "[Live Play] Sayur Buah-Buah Game": ["Redeem-Redeem", "Kiwi", "Durian", "Nanas", "Tembikai", "Stawbery", "Pisang", "Mangga", "Manggis", "Oren", "Epal", "Broccoli", "Kubis", "Bendi", "Tomato", "Kentang", "Jagung", "Timun", "Labu", "Terung", "Lobak"],
-    "Doraemon Matching | Where is the Wolf | Kid Family Puzzle Game": ["Driver", "Passenger", "1 Game", "3 Game ( Free1 )", "6 Game ( Free1 )"],
-    "[CustomMade Service ] Product design By Kay": ["Mug", "Phone Stand", "Back Case", "Other"],
-    "Authentic Blind Box Figure": ["POP BEAN", "SP Warm", "DIMOO", "Zora", "Hacipupu", "HIRONO", "SP MIRAGE", "Molly", "POP MART", "Kiwiwi", "Plush", "Cry Baby", "Figure"],
-    "Pop Beam Series/Pen/Key chain/Phone chain": ["PEN", "Car Chain", "Phone Chain"],
-    "Display Box / Figure Case": ["Normal", "SP", "HIRONO"],
-    "KeyChain Colour match game": ["1-white", "1-yellow", "1-green", "1-pink", "1-red", "1-orange", "1-blue", "1-light blue", "1-black", "1-puple"],
-    "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"],
-    "[Live] KeyChain | Perfume | Cincin Colour match game": ["Perfume-1", "Perfume-3", "Perfume-5", "Perfume-10", "Keychain-1", "Keychain-3", "Keychain-5", "Keychain-10", "Keychain-20", "Cincin-1", "Cincin-3", "Cincin-5", "Cincin-10", "Cincin-20"],
-    "Tasbih Gelang Premium Handmade by Kay": ["T2,Without Box"],
-    "Silica Gel Desiccant Packets": ["10 pack", "50 pack"],
-    "【Double Layer】 Gelang Tangan Handmade By Kay": ["normal", "with box"],
-    "【Premium Series】 Handmade Gelang Tangan": ["normal", "with box"]
+    "[Live Play] Handmade Gelang Tangan": [
+      "Normal-3",
+      "Normal-5",
+      "Normal-10",
+      "Normal-20",
+      "Premium-3",
+      "Premium-5",
+      "Premium-10"
+    ],
+    "[NOT FOR SALE] Free Gift Zone": [
+      "Fake Nails",
+      "Kuromi Book",
+      "Pouch",
+      "Night Light",
+      "Premium Pro-Max",
+      "Random"
+    ],
+    "KeyChain Colour match game": [
+      "1-white",
+      "1-yellow",
+      "1-green",
+      "1-pink",
+      "1-red",
+      "1-orange",
+      "1-blue",
+      "1-light blue",
+      "1-black",
+      "1-puple"
+    ],
+    "[Live] KeyChain | Perfume | Cincin Colour match game": [
+      "Perfume-1",
+      "Perfume-3",
+      "Perfume-5",
+      "Perfume-10",
+      "Keychain-1",
+      "Keychain-3",
+      "Keychain-5",
+      "Keychain-10",
+      "Keychain-20",
+      "Cincin-1",
+      "Cincin-3",
+      "Cincin-5",
+      "Cincin-10",
+      "Cincin-20"
+    ],
+    "【Premium Series】 Handmade Gelang Tangan": [
+      "normal",
+      "with box"
+    ],
+    "【Double Layer】 Gelang Tangan Handmade By Kay": [
+      "normal",
+      "with box"
+    ],
+    "Happy BoomBoom Game | Bingo 49 | Ice Cube Challenge": [
+      "HappyBoomBoom Game",
+      "Bingo 49 Card Game",
+      "Ice Cube Game",
+      "Card Game"
+    ],
+    "[Live Play] Sayur Buah-Buah Game": [
+      "Redeem-Redeem",
+      "Kiwi",
+      "Durian",
+      "Nanas",
+      "Tembikai",
+      "Stawbery",
+      "Pisang",
+      "Mangga",
+      "Manggis",
+      "Oren",
+      "Epal",
+      "Broccoli",
+      "Kubis",
+      "Bendi",
+      "Tomato",
+      "Kentang",
+      "Jagung",
+      "Timun",
+      "Labu",
+      "Terung",
+      "Lobak"
+    ],
+    "Doraemon Matching | Where is the Wolf | Kid Family Puzzle Game": [
+      "Driver",
+      "Passenger",
+      "1 Game",
+      "3 Game ( Free1 )",
+      "6 Game ( Free1 )"
+    ],
+    "[CustomMade Service ] Product design By Kay": [
+      "Mug",
+      "Phone Stand",
+      "Back Case",
+      "Other"
+    ],
+    "Authentic Blind Box Figure": [
+      "POP BEAN",
+      "SP Warm",
+      "DIMOO",
+      "Zora",
+      "Hacipupu",
+      "HIRONO",
+      "SP MIRAGE",
+      "Molly",
+      "POP MART",
+      "Kiwiwi",
+      "Plush",
+      "Cry Baby",
+      "Figure"
+    ],
+    "Pop Beam Series/Pen/Key chain/Phone chain": [
+      "PEN",
+      "Car Chain",
+      "Phone Chain"
+    ],
+    "Display Box / Figure Case": [
+      "Normal",
+      "SP",
+      "HIRONO"
+    ],
+    "Tasbih Gelang Premium Handmade by Kay": [
+      "T2,Without Box"
+    ],
+    "Silica Gel Desiccant Packets": [
+      "10 pack",
+      "50 pack"
+    ]
   }
 }
