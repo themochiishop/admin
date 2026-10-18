@@ -48,7 +48,7 @@
       border-bottom: 2px solid var(--bg-color);
     }
 
-    .panel-title { font-size: 14px; font-weight: bold; color: var(--primary); }
+    .panel-title { font-size: 14px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
 
     .btn-quick-paste {
       background-color: #8b5cf6;
@@ -277,29 +277,24 @@
       flex-direction: column;
       gap: 2px;
     }
-    /* ⚡ 优化商品标题布局：图标与文字分离，实现换行对齐 */
-.awb-product-title {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #000;
-  line-height: 1.25;
-  display: flex;             /* 开启 Flex 布局 */
-  align-items: flex-start;   /* 对齐顶部 */
-  gap: 4px;                  /* 图标与文字之间的间隔 */
-}
-/* 缩进 Variation，使其与 Product 的文字对齐 */
-.awb-product-sub {
-  font-size: 12px;
-  color: #404854;
-  font-weight: 650;
-  margin-left: 19px;        /* 保持左边距与上方文字对齐 */
-}
+
+    .awb-product-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #000;
+      line-height: 1.25;
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
     .awb-product-sub {
       font-size: 12px;
       color: #404854;
       font-weight: 650;
       margin-left: 19px;
     }
+
     .awb-product-qty {
       font-weight: 800;
       color: #374151;
@@ -377,6 +372,19 @@
       margin-left: auto;
     }
 
+    /* 优化 Google 翻译样式 */
+    .goog-te-banner-frame.skiptranslate { display: none !important; }
+    body { top: 0px !important; }
+    .goog-te-gadget-simple {
+      background-color: #fff !important;
+      border: 1px solid var(--border-color) !important;
+      padding: 2px 5px !important;
+      border-radius: 5px !important;
+      font-size: 11px !important;
+      cursor: pointer;
+    }
+    .goog-te-gadget-icon { display: none !important; }
+
     /* 打印优化 */
     @media print {
       html, body { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; background: white !important; }
@@ -409,10 +417,14 @@
     <div class="control-panel">
       <div class="panel-header">
         <div class="panel-title">
-          📦 COD 面单录入
-          <span id="syncBadge" class="sync-badge">🔄 正在同步表格分类...</span>
+          <span>📦 COD 面单录入</span>
+          <!-- ⚡ Google 翻译挂载节点 -->
+          <div id="google_translate_element"></div>
         </div>
-        <button class="btn-quick-paste" onclick="openPasteModal()">📋 快捷粘贴抓取</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="syncBadge" class="sync-badge">🔄 正在同步表格分类...</span>
+          <button class="btn-quick-paste" onclick="openPasteModal()">📋 快捷粘贴抓取</button>
+        </div>
       </div>
 
       <div class="form-grid-2col">
@@ -613,9 +625,7 @@
   </div>
 
   <script>
-    // ⚡ 1. 优先读取同目录下的 catalog.json
     const GITHUB_CATALOG_URL = "./catalog.json";
-    // ⚡ 2. 备用方案：COD 表单 1 (Google Apps Script)
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYLt1EXJkkXT2RbXnXb78hv3fNi1VwAKwpgMXrGLoz0_0-ibz8bZrPEWQAEVb6YA/exec";
 
     const DEFAULT_CHANNELS = [
@@ -657,7 +667,6 @@
       window.print();
     }
 
-    // ⚡ 优先提取 GitHub 资料库，失败自动切换 COD 表单1 预备库
     function fetchLiveCatalog() {
       const syncBadge = document.getElementById('syncBadge');
       syncBadge.innerText = "🔄 正在提取 GitHub 资料库...";
@@ -689,7 +698,6 @@
         });
     }
 
-    // 预备方案：从 Google Sheets 提取
     function fetchFromGoogleSheets() {
       const syncBadge = document.getElementById('syncBadge');
       fetch(SCRIPT_URL + "?action=getCatalog")
@@ -955,9 +963,9 @@
           box.innerHTML = `
             <div class="awb-product-left">
               <div class="awb-product-title">
-  <span>📦</span>
-  <span>Product: ${titleVal}</span>
-</div>
+                <span>📦</span>
+                <span>Product: ${titleVal}</span>
+              </div>
               <div class="awb-product-sub">Variation: ${varVal || ''}</div>
             </div>
             <div class="awb-product-qty">${qtyVal.startsWith('x') ? qtyVal : 'x' + qtyVal}</div>
@@ -1063,5 +1071,18 @@
       renderAWB();
     };
   </script>
+
+  <!-- ⚡ Google 翻译官方脚本组件加载 -->
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'zh-CN',
+        includedLanguages: 'zh-CN,en,ms',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  </script>
+  <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
