@@ -27,6 +27,7 @@
       margin: 0 auto;
     }
 
+    /* 左侧控制台 */
     .control-panel {
       flex: 1;
       background: var(--card-bg);
@@ -70,6 +71,7 @@
       font-weight: 600;
     }
 
+    /* 左右 2列 Grid 排版 */
     .form-grid-2col {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -89,6 +91,24 @@
     }
     .form-control:focus { border-color: var(--primary); }
 
+    /* 带齿轮的小组件输入框容器 */
+    .input-gear-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .btn-gear {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      padding: 4px 7px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
+
+    /* 商品行卡片样式 */
     .product-row {
       background-color: #fff5f8;
       border: 1px dashed var(--border-color);
@@ -152,6 +172,7 @@
     .btn-print { flex: 1; padding: 7px; background-color: #10b981; color: white; border: none; border-radius: 5px; font-size: 12.5px; font-weight: bold; cursor: pointer; }
     .btn-settings { padding: 7px 12px; background-color: #6b7280; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
 
+    /* 右侧 AWB 预览 */
     .preview-panel {
       width: 380px;
       background: #2b2b2b;
@@ -196,12 +217,37 @@
     .awb-footer { position: absolute; bottom: 12px; left: 18px; right: 18px; text-align: center; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
     .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
 
+    /* 弹窗 Modal 样式 */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 9999; }
     .modal-content { background: #fff; padding: 16px; border-radius: 10px; width: 420px; max-width: 90%; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .modal-title { font-size: 14px; font-weight: bold; }
     .modal-close { cursor: pointer; font-size: 18px; font-weight: bold; color: #9ca3af; }
     .modal-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11.5px; margin-bottom: 10px; }
+
+    /* 选项列表项样式 */
+    .channel-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .channel-list-item:hover {
+      background: #fdf2f8;
+      border-color: var(--primary);
+    }
+    .btn-item-del {
+      color: #ef4444;
+      font-size: 11px;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
 
     @media print {
       html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; }
@@ -233,27 +279,33 @@
       <div class="form-grid-2col">
         <div class="form-group">
           <label>USER NAME (买家名)</label>
-          <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e">
+          <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e" oninput="renderAWB()">
         </div>
         <div class="form-group">
           <label>ORDER ID (订单号)</label>
-          <input type="text" id="orderInput" class="form-control" value="261014HN714REB">
+          <input type="text" id="orderInput" class="form-control" value="261014HN714REB" oninput="renderAWB()">
         </div>
+
+        <!-- ⚙️ SHIPP CHANNEL 自带齿轮选择按钮 -->
         <div class="form-group">
           <label>SHIPP CHANNEL</label>
-          <input type="text" id="channelInput" class="form-control" value="COD">
+          <div class="input-gear-group">
+            <input type="text" id="channelInput" class="form-control" value="COD" oninput="renderAWB()">
+            <button class="btn-gear" onclick="openChannelModal()" title="选择或管理自定义物流渠道">⚙️</button>
+          </div>
         </div>
+
         <div class="form-group">
           <label>STORE (店铺)</label>
-          <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee">
+          <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee" oninput="renderAWB()">
         </div>
         <div class="form-group">
           <label>BUYER MESSAGE</label>
-          <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白">
+          <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
         </div>
         <div class="form-group">
           <label>INTERNAL NOTE</label>
-          <input type="text" id="noteInput" class="form-control" value="" placeholder="默认为空白">
+          <input type="text" id="noteInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
         </div>
       </div>
 
@@ -315,6 +367,29 @@
     </div>
   </div>
 
+  <!-- ⚙️ SHIPP CHANNEL 快捷选择与自定义管理弹窗 -->
+  <div class="modal-overlay" id="channelModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">⚙️ 选择/自定义 SHIPP CHANNEL 选项</span>
+        <span class="modal-close" onclick="closeChannelModal()">&times;</span>
+      </div>
+      
+      <p style="font-size:11px; color:#6b7280; margin:0 0 10px 0;">点击下方任意选项即可直接填入，或添加你自己的新渠道：</p>
+
+      <!-- 选项列表容器 -->
+      <div id="channelListContainer" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px;">
+        <!-- 动态渲染 -->
+      </div>
+
+      <!-- 添加自定义新选项输入区 -->
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="newChannelInput" class="form-control" placeholder="输入自定义的新渠道 (如: Self Pickup)" style="flex:1;">
+        <button onclick="addNewCustomChannel()" style="padding:5px 10px; background:#8b5cf6; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">➕ 保存添加</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 快捷粘贴弹窗 -->
   <div class="modal-overlay" id="pasteModal">
     <div class="modal-content">
@@ -350,16 +425,22 @@
   </div>
 
   <script>
-    // ⚙️ 你的 Apps Script 部署 URL
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYLt1EXJkkXT2RbXnXb78hv3fNi1VwAKwpgMXrGLoz0_0-ibz8bZrPEWQAEVb6YA/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyB-vzQ7khhXzuOdVT-WWDusEA6Ag7idlgVf30I1hAoYnAWcfuu6L4b59rMelfzUSeow/exec";
 
-    // 默认备用分类（当网络异常时使用）
+    // 默认预设 Channel 列表
+    const DEFAULT_CHANNELS = [
+      "COD",
+      "Cash Payment at Physical Stores",
+      "Dispatched By System(Virtual Goods)",
+      "Own Fleet (SPX)",
+      "Pre-Order"
+    ];
+
     let EXCEL_CATALOG = {
       "[Live Play] Handmade Gelang Tangan": ["Normal-3", "Normal-5", "Normal-10", "Normal-20", "Premium-3", "Premium-5", "Premium-10"],
       "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"]
     };
 
-    // 🌐 从 Google Sheets 实时加载【目录】
     function fetchLiveCatalog() {
       const syncBadge = document.getElementById('syncBadge');
       fetch(SCRIPT_URL + "?action=getCatalog")
@@ -378,6 +459,67 @@
           console.log("加载在线目录失败，使用本地备用:", err);
           syncBadge.innerText = "🟡 使用离线备用数据";
         });
+    }
+
+    /* ⚙️ SHIPP CHANNEL 齿轮弹窗与自定义管理逻辑 */
+    function getStoredChannels() {
+      const saved = localStorage.getItem('custom_shipp_channels');
+      if (saved) {
+        try { return JSON.parse(saved); } catch(e){}
+      }
+      return DEFAULT_CHANNELS;
+    }
+
+    function renderChannelList() {
+      const listContainer = document.getElementById('channelListContainer');
+      const channels = getStoredChannels();
+      listContainer.innerHTML = '';
+
+      channels.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'channel-list-item';
+        div.innerHTML = `
+          <span style="font-size:12px; font-weight:600;" onclick="selectChannel('${item}')">${item}</span>
+          <button class="btn-item-del" onclick="event.stopPropagation(); deleteCustomChannel(${index});">删除</button>
+        `;
+        listContainer.appendChild(div);
+      });
+    }
+
+    function selectChannel(val) {
+      document.getElementById('channelInput').value = val;
+      renderAWB();
+      closeChannelModal();
+    }
+
+    function addNewCustomChannel() {
+      const input = document.getElementById('newChannelInput');
+      const val = input.value.trim();
+      if (!val) return;
+
+      let channels = getStoredChannels();
+      if (!channels.includes(val)) {
+        channels.push(val);
+        localStorage.setItem('custom_shipp_channels', JSON.stringify(channels));
+      }
+      input.value = '';
+      renderChannelList();
+    }
+
+    function deleteCustomChannel(index) {
+      let channels = getStoredChannels();
+      channels.splice(index, 1);
+      localStorage.setItem('custom_shipp_channels', JSON.stringify(channels));
+      renderChannelList();
+    }
+
+    function openChannelModal() {
+      renderChannelList();
+      document.getElementById('channelModal').style.display = 'flex';
+    }
+
+    function closeChannelModal() {
+      document.getElementById('channelModal').style.display = 'none';
     }
 
     function updateBarcode(orderId) {
@@ -418,11 +560,11 @@
           </select>
         </div>
 
-        <input type="text" class="form-control prod-title" value="${titleVal}" style="margin-bottom:3px;" placeholder="Product Title (商品名称)">
+        <input type="text" class="form-control prod-title" value="${titleVal}" style="margin-bottom:3px;" placeholder="Product Title (商品名称)" oninput="renderAWB()">
         
         <div style="display:flex; gap:4px; margin-bottom:3px;">
-          <input type="text" class="form-control prod-var" value="${varVal}" style="flex:1;" placeholder="Variation (规格变体)">
-          <input type="text" class="form-control prod-qty" value="${qtyVal}" style="width:70px;" placeholder="Quantity">
+          <input type="text" class="form-control prod-var" value="${varVal}" style="flex:1;" placeholder="Variation (规格变体)" oninput="renderAWB()">
+          <input type="text" class="form-control prod-qty" value="${qtyVal}" style="width:70px;" placeholder="Quantity" oninput="renderAWB()">
         </div>
 
         <label class="dashed-check-label">
@@ -439,7 +581,6 @@
       if (!rowElem) return;
       const selectArea = rowElem.querySelector('.catalog-select-area');
       
-      // 如果展开时下拉菜单还没填入最新的在线数据，重新更新一次 option
       if (selectArea.style.display === 'none') {
         const catSelect = rowElem.querySelector('.cat-select');
         let productOptionsHTML = `<option value="">-- 选择在线表格主分类 --</option>`;
@@ -606,10 +747,7 @@
     }
 
     window.onload = function() {
-      // 启动时自动同步 Google 表格
       fetchLiveCatalog();
-      
-      // 默认渲染两行
       addProductRow('[Live Play] Handmade Gelang Tangan', 'Premium-10', 'x1', true);
       addProductRow('[NOT FOR SALE] Free Gift Zone', 'Premium Pro-Max', 'x1', false);
       renderAWB();
