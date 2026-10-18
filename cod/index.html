@@ -502,7 +502,7 @@
     </div>
   </div>
 
-  <!-- ⚡【新增】：选择表格商品/变体弹窗 Modal -->
+  <!-- 选择表格商品/变体弹窗 Modal -->
   <div class="modal-overlay" id="catalogModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -602,6 +602,9 @@
   </div>
 
   <script>
+    // ⚡ 1. 优先读取同目录下的 catalog.json
+    const GITHUB_CATALOG_URL = "./catalog.json";
+    // ⚡ 2. 备用方案：COD 表单 1 (Google Apps Script)
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYLt1EXJkkXT2RbXnXb78hv3fNi1VwAKwpgMXrGLoz0_0-ibz8bZrPEWQAEVb6YA/exec";
 
     const DEFAULT_CHANNELS = [
@@ -623,7 +626,7 @@
       "Authentic Blind Box Figure": ["POP BEAN", "SP Warm", "DIMOO", "Zora", "Hacipupu", "HIRONO", "SP MIRAGE", "Molly", "POP MART", "Kiwiwi", "Plush", "Cry Baby", "Figure"],
       "Pop Beam Series/Pen/Key chain/Phone chain": ["PEN", "Car Chain", "Phone Chain"],
       "Display Box / Figure Case": ["Normal", "SP", "HIRONO"],
-      "KeyChain Colour match game": ["1-white", "1-yellow", "1-green", "1-pink", "1-red", "1-orange", "1-blue", "1-light blue", "1-black", "1-puple", "3-white", "3-yellow", "3-green", "3-pink", "3-red", "3-orange", "3-blue", "3-light blue", "3-black", "3-puple", "5-white", "5-yellow", "5-green", "5-pink", "5-red", "5-orange", "5-blue", "5-light blue", "5-black", "5-puple"],
+      "KeyChain Colour match game": ["1-white", "1-yellow", "1-green", "1-pink", "1-red", "1-orange", "1-blue", "1-light blue", "1-black", "1-puple"],
       "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"],
       "[Live] KeyChain | Perfume | Cincin Colour match game": ["Perfume-1", "Perfume-3", "Perfume-5", "Perfume-10", "Keychain-1", "Keychain-3", "Keychain-5", "Keychain-10", "Keychain-20", "Cincin-1", "Cincin-3", "Cincin-5", "Cincin-10", "Cincin-20"],
       "Tasbih Gelang Premium Handmade by Kay": ["T2,Without Box"],
@@ -632,7 +635,7 @@
       "【Premium Series】 Handmade Gelang Tangan": ["normal", "with box"]
     };
 
-    let activeRowIdForCatalog = null; // ⚡ 记录当前打开弹窗的是哪一行商品
+    let activeRowIdForCatalog = null;
 
     function triggerPrint() {
       const isChecked = document.getElementById('checkMsgBox').checked;
@@ -643,36 +646,69 @@
       window.print();
     }
 
+    // ⚡ 优先提取 GitHub 资料库，失败自动切换 COD 表单1 预备库
     function fetchLiveCatalog() {
+      const syncBadge = document.getElementById('syncBadge');
+      syncBadge.innerText = "🔄 正在提取 GitHub 资料库...";
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      fetch(GITHUB_CATALOG_URL, { signal: controller.signal })
+        .then(res => {
+          if (!res.ok) throw new Error("无法读取 catalog.json");
+          return res.json();
+        })
+        .then(data => {
+          clearTimeout(timeoutId);
+          if (data && data.catalog) {
+            applyCatalogData(data);
+            syncBadge.innerText = "🟢 已同步 GitHub 资料库数据";
+            syncBadge.style.background = "#dcfce7";
+            syncBadge.style.color = "#15803d";
+          } else {
+            throw new Error("GitHub 数据格式不匹配");
+          }
+        })
+        .catch(err => {
+          clearTimeout(timeoutId);
+          console.warn("⚠️ 从 GitHub 提取失败，启动预备方案 (Google Sheets COD表单1):", err);
+          syncBadge.innerText = "🟡 正在连接 COD 表单1 预备库...";
+          fetchFromGoogleSheets();
+        });
+    }
+
+    // 预备方案：从 Google Sheets 提取
+    function fetchFromGoogleSheets() {
       const syncBadge = document.getElementById('syncBadge');
       fetch(SCRIPT_URL + "?action=getCatalog")
         .then(res => res.json())
         .then(data => {
           if (data && (data.catalog || Object.keys(data).length > 0)) {
-            const fetchedCatalog = data.catalog || data;
-            if (Object.keys(fetchedCatalog).length > 0) {
-              EXCEL_CATALOG = fetchedCatalog;
-            }
-            
-            if (data.channels && data.channels.length > 0) {
-              localStorage.setItem('custom_shipp_channels', JSON.stringify(data.channels));
-            }
-
-            if (data.quantities && data.quantities.length > 0) {
-              EXCEL_QUANTITIES = data.quantities;
-            }
-
-            syncBadge.innerText = "🟢 已同步 Google 表格最新数据";
-            syncBadge.style.background = "#dcfce7";
-            syncBadge.style.color = "#15803d";
+            const catalogObj = data.catalog || data;
+            applyCatalogData({ catalog: catalogObj, channels: data.channels, quantities: data.quantities });
+            syncBadge.innerText = "🟡 已连接 COD 表单1 预备库";
+            syncBadge.style.background = "#fef9c3";
+            syncBadge.style.color = "#854d0e";
           } else {
-            syncBadge.innerText = "🟡 使用完整离线数据";
+            syncBadge.innerText = "🟠 使用本地离线数据";
           }
         })
-        .catch(err => {
-          console.log("加载在线目录失败，使用离线完整数据库:", err);
-          syncBadge.innerText = "🟡 使用完整离线数据";
+        .catch(() => {
+          syncBadge.innerText = "🟠 使用本地离线数据";
         });
+    }
+
+    function applyCatalogData(data) {
+      if (data.catalog && Object.keys(data.catalog).length > 0) {
+        EXCEL_CATALOG = data.catalog;
+      }
+      if (data.channels && data.channels.length > 0) {
+        localStorage.setItem('custom_shipp_channels', JSON.stringify(data.channels));
+      }
+      if (data.quantities && data.quantities.length > 0) {
+        EXCEL_QUANTITIES = data.quantities;
+      }
     }
 
     function getStoredChannels() {
@@ -744,14 +780,13 @@
           width: 1.1, 
           height: 32, 
           displayValue: true,    
-          fontSize: 24,          
+          fontSize: 22,          
           textMargin: 2,         
           font: "monospace"      
         });
       } catch(e) { console.log(e); }
     }
 
-    // ⚡【修改】：精简商品行，不占用多余布局空间
     function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
       const container = document.getElementById('productContainer');
       const count = container.children.length + 1;
@@ -798,7 +833,6 @@
       container.appendChild(div);
     }
 
-    /* ⚡【新增】：分类选择弹窗逻辑 */
     function openCatalogModal(rowId) {
       activeRowIdForCatalog = rowId;
       const catSelect = document.getElementById('modalCatSelect');
@@ -811,7 +845,6 @@
       catSelect.innerHTML = optionsHTML;
       varSelect.innerHTML = `<option value="">-- 请选择规格变体 --</option>`;
 
-      // 如果当前行已有名字，默认选中
       const rowElem = document.getElementById(rowId);
       if (rowElem) {
         const currentTitle = rowElem.querySelector('.prod-title').value.trim();
