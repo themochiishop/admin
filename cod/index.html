@@ -27,7 +27,6 @@
       margin: 0 auto;
     }
 
-    /* 左侧控制台 */
     .control-panel {
       flex: 1;
       background: var(--card-bg);
@@ -48,11 +47,7 @@
       border-bottom: 2px solid var(--bg-color);
     }
 
-    .panel-title {
-      font-size: 14px;
-      font-weight: bold;
-      color: var(--primary);
-    }
+    .panel-title { font-size: 14px; font-weight: bold; color: var(--primary); }
 
     .btn-quick-paste {
       background-color: #8b5cf6;
@@ -66,7 +61,15 @@
     }
     .btn-quick-paste:hover { background-color: #7c3aed; }
 
-    /* 左右 2列 Grid 排版 */
+    .sync-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 600;
+    }
+
     .form-grid-2col {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -86,20 +89,42 @@
     }
     .form-control:focus { border-color: var(--primary); }
 
-    /* 商品行样式 */
     .product-row {
       background-color: #fff5f8;
       border: 1px dashed var(--border-color);
-      padding: 6px 8px;
-      border-radius: 5px;
-      margin-bottom: 6px;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
     }
-    .product-row-header { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; font-weight: bold; color: var(--primary); }
-    .btn-remove { color: #ef4444; cursor: pointer; border: none; background: none; font-size: 11px; }
+    .product-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 11px; font-weight: bold; color: var(--primary); }
+    .btn-remove { color: #ef4444; cursor: pointer; border: none; background: none; font-size: 11px; font-weight: bold; }
+
+    .dashed-check-label {
+      font-size: 10.5px;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      margin-top: 4px;
+      font-weight: normal;
+    }
+
+    .btn-toggle-select {
+      background: #f3e8ff;
+      color: #7e22ce;
+      border: 1px solid #d8b4fe;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10.5px;
+      cursor: pointer;
+      font-weight: 600;
+      white-space: nowrap;
+    }
 
     .btn-add {
       width: 100%;
-      padding: 5px;
+      padding: 6px;
       background: #fdf2f8;
       border: 1px dashed var(--primary);
       color: var(--primary);
@@ -123,41 +148,10 @@
       margin-top: 4px;
     }
 
-    /* 打印与设置按钮组合 */
-    .print-btn-group {
-      display: flex;
-      gap: 8px;
-      margin-top: 6px;
-    }
-    .btn-print {
-      flex: 1;
-      padding: 7px;
-      background-color: #10b981;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 12.5px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-print:hover { background-color: #059669; }
+    .print-btn-group { display: flex; gap: 8px; margin-top: 6px; }
+    .btn-print { flex: 1; padding: 7px; background-color: #10b981; color: white; border: none; border-radius: 5px; font-size: 12.5px; font-weight: bold; cursor: pointer; }
+    .btn-settings { padding: 7px 12px; background-color: #6b7280; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
 
-    .btn-settings {
-      padding: 7px 12px;
-      background-color: #6b7280;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.2s;
-    }
-    .btn-settings:hover { background-color: #4b5563; }
-
-    /* 右侧 AWB 预览 */
     .preview-panel {
       width: 380px;
       background: #2b2b2b;
@@ -167,236 +161,58 @@
       justify-content: center;
     }
 
-    /* ⚡ 关键设定：卡片设为 relative 相对定位，固定高度 */
     .awb-card {
       width: 100%;
       background: #ffffff;
-      padding: 16px 18px 50px 18px; /* 底部保留 50px 给绝对定位的页脚 */
+      padding: 16px 18px 50px 18px;
       border-radius: 6px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      position: relative; /* 为页脚绝对定位做准备 */
+      position: relative;
       min-height: 520px;
       height: 100%;
       box-sizing: border-box;
     }
 
-    .awb-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 6px;
-    }
-    .awb-logo-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .awb-logo {
-      width: 34px;
-      height: 34px;
-      object-fit: contain;
-    }
-    .awb-title {
-      font-family: "Georgia", "Times New Roman", serif;
-      font-size: 22px;
-      font-weight: bold;
-      color: #000;
-      letter-spacing: 0.3px;
-    }
-    #barcode {
-      width: 110px;
-      height: 32px;
-    }
+    .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .awb-logo-group { display: flex; align-items: center; gap: 8px; }
+    .awb-logo { width: 34px; height: 34px; object-fit: contain; }
+    .awb-title { font-family: "Georgia", serif; font-size: 22px; font-weight: bold; color: #000; }
+    #barcode { width: 110px; height: 32px; }
 
-    .awb-divider-thick {
-      border-top: 2px solid #000;
-      margin-bottom: 10px;
-    }
+    .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
+    .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+    .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 800; color: #000; vertical-align: top; }
+    .awb-info-table .lbl { width: 100px; }
+    .awb-info-table .colon { width: 12px; text-align: center; }
+    .awb-info-table .val { word-break: break-all; }
 
-    .awb-info-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 6px;
-    }
-    .awb-info-table td {
-      padding: 2px 0;
-      font-size: 11.5px;
-      font-weight: 800;
-      color: #000;
-      vertical-align: top;
-      font-family: Arial, sans-serif;
-    }
-    .awb-info-table .lbl {
-      width: 100px;
-      letter-spacing: 0.1px;
-    }
-    .awb-info-table .colon {
-      width: 12px;
-      text-align: center;
-    }
-    .awb-info-table .val {
-      word-break: break-all;
-    }
+    .awb-divider-dashed { border-top: 1px dashed #777; margin: 6px 0 8px 0; }
 
-    .awb-divider-dashed {
-      border-top: 1px dashed #777;
-      margin: 6px 0 8px 0;
-    }
+    .awb-product-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 8px; margin-bottom: 6px; }
+    .awb-product-title { font-size: 11.5px; font-weight: 800; color: #000; line-height: 1.25; margin-bottom: 3px; }
+    .awb-product-sub { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #475569; font-weight: 600; }
+    .awb-product-qty { font-size: 12px; font-weight: 900; color: #0f172a; }
 
-    .awb-product-box {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 5px;
-      padding: 6px 8px;
-      margin-bottom: 6px;
-    }
-    .awb-product-title {
-      font-size: 11.5px;
-      font-weight: 800;
-      color: #000;
-      line-height: 1.25;
-      margin-bottom: 3px;
-    }
-    .awb-product-sub {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 10.5px;
-      color: #475569;
-      font-weight: 600;
-    }
-    .awb-product-qty {
-      font-size: 12px;
-      font-weight: 900;
-      color: #0f172a;
-    }
+    .awb-footer { position: absolute; bottom: 12px; left: 18px; right: 18px; text-align: center; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
+    .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
 
-    .awb-note-section {
-      margin-top: 4px;
-    }
-
-    /* ⚡ 关键修改：页脚绝对定位，永远贴紧最底部 */
-    .awb-footer {
-      position: absolute;
-      bottom: 12px;
-      left: 18px;
-      right: 18px;
-      text-align: center;
-      padding-top: 6px;
-      border-top: 1px dashed #e2e8f0;
-    }
-    .awb-footer-text {
-      font-family: 'Roboto Mono', 'Courier New', Courier, monospace !important;
-      font-size: 9.5px;
-      color: #aaaaaa;
-      text-align: center;
-      line-height: 1.35;
-    }
-
-    /* 弹窗通用 Modal 样式 */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-    }
-    .modal-content {
-      background: #fff;
-      padding: 16px;
-      border-radius: 10px;
-      width: 420px;
-      max-width: 90%;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 9999; }
+    .modal-content { background: #fff; padding: 16px; border-radius: 10px; width: 420px; max-width: 90%; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .modal-title { font-size: 14px; font-weight: bold; color: #111827; }
+    .modal-title { font-size: 14px; font-weight: bold; }
     .modal-close { cursor: pointer; font-size: 18px; font-weight: bold; color: #9ca3af; }
-    .modal-textarea {
-      width: 100%;
-      height: 140px;
-      padding: 8px;
-      border: 1px solid #d1d5db;
-      border-radius: 5px;
-      font-size: 11.5px;
-      outline: none;
-      resize: vertical;
-      margin-bottom: 10px;
-    }
+    .modal-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11.5px; margin-bottom: 10px; }
 
-    /* 打印选项单选框样式 */
-    .setting-option {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-    .setting-option:hover {
-      border-color: var(--primary);
-      background-color: #fdf2f8;
-    }
-    .setting-option input[type="radio"] {
-      margin-right: 10px;
-      accent-color: var(--primary);
-    }
-    .setting-label {
-      font-size: 12px;
-      font-weight: bold;
-      color: #1f2937;
-    }
-    .setting-desc {
-      font-size: 11px;
-      color: #6b7280;
-      margin-left: auto;
-    }
-
-    /* 打印适配样式 */
     @media print {
-      html, body {
-        width: 100% !important;
-        height: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: white !important;
-      }
+      html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; }
       .control-panel, .modal-overlay { display: none !important; }
-      .app-container {
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-      }
-      .preview-panel {
-        width: 100% !important;
-        background: white !important;
-        padding: 0 !important;
-        display: block !important;
-      }
-      .awb-card {
-        border: none !important;
-        box-shadow: none !important;
-        width: 100% !important;
-        height: 100vh !important;
-        box-sizing: border-box !important;
-        margin: 0 auto !important;
-        position: relative !important;
-      }
-      .awb-footer {
-        position: absolute !important;
-        bottom: 15px !important;
-        left: 0 !important;
-        right: 0 !important;
-      }
+      .app-container { display: block !important; margin: 0 !important; width: 100% !important; }
+      .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; }
+      .awb-card { border: none !important; box-shadow: none !important; width: 100% !important; height: 100vh !important; position: relative !important; }
+      .awb-footer { position: absolute !important; bottom: 15px !important; left: 0 !important; right: 0 !important; }
     }
   </style>
 
-  <!-- 动态打印尺寸样式注入区域 -->
   <style id="printPageStyle">
     @media print { @page { size: 100mm 150mm; margin: 0; } }
   </style>
@@ -404,84 +220,64 @@
 <body>
 
   <div class="app-container">
-    <!-- 左侧：录入控制台 -->
+    <!-- 左侧控制台 -->
     <div class="control-panel">
       <div class="panel-header">
-        <div class="panel-title">📦 COD 面单录入</div>
+        <div class="panel-title">
+          📦 COD 面单录入
+          <span id="syncBadge" class="sync-badge">🔄 正在同步表格分类...</span>
+        </div>
         <button class="btn-quick-paste" onclick="openPasteModal()">📋 快捷粘贴抓取</button>
       </div>
 
-      <!-- 左右 2列 Grid 排版 -->
       <div class="form-grid-2col">
         <div class="form-group">
           <label>USER NAME (买家名)</label>
           <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e">
         </div>
-
         <div class="form-group">
           <label>ORDER ID (订单号)</label>
           <input type="text" id="orderInput" class="form-control" value="261014HN714REB">
         </div>
-
         <div class="form-group">
           <label>SHIPP CHANNEL</label>
           <input type="text" id="channelInput" class="form-control" value="COD">
         </div>
-
         <div class="form-group">
           <label>STORE (店铺)</label>
           <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee">
         </div>
-
         <div class="form-group">
           <label>BUYER MESSAGE</label>
           <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白">
         </div>
-
         <div class="form-group">
           <label>INTERNAL NOTE</label>
           <input type="text" id="noteInput" class="form-control" value="" placeholder="默认为空白">
         </div>
       </div>
 
+      <!-- 商品清单动态选择区 -->
       <div class="form-group" style="margin-bottom: 6px;">
         <label>商品清单 Product List</label>
         <div id="productContainer">
-          <div class="product-row">
-            <div class="product-row-header">
-              <span>商品 #1</span>
-            </div>
-            <input type="text" class="form-control prod-title" value="[Live Play] Handmade Gelang Tangan" style="margin-bottom:3px;" placeholder="Product Title">
-            <input type="text" class="form-control prod-var" value="Premium-10" style="margin-bottom:3px;" placeholder="Variation">
-            <input type="text" class="form-control prod-qty" value="x1" placeholder="Quantity">
-          </div>
-          <div class="product-row">
-            <div class="product-row-header">
-              <span>商品 #2</span>
-              <button class="btn-remove" onclick="this.parentElement.parentElement.remove()">删除</button>
-            </div>
-            <input type="text" class="form-control prod-title" value="[NOT FOR SALE] Free Gift Zone" style="margin-bottom:3px;" placeholder="Product Title">
-            <input type="text" class="form-control prod-var" value="Premium Pro-Max" style="margin-bottom:3px;" placeholder="Variation">
-            <input type="text" class="form-control prod-qty" value="x1" placeholder="Quantity">
-          </div>
+          <!-- 动态生成 -->
         </div>
         <button class="btn-add" onclick="addProductRow()">+ 增加商品行</button>
       </div>
 
       <button class="btn-primary" onclick="renderAWB()">🔄 更新面单预览</button>
       
-      <!-- 打印与设置按钮组合 -->
       <div class="print-btn-group">
         <button class="btn-print" id="btnPrint" onclick="window.print()">🖨️ 打印面单 AWB</button>
         <button class="btn-settings" onclick="openSettingsModal()">⚙️ 打印设置</button>
       </div>
     </div>
 
-    <!-- 右侧：AWB 预览 -->
+    <!-- 右侧 AWB 预览 -->
     <div class="preview-panel">
       <div class="awb-card" id="awbCard">
         <div>
-          <!-- 页眉：Logo + Order List 标题 + 条形码 -->
           <div class="awb-header">
             <div class="awb-logo-group">
               <img src="https://admin.themochiishop.com/logo.jpg" alt="Logo" class="awb-logo" onerror="this.src='https://via.placeholder.com/34?text=Mochii'">
@@ -492,55 +288,25 @@
 
           <div class="awb-divider-thick"></div>
 
-          <!-- 订单基本信息 -->
           <table class="awb-info-table">
-            <tr>
-              <td class="lbl">USER NAME</td>
-              <td class="colon">:</td>
-              <td class="val" id="awbBuyer">ssvo10dp9e</td>
-            </tr>
-            <tr>
-              <td class="lbl">ORDER ID</td>
-              <td class="colon">:</td>
-              <td class="val" id="awbOrder">261014HN714REB</td>
-            </tr>
-            <tr>
-              <td class="lbl">SHIPP CHANNEL</td>
-              <td class="colon">:</td>
-              <td class="val" id="awbChannel">COD</td>
-            </tr>
-            <tr>
-              <td class="lbl">STORE</td>
-              <td class="colon">:</td>
-              <td class="val" id="awbStore">The MoChii Shop@Shopee</td>
-            </tr>
+            <tr><td class="lbl">USER NAME</td><td class="colon">:</td><td class="val" id="awbBuyer">ssvo10dp9e</td></tr>
+            <tr><td class="lbl">ORDER ID</td><td class="colon">:</td><td class="val" id="awbOrder">261014HN714REB</td></tr>
+            <tr><td class="lbl">SHIPP CHANNEL</td><td class="colon">:</td><td class="val" id="awbChannel">COD</td></tr>
+            <tr><td class="lbl">STORE</td><td class="colon">:</td><td class="val" id="awbStore">The MoChii Shop@Shopee</td></tr>
           </table>
 
           <div class="awb-divider-dashed"></div>
 
-          <!-- 商品列表区 -->
-          <div id="awbProducts">
-            <!-- 动态生成 -->
-          </div>
+          <div id="awbProducts"></div>
 
           <div class="awb-divider-dashed"></div>
 
-          <!-- 留言与备注区 (默认空白) -->
           <table class="awb-info-table awb-note-section">
-            <tr>
-              <td class="lbl">BUYER MESSAGE</td>
-              <td class="colon">:</td>
-              <td class="val" id="awbMsg"></td>
-            </tr>
-            <tr>
-              <td class="lbl">INTERNAL NOTE</td>
-              <td class="colon">:</td>
-              <td class="val" id="awbNote"></td>
-            </tr>
+            <tr><td class="lbl">BUYER MESSAGE</td><td class="colon">:</td><td class="val" id="awbMsg"></td></tr>
+            <tr><td class="lbl">INTERNAL NOTE</td><td class="colon">:</td><td class="val" id="awbNote"></td></tr>
           </table>
         </div>
 
-        <!-- ⚡ 绝对固定在最下方的页脚 -->
         <div class="awb-footer">
           <div class="awb-footer-text">Generated By The Mochii Shop System</div>
           <div class="awb-footer-text" id="awbTimestamp">18/10/2026 18:35</div>
@@ -565,7 +331,7 @@
     </div>
   </div>
 
-  <!-- ⚙️ 打印设置弹窗 Modal -->
+  <!-- 打印设置弹窗 -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -573,25 +339,9 @@
         <span class="modal-close" onclick="closeSettingsModal()">&times;</span>
       </div>
       <p style="font-size:11px; color:#6b7280; margin:0 0 12px 0;">请选择打印面单时使用的纸张格式：</p>
-
-      <label class="setting-option">
-        <input type="radio" name="printFormat" value="AWB" checked>
-        <span class="setting-label">AWB 格式</span>
-        <span class="setting-desc">100mm × 150mm (默认热敏单)</span>
-      </label>
-
-      <label class="setting-option">
-        <input type="radio" name="printFormat" value="A4">
-        <span class="setting-label">A4 格式</span>
-        <span class="setting-desc">210mm × 297mm</span>
-      </label>
-
-      <label class="setting-option">
-        <input type="radio" name="printFormat" value="A5">
-        <span class="setting-label">A5 格式</span>
-        <span class="setting-desc">148mm × 210mm</span>
-      </label>
-
+      <label style="display:block; margin-bottom:8px;"><input type="radio" name="printFormat" value="AWB" checked> AWB (100mm × 150mm)</label>
+      <label style="display:block; margin-bottom:8px;"><input type="radio" name="printFormat" value="A4"> A4 格式</label>
+      <label style="display:block; margin-bottom:8px;"><input type="radio" name="printFormat" value="A5"> A5 格式</label>
       <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:14px;">
         <button onclick="closeSettingsModal()" style="padding:5px 10px; border:1px solid #ccc; background:#fff; border-radius:5px; cursor:pointer; font-size:11px;">取消</button>
         <button onclick="applyPrintSettings()" style="padding:5px 12px; background:var(--primary); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">确认应用</button>
@@ -600,36 +350,135 @@
   </div>
 
   <script>
-    let currentFormat = "AWB";
+    // ⚙️ 你的 Apps Script 部署 URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYLt1EXJkkXT2RbXnXb78hv3fNi1VwAKwpgMXrGLoz0_0-ibz8bZrPEWQAEVb6YA/exec";
+
+    // 默认备用分类（当网络异常时使用）
+    let EXCEL_CATALOG = {
+      "[Live Play] Handmade Gelang Tangan": ["Normal-3", "Normal-5", "Normal-10", "Normal-20", "Premium-3", "Premium-5", "Premium-10"],
+      "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"]
+    };
+
+    // 🌐 从 Google Sheets 实时加载【目录】
+    function fetchLiveCatalog() {
+      const syncBadge = document.getElementById('syncBadge');
+      fetch(SCRIPT_URL + "?action=getCatalog")
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error && Object.keys(data).length > 0) {
+            EXCEL_CATALOG = data;
+            syncBadge.innerText = "🟢 已同步 Google 表格最新数据";
+            syncBadge.style.background = "#dcfce7";
+            syncBadge.style.color = "#15803d";
+          } else {
+            syncBadge.innerText = "🟡 使用离线备用数据";
+          }
+        })
+        .catch(err => {
+          console.log("加载在线目录失败，使用本地备用:", err);
+          syncBadge.innerText = "🟡 使用离线备用数据";
+        });
+    }
 
     function updateBarcode(orderId) {
       if(!orderId) orderId = "261014HN714REB";
       try {
-        JsBarcode("#barcode", orderId, {
-          format: "CODE128",
-          lineColor: "#000",
-          width: 1.1,
-          height: 32,
-          displayValue: false
-        });
+        JsBarcode("#barcode", orderId, { format: "CODE128", lineColor: "#000", width: 1.1, height: 32, displayValue: false });
       } catch(e) { console.log(e); }
     }
 
-    function addProductRow(title = '', variation = '', qty = 'x1') {
+    function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
       const container = document.getElementById('productContainer');
       const count = container.children.length + 1;
+      const rowId = 'prod_row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+
+      let productOptionsHTML = `<option value="">-- 选择在线表格主分类 --</option>`;
+      Object.keys(EXCEL_CATALOG).forEach(pName => {
+        productOptionsHTML += `<option value="${pName}">${pName}</option>`;
+      });
+
       const div = document.createElement('div');
       div.className = 'product-row';
+      div.id = rowId;
       div.innerHTML = `
         <div class="product-row-header">
           <span>商品 #${count}</span>
-          <button class="btn-remove" onclick="this.parentElement.parentElement.remove()">删除</button>
+          <div>
+            <button class="btn-toggle-select" onclick="toggleCatalogDropdown('${rowId}')">▼ 选择表格分类</button>
+            <button class="btn-remove" onclick="document.getElementById('${rowId}').remove(); renderAWB();">删除</button>
+          </div>
         </div>
-        <input type="text" class="form-control prod-title" value="${title}" style="margin-bottom:3px;" placeholder="Product Title">
-        <input type="text" class="form-control prod-var" value="${variation}" style="margin-bottom:3px;" placeholder="Variation">
-        <input type="text" class="form-control prod-qty" value="${qty}" placeholder="Quantity">
+        
+        <div class="catalog-select-area" style="display:none; background:#f5f3ff; padding:6px; border-radius:4px; margin-bottom:4px; border:1px solid #ddd6fe;">
+          <select class="form-control cat-select" style="margin-bottom:3px; background:#fff;" onchange="onCatalogSelect('${rowId}', this.value)">
+            ${productOptionsHTML}
+          </select>
+          <select class="form-control var-select" style="background:#fff;" onchange="onVarSelect('${rowId}', this.value)">
+            <option value="">-- 选择规格变体 --</option>
+          </select>
+        </div>
+
+        <input type="text" class="form-control prod-title" value="${titleVal}" style="margin-bottom:3px;" placeholder="Product Title (商品名称)">
+        
+        <div style="display:flex; gap:4px; margin-bottom:3px;">
+          <input type="text" class="form-control prod-var" value="${varVal}" style="flex:1;" placeholder="Variation (规格变体)">
+          <input type="text" class="form-control prod-qty" value="${qtyVal}" style="width:70px;" placeholder="Quantity">
+        </div>
+
+        <label class="dashed-check-label">
+          <input type="checkbox" class="prod-dashed-check" ${isDashed ? 'checked' : ''} onchange="renderAWB()">
+          ✂️ 在此商品下方加一排虚线分割
+        </label>
       `;
+
       container.appendChild(div);
+    }
+
+    function toggleCatalogDropdown(rowId) {
+      const rowElem = document.getElementById(rowId);
+      if (!rowElem) return;
+      const selectArea = rowElem.querySelector('.catalog-select-area');
+      
+      // 如果展开时下拉菜单还没填入最新的在线数据，重新更新一次 option
+      if (selectArea.style.display === 'none') {
+        const catSelect = rowElem.querySelector('.cat-select');
+        let productOptionsHTML = `<option value="">-- 选择在线表格主分类 --</option>`;
+        Object.keys(EXCEL_CATALOG).forEach(pName => {
+          productOptionsHTML += `<option value="${pName}">${pName}</option>`;
+        });
+        catSelect.innerHTML = productOptionsHTML;
+        selectArea.style.display = 'block';
+      } else {
+        selectArea.style.display = 'none';
+      }
+    }
+
+    function onCatalogSelect(rowId, selectedProduct) {
+      const rowElem = document.getElementById(rowId);
+      if (!rowElem) return;
+
+      const titleInput = rowElem.querySelector('.prod-title');
+      const varSelect = rowElem.querySelector('.var-select');
+
+      if (selectedProduct) {
+        titleInput.value = selectedProduct;
+      }
+
+      let varList = EXCEL_CATALOG[selectedProduct] || [];
+      varSelect.innerHTML = `<option value="">-- 选择规格变体 --</option>`;
+      varList.forEach(v => {
+        varSelect.innerHTML += `<option value="${v}">${v}</option>`;
+      });
+      renderAWB();
+    }
+
+    function onVarSelect(rowId, selectedVar) {
+      const rowElem = document.getElementById(rowId);
+      if (!rowElem) return;
+      if (selectedVar) {
+        rowElem.querySelector('.prod-var').value = selectedVar;
+      }
+      renderAWB();
     }
 
     function renderAWB() {
@@ -647,14 +496,13 @@
       const prodContainer = document.getElementById('awbProducts');
       prodContainer.innerHTML = '';
 
-      const titles = document.querySelectorAll('.prod-title');
-      const vars = document.querySelectorAll('.prod-var');
-      const qtys = document.querySelectorAll('.prod-qty');
+      const rows = document.querySelectorAll('.product-row');
 
-      titles.forEach((el, i) => {
-        const titleVal = el.value.trim();
-        const varVal = vars[i] ? vars[i].value.trim() : '';
-        const qtyVal = qtys[i] ? qtys[i].value.trim() : 'x1';
+      rows.forEach((rowElem) => {
+        const titleVal = rowElem.querySelector('.prod-title').value.trim();
+        const varVal = rowElem.querySelector('.prod-var').value.trim();
+        const qtyVal = rowElem.querySelector('.prod-qty').value.trim() || 'x1';
+        const isDashed = rowElem.querySelector('.prod-dashed-check').checked;
 
         if(titleVal) {
           const box = document.createElement('div');
@@ -667,6 +515,12 @@
             </div>
           `;
           prodContainer.appendChild(box);
+
+          if (isDashed) {
+            const divider = document.createElement('div');
+            divider.className = 'awb-divider-dashed';
+            prodContainer.appendChild(divider);
+          }
         }
       });
 
@@ -679,36 +533,25 @@
       document.getElementById('awbTimestamp').innerText = `${day}/${month}/${year} ${hours}:${mins}`;
     }
 
-    function openPasteModal() {
-      document.getElementById('pasteModal').style.display = 'flex';
-      document.getElementById('pasteTextarea').value = '';
-      document.getElementById('pasteTextarea').focus();
-    }
-    function closePasteModal() {
-      document.getElementById('pasteModal').style.display = 'none';
-    }
-
-    function openSettingsModal() {
-      document.getElementById('settingsModal').style.display = 'flex';
-    }
-    function closeSettingsModal() {
-      document.getElementById('settingsModal').style.display = 'none';
-    }
+    function openPasteModal() { document.getElementById('pasteModal').style.display = 'flex'; }
+    function closePasteModal() { document.getElementById('pasteModal').style.display = 'none'; }
+    function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
     function applyPrintSettings() {
       const selected = document.querySelector('input[name="printFormat"]:checked');
       if (selected) {
-        currentFormat = selected.value;
+        const val = selected.value;
         const btnPrint = document.getElementById('btnPrint');
         const styleTag = document.getElementById('printPageStyle');
 
-        if (currentFormat === 'AWB') {
+        if (val === 'AWB') {
           btnPrint.innerText = '🖨️ 打印面单 AWB';
           styleTag.innerHTML = '@media print { @page { size: 100mm 150mm; margin: 0; } }';
-        } else if (currentFormat === 'A4') {
+        } else if (val === 'A4') {
           btnPrint.innerText = '🖨️ 打印 A4';
           styleTag.innerHTML = '@media print { @page { size: A4; margin: 10mm; } }';
-        } else if (currentFormat === 'A5') {
+        } else if (val === 'A5') {
           btnPrint.innerText = '🖨️ 打印 A5';
           styleTag.innerHTML = '@media print { @page { size: A5; margin: 5mm; } }';
         }
@@ -718,10 +561,7 @@
 
     function processPastedText() {
       const rawText = document.getElementById('pasteTextarea').value;
-      if (!rawText || rawText.trim() === '') {
-        alert('请先粘贴内容！');
-        return;
-      }
+      if (!rawText || rawText.trim() === '') return;
 
       const orderMatch = rawText.match(/订单编号\s*([A-Z0-9]+)/i) || rawText.match(/Order\s*SN\s*([A-Z0-9]+)/i);
       if (orderMatch) document.getElementById('orderInput').value = orderMatch[1].trim();
@@ -739,8 +579,7 @@
         if (line.includes('Handmade') || line.includes('Gelang') || line.includes('[Live') || line.includes('NOT FOR SALE') || line.includes('Free Gift')) {
           if (currentTitle) {
             productsFound.push({ title: currentTitle, variation: currentVar, qty: currentQty });
-            currentVar = '';
-            currentQty = 'x1';
+            currentVar = ''; currentQty = 'x1';
           }
           currentTitle = line.replace(/预购|礼品|现货/g, '').trim();
         } else if (line.startsWith('规格:') || line.startsWith('规格：') || line.startsWith('Variation:')) {
@@ -755,9 +594,11 @@
       }
 
       if (productsFound.length > 0) {
-        const container = document.getElementById('productContainer');
-        container.innerHTML = '';
-        productsFound.forEach(p => addProductRow(p.title, p.variation, p.qty));
+        document.getElementById('productContainer').innerHTML = '';
+        productsFound.forEach((p, idx) => {
+          const isDashed = idx < productsFound.length - 1;
+          addProductRow(p.title, p.variation, p.qty, isDashed);
+        });
       }
 
       closePasteModal();
@@ -765,6 +606,12 @@
     }
 
     window.onload = function() {
+      // 启动时自动同步 Google 表格
+      fetchLiveCatalog();
+      
+      // 默认渲染两行
+      addProductRow('[Live Play] Handmade Gelang Tangan', 'Premium-10', 'x1', true);
+      addProductRow('[NOT FOR SALE] Free Gift Zone', 'Premium Pro-Max', 'x1', false);
       renderAWB();
     };
   </script>
