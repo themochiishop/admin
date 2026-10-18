@@ -698,7 +698,7 @@
       showModal('googleSheetsModal');
     }
 
-    // 🎯 同步 Google 表格（仅写页面，不自动覆盖任何云端快照）
+    // 🎯 同步 Google 表格（已完美修复 C 列内定规则抓取逻辑）
     function fetchNamesFromGoogleSheets() {
       const inputUrl = document.getElementById('sheetsUrlInput').value.trim();
       if (!inputUrl) { alert("Please paste a valid Google Sheets CSV URL! 请输入有效的 CSV 链接！"); return; }
@@ -719,14 +719,21 @@
 
           const lines = csvText.split(/\r?\n/);
           let newNames = [];
-          riggingRules = {}; 
+          riggingRules = {}; // 重置内定矩阵规则
 
           lines.forEach((line, index) => {
+            if (!line.trim()) return;
+
+            // 安全分割 CSV 行并处理双引号
             const cols = line.split(',').map(c => c.replace(/^["']|["']\$/g, '').trim());
             const name = cols[0] || "";
             const rawOrderNo = cols[1] || "";
-            const rigRound = parseInt(cols[2]) || 0; 
+            
+            // 安全抓取 C 列 (索引为 2)
+            const rigRoundStr = cols.length > 2 ? cols[2] : "";
+            const rigRound = parseInt(rigRoundStr, 10);
 
+            // 过滤表头
             if (name && name !== "买家姓名" && name !== "Name" && name !== "Nama") {
               let fullName = name;
               if (rawOrderNo && rawOrderNo !== "订单编号" && rawOrderNo !== "Order No") {
@@ -737,7 +744,8 @@
               const itemObj = { id: `row_${index + 1}_${Math.random()}`, text: fullName };
               newNames.push(itemObj);
 
-              if (rigRound > 0) {
+              // 只要 C 列解析出有效的正数轮次，就记录内定规则
+              if (!isNaN(rigRound) && rigRound > 0) {
                 riggingRules[rigRound] = fullName;
               }
             }
@@ -749,10 +757,12 @@
             drawWheel();
             closeModal('googleSheetsModal');
 
-            // 设置为本地修改锁，要求用户点击【保存为全新时间段】才进行存储，防止误触覆盖当前快照
             isLocalModified = true;
 
-            alert(`✅ 成功获取 ${newNames.length} 条新数据！请在弹窗中点击【保存为全新的时间段记忆】来保存为 B1。`);
+            console.log("✅ 成功解析内定规则 (riggingRules):", riggingRules);
+
+            const ruleCount = Object.keys(riggingRules).length;
+            alert(`✅ 成功获取 ${newNames.length} 条新数据！检测到 ${ruleCount} 条内定规则。请在弹窗中点击【保存为全新的时间段记忆】。`);
             showModal('editNamesMenuModal');
           } else {
             alert("No valid data found in Google Sheets! 未在表格中找到有效数据！");
