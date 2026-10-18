@@ -214,8 +214,19 @@
 
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .awb-logo-group { display: flex; align-items: center; gap: 8px; }
-    .awb-logo { width: 34px; height: 34px; object-fit: contain; }
-    .awb-title { font-family: "Georgia", serif; font-size: 22px; font-weight: bold; color: #000; }
+    .awb-logo {
+    margin-left: 6px;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+    .awb-title {
+    padding-left: 15px;
+    font-family: "Georgia", serif;
+    font-size: 20px;
+    font-weight: bold;
+    color: #000;
+}
     #barcode { width: 110px; height: 32px; }
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
@@ -261,8 +272,9 @@
 }
 /* 将面单上的 USER NAME 买家名字字体加大一号 */
 #awbBuyer {
-  font-size: 13.5px; /* 原为 11.5px，加大一号 */
-  font-weight: 900;
+    vertical-align: text-top;
+    font-size: 13.5px;
+    font-weight: 900;
 }
     .awb-footer { position: absolute; bottom: 12px; left: 18px; right: 18px; text-align: center; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
     .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
