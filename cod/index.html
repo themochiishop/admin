@@ -71,7 +71,6 @@
       font-weight: 600;
     }
 
-    /* 左右 2列 Grid 排版 */
     .form-grid-2col {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -221,7 +220,6 @@
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     
-    /* 保持修改文字水平/加粗之前的全加粗样式 */
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
     .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 800; color: #000; vertical-align: top; }
     .awb-info-table .lbl { width: 100px; }
@@ -502,7 +500,9 @@
       "Pre-Order"
     ];
 
-    // 双重保障完整数据库
+    // ⚡ 默认 A54:A63 数量列表 (离线备用)
+    let EXCEL_QUANTITIES = ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"];
+
     let EXCEL_CATALOG = {
       "[Live Play] Handmade Gelang Tangan": ["Normal-3", "Normal-5", "Normal-10", "Normal-20", "Premium-3", "Premium-5", "Premium-10"],
       "Happy BoomBoom Game | Bingo 49 | Ice Cube Challenge": ["HappyBoomBoom Game", "Bingo 49 Card Game", "Ice Cube Game", "Card Game"],
@@ -543,6 +543,10 @@
             
             if (data.channels && data.channels.length > 0) {
               localStorage.setItem('custom_shipp_channels', JSON.stringify(data.channels));
+            }
+
+            if (data.quantities && data.quantities.length > 0) {
+              EXCEL_QUANTITIES = data.quantities;
             }
 
             syncBadge.innerText = "🟢 已同步 Google 表格最新数据";
@@ -625,6 +629,7 @@
       } catch(e) { console.log(e); }
     }
 
+    // ⚡【新增】：增加动态抓取 A54:A63 数量 + 可自定义数量逻辑
     function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
       const container = document.getElementById('productContainer');
       const count = container.children.length + 1;
@@ -634,6 +639,16 @@
       Object.keys(EXCEL_CATALOG).forEach(pName => {
         productOptionsHTML += `<option value="${pName}">${pName}</option>`;
       });
+
+      // 生成 Quantity 下拉菜单选项 (根据 A54:A63)
+      let qtyOptionsHTML = '';
+      let isCustomQty = true;
+
+      EXCEL_QUANTITIES.forEach(q => {
+        if (q === qtyVal) isCustomQty = false;
+        qtyOptionsHTML += `<option value="${q}" ${q === qtyVal ? 'selected' : ''}>${q}</option>`;
+      });
+      qtyOptionsHTML += `<option value="CUSTOM" ${isCustomQty ? 'selected' : ''}>✍️ 自定义...</option>`;
 
       const div = document.createElement('div');
       div.className = 'product-row';
@@ -660,7 +675,12 @@
         
         <div style="display:flex; gap:4px; margin-bottom:3px;">
           <input type="text" class="form-control prod-var" value="${varVal}" style="flex:1;" placeholder="Variation (规格变体)" oninput="renderAWB()">
-          <input type="text" class="form-control prod-qty" value="${qtyVal}" style="width:70px;" placeholder="Quantity" oninput="renderAWB()">
+          
+          <!-- ⚡ 数量下拉与输入联动 -->
+          <select class="form-control prod-qty-select" style="width:75px;" onchange="onQtySelectChange('${rowId}', this.value)">
+            ${qtyOptionsHTML}
+          </select>
+          <input type="text" class="form-control prod-qty-custom" value="${qtyVal}" style="width:65px; ${isCustomQty ? '' : 'display:none;'}" placeholder="数量" oninput="renderAWB()">
         </div>
 
         <label class="dashed-check-label">
@@ -670,6 +690,21 @@
       `;
 
       container.appendChild(div);
+    }
+
+    function onQtySelectChange(rowId, selectedVal) {
+      const rowElem = document.getElementById(rowId);
+      if (!rowElem) return;
+      const customInput = rowElem.querySelector('.prod-qty-custom');
+
+      if (selectedVal === 'CUSTOM') {
+        customInput.style.display = 'block';
+        customInput.focus();
+      } else {
+        customInput.style.display = 'none';
+        customInput.value = selectedVal;
+      }
+      renderAWB();
     }
 
     function toggleCatalogDropdown(rowId) {
@@ -738,7 +773,12 @@
       rows.forEach((rowElem) => {
         const titleVal = rowElem.querySelector('.prod-title').value.trim();
         const varVal = rowElem.querySelector('.prod-var').value.trim();
-        const qtyVal = rowElem.querySelector('.prod-qty').value.trim() || 'x1';
+        
+        // ⚡ 获取数量（如果选了自定义则取输入框值，否则取下拉框值）
+        const qtySelectVal = rowElem.querySelector('.prod-qty-select').value;
+        const qtyCustomVal = rowElem.querySelector('.prod-qty-custom').value.trim();
+        let qtyVal = (qtySelectVal === 'CUSTOM' ? qtyCustomVal : qtySelectVal) || 'x1';
+
         const isDashed = rowElem.querySelector('.prod-dashed-check').checked;
 
         if(titleVal) {
