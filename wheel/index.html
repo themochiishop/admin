@@ -1030,28 +1030,21 @@
     }
 
     // 🚀【核心改进】异步实时抓取最新的内定目标并直接抽奖
-    async function spin() {
-      if (isSpinning) return;
-      if (items.length === 0) {
-        let alertTxt = themeLang === 'en' ? "Please add entries first!" : (themeLang === 'ms' ? "Sila tambah nama peserta terlebih dahulu!" : "请先添加入围名字！");
-        alert(alertTxt);
-        return;
-      }
-      
-      isSpinning = true;
-      document.getElementById('spinBtn').disabled = true;
-      document.getElementById('result').innerText = themeDict[themeLang].spinning;
-
-      startDrumRoll();
-
-      // 1. 计算当前将要进行的轮次 N
-      const nextRound = historyRecords.length + 1;
-      let targetIndex = -1;
-
-      // 2. 实时去 Google Sheets 拉取最新的表格 CSV 数据，解析 C 列内定规则
+ // 2. 实时去 Google Sheets 拉取最新的表格 CSV 数据，解析 C 列内定规则
       if (googleSheetCsvUrl) {
         try {
-          const res = await fetch(googleSheetCsvUrl + `&_t=${Date.now()}`); // 带时间戳防浏览器缓存
+          // 💡 【关键修复】构建强效防缓存 URL：拼接随机数与 timestamp，并开启 no-store
+          const separator = googleSheetCsvUrl.includes('?') ? '&' : '?';
+          const nocacheUrl = `${googleSheetCsvUrl}${separator}_nocache=${Date.now()}_${Math.random()}`;
+
+          const res = await fetch(nocacheUrl, {
+            cache: "no-store",
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
+
           if (res.ok) {
             const csvText = await res.text();
             const lines = csvText.split(/\r?\n/);
@@ -1076,15 +1069,15 @@
               }
             });
 
-            console.log(`[实时抓取] 第 ${nextRound} 轮内定判定，规则集:`, latestRiggingRules);
+            console.log(`[🚀 实时无缓存抓取] 第 ${nextRound} 轮内定判定，最新规则集:`, latestRiggingRules);
 
-            // 检查当前 N 轮是否有对应的内定名单
+            // 优先判断当前第 N 轮是否有内定规则
             if (latestRiggingRules[nextRound]) {
               const targetText = latestRiggingRules[nextRound];
-              // 优先全匹配
+              // 1. 全匹配 (姓名 + 订单号)
               targetIndex = items.findIndex(item => item.text === targetText);
 
-              // 次之匹配买家名字前缀
+              // 2. 模糊匹配 (只匹配买家名字前缀)
               if (targetIndex === -1 && targetText) {
                 const pureName = targetText.split(' ')[0];
                 targetIndex = items.findIndex(item => item.text.startsWith(pureName));
