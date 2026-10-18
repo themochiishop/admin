@@ -215,91 +215,89 @@
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .awb-logo-group { display: flex; align-items: center; gap: 8px; }
     .awb-logo {
-    margin-left: 6px;
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-}
+      margin-left: 6px;
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
     .awb-title {
-    padding-left: 15px;
-    font-family: "Georgia", serif;
-    font-size: 20px;
-    font-weight: bold;
-    color: #000;
-}
+      padding-left: 15px;
+      font-family: "Georgia", serif;
+      font-size: 20px;
+      font-weight: bold;
+      color: #000;
+    }
     #barcode { width: 110px; height: 32px; }
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
     .awb-info-table td {
-    padding: 2px 0;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: #000;
-    vertical-align: middle !important; /* 强制所有行单元格垂直居中对齐 */
-  line-height: 1.2;                  /* 统一行高，防止字号不同导致错位 */
-}
-.awb-info-table td.lbl,
-.awb-info-table td.colon,
-#awbBuyer {
-  display: table-cell;
-  vertical-align: middle !important;
-}
+      padding: 2px 0;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #000;
+      vertical-align: middle !important; /* 强制所有行单元格垂直居中对齐 */
+      line-height: 1.2;                  /* 统一行高，防止字号不同导致错位 */
+    }
+    .awb-info-table td.lbl,
+    .awb-info-table td.colon,
+    #awbBuyer {
+      display: table-cell;
+      vertical-align: middle !important;
+    }
     .awb-info-table .lbl {
-    font-weight: 600;
-    width: 100px;
-}
+      font-weight: 600;
+      width: 100px;
+    }
     .awb-info-table .colon { width: 12px; text-align: center; }
     .awb-info-table .val { word-break: break-all; }
 
     .awb-divider-dashed { border-top: 1px dashed #777; margin: 6px 0 8px 0; }
 
     .awb-product-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 5px;
-  padding: 6px 8px;
-  margin-bottom: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center; /* 上下居中 */
-  gap: 8px;
-}
-.awb-product-left {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-   .awb-product-title {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #000;
-  line-height: 1.25;
-}
-   .awb-product-sub {
-    font-size: 12px;
-    color: #404854;
-    font-weight: 650;
-     margin-left: 19px;
-}
-    /* 替换 .awb-product-qty 规则 */
-.awb-product-qty {
-    font-weight: 800;
-    color: #374151;
-    border: 1px dotted #5f6b7c;
-    padding: 9px 9px;
-    line-height: 1.2;
-    white-space: nowrap;
-}
-/* 将面单上的 USER NAME 买家名字字体加大一号 */
-#awbBuyer {
-  font-size: 15.5px; /* 买家名字字号 */
-  font-weight: 600;
-  margin: 0;
-  padding: 0;
-}
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center; /* 上下居中 */
+      gap: 8px;
+    }
+    .awb-product-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .awb-product-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #000;
+      line-height: 1.25;
+    }
+    .awb-product-sub {
+      font-size: 12px;
+      color: #404854;
+      font-weight: 650;
+      margin-left: 19px;
+    }
+    .awb-product-qty {
+      font-weight: 800;
+      color: #374151;
+      border: 1px dotted #5f6b7c;
+      padding: 9px 9px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    #awbBuyer {
+      font-size: 15.5px; /* 买家名字字号 */
+      font-weight: 600;
+      margin: 0;
+      padding: 0;
+    }
     .awb-footer { position: absolute; bottom: 12px; left: 18px; right: 18px; text-align: center; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
     .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
 
@@ -363,13 +361,14 @@
       margin-left: auto;
     }
 
+    /* ⚡ 修复重点：解除 height: 100vh 限制，防止浏览器打印强制整体缩小，允许正常跨页延伸 */
     @media print {
-      html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+      html, body { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; background: white !important; }
       .control-panel, .modal-overlay { display: none !important; }
       .app-container { display: block !important; margin: 0 !important; width: 100% !important; }
       .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; }
-      .awb-card { border: none !important; box-shadow: none !important; width: 100% !important; height: 100vh !important; position: relative !important; }
-      .awb-footer { position: absolute !important; bottom: 15px !important; left: 0 !important; right: 0 !important; }
+      .awb-card { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; min-height: auto !important; position: relative !important; overflow: visible !important; }
+      .awb-footer { position: relative !important; margin-top: 30px !important; bottom: auto !important; left: 0 !important; right: 0 !important; }
     }
   </style>
 
@@ -567,7 +566,6 @@
       "Pre-Order"
     ];
 
-    // ⚡ 默认 A54:A63 数量列表 (离线备用)
     let EXCEL_QUANTITIES = ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"];
 
     let EXCEL_CATALOG = {
@@ -696,7 +694,6 @@
       } catch(e) { console.log(e); }
     }
 
-    // ⚡【新增】：增加动态抓取 A54:A63 数量 + 可自定义数量逻辑
     function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
       const container = document.getElementById('productContainer');
       const count = container.children.length + 1;
@@ -707,7 +704,6 @@
         productOptionsHTML += `<option value="${pName}">${pName}</option>`;
       });
 
-      // 生成 Quantity 下拉菜单选项 (根据 A54:A63)
       let qtyOptionsHTML = '';
       let isCustomQty = true;
 
@@ -743,7 +739,6 @@
         <div style="display:flex; gap:4px; margin-bottom:3px;">
           <input type="text" class="form-control prod-var" value="${varVal}" style="flex:1;" placeholder="Variation (规格变体)" oninput="renderAWB()">
           
-          <!-- ⚡ 数量下拉与输入联动 -->
           <select class="form-control prod-qty-select" style="width:75px;" onchange="onQtySelectChange('${rowId}', this.value)">
             ${qtyOptionsHTML}
           </select>
@@ -841,14 +836,13 @@
         const titleVal = rowElem.querySelector('.prod-title').value.trim();
         const varVal = rowElem.querySelector('.prod-var').value.trim();
         
-        // ⚡ 获取数量（如果选了自定义则取输入框值，否则取下拉框值）
         const qtySelectVal = rowElem.querySelector('.prod-qty-select').value;
         const qtyCustomVal = rowElem.querySelector('.prod-qty-custom').value.trim();
         let qtyVal = (qtySelectVal === 'CUSTOM' ? qtyCustomVal : qtySelectVal) || 'x1';
 
         const isDashed = rowElem.querySelector('.prod-dashed-check').checked;
 
-       if(titleVal) {
+        if(titleVal) {
           const box = document.createElement('div');
           box.className = 'awb-product-box';
           box.innerHTML = `
