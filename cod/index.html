@@ -20,16 +20,17 @@
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { margin: 0; padding: 14px; background-color: var(--bg-color); color: var(--text-main); }
 
+    /* ⚡ 调整为 3 栏弹性布局：左(订单信息) - 中(商品清单) - 右(面单预览) */
     .app-container {
       display: flex;
       gap: 14px;
-      max-width: 1240px;
+      max-width: 1400px;
       margin: 0 auto;
+      align-items: flex-start;
     }
 
-    /* 左侧控制台 */
-    .control-panel {
-      flex: 1;
+    /* 通用卡片容器 */
+    .panel-card {
       background: var(--card-bg);
       padding: 14px;
       border-radius: 10px;
@@ -37,6 +38,29 @@
       border: 1px solid var(--border-color);
       max-height: 92vh;
       overflow-y: auto;
+    }
+
+    /* 左侧：基本订单信息 */
+    .left-panel {
+      width: 320px;
+      flex-shrink: 0;
+    }
+
+    /* 中间：商品清单列表 */
+    .middle-panel {
+      flex: 1;
+      min-width: 340px;
+    }
+
+    /* 右侧：面单预览区 */
+    .preview-panel {
+      width: 380px;
+      flex-shrink: 0;
+      background: #2b2b2b;
+      padding: 14px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
     }
 
     .panel-header {
@@ -71,14 +95,7 @@
       font-weight: 600;
     }
 
-    .form-grid-2col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 10px;
-      margin-bottom: 10px;
-    }
-
-    .form-group { margin-bottom: 0; }
+    .form-group { margin-bottom: 8px; }
     .form-group label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 2px; color: var(--text-main); }
     .form-control {
       width: 100%;
@@ -185,23 +202,14 @@
       font-size: 12.5px;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 4px;
+      margin-top: 8px;
     }
 
     .print-btn-group { display: flex; gap: 8px; margin-top: 6px; }
     .btn-print { flex: 1; padding: 7px; background-color: #10b981; color: white; border: none; border-radius: 5px; font-size: 12.5px; font-weight: bold; cursor: pointer; }
     .btn-settings { padding: 7px 12px; background-color: #6b7280; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
 
-    /* 右侧 AWB 预览 */
-    .preview-panel {
-      width: 380px;
-      background: #2b2b2b;
-      padding: 14px;
-      border-radius: 10px;
-      display: flex;
-      justify-content: center;
-    }
-
+    /* AWB 预览卡片 */
     .awb-card {
       width: 100%;
       background: #ffffff;
@@ -215,51 +223,19 @@
       box-sizing: border-box;
     }
 
-    .awb-main-content {
-      flex: 1;
-    }
-
+    .awb-main-content { flex: 1; }
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .awb-logo-group { display: flex; align-items: center; gap: 8px; }
-    .awb-logo {
-      margin-left: 15px;
-      width: 40px;
-      height: 40px;
-      object-fit: contain;
-    }
-    .awb-title {
-      padding-left: 20px;
-      font-family: "Georgia", serif;
-      font-size: 20px;
-      font-weight: bold;
-      color: #000;
-    }
-    #barcode { 
-      width: 110px; 
-      height: 42px;
-    }
+    .awb-logo { margin-left: 15px; width: 40px; height: 40px; object-fit: contain; }
+    .awb-title { padding-left: 20px; font-family: "Georgia", serif; font-size: 20px; font-weight: bold; color: #000; }
+    #barcode { width: 110px; height: 42px; }
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-    .awb-info-table td {
-      padding: 2px 0;
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #000;
-      vertical-align: middle !important;
-      line-height: 1.2;
-    }
-    .awb-info-table td.lbl,
-    .awb-info-table td.colon,
-    #awbBuyer {
-      display: table-cell;
-      vertical-align: middle !important;
-    }
-    .awb-info-table .lbl {
-      font-weight: 600;
-      width: 100px;
-    }
+    .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 600; color: #000; vertical-align: middle !important; line-height: 1.2; }
+    .awb-info-table td.lbl, .awb-info-table td.colon, #awbBuyer { display: table-cell; vertical-align: middle !important; }
+    .awb-info-table .lbl { font-weight: 600; width: 100px; }
     .awb-info-table .colon { width: 12px; text-align: center; }
     .awb-info-table .val { word-break: break-all; }
 
@@ -278,46 +254,12 @@
       break-inside: avoid;
       page-break-inside: avoid;
     }
-    .awb-product-left {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .awb-product-title {
-      font-size: 11.5px;
-      font-weight: 800;
-      color: #000;
-      line-height: 1.25;
-      display: flex;
-      align-items: flex-start;
-      gap: 4px;
-    }
-
-    .awb-product-sub {
-      font-size: 12px;
-      color: #404854;
-      font-weight: 650;
-      margin-left: 19px;
-    }
-
-    .awb-product-qty {
-      font-weight: 800;
-      color: #374151;
-      border: 1px dotted #5f6b7c;
-      padding: 9px 9px;
-      line-height: 1.2;
-      white-space: nowrap;
-    }
-    #awbBuyer {
-      font-size: 15.5px;
-      font-weight: 600;
-      margin: 0;
-      padding: 0;
-    }
+    .awb-product-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .awb-product-title { font-size: 11.5px; font-weight: 800; color: #000; line-height: 1.25; display: flex; align-items: flex-start; gap: 4px; }
+    .awb-product-sub { font-size: 12px; color: #404854; font-weight: 650; margin-left: 19px; }
+    .awb-product-qty { font-weight: 800; color: #374151; border: 1px dotted #5f6b7c; padding: 9px 9px; line-height: 1.2; white-space: nowrap; }
+    #awbBuyer { font-size: 15.5px; font-weight: 600; margin: 0; padding: 0; }
     
-    /* 页脚放置在卡片底部 */
     .awb-footer { 
       margin-top: auto; 
       padding-top: 8px; 
@@ -336,81 +278,26 @@
     .modal-close { cursor: pointer; font-size: 18px; font-weight: bold; color: #9ca3af; }
     .modal-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11.5px; margin-bottom: 10px; }
 
-    .channel-list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 10px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      margin-bottom: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .channel-list-item:hover {
-      background: #fdf2f8;
-      border-color: var(--primary);
-    }
-    .btn-item-del {
-      color: #ef4444;
-      font-size: 11px;
-      border: none;
-      background: none;
-      cursor: pointer;
-    }
+    .channel-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
+    .channel-list-item:hover { background: #fdf2f8; border-color: var(--primary); }
+    .btn-item-del { color: #ef4444; font-size: 11px; border: none; background: none; cursor: pointer; }
 
-    .setting-option {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-    .setting-option:hover {
-      border-color: var(--primary);
-      background-color: #fdf2f8;
-    }
-    .setting-option input[type="radio"] {
-      margin-right: 10px;
-      accent-color: var(--primary);
-    }
-    .setting-label {
-      font-size: 12px;
-      font-weight: bold;
-      color: #1f2937;
-    }
-    .setting-desc {
-      font-size: 11px;
-      color: #6b7280;
-      margin-left: auto;
-    }
+    .setting-option { display: flex; align-items: center; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
+    .setting-option:hover { border-color: var(--primary); background-color: #fdf2f8; }
+    .setting-option input[type="radio"] { margin-right: 10px; accent-color: var(--primary); }
+    .setting-label { font-size: 12px; font-weight: bold; color: #1f2937; }
+    .setting-desc { font-size: 11px; color: #6b7280; margin-left: auto; }
 
     /* Google 翻译兼容样式 */
     .goog-te-banner-frame.skiptranslate { display: none !important; }
     body { top: 0px !important; }
-    .goog-te-gadget-simple {
-      background-color: #fff !important;
-      border: 1px solid var(--border-color) !important;
-      padding: 2px 5px !important;
-      border-radius: 5px !important;
-      font-size: 11px !important;
-      cursor: pointer;
-    }
+    .goog-te-gadget-simple { background-color: #fff !important; border: 1px solid var(--border-color) !important; padding: 2px 5px !important; border-radius: 5px !important; font-size: 11px !important; cursor: pointer; }
     .goog-te-gadget-icon { display: none !important; }
 
-    /* ⚡ 关键打印优化：强制页脚落到底部，多页时居于最后一页底部 */
+    /* 打印优化：隐去左右控制面板，只保留 AWB 预览 */
     @media print {
-      html, body { 
-        width: 100% !important; 
-        height: 100% !important; 
-        margin: 0 !important; 
-        padding: 0 !important; 
-        background: white !important; 
-      }
-      .control-panel, .modal-overlay { display: none !important; }
+      html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+      .left-panel, .middle-panel, .modal-overlay { display: none !important; }
       .app-container { display: block !important; margin: 0 !important; width: 100% !important; height: 100% !important; }
       .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; min-height: 100vh !important; }
       
@@ -425,22 +312,9 @@
         box-sizing: border-box !important;
       }
       
-      .awb-main-content {
-        flex: 1 0 auto !important;
-      }
-
-      .awb-product-box, .awb-divider-dashed, .awb-note-section {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-      }
-
-      .awb-footer { 
-        margin-top: auto !important; 
-        padding-top: 10px !important; 
-        padding-bottom: 5px !important;
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-      }
+      .awb-main-content { flex: 1 0 auto !important; }
+      .awb-product-box, .awb-divider-dashed, .awb-note-section { break-inside: avoid !important; page-break-inside: avoid !important; }
+      .awb-footer { margin-top: auto !important; padding-top: 10px !important; padding-bottom: 5px !important; break-inside: avoid !important; page-break-inside: avoid !important; }
     }
   </style>
 
@@ -451,13 +325,67 @@
 <body>
 
   <div class="app-container">
-    <!-- 左侧控制台 -->
-    <div class="control-panel">
+    
+    <!-- ⚡ 1. 左侧：基本订单信息面板 -->
+    <div class="panel-card left-panel">
       <div class="panel-header">
         <div class="panel-title">
           <span>📦 COD 面单录入</span>
-          <!-- Google 翻译挂载节点 -->
           <div id="google_translate_element"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>USER NAME (买家名)</label>
+        <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e" oninput="renderAWB()">
+      </div>
+
+      <div class="form-group">
+        <label>ORDER ID (订单号)</label>
+        <input type="text" id="orderInput" class="form-control" value="261014HN714REB" oninput="renderAWB()">
+      </div>
+
+      <div class="form-group">
+        <label>SHIPP CHANNEL</label>
+        <div class="input-gear-group">
+          <input type="text" id="channelInput" class="form-control" value="COD" oninput="renderAWB()">
+          <button class="btn-gear" onclick="openChannelModal()" title="选择或管理自定义物流渠道">⚙️</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>STORE (店铺)</label>
+        <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee" oninput="renderAWB()">
+      </div>
+
+      <div class="form-group">
+        <label>BUYER MESSAGE</label>
+        <div class="input-msg-group">
+          <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
+          <label class="check-msg-label" title="请确认已打开 Shopee 订单详情页核对是否有买家留言">
+            <input type="checkbox" id="checkMsgBox"> 核对
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>INTERNAL NOTE</label>
+        <input type="text" id="noteInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
+      </div>
+
+      <button class="btn-primary" onclick="renderAWB()">🔄 更新面单预览</button>
+      
+      <div class="print-btn-group">
+        <button class="btn-print" id="btnPrint" onclick="triggerPrint()">🖨️ 打印面单 AWB</button>
+        <button class="btn-settings" onclick="openSettingsModal()">⚙️ 设置</button>
+      </div>
+    </div>
+
+    <!-- ⚡ 2. 中间：移动后的商品清单 Product List -->
+    <div class="panel-card middle-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🛍️ 商品清单 Product List</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <span id="syncBadge" class="sync-badge">🔄 正在同步表格分类...</span>
@@ -465,63 +393,14 @@
         </div>
       </div>
 
-      <div class="form-grid-2col">
-        <div class="form-group">
-          <label>USER NAME (买家名)</label>
-          <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e" oninput="renderAWB()">
-        </div>
-        <div class="form-group">
-          <label>ORDER ID (订单号)</label>
-          <input type="text" id="orderInput" class="form-control" value="261014HN714REB" oninput="renderAWB()">
-        </div>
-
-        <div class="form-group">
-          <label>SHIPP CHANNEL</label>
-          <div class="input-gear-group">
-            <input type="text" id="channelInput" class="form-control" value="COD" oninput="renderAWB()">
-            <button class="btn-gear" onclick="openChannelModal()" title="选择或管理自定义物流渠道">⚙️</button>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>STORE (店铺)</label>
-          <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee" oninput="renderAWB()">
-        </div>
-
-        <div class="form-group">
-          <label>BUYER MESSAGE</label>
-          <div class="input-msg-group">
-            <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
-            <label class="check-msg-label" title="请确认已打开 Shopee 订单详情页核对是否有买家留言">
-              <input type="checkbox" id="checkMsgBox"> 核对
-            </label>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>INTERNAL NOTE</label>
-          <input type="text" id="noteInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
-        </div>
+      <div id="productContainer">
+        <!-- 动态生成商品行 -->
       </div>
-
-      <!-- 商品清单动态选择区 -->
-      <div class="form-group" style="margin-bottom: 6px;">
-        <label>商品清单 Product List</label>
-        <div id="productContainer">
-          <!-- 动态生成 -->
-        </div>
-        <button class="btn-add" onclick="addProductRow()">+ 增加商品行</button>
-      </div>
-
-      <button class="btn-primary" onclick="renderAWB()">🔄 更新面单预览</button>
       
-      <div class="print-btn-group">
-        <button class="btn-print" id="btnPrint" onclick="triggerPrint()">🖨️ 打印面单 AWB</button>
-        <button class="btn-settings" onclick="openSettingsModal()">⚙️ 打印设置</button>
-      </div>
+      <button class="btn-add" onclick="addProductRow()">+ 增加商品行</button>
     </div>
 
-    <!-- 右侧 AWB 预览 -->
+    <!-- ⚡ 3. 右侧：面单预览 -->
     <div class="preview-panel">
       <div class="awb-card" id="awbCard">
         <div class="awb-main-content">
@@ -561,6 +440,7 @@
         </div>
       </div>
     </div>
+
   </div>
 
   <!-- 选择表格商品/变体弹窗 Modal -->
@@ -570,7 +450,7 @@
         <span class="modal-title">🏷️ 选择表格分类与规格变体</span>
         <span class="modal-close" onclick="closeCatalogModal()">&times;</span>
       </div>
-      <p style="font-size:11px; color:#6b7280; margin:0 0 10px 0;">请从表格目录中选择要填入的主分类和变体：</p>
+      <p style="font-size:11px; color:#6b7280; margin:0 0 10px 0;">请从表格目录中选择要填入的主分类、变体及数量：</p>
       
       <div class="form-group" style="margin-bottom:8px;">
         <label>1. 选择商品主分类</label>
@@ -579,10 +459,17 @@
         </select>
       </div>
 
-      <div class="form-group" style="margin-bottom:14px;">
+      <div class="form-group" style="margin-bottom:8px;">
         <label>2. 选择规格变体 (Variation)</label>
         <select id="modalVarSelect" class="form-control">
           <option value="">-- 请选择规格变体 --</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>3. 选择数量 (Quantity)</label>
+        <select id="modalQtySelect" class="form-control prod-qty-select">
+          <!-- 动态加载 -->
         </select>
       </div>
 
@@ -894,6 +781,7 @@
       activeRowIdForCatalog = rowId;
       const catSelect = document.getElementById('modalCatSelect');
       const varSelect = document.getElementById('modalVarSelect');
+      const qtySelect = document.getElementById('modalQtySelect');
 
       let optionsHTML = `<option value="">-- 请选择主分类 --</option>`;
       Object.keys(EXCEL_CATALOG).forEach(pName => {
@@ -901,6 +789,12 @@
       });
       catSelect.innerHTML = optionsHTML;
       varSelect.innerHTML = `<option value="">-- 请选择规格变体 --</option>`;
+
+      let qtyHTML = '';
+      EXCEL_QUANTITIES.forEach(q => {
+        qtyHTML += `<option value="${q}">${q}</option>`;
+      });
+      qtySelect.innerHTML = qtyHTML;
 
       const rowElem = document.getElementById(rowId);
       if (rowElem) {
@@ -910,6 +804,13 @@
           onModalCatChange(currentTitle);
           const currentVar = rowElem.querySelector('.prod-var').value.trim();
           if (currentVar) varSelect.value = currentVar;
+        }
+
+        const currentQtySelect = rowElem.querySelector('.prod-qty-select').value;
+        const currentQtyCustom = rowElem.querySelector('.prod-qty-custom').value.trim();
+        const currentQty = (currentQtySelect === 'CUSTOM' ? currentQtyCustom : currentQtySelect) || 'x1';
+        if (EXCEL_QUANTITIES.includes(currentQty)) {
+          qtySelect.value = currentQty;
         }
       }
 
@@ -937,12 +838,20 @@
       if (rowElem) {
         const selectedCat = document.getElementById('modalCatSelect').value;
         const selectedVar = document.getElementById('modalVarSelect').value;
+        const selectedQty = document.getElementById('modalQtySelect').value;
 
         if (selectedCat) {
           rowElem.querySelector('.prod-title').value = selectedCat;
         }
         if (selectedVar) {
           rowElem.querySelector('.prod-var').value = selectedVar;
+        }
+        if (selectedQty) {
+          const qtySelectElem = rowElem.querySelector('.prod-qty-select');
+          const qtyCustomElem = rowElem.querySelector('.prod-qty-custom');
+          qtySelectElem.value = selectedQty;
+          qtyCustomElem.style.display = 'none';
+          qtyCustomElem.value = selectedQty;
         }
         renderAWB();
       }
