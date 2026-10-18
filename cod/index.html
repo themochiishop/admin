@@ -3,800 +3,594 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Mochii Shop - COD 面单打印系统 (绝对底端页脚版)</title>
-  <!-- Barcode 条形码生成库 -->
+  <title>COD 面单打印系统 - The Mochii Shop</title>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background-color: #262626;
-      color: #333;
+    :root {
+      --primary: #ec4899;
+      --primary-hover: #db2777;
+      --bg-color: #fce7f3;
+      --border-color: #fbcfe8;
+      --card-bg: #ffffff;
+      --text-main: #374151;
     }
 
-    /* 顶部导航控制栏 */
-    .top-header {
-      background: #18181b;
-      color: #fff;
-      padding: 10px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 3px solid #ec4899;
-    }
-    .brand-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 1.05rem;
-      font-weight: 700;
-    }
-    .brand-logo-mini {
-      height: 36px;
-      width: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #ec4899;
-      background-color: #fff;
-    }
-    .btn-back {
-      color: #f472b6;
-      text-decoration: none;
-      font-size: 0.85rem;
-      border: 1px solid #f472b6;
-      padding: 5px 12px;
-      border-radius: 20px;
-      transition: all 0.2s;
-      font-weight: 600;
-    }
-    .btn-back:hover { background: #ec4899; color: #fff; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-main); }
 
-    /* 主架构 */
-    .main-container {
-      max-width: 1440px;
-      margin: 16px auto;
-      padding: 0 16px;
-      display: grid;
-      grid-template-columns: 660px 1fr;
+    .app-container {
+      display: flex;
       gap: 20px;
+      max-width: 1280px;
+      margin: 0 auto;
     }
 
-    /* 左侧录入卡片 */
-    .form-card {
-      background: #ffffff;
-      padding: 18px 20px;
+    /* 左侧控制台 */
+    .control-panel {
+      flex: 1;
+      background: var(--card-bg);
+      padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      height: fit-content;
-    }
-    .form-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 12px;
-      padding-bottom: 6px;
-      border-bottom: 2px solid #f472b6;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .form-split-grid {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 16px;
-      align-items: start;
-    }
-
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 3px; }
-    .form-control, .form-select {
-      width: 100%;
-      padding: 7px 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font-size: 0.85rem;
-    }
-    .form-control:focus, .form-select:focus {
-      outline: none;
-      border-color: #ec4899;
-      box-shadow: 0 0 0 3px rgba(236,72,153,0.15);
-    }
-
-    .dynamic-section {
-      background: #fcf4f9;
-      border: 1px solid #fbcfe8;
-      border-radius: 8px;
-      padding: 10px;
-      max-height: 400px;
+      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.1);
+      border: 1px solid var(--border-color);
+      max-height: 90vh;
       overflow-y: auto;
     }
 
-    .item-card {
-      background: #ffffff;
-      border: 1px solid #f472b6;
-      border-radius: 6px;
-      padding: 8px;
-      margin-bottom: 8px;
-      box-shadow: 0 2px 4px rgba(236,72,153,0.05);
-    }
-    .item-card-header { 
-      display: flex; 
-      justify-content: space-between; 
-      font-size: 0.75rem; 
-      font-weight: 700; 
-      color: #db2777; 
-      margin-bottom: 4px; 
-    }
-    .btn-remove-item { color: #ef4444; cursor: pointer; }
-    
-    .item-row-grid { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr 60px; 
-      gap: 5px; 
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--bg-color);
     }
 
-    .btn-add-item {
-      background: #fce7f3;
-      color: #db2777;
-      border: 1px dashed #f472b6;
+    .panel-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    .btn-quick-paste {
+      background-color: #8b5cf6;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-quick-paste:hover { background-color: #7c3aed; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-main); }
+    .form-control {
       width: 100%;
-      padding: 7px;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .form-control:focus { border-color: var(--primary); }
+
+    .product-row {
+      background-color: #fff5f8;
+      border: 1px dashed var(--border-color);
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .product-row-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; font-weight: bold; color: var(--primary); }
+    .btn-remove { color: #ef4444; cursor: pointer; border: none; background: none; font-size: 12px; }
+
+    .btn-add {
+      width: 100%;
+      padding: 6px;
+      background: #fdf2f8;
+      border: 1px dashed var(--primary);
+      color: var(--primary);
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.82rem;
-      font-weight: 700;
-      margin-top: 4px;
-      transition: background 0.2s;
+      font-weight: bold;
+      margin-bottom: 12px;
     }
-    .btn-add-item:hover { background: #fbcfe8; }
 
-    .btn-action-group { 
-      display: flex; 
-      gap: 10px; 
-      margin-top: 14px; 
-      padding-top: 12px;
-      border-top: 1px solid #e2e8f0;
-    }
     .btn-primary {
-      flex: 1;
-      background: #ec4899;
-      color: #fff;
-      border: none;
+      width: 100%;
       padding: 10px;
-      border-radius: 8px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(236,72,153,0.3);
-      font-size: 0.9rem;
-    }
-    .btn-primary:hover { background: #db2777; }
-
-    .btn-copy {
-      background: #2563eb;
-      color: #fff;
+      background-color: var(--primary);
+      color: white;
       border: none;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-weight: 600;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
       cursor: pointer;
-      font-size: 0.85rem;
+      margin-top: 5px;
     }
 
-    /* 右侧 A4 预览区 */
-    .preview-card {
+    /* 右侧面单预览（100% 还原你原本截图的设计与尺寸） */
+    .preview-panel {
+      width: 440px;
+      background: #2b2b2b;
+      padding: 20px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .awb-card {
+      width: 100%;
+      background: #ffffff;
+      padding: 20px 22px 15px 22px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
       display: flex;
       flex-direction: column;
-      align-items: center;
-    }
-    .preview-actions {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      position: relative;
-    }
-    
-    .print-button-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      position: relative;
-    }
-    .btn-settings {
-      background: #3f3f46;
-      color: #fff;
-      border: 1px solid #52525b;
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 1.1rem;
-      transition: all 0.2s;
-    }
-    .btn-settings:hover { background: #52525b; border-color: #ec4899; }
-
-    .settings-popover {
-      display: none;
-      position: absolute;
-      top: 44px;
-      right: 0;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      padding: 12px;
-      width: 260px;
-      z-index: 100;
-    }
-    .settings-popover.active { display: block; }
-    .popover-title {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 8px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .popover-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.82rem;
-      padding: 6px;
-      cursor: pointer;
-      border-radius: 4px;
-      color: #334155;
-    }
-    .popover-option:hover { background: #fdf2f8; color: #db2777; }
-
-    .btn-print {
-      background: #16a34a;
-      color: #fff;
-      border: none;
-      padding: 8px 18px;
-      height: 38px;
-      border-radius: 8px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(22,163,74,0.3);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* ========================================== */
-    /* 🎯 绝对定位 (Absolute) 压紧底端页脚样式   */
-    /* ========================================== */
-    .awb-paper {
-      width: 100%;
-      max-width: 480px;
-      background: #ffffff;
-      padding: 12px 18px 45px 18px; /* 底部预留 45px 给绝对定位页脚 */
-      box-shadow: 0 12px 35px rgba(0,0,0,0.45);
-      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-      color: #000;
+      min-height: 560px;
       box-sizing: border-box;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-      position: relative; /* 为绝对定位页脚做基准容器 */
     }
 
-    /* 页眉 */
-    .awb-header-official {
+    /* AWB 顶部 Logo 与 Order List 标题 */
+    .awb-header {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
-      border-bottom: 1.5px solid #000;
-      padding-bottom: 4px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
-    .awb-brand-box {
+    .awb-logo-group {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
-    .awb-logo-img {
-      width: 60px;
-      height: 42px;
+    .awb-logo {
+      width: 40px;
+      height: 40px;
       object-fit: contain;
-      border-radius: 50%;
     }
-    .awb-page-title {
-      padding-left: 10px;
-      font-size: 1.2rem;
-      font-weight: 900;
-      font-family: Georgia, "Times New Roman", serif;
-      letter-spacing: 0.3px;
+    .awb-title {
+      font-family: "Georgia", "Times New Roman", serif;
+      font-size: 26px;
+      font-weight: bold;
       color: #000;
+      letter-spacing: 0.5px;
     }
-    
-    .awb-top-barcode {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-    }
-    .awb-top-barcode svg {
-      height: 30px;
-      max-width: 130px;
+    #barcode {
+      width: 130px;
+      height: 38px;
     }
 
-    /* 表格化网格布局 */
-    .awb-meta-grid {
-      display: grid;
-      grid-template-columns: 95px 10px 1fr;
-      row-gap: 2px;
-      align-items: center;
-      font-size: 0.78rem;
-      margin-bottom: 2px;
+    .awb-divider-thick {
+      border-top: 2px solid #000;
+      margin-bottom: 12px;
     }
-    .awb-meta-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #444;
-      text-transform: uppercase;
+
+    /* AWB 字段表达与对齐（USER NAME, ORDER ID, SHIPP CHANNEL, STORE） */
+    .awb-info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+    .awb-info-table td {
+      padding: 3px 0;
+      font-size: 13px;
+      font-weight: 800;
+      color: #000;
+      vertical-align: top;
+      font-family: Arial, sans-serif;
+    }
+    .awb-info-table .lbl {
+      width: 110px;
       letter-spacing: 0.2px;
     }
-    .awb-meta-colon { font-weight: bold; text-align: center; }
-    .awb-meta-value { font-weight: 800; color: #000; word-break: break-all; }
-
-    .awb-divider-line {
-      border-top: 1px dashed #888;
-      margin: 5px 0;
+    .awb-info-table .colon {
+      width: 15px;
+      text-align: center;
+    }
+    .awb-info-table .val {
+      word-break: break-all;
     }
 
-    /* 商品项目块 */
-    .awb-products-container {
-      margin-top: 2px;
+    .awb-divider-dashed {
+      border-top: 1px dashed #777;
+      margin: 8px 0 12px 0;
     }
-    .awb-product-card {
+
+    /* 商品列表样式（带 📦 框） */
+    .awb-product-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      padding: 4px 6px;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .awb-product-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #000;
+      line-height: 1.3;
       margin-bottom: 4px;
     }
-    .awb-product-card:last-child { margin-bottom: 0; }
-    
-    .awb-prod-header {
-      font-weight: 800;
-      font-size: 0.78rem;
-      color: #0f172a;
-      margin-bottom: 2px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .awb-var-flex {
+    .awb-product-sub {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #334155;
-      padding-left: 8px;
+      font-size: 12px;
+      color: #475569;
+      font-weight: 600;
+    }
+    .awb-product-qty {
+      font-size: 14px;
+      font-weight: 900;
+      color: #0f172a;
     }
 
- /* 引入官方热敏打印机/物流面单专用等宽字体 */
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
-
-/* 🎯 官方热敏打印机机打点阵字体与淡灰色页脚 */
-.awb-official-footer {
-  position: absolute;
-  bottom: 8px; /* 强行贴紧底端 */
-  left: 18px;
-  right: 18px;
-  border-top: 1px dashed #e5e5e5;
-  padding-top: 4px;
-  text-align: center;
-}
-
-.awb-footer-line1, .awb-footer-line2 {
-  font-family: 'Roboto Mono', 'Courier New', Courier, monospace !important; /* 真正的热敏纸机打字体 */
-  font-size: 0.62rem;
-  color: #aaaaaa; /* 调整为更淡的打印机灰色 */
-  letter-spacing: 0.2px;
-  font-weight: 500;
-  line-height: 1.3;
-  text-align: center;
-  text-transform: capitalize; /* 强制首字母大写，其余小写 */
-}
-
-    /* 格式 1: AWB 热敏纸 (100mm x 150mm) 预览高 */
-    body.format-awb .awb-paper {
-      width: 100mm;
-      height: 148mm; /* 固定为 148mm 保证页脚精准钉在底边 */
-    }
-    
-    /* 格式 2: 标准 A4 纸格式 */
-    body.format-a4 .awb-paper {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 12mm 15mm 20mm 15mm;
+    /* 留言与备注 */
+    .awb-note-section {
+      margin-top: 6px;
     }
 
-    /* 打印媒体控制 */
+    /* 页脚机打字体与淡灰色 */
+    .awb-footer {
+      text-align: center;
+      margin-top: 25px;
+      padding-top: 8px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    .awb-footer-text {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+      line-height: 1.4;
+      text-transform: capitalize;
+    }
+
+    /* 弹窗 Modal 样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      width: 480px;
+      max-width: 90%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .modal-title { font-size: 15px; font-weight: bold; color: #111827; }
+    .modal-close { cursor: pointer; font-size: 20px; font-weight: bold; color: #9ca3af; }
+    .modal-textarea {
+      width: 100%;
+      height: 170px;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+      resize: vertical;
+      margin-bottom: 12px;
+    }
+
     @media print {
-      @page {
-        margin: 0 !important;
-        size: auto;
-      }
-      body { background: #fff; }
-      body * { visibility: hidden; }
-      .awb-paper, .awb-paper * { visibility: visible; }
-      .awb-paper {
-        position: absolute;
-        left: 0;
-        top: 0;
-        box-shadow: none;
-        border: none;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-      }
-      body.format-awb .awb-paper {
-        width: 100mm !important;
-        height: 148mm !important;
-        padding: 6mm 6mm 14mm 6mm !important;
-      }
-      body.format-awb .awb-official-footer {
-        bottom: 4mm !important;
-        left: 6mm !important;
-        right: 6mm !important;
-      }
-      .top-header, .form-card, .preview-actions { display: none !important; }
+      body { background: white; padding: 0; }
+      .control-panel, .modal-overlay { display: none !important; }
+      .app-container { display: block; margin: 0; }
+      .preview-panel { width: 100%; background: white; padding: 0; }
+      .awb-card { border: none; box-shadow: none; width: 100%; padding: 0; }
     }
   </style>
 </head>
-<body class="format-awb">
+<body>
 
-  <!-- 顶栏 -->
-  <div class="top-header">
-    <div class="brand-title">
-      <img src="/logo.jpg" class="brand-logo-mini" alt="Mochii Logo">
-      <span>The Mochii Shop — COD Express System</span>
+  <div class="app-container">
+    <!-- 左侧：录入控制台 -->
+    <div class="control-panel">
+      <div class="panel-header">
+        <div class="panel-title">📦 COD 面单录入</div>
+        <button class="btn-quick-paste" onclick="openPasteModal()">📋 快捷粘贴抓取</button>
+      </div>
+
+      <div class="form-group">
+        <label>USER NAME (买家名)</label>
+        <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e">
+      </div>
+
+      <div class="form-group">
+        <label>ORDER ID (订单号)</label>
+        <input type="text" id="orderInput" class="form-control" value="261014HN714REB">
+      </div>
+
+      <div class="form-group">
+        <label>SHIPP CHANNEL</label>
+        <input type="text" id="channelInput" class="form-control" value="COD">
+      </div>
+
+      <div class="form-group">
+        <label>STORE (店铺)</label>
+        <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee">
+      </div>
+
+      <div class="form-group">
+        <label>BUYER MESSAGE</label>
+        <input type="text" id="msgInput" class="form-control" value="-">
+      </div>
+
+      <div class="form-group">
+        <label>INTERNAL NOTE</label>
+        <input type="text" id="noteInput" class="form-control" value="-">
+      </div>
+
+      <div class="form-group">
+        <label>商品清单 Product List</label>
+        <div id="productContainer">
+          <div class="product-row">
+            <div class="product-row-header">
+              <span>商品 #1</span>
+            </div>
+            <input type="text" class="form-control prod-title" value="[Live Play] Handmade Gelang Tangan" style="margin-bottom:4px;">
+            <input type="text" class="form-control prod-var" value="Premium-10" style="margin-bottom:4px;" placeholder="Variation">
+            <input type="text" class="form-control prod-qty" value="x1" placeholder="Quantity">
+          </div>
+          <div class="product-row">
+            <div class="product-row-header">
+              <span>商品 #2</span>
+              <button class="btn-remove" onclick="this.parentElement.parentElement.remove()">删除</button>
+            </div>
+            <input type="text" class="form-control prod-title" value="[NOT FOR SALE] Free Gift Zone" style="margin-bottom:4px;">
+            <input type="text" class="form-control prod-var" value="Premium Pro-Max" style="margin-bottom:4px;" placeholder="Variation">
+            <input type="text" class="form-control prod-qty" value="x1" placeholder="Quantity">
+          </div>
+        </div>
+        <button class="btn-add" onclick="addProductRow()">+ 增加商品行</button>
+      </div>
+
+      <button class="btn-primary" onclick="renderAWB()">🔄 更新面单预览</button>
+      <button class="btn-primary" onclick="window.print()" style="background-color: #10b981; margin-top: 8px;">🖨️ 打印面单 AWB</button>
     </div>
-    <a href="../" class="btn-back">⬅️ 返回管理控制台</a>
+
+    <!-- 右侧：AWB 预览（完全忠于你截图的样式与排版） -->
+    <div class="preview-panel">
+      <div class="awb-card" id="awbCard">
+        <div>
+          <!-- 页眉：Logo + Order List 标题 + 条形码 -->
+          <div class="awb-header">
+            <div class="awb-logo-group">
+              <img src="../logo.jpg" alt="Logo" class="awb-logo" onerror="this.src='https://via.placeholder.com/40?text=Mochii'">
+              <span class="awb-title">Order List</span>
+            </div>
+            <svg id="barcode"></svg>
+          </div>
+
+          <div class="awb-divider-thick"></div>
+
+          <!-- 订单基本信息 -->
+          <table class="awb-info-table">
+            <tr>
+              <td class="lbl">USER NAME</td>
+              <td class="colon">:</td>
+              <td class="val" id="awbBuyer">ssvo10dp9e</td>
+            </tr>
+            <tr>
+              <td class="lbl">ORDER ID</td>
+              <td class="colon">:</td>
+              <td class="val" id="awbOrder">261014HN714REB</td>
+            </tr>
+            <tr>
+              <td class="lbl">SHIPP CHANNEL</td>
+              <td class="colon">:</td>
+              <td class="val" id="awbChannel">COD</td>
+            </tr>
+            <tr>
+              <td class="lbl">STORE</td>
+              <td class="colon">:</td>
+              <td class="val" id="awbStore">The MoChii Shop@Shopee</td>
+            </tr>
+          </table>
+
+          <div class="awb-divider-dashed"></div>
+
+          <!-- 商品列表区 -->
+          <div id="awbProducts">
+            <!-- 动态生成 -->
+          </div>
+
+          <div class="awb-divider-dashed"></div>
+
+          <!-- 留言与备注区 -->
+          <table class="awb-info-table awb-note-section">
+            <tr>
+              <td class="lbl">BUYER MESSAGE</td>
+              <td class="colon">:</td>
+              <td class="val" id="awbMsg">-</td>
+            </tr>
+            <tr>
+              <td class="lbl">INTERNAL NOTE</td>
+              <td class="colon">:</td>
+              <td class="val" id="awbNote">-</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- 强制两排居中微灰页脚 -->
+        <div class="awb-footer">
+          <div class="awb-footer-text">Generated By The Mochii Shop System</div>
+          <div class="awb-footer-text" id="awbTimestamp">18/10/2026 17:46</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="main-container">
-    
-    <!-- 左侧表单录入台 -->
-    <div class="form-card">
-      <div class="form-title">
-        <span>📝 订单高效处理录入台</span>
-        <span style="font-size:0.75rem; color:#ec4899; font-weight:normal;">⚡ 绝对底端页脚版</span>
+  <!-- 快捷粘贴弹窗 -->
+  <div class="modal-overlay" id="pasteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">📋 粘贴 Shopee 订单文本</span>
+        <span class="modal-close" onclick="closePasteModal()">&times;</span>
       </div>
-      
-      <div class="form-split-grid">
-        
-        <!-- 左侧基础信息 -->
-        <div class="static-section">
-          <div class="form-group">
-            <label>User Name / 买家姓名</label>
-            <input type="text" id="inputUsername" class="form-control" value="ssvo10dp9e">
-          </div>
-
-          <div class="form-group">
-            <label>Order ID / 订单号</label>
-            <input type="text" id="inputOrderId" class="form-control" value="261014HN714REB">
-          </div>
-
-          <div class="form-group">
-            <label>Shipp Channel / 运输渠道</label>
-            <select id="inputChannel" class="form-select">
-              <option value="COD" selected>COD</option>
-              <option value="Cash Payment at Physical Stores">Cash Payment at Physical Stores</option>
-              <option value="Dispatched By System(Virtual Goods)">Dispatched By System(Virtual Goods)</option>
-              <option value="Own Fleet (SPX)">Own Fleet (SPX)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Store / 店铺名称</label>
-            <input type="text" id="inputStore" class="form-control" value="The MoChii Shop@Shopee">
-          </div>
-
-          <div class="form-group">
-            <label>Buyer Message / 买家留言</label>
-            <input type="text" id="inputBuyerMsg" class="form-control" placeholder="留空不显示">
-          </div>
-
-          <div class="form-group">
-            <label>Internal note / 内部备注</label>
-            <input type="text" id="inputInternalNote" class="form-control" placeholder="留空不显示">
-          </div>
-        </div>
-
-        <!-- 右侧商品变体独立区域 -->
-        <div>
-          <div style="font-size: 0.78rem; font-weight: 700; color: #db2777; margin-bottom: 5px;">
-            🛍️ 选购商品/变体 (独立滚动)
-          </div>
-          <div class="dynamic-section">
-            <div id="itemsContainer"></div>
-            <button class="btn-add-item" onclick="addItemCard()">+ 添加商品/变体项</button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- 操作按钮 -->
-      <div class="btn-action-group">
-        <button class="btn-primary" onclick="generateAWB()">⚡ 立即更新面单预览</button>
-        <button class="btn-copy" onclick="copyWheelFormat()">📋 复制抽奖格式</button>
+      <p style="font-size:12px; color:#6b7280; margin:0 0 10px 0;">在 Shopee 订单页面全选/复制内容后粘贴在下方：</p>
+      <textarea id="pasteTextarea" class="modal-textarea" placeholder="在此按下 Ctrl+V 粘贴文本..."></textarea>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button onclick="closePasteModal()" style="padding:6px 12px; border:1px solid #ccc; background:#fff; border-radius:6px; cursor:pointer; font-size:12px;">取消</button>
+        <button onclick="processPastedText()" style="padding:6px 12px; background:var(--primary); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">⚡ 智能解析填入</button>
       </div>
     </div>
-
-    <!-- 右侧 AWB 面单预览区 -->
-    <div class="preview-card">
-      <div class="preview-actions">
-        <span style="color:#f472b6; font-weight:700;">📄 面单实时预览 View</span>
-        
-        <div class="print-button-wrapper">
-          <button class="btn-settings" onclick="toggleSettingsPopover(event)" title="打印格式设置">⚙️</button>
-          
-          <div class="settings-popover" id="settingsPopover">
-            <div class="popover-title">⚙️ 选择打印纸张格式</div>
-            <label class="popover-option">
-              <input type="radio" name="printFormat" value="awb" checked onchange="changePrintFormat('awb')">
-              <span>AWB 热敏纸 (100mm x 150mm)</span>
-            </label>
-            <label class="popover-option">
-              <input type="radio" name="printFormat" value="a4" onchange="changePrintFormat('a4')">
-              <span>标准 A4 纸全页格式</span>
-            </label>
-          </div>
-
-          <button class="btn-print" onclick="window.print()">🖨️ 打印面单 AWB</button>
-        </div>
-      </div>
-
-      <!-- ✨ 绝对定位底端页脚 AWB 结构 -->
-      <div class="awb-paper" id="awbPaper">
-        
-        <div>
-          <!-- 页眉：Logo + Order List 标题 + 最右侧条形码 -->
-          <div class="awb-header-official">
-            <div class="awb-brand-box">
-              <img class="awb-logo-img" src="/logo.jpg" alt="Logo">
-              <div class="awb-page-title">Order List</div>
-            </div>
-            <div class="awb-top-barcode">
-              <svg id="barcode"></svg>
-            </div>
-          </div>
-
-          <!-- 规范字段网格布局 -->
-          <div class="awb-meta-grid">
-            <div class="awb-meta-label">User Name</div>
-            <div class="awb-meta-colon">:</div>
-            <div class="awb-meta-value" id="awbUserName">ssvo10dp9e</div>
-
-            <div class="awb-meta-label">Order ID</div>
-            <div class="awb-meta-colon">:</div>
-            <div class="awb-meta-value" id="awbOrderId">261014HN714REB</div>
-
-            <div class="awb-meta-label">Shipp Channel</div>
-            <div class="awb-meta-colon">:</div>
-            <div class="awb-meta-value" id="awbChannel">COD</div>
-
-            <div class="awb-meta-label">Store</div>
-            <div class="awb-meta-colon">:</div>
-            <div class="awb-meta-value" id="awbStore">The MoChii Shop@Shopee</div>
-          </div>
-
-          <div class="awb-divider-line"></div>
-
-          <!-- 动态渲染商品列表 -->
-          <div class="awb-products-container" id="awbProductsArea"></div>
-
-          <div class="awb-divider-line"></div>
-
-          <!-- 留言与备注 -->
-          <div class="awb-meta-grid" style="margin-bottom:0;">
-            <div class="awb-meta-label">Buyer Message</div>
-            <div class="awb-meta-colon">:</div>
-            <div class="awb-meta-value" id="awbBuyerMsg" style="font-weight:600; color:#444;">-</div>
-
-            <div class="awb-meta-label">Internal Note</div>
-            <div class="awb-meta-colon">:</div>
-            <div class="awb-meta-value" id="awbInternalNote" style="font-weight:600; color:#444;">-</div>
-          </div>
-        </div>
-
-    <!-- 🎯 强制双排居中淡灰色页脚 -->
-<div class="awb-official-footer">
-  <div class="awb-footer-line1">Generated by The Mochii Shop System</div>
-  <div class="awb-footer-line2" id="awbTimestamp">18/10/2026 01:42</div>
-</div>
-
-      </div>
-    </div>
-
   </div>
 
   <script>
-    const EXCEL_DATABASE = {
-      products: [
-        "[Live Play] Handmade Gelang Tangan",
-        "[NOT FOR SALE] Free Gift Zone",
-        "[Live Play] Bingo 49 Card Game",
-        "[Live Play] Ice Cube Challenge",
-        "HappyBoomBoom Game",
-        "Redeem-Redeem"
-      ],
-      variations: {
-        "[Live Play] Handmade Gelang Tangan": [
-          "Premium-10", "Premium-3", "Premium-5", "Premium Pro-Max",
-          "Kiwi", "Durian", "Nanas", "Tembikai", "Strawbery", "Pisang", "Bendi"
-        ],
-        "[NOT FOR SALE] Free Gift Zone": [
-          "Premium Pro-Max", "Random", "Keychain-1", "Cincin-1"
-        ],
-        "[Live Play] Bingo 49 Card Game": ["Bingo 49 Card Game", "Ice Cube Game"],
-        "[Live Play] Ice Cube Challenge": ["1 Game", "3 Game (Free 1)"],
-        "HappyBoomBoom Game": ["Normal-3", "Normal-5"],
-        "Redeem-Redeem": ["Redeem-Redeem"]
-      },
-      quantities: ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"]
-    };
-
-    let itemCounter = 0;
-
-    window.onload = function() {
-      addItemCard("[Live Play] Handmade Gelang Tangan", "Premium-10", "x1");
-      addItemCard("[NOT FOR SALE] Free Gift Zone", "Premium Pro-Max", "x1");
-      generateAWB();
-    };
-
-    function toggleSettingsPopover(e) {
-      e.stopPropagation();
-      const popover = document.getElementById('settingsPopover');
-      popover.classList.toggle('active');
-    }
-
-    document.addEventListener('click', function(e) {
-      const popover = document.getElementById('settingsPopover');
-      if (popover && !popover.contains(e.target)) {
-        popover.classList.remove('active');
-      }
-    });
-
-    function changePrintFormat(format) {
-      document.body.className = '';
-      if (format === 'a4') {
-        document.body.classList.add('format-a4');
-      } else {
-        document.body.classList.add('format-awb');
-      }
-    }
-
-    function addItemCard(defaultProd = "", defaultVar = "", defaultQty = "x1") {
-      itemCounter++;
-      const container = document.getElementById('itemsContainer');
-      const card = document.createElement('div');
-      card.className = 'item-card';
-      card.id = `itemCard_${itemCounter}`;
-
-      let prodOptions = EXCEL_DATABASE.products.map(p => 
-        `<option value="${p}" ${p === defaultProd ? 'selected' : ''}>${p}</option>`
-      ).join('');
-
-      let qtyOptions = EXCEL_DATABASE.quantities.map(q => 
-        `<option value="${q}" ${q === defaultQty ? 'selected' : ''}>${q}</option>`
-      ).join('');
-
-      card.innerHTML = `
-        <div class="item-card-header">
-          <span>项 #${itemCounter}</span>
-          <span class="btn-remove-item" onclick="removeItemCard(${itemCounter})">✕ 删除</span>
-        </div>
-        <div style="margin-bottom:4px;">
-          <select class="form-select select-prod" onchange="updateVariationDropdown(${itemCounter})">
-            ${prodOptions}
-          </select>
-        </div>
-        <div class="item-row-grid">
-          <select class="form-select select-var"></select>
-          <input type="text" class="form-control custom-var-input" placeholder="补充变体">
-          <select class="form-select select-qty">${qtyOptions}</select>
-        </div>
-      `;
-
-      container.appendChild(card);
-      updateVariationDropdown(itemCounter, defaultVar);
-    }
-
-    function removeItemCard(id) {
-      const card = document.getElementById(`itemCard_${id}`);
-      if (card) card.remove();
-    }
-
-    function updateVariationDropdown(id, defaultVar = "") {
-      const card = document.getElementById(`itemCard_${id}`);
-      const prodSelect = card.querySelector('.select-prod');
-      const varSelect = card.querySelector('.select-var');
-      const selectedProd = prodSelect.value;
-
-      const vars = EXCEL_DATABASE.variations[selectedProd] || ["Normal"];
-      varSelect.innerHTML = vars.map(v => 
-        `<option value="${v}" ${v === defaultVar ? 'selected' : ''}>${v}</option>`
-      ).join('');
-    }
-
-    function generateAWB() {
-      const username = document.getElementById('inputUsername').value || '';
-      const orderId = document.getElementById('inputOrderId').value || '';
-      const channel = document.getElementById('inputChannel').value;
-      const store = document.getElementById('inputStore').value || '';
-      const buyerMsg = document.getElementById('inputBuyerMsg').value || '-';
-      const internalNote = document.getElementById('inputInternalNote').value || '-';
-
-      document.getElementById('awbUserName').innerText = username;
-      document.getElementById('awbOrderId').innerText = orderId;
-      document.getElementById('awbChannel').innerText = channel;
-      document.getElementById('awbStore').innerText = store;
-      document.getElementById('awbBuyerMsg').innerText = buyerMsg;
-      document.getElementById('awbInternalNote').innerText = internalNote;
-
-      if (orderId) {
+    function updateBarcode(orderId) {
+      if(!orderId) orderId = "261014HN714REB";
+      try {
         JsBarcode("#barcode", orderId, {
           format: "CODE128",
-          width: 1.4,
-          height: 28,
+          lineColor: "#000",
+          width: 1.2,
+          height: 35,
           displayValue: false
         });
-      }
-
-      const itemCards = document.querySelectorAll('.item-card');
-      const productsArea = document.getElementById('awbProductsArea');
-      productsArea.innerHTML = '';
-
-      itemCards.forEach(card => {
-        const prodName = card.querySelector('.select-prod').value;
-        const varSelect = card.querySelector('.select-var').value;
-        const customVar = card.querySelector('.custom-var-input').value.trim();
-        const varName = customVar ? `${varSelect} ${customVar}` : varSelect;
-        const qty = card.querySelector('.select-qty').value;
-
-        const block = document.createElement('div');
-        block.className = 'awb-product-card';
-        block.innerHTML = `
-          <div class="awb-prod-header">📦 Product: ${prodName}</div>
-          <div class="awb-var-flex">
-            <span>Variation: ${varName}</span>
-            <b style="font-size:0.95rem;">${qty}</b>
-          </div>
-        `;
-        productsArea.appendChild(block);
-      });
-
-      const now = new Date();
-      const dateStr = String(now.getDate()).padStart(2, '0') + '/' +
-                      String(now.getMonth() + 1).padStart(2, '0') + '/' +
-                      now.getFullYear() + ' ' +
-                      String(now.getHours()).padStart(2, '0') + ':' +
-                      String(now.getMinutes()).padStart(2, '0');
-      document.getElementById('awbTimestamp').innerText = dateStr;
+      } catch(e) { console.log(e); }
     }
 
-    function copyWheelFormat() {
-      const username = document.getElementById('inputUsername').value.trim();
-      const orderId = document.getElementById('inputOrderId').value.trim();
-      if (!username || !orderId) {
-        alert('请先输入买家姓名和订单号！');
+    function addProductRow(title = '', variation = '', qty = 'x1') {
+      const container = document.getElementById('productContainer');
+      const count = container.children.length + 1;
+      const div = document.createElement('div');
+      div.className = 'product-row';
+      div.innerHTML = `
+        <div class="product-row-header">
+          <span>商品 #${count}</span>
+          <button class="btn-remove" onclick="this.parentElement.parentElement.remove()">删除</button>
+        </div>
+        <input type="text" class="form-control prod-title" value="${title}" style="margin-bottom:4px;" placeholder="Product Title">
+        <input type="text" class="form-control prod-var" value="${variation}" style="margin-bottom:4px;" placeholder="Variation">
+        <input type="text" class="form-control prod-qty" value="${qty}" placeholder="Quantity">
+      `;
+      container.appendChild(div);
+    }
+
+    function renderAWB() {
+      document.getElementById('awbBuyer').innerText = document.getElementById('buyerInput').value || '-';
+      const orderNo = document.getElementById('orderInput').value || '-';
+      document.getElementById('awbOrder').innerText = orderNo;
+      document.getElementById('awbChannel').innerText = document.getElementById('channelInput').value || 'COD';
+      document.getElementById('awbStore').innerText = document.getElementById('storeInput').value || 'The MoChii Shop@Shopee';
+      document.getElementById('awbMsg').innerText = document.getElementById('msgInput').value || '-';
+      document.getElementById('awbNote').innerText = document.getElementById('noteInput').value || '-';
+
+      updateBarcode(orderNo);
+
+      // 渲染商品列表
+      const prodContainer = document.getElementById('awbProducts');
+      prodContainer.innerHTML = '';
+
+      const titles = document.querySelectorAll('.prod-title');
+      const vars = document.querySelectorAll('.prod-var');
+      const qtys = document.querySelectorAll('.prod-qty');
+
+      titles.forEach((el, i) => {
+        const titleVal = el.value.trim();
+        const varVal = vars[i] ? vars[i].value.trim() : '';
+        const qtyVal = qtys[i] ? qtys[i].value.trim() : 'x1';
+
+        if(titleVal) {
+          const box = document.createElement('div');
+          box.className = 'awb-product-box';
+          box.innerHTML = `
+            <div class="awb-product-title">📦 Product: ${titleVal}</div>
+            <div class="awb-product-sub">
+              <span>Variation: ${varVal || '-'}</span>
+              <span class="awb-product-qty">${qtyVal.startsWith('x') ? qtyVal : 'x' + qtyVal}</span>
+            </div>
+          `;
+          prodContainer.appendChild(box);
+        }
+      });
+
+      // 动态时间戳 (如: 18/10/2026 17:46)
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('awbTimestamp').innerText = `${day}/${month}/${year} ${hours}:${mins}`;
+    }
+
+    function openPasteModal() {
+      document.getElementById('pasteModal').style.display = 'flex';
+      document.getElementById('pasteTextarea').value = '';
+      document.getElementById('pasteTextarea').focus();
+    }
+
+    function closePasteModal() {
+      document.getElementById('pasteModal').style.display = 'none';
+    }
+
+    function processPastedText() {
+      const rawText = document.getElementById('pasteTextarea').value;
+      if (!rawText || rawText.trim() === '') {
+        alert('请先粘贴内容！');
         return;
       }
-      const wheelText = `${username} #${orderId}`;
-      navigator.clipboard.writeText(wheelText).then(() => {
-        alert(`已复制大转盘格式:\n"${wheelText}"`);
+
+      // 1. 抓取订单号
+      const orderMatch = rawText.match(/订单编号\s*([A-Z0-9]+)/i) || rawText.match(/Order\s*SN\s*([A-Z0-9]+)/i);
+      if (orderMatch) document.getElementById('orderInput').value = orderMatch[1].trim();
+
+      // 2. 抓取买家名
+      const buyerMatch = rawText.match(/([a-zA-Z0-9_\.]+)\s*订单编号/) || rawText.match(/([a-zA-Z0-9_\.]+)\s*Order\s*SN/);
+      if (buyerMatch) document.getElementById('buyerInput').value = buyerMatch[1].trim();
+
+      // 3. 抓取商品与规格变体
+      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      let productsFound = [];
+      let currentTitle = '';
+      let currentVar = '';
+      let currentQty = 'x1';
+
+      lines.forEach(line => {
+        if (line.includes('Handmade') || line.includes('Gelang') || line.includes('[Live') || line.includes('NOT FOR SALE') || line.includes('Free Gift')) {
+          if (currentTitle) {
+            productsFound.push({ title: currentTitle, variation: currentVar, qty: currentQty });
+            currentVar = '';
+            currentQty = 'x1';
+          }
+          currentTitle = line.replace(/预购|礼品|现货/g, '').trim();
+        } else if (line.startsWith('规格:') || line.startsWith('规格：') || line.startsWith('Variation:')) {
+          currentVar = line.replace(/规格[:：]|Variation:/g, '').trim();
+        } else if (line.match(/^x\d+\$/)) {
+          currentQty = line;
+        }
       });
+
+      if (currentTitle) {
+        productsFound.push({ title: currentTitle, variation: currentVar, qty: currentQty });
+      }
+
+      if (productsFound.length > 0) {
+        const container = document.getElementById('productContainer');
+        container.innerHTML = '';
+        productsFound.forEach(p => addProductRow(p.title, p.variation, p.qty));
+      }
+
+      closePasteModal();
+      renderAWB();
     }
+
+    window.onload = function() {
+      renderAWB();
+    };
   </script>
 </body>
 </html>
