@@ -221,49 +221,16 @@
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     
-    /* ⚡ 核心修复：表格布局对齐与列宽锁定 */
-    .awb-info-table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin-bottom: 6px; 
-      table-layout: fixed; /* 锁定表格列宽，不受文字长度影响 */
-    }
-    .awb-info-table td { 
-      padding: 3px 0; 
-      font-size: 11.5px; 
-      color: #000; 
-      vertical-align: top; 
-      font-family: Arial, sans-serif; 
-    }
-    .awb-info-table .lbl { 
-      width: 135px; /* 强行统一上下两组表格的左侧列宽 */
-      min-width: 135px;
-      max-width: 135px;
-      font-weight: normal; 
-      white-space: nowrap; /* 预防文字换行挤错位 */
-    }
-    .awb-info-table .colon { 
-      width: 15px; 
-      min-width: 15px;
-      max-width: 15px;
-      text-align: center; 
-      font-weight: bold; 
-    }
-    .awb-info-table .val { 
-      word-break: break-all; 
-      font-weight: 800; 
-    }
+    /* 保持修改文字水平/加粗之前的全加粗样式 */
+    .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+    .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 800; color: #000; vertical-align: top; }
+    .awb-info-table .lbl { width: 100px; }
+    .awb-info-table .colon { width: 12px; text-align: center; }
+    .awb-info-table .val { word-break: break-all; }
 
-    .awb-divider-dashed { border-top: 1px dashed #777; margin: 8px 0; }
+    .awb-divider-dashed { border-top: 1px dashed #777; margin: 6px 0 8px 0; }
 
-    .awb-product-box { 
-      background: #f8fafc; 
-      border: 1px solid #e2e8f0; 
-      border-radius: 5px; 
-      padding: 6px 8px; 
-      margin-bottom: 6px; 
-      width: 100%;
-    }
+    .awb-product-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 8px; margin-bottom: 6px; }
     .awb-product-title { font-size: 11.5px; font-weight: 800; color: #000; line-height: 1.25; margin-bottom: 3px; }
     .awb-product-sub { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #475569; font-weight: 600; }
     .awb-product-qty { font-size: 12px; font-weight: 900; color: #0f172a; }
@@ -535,6 +502,7 @@
       "Pre-Order"
     ];
 
+    // 双重保障完整数据库
     let EXCEL_CATALOG = {
       "[Live Play] Handmade Gelang Tangan": ["Normal-3", "Normal-5", "Normal-10", "Normal-20", "Premium-3", "Premium-5", "Premium-10"],
       "Happy BoomBoom Game | Bingo 49 | Ice Cube Challenge": ["HappyBoomBoom Game", "Bingo 49 Card Game", "Ice Cube Game", "Card Game"],
