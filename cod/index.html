@@ -106,7 +106,7 @@
     }
     .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
 
-    /* ⚡ BUYER MESSAGE 输入框与右侧核对框组合样式 */
+    /* BUYER MESSAGE 输入框与右侧核对框组合样式 */
     .input-msg-group {
       display: flex;
       gap: 4px;
@@ -205,13 +205,18 @@
     .awb-card {
       width: 100%;
       background: #ffffff;
-      padding: 16px 18px 50px 18px;
+      padding: 16px 18px 16px 18px;
       border-radius: 6px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
       position: relative;
       min-height: 520px;
-      height: 100%;
+      display: flex;
+      flex-direction: column;
       box-sizing: border-box;
+    }
+
+    .awb-main-content {
+      flex: 1;
     }
 
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
@@ -311,7 +316,16 @@
       margin: 0;
       padding: 0;
     }
-    .awb-footer { position: absolute; bottom: 12px; left: 18px; right: 18px; text-align: center; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
+    
+    /* 页脚放置在卡片底部 */
+    .awb-footer { 
+      margin-top: auto; 
+      padding-top: 8px; 
+      text-align: center; 
+      border-top: 1px dashed #e2e8f0; 
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
     .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
 
     /* 弹窗 Modal 样式 */
@@ -374,7 +388,7 @@
       margin-left: auto;
     }
 
-    /* Google 翻译通用兼容样式 */
+    /* Google 翻译兼容样式 */
     .goog-te-banner-frame.skiptranslate { display: none !important; }
     body { top: 0px !important; }
     .goog-te-gadget-simple {
@@ -387,24 +401,46 @@
     }
     .goog-te-gadget-icon { display: none !important; }
 
-    /* 打印优化 */
+    /* ⚡ 关键打印优化：强制页脚落到底部，多页时居于最后一页底部 */
     @media print {
-      html, body { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; background: white !important; }
-      .control-panel, .modal-overlay { display: none !important; }
-      .app-container { display: block !important; margin: 0 !important; width: 100% !important; }
-      .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; }
-      .awb-card { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; min-height: auto !important; position: relative !important; overflow: visible !important; }
-      
-      .awb-product-box, .awb-divider-dashed {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
+      html, body { 
+        width: 100% !important; 
+        height: 100% !important; 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        background: white !important; 
       }
-      .awb-note-section, .awb-footer {
+      .control-panel, .modal-overlay { display: none !important; }
+      .app-container { display: block !important; margin: 0 !important; width: 100% !important; height: 100% !important; }
+      .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; min-height: 100vh !important; }
+      
+      .awb-card { 
+        border: none !important; 
+        box-shadow: none !important; 
+        width: 100% !important; 
+        min-height: 100vh !important; 
+        display: flex !important; 
+        flex-direction: column !important; 
+        padding: 15px !important; 
+        box-sizing: border-box !important;
+      }
+      
+      .awb-main-content {
+        flex: 1 0 auto !important;
+      }
+
+      .awb-product-box, .awb-divider-dashed, .awb-note-section {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
 
-      .awb-footer { position: relative !important; margin-top: 30px !important; bottom: auto !important; left: 0 !important; right: 0 !important; }
+      .awb-footer { 
+        margin-top: auto !important; 
+        padding-top: 10px !important; 
+        padding-bottom: 5px !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
     }
   </style>
 
@@ -452,7 +488,6 @@
           <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee" oninput="renderAWB()">
         </div>
 
-        <!-- ⚡ BUYER MESSAGE 与核对框横向布局 -->
         <div class="form-group">
           <label>BUYER MESSAGE</label>
           <div class="input-msg-group">
@@ -489,7 +524,7 @@
     <!-- 右侧 AWB 预览 -->
     <div class="preview-panel">
       <div class="awb-card" id="awbCard">
-        <div>
+        <div class="awb-main-content">
           <div class="awb-header">
             <div class="awb-logo-group">
               <img src="https://admin.themochiishop.com/logo.jpg" alt="Logo" class="awb-logo" onerror="this.src='https://via.placeholder.com/34?text=Mochii'">
