@@ -277,12 +277,23 @@
       flex-direction: column;
       gap: 2px;
     }
-    .awb-product-title {
-      font-size: 11.5px;
-      font-weight: 800;
-      color: #000;
-      line-height: 1.25;
-    }
+    /* ⚡ 优化商品标题布局：图标与文字分离，实现换行对齐 */
+.awb-product-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #000;
+  line-height: 1.25;
+  display: flex;             /* 开启 Flex 布局 */
+  align-items: flex-start;   /* 对齐顶部 */
+  gap: 4px;                  /* 图标与文字之间的间隔 */
+}
+/* 缩进 Variation，使其与 Product 的文字对齐 */
+.awb-product-sub {
+  font-size: 12px;
+  color: #404854;
+  font-weight: 650;
+  margin-left: 19px;        /* 保持左边距与上方文字对齐 */
+}
     .awb-product-sub {
       font-size: 12px;
       color: #404854;
@@ -943,7 +954,10 @@
           box.className = 'awb-product-box';
           box.innerHTML = `
             <div class="awb-product-left">
-              <div class="awb-product-title">📦 Product: ${titleVal}</div>
+              <div class="awb-product-title">
+  <span>📦</span>
+  <span>Product: ${titleVal}</span>
+</div>
               <div class="awb-product-sub">Variation: ${varVal || ''}</div>
             </div>
             <div class="awb-product-qty">${qtyVal.startsWith('x') ? qtyVal : 'x' + qtyVal}</div>
