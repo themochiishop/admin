@@ -18,9 +18,17 @@
     }
 
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    body { margin: 0; padding: 14px; background-color: var(--bg-color); color: var(--text-main); }
+    
+    /* ⚡ 1. 允许页面正常避让 Google 顶部翻译条，并添加全局边距 */
+    body { 
+      margin: 0; 
+      padding: 14px; 
+      background-color: var(--bg-color); 
+      color: var(--text-main); 
+      transition: top 0.2s ease;
+    }
 
-    /* ⚡ 调整为 3 栏弹性布局：左(订单信息) - 中(商品清单) - 右(面单预览) */
+    /* ⚡ 3 栏弹性布局：左(订单信息) - 中(商品清单) - 右(面单预览) */
     .app-container {
       display: flex;
       gap: 14px;
@@ -288,16 +296,24 @@
     .setting-label { font-size: 12px; font-weight: bold; color: #1f2937; }
     .setting-desc { font-size: 11px; color: #6b7280; margin-left: auto; }
 
-    /* Google 翻译兼容样式 */
-    .goog-te-banner-frame.skiptranslate { display: none !important; }
-    body { top: 0px !important; }
-    .goog-te-gadget-simple { background-color: #fff !important; border: 1px solid var(--border-color) !important; padding: 2px 5px !important; border-radius: 5px !important; font-size: 11px !important; cursor: pointer; }
+    /* ⚡ 2. Google 翻译组件美化与适配 */
+    .goog-te-banner-frame.skiptranslate {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+    }
+    .goog-te-gadget-simple { 
+      background-color: #fff !important; 
+      border: 1px solid var(--border-color) !important; 
+      padding: 2px 5px !important; 
+      border-radius: 5px !important; 
+      font-size: 11px !important; 
+      cursor: pointer; 
+    }
     .goog-te-gadget-icon { display: none !important; }
 
     /* 打印优化：隐去左右控制面板，只保留 AWB 预览 */
     @media print {
-      html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; }
-      .left-panel, .middle-panel, .modal-overlay { display: none !important; }
+      html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; top: 0px !important; }
+      .left-panel, .middle-panel, .modal-overlay, .goog-te-banner-frame { display: none !important; }
       .app-container { display: block !important; margin: 0 !important; width: 100% !important; height: 100% !important; }
       .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; min-height: 100vh !important; }
       
@@ -326,7 +342,7 @@
 
   <div class="app-container">
     
-    <!-- ⚡ 1. 左侧：基本订单信息面板 -->
+    <!-- 1. 左侧：基本订单信息面板 -->
     <div class="panel-card left-panel">
       <div class="panel-header">
         <div class="panel-title">
@@ -381,7 +397,7 @@
       </div>
     </div>
 
-    <!-- ⚡ 2. 中间：移动后的商品清单 Product List -->
+    <!-- 2. 中间：商品清单 Product List -->
     <div class="panel-card middle-panel">
       <div class="panel-header">
         <div class="panel-title">
@@ -400,7 +416,7 @@
       <button class="btn-add" onclick="addProductRow()">+ 增加商品行</button>
     </div>
 
-    <!-- ⚡ 3. 右侧：面单预览 -->
+    <!-- 3. 右侧：面单预览 -->
     <div class="preview-panel">
       <div class="awb-card" id="awbCard">
         <div class="awb-main-content">
