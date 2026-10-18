@@ -215,19 +215,22 @@
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .awb-logo-group { display: flex; align-items: center; gap: 8px; }
     .awb-logo {
-      margin-left: 6px;
+      margin-left: 15px;
       width: 40px;
       height: 40px;
       object-fit: contain;
     }
     .awb-title {
-      padding-left: 15px;
+      padding-left: 20px;
       font-family: "Georgia", serif;
       font-size: 20px;
       font-weight: bold;
       color: #000;
     }
-    #barcode { width: 110px; height: 32px; }
+    #barcode { 
+  width: 110px; 
+  height: 42px; /* 原为 32px，调高 10px 给下方的订单号文本留出空间 */
+}
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     
@@ -701,12 +704,21 @@
       document.getElementById('channelModal').style.display = 'none';
     }
 
-    function updateBarcode(orderId) {
-      if(!orderId) orderId = "261014HN714REB";
-      try {
-        JsBarcode("#barcode", orderId, { format: "CODE128", lineColor: "#000", width: 1.1, height: 32, displayValue: false });
-      } catch(e) { console.log(e); }
-    }
+   function updateBarcode(orderId) {
+  if(!orderId) orderId = "261014HN714REB";
+  try {
+    JsBarcode("#barcode", orderId, { 
+      format: "CODE128", 
+      lineColor: "#000", 
+      width: 1.1, 
+      height: 32, 
+      displayValue: true,    // ⚡ 改为 true，开启在条形码下方显示文本
+      fontSize: 22,          // ⚡ 设置下方文本字号
+      textMargin: 2,         // ⚡ 设置条形码与下方文字的间距
+      font: "monospace"      // ⚡ 设置文本字体
+    });
+  } catch(e) { console.log(e); }
+}
 
     function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
       const container = document.getElementById('productContainer');
