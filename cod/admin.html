@@ -103,10 +103,10 @@
     }
     .btn-cancel-item:hover { background: #6b7280; }
 
-    .btn-danger { background: #ef4444; }
+    .btn-danger { background: #ef4444; color: white; border: none; }
     .btn-danger:hover { background: #dc2626; }
 
-    .btn-sm { padding: 4px 8px; font-size: 11px; }
+    .btn-sm { padding: 4px 8px; font-size: 11px; border-radius: 5px; cursor: pointer; }
 
     /* 分类卡片区域 */
     .catalog-item {
@@ -194,7 +194,7 @@
     </div>
 
     <p style="font-size:12px; color:#6b7280; margin-bottom:15px;">
-      点击商品分类右侧的 ⚙️ 按钮可开启该分类的“上移/下移排序”与调整模式。修改完成后请点击“💾 保存并下载”，替换 GitHub 仓库里的 <code>catalog.json</code> 即可！
+      点击商品分类右侧的 ⚙️ 按钮可开启该分类的“上移/下移排序”与“删除分类”模式。修改完成后请点击“💾 保存并下载”，替换 GitHub 仓库里的 <code>catalog.json</code> 即可！
     </p>
 
     <button class="btn btn-add-main" onclick="addMainCategory()">➕ 添加新商品主分类</button>
@@ -216,8 +216,8 @@
       catalog: {}
     };
 
-    let editingCategoryIndex = null; // ⚡ 记录当前哪一行正在开启齿轮编辑模式
-    let tempCatalogBackup = null;   // ⚡ 备份数据用于“取消”功能还原
+    let editingCategoryIndex = null; // 记录当前哪一行正在开启齿轮编辑模式
+    let tempCatalogBackup = null;   // 备份数据用于“取消”功能还原
 
     // 页面加载时抓取当前的 catalog.json
     window.onload = function() {
@@ -254,18 +254,21 @@
           `;
         });
 
-        // 根据是否点击齿轮，条件渲染“上移/下移/保存/取消”控制按纽
+        // 按钮布局逻辑：默认显示 [+ 增加规格] 和 [⚙️ 排序与编辑]
+        // 开启齿轮后展开 [▲ 上移] [▼ 下移] [🗑️ 删除分类] [确定保存] [取消]
         let controlControlsHTML = '';
         if (isEditing) {
           controlControlsHTML = `
             <button class="btn-move" title="向上移动" onclick="moveCategory(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▲ 上移</button>
             <button class="btn-move" title="向下移动" onclick="moveCategory(${index}, 1)" ${index === keys.length - 1 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▼ 下移</button>
-            <button class="btn-save-item" onclick="saveCategoryEdit()">取确定保存</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteMainCategory('${mainTitle}')">🗑️ 删除分类</button>
+            <button class="btn-save-item" onclick="saveCategoryEdit()">确定保存</button>
             <button class="btn-cancel-item" onclick="cancelCategoryEdit()">取消</button>
           `;
         } else {
           controlControlsHTML = `
-            <button class="btn-gear" onclick="openCategoryEdit(${index})" title="开启排序与排序设置">⚙️ 排序与编辑</button>
+            <button class="btn btn-sm" onclick="addVar('${mainTitle}')" style="background:#8b5cf6; color:white;">+ 增加规格</button>
+            <button class="btn-gear" onclick="openCategoryEdit(${index})" title="开启排序与设置模式">⚙️ 排序与编辑</button>
           `;
         }
 
@@ -274,8 +277,6 @@
             <span style="font-size:12px; font-weight:bold; color:${isEditing ? '#0284c7' : 'var(--primary)'}; width:24px;">#${index + 1}</span>
             <input type="text" class="input-main-title" value="${mainTitle}" onchange="updateMainTitle('${mainTitle}', this.value)">
             ${controlControlsHTML}
-            <button class="btn btn-sm" onclick="addVar('${mainTitle}')">+ 增加规格</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteMainCategory('${mainTitle}')">🗑️ 删除分类</button>
           </div>
           <div class="var-list">
             ${varsHTML}
@@ -286,21 +287,21 @@
       });
     }
 
-    // ⚡ 开启齿轮编辑/排序模式
+    // 开启齿轮编辑/排序模式
     function openCategoryEdit(index) {
       editingCategoryIndex = index;
       tempCatalogBackup = JSON.parse(JSON.stringify(rawData.catalog)); // 备份原数据
       renderCatalogUI();
     }
 
-    // ⚡ 确定保存编辑/排序
+    // 确定保存编辑/排序
     function saveCategoryEdit() {
       editingCategoryIndex = null;
       tempCatalogBackup = null;
       renderCatalogUI();
     }
 
-    // ⚡ 取消编辑/排序，恢复旧数据
+    // 取消编辑/排序，恢复旧数据
     function cancelCategoryEdit() {
       if (tempCatalogBackup) {
         rawData.catalog = JSON.parse(JSON.stringify(tempCatalogBackup));
@@ -310,7 +311,7 @@
       renderCatalogUI();
     }
 
-    // ⚡ 移动商品主分类位置（上移/下移）
+    // 移动商品主分类位置（上移/下移）
     function moveCategory(index, direction) {
       const entries = Object.entries(rawData.catalog);
       const targetIndex = index + direction;
@@ -380,6 +381,8 @@
     function deleteMainCategory(mainTitle) {
       if (confirm(`确定要删除分类【${mainTitle}】及其所有规格吗？`)) {
         delete rawData.catalog[mainTitle];
+        editingCategoryIndex = null;
+        tempCatalogBackup = null;
         renderCatalogUI();
       }
     }
