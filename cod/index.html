@@ -106,11 +106,11 @@
     }
     .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
 
-    .msg-label-row {
+    /* ⚡ BUYER MESSAGE 输入框与右侧核对框组合样式 */
+    .input-msg-group {
       display: flex;
-      justify-content: space-between;
+      gap: 4px;
       align-items: center;
-      margin-bottom: 2px;
     }
     .check-msg-label {
       font-size: 10.5px;
@@ -121,9 +121,11 @@
       gap: 3px;
       cursor: pointer;
       background: #fef2f2;
-      padding: 1px 5px;
-      border-radius: 4px;
+      padding: 4px 7px;
+      border-radius: 5px;
       border: 1px solid #fca5a5;
+      white-space: nowrap;
+      height: 28px;
     }
 
     /* 商品行卡片样式 */
@@ -372,7 +374,7 @@
       margin-left: auto;
     }
 
-    /* 优化 Google 翻译样式 */
+    /* Google 翻译通用兼容样式 */
     .goog-te-banner-frame.skiptranslate { display: none !important; }
     body { top: 0px !important; }
     .goog-te-gadget-simple {
@@ -418,7 +420,7 @@
       <div class="panel-header">
         <div class="panel-title">
           <span>📦 COD 面单录入</span>
-          <!-- ⚡ Google 翻译挂载节点 -->
+          <!-- Google 翻译挂载节点 -->
           <div id="google_translate_element"></div>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
@@ -450,14 +452,15 @@
           <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee" oninput="renderAWB()">
         </div>
 
+        <!-- ⚡ BUYER MESSAGE 与核对框横向布局 -->
         <div class="form-group">
-          <div class="msg-label-row">
-            <label style="margin-bottom:0;">BUYER MESSAGE</label>
+          <label>BUYER MESSAGE</label>
+          <div class="input-msg-group">
+            <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
             <label class="check-msg-label" title="请确认已打开 Shopee 订单详情页核对是否有买家留言">
               <input type="checkbox" id="checkMsgBox"> 核对
             </label>
           </div>
-          <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
         </div>
 
         <div class="form-group">
@@ -1072,7 +1075,7 @@
     };
   </script>
 
-  <!-- ⚡ Google 翻译官方脚本组件加载 -->
+  <!-- Google 翻译官方脚本组件加载 -->
   <script type="text/javascript">
     function googleTranslateElementInit() {
       new google.translate.TranslateElement({
