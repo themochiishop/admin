@@ -441,13 +441,21 @@
       "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"]
     };
 
+   // 🌐 从 Google Sheets 实时加载【目录】与 C56:C62 的渠道选项
     function fetchLiveCatalog() {
       const syncBadge = document.getElementById('syncBadge');
       fetch(SCRIPT_URL + "?action=getCatalog")
         .then(res => res.json())
         .then(data => {
-          if (data && !data.error && Object.keys(data).length > 0) {
-            EXCEL_CATALOG = data;
+          if (data && (data.catalog || Object.keys(data).length > 0)) {
+            // 解析商品目录
+            EXCEL_CATALOG = data.catalog || data;
+            
+            // 如果后端返回了 C56:C62 的 Channel 选项，自动更新 LocalStorage 列表
+            if (data.channels && data.channels.length > 0) {
+              localStorage.setItem('custom_shipp_channels', JSON.stringify(data.channels));
+            }
+
             syncBadge.innerText = "🟢 已同步 Google 表格最新数据";
             syncBadge.style.background = "#dcfce7";
             syncBadge.style.color = "#15803d";
