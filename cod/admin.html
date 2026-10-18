@@ -57,6 +57,13 @@
     }
     .btn-add-main:hover { background: #7c3aed; }
 
+    .btn-move {
+      background: #6b7280;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    .btn-move:hover { background: #4b5563; }
+
     .btn-danger { background: #ef4444; }
     .btn-danger:hover { background: #dc2626; }
 
@@ -73,7 +80,7 @@
 
     .catalog-item-header {
       display: flex;
-      gap: 10px;
+      gap: 6px;
       align-items: center;
       margin-bottom: 8px;
     }
@@ -142,7 +149,7 @@
     </div>
 
     <p style="font-size:12px; color:#6b7280; margin-bottom:15px;">
-      你可以通过下方界面直接修改商品分类或规格变体，修改完成后点击右上角的“保存并下载”，直接替换 GitHub 仓库里的 <code>catalog.json</code> 即可！
+      你可以通过下方界面调整商品主分类的显示顺序、修改名称或规格，修改完成后点击右上角的“保存并下载”，替换 GitHub 仓库里的 <code>catalog.json</code> 即可！
     </p>
 
     <button class="btn btn-add-main" onclick="addMainCategory()">➕ 添加新商品主分类</button>
@@ -152,7 +159,7 @@
     </div>
 
     <div class="actions-bar">
-      <span style="font-size:12px; color:#9ca3af;">修改完成后请记得替换 GitHub 中的 admin/cod/catalog.json</span>
+      <span style="font-size:12px; color:#9ca3af;">修改排序后请记得替换 GitHub 中的 admin/cod/catalog.json</span>
       <button class="btn" onclick="saveAndDownload()">💾 保存并下载 catalog.json</button>
     </div>
   </div>
@@ -182,7 +189,9 @@
       const container = document.getElementById('catalogContainer');
       container.innerHTML = '';
 
-      Object.keys(rawData.catalog).forEach((mainTitle, index) => {
+      const keys = Object.keys(rawData.catalog);
+
+      keys.forEach((mainTitle, index) => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'catalog-item';
         
@@ -198,7 +207,9 @@
 
         itemDiv.innerHTML = `
           <div class="catalog-item-header">
-            <span style="font-size:12px; font-weight:bold; color:var(--primary);">#${index + 1}</span>
+            <span style="font-size:12px; font-weight:bold; color:var(--primary); width:24px;">#${index + 1}</span>
+            <button class="btn btn-move" title="向上移动" onclick="moveCategory(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▲ 上移</button>
+            <button class="btn btn-move" title="向下移动" onclick="moveCategory(${index}, 1)" ${index === keys.length - 1 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▼ 下移</button>
             <input type="text" class="input-main-title" value="${mainTitle}" onchange="updateMainTitle('${mainTitle}', this.value)">
             <button class="btn btn-sm" onclick="addVar('${mainTitle}')">+ 增加规格</button>
             <button class="btn btn-sm btn-danger" onclick="deleteMainCategory('${mainTitle}')">🗑️ 删除分类</button>
@@ -212,14 +223,45 @@
       });
     }
 
+    // ⚡ 新增：移动商品主分类位置（上移/下移）
+    function moveCategory(index, direction) {
+      const entries = Object.entries(rawData.catalog);
+      const targetIndex = index + direction;
+
+      if (targetIndex < 0 || targetIndex >= entries.length) return;
+
+      // 交换位置
+      const temp = entries[index];
+      entries[index] = entries[targetIndex];
+      entries[targetIndex] = temp;
+
+      // 重构 rawData.catalog 保证 key 的顺序保持一致
+      const newCatalog = {};
+      entries.forEach(([key, val]) => {
+        newCatalog[key] = val;
+      });
+
+      rawData.catalog = newCatalog;
+      renderCatalogUI();
+    }
+
     // 更新主分类名称
     function updateMainTitle(oldTitle, newTitle) {
       newTitle = newTitle.trim();
       if (!newTitle || oldTitle === newTitle) return;
       
-      const varList = rawData.catalog[oldTitle];
-      delete rawData.catalog[oldTitle];
-      rawData.catalog[newTitle] = varList;
+      const entries = Object.entries(rawData.catalog);
+      const newCatalog = {};
+
+      entries.forEach(([key, val]) => {
+        if (key === oldTitle) {
+          newCatalog[newTitle] = val;
+        } else {
+          newCatalog[key] = val;
+        }
+      });
+
+      rawData.catalog = newCatalog;
       renderCatalogUI();
     }
 
