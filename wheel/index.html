@@ -700,7 +700,11 @@
       btnSync.innerText = "Syncing... 同步中...";
       btnSync.disabled = true;
 
-      fetch(googleSheetCsvUrl)
+      // 增加防缓存机制，确保手动同步也是最新
+      const separator = googleSheetCsvUrl.includes('?') ? '&' : '?';
+      const syncUrl = `${googleSheetCsvUrl}${separator}_nocache=${Date.now()}_${Math.random()}`;
+
+      fetch(syncUrl, { cache: "no-store" })
         .then(res => {
           if (!res.ok) throw new Error("HTTP error " + res.status);
           return res.text();
@@ -748,7 +752,7 @@
             isLocalModified = true;
 
             const ruleCount = Object.keys(riggingRules).length;
-            alert(`✅ 成功获取 ${newNames.length} 条新数据！检测到 ${ruleCount} 条。请在弹窗中点击【保存为全新的时间段记忆】。`);
+            alert(`✅ 成功获取 ${newNames.length} 条新数据！检测到 ${ruleCount} 条内定规则。请在弹窗中点击【保存为全新的时间段记忆】。`);
             showModal('editNamesMenuModal');
           } else {
             alert("No valid data found in Google Sheets! 未在表格中找到有效数据！");
@@ -1029,11 +1033,28 @@
       }
     }
 
-    // 🚀【核心改进】异步实时抓取最新的内定目标并直接抽奖
- // 2. 实时去 Google Sheets 拉取最新的表格 CSV 数据，解析 C 列内定规则
+    // 🚀【核心改进】绝对防缓存的实时抓取逻辑
+    async function spin() {
+      if (isSpinning) return;
+      if (items.length === 0) {
+        let alertTxt = themeLang === 'en' ? "Please add entries first!" : (themeLang === 'ms' ? "Sila tambah nama peserta terlebih dahulu!" : "请先添加入围名字！");
+        alert(alertTxt);
+        return;
+      }
+      
+      isSpinning = true;
+      document.getElementById('spinBtn').disabled = true;
+      document.getElementById('result').innerText = themeDict[themeLang].spinning;
+
+      startDrumRoll();
+
+      // 1. 计算当前即将进行的轮次 N
+      const nextRound = historyRecords.length + 1;
+      let targetIndex = -1;
+
+      // 2. 实时去 Google Sheets 拉取最新表格 CSV 数据（强效防缓存）
       if (googleSheetCsvUrl) {
         try {
-          // 💡 【关键修复】构建强效防缓存 URL：拼接随机数与 timestamp，并开启 no-store
           const separator = googleSheetCsvUrl.includes('?') ? '&' : '?';
           const nocacheUrl = `${googleSheetCsvUrl}${separator}_nocache=${Date.now()}_${Math.random()}`;
 
@@ -1071,13 +1092,13 @@
 
             console.log(`[🚀 实时无缓存抓取] 第 ${nextRound} 轮内定判定，最新规则集:`, latestRiggingRules);
 
-            // 优先判断当前第 N 轮是否有内定规则
+            // 优先匹配当前 N 轮是否有对应的内定名单
             if (latestRiggingRules[nextRound]) {
               const targetText = latestRiggingRules[nextRound];
               // 1. 全匹配 (姓名 + 订单号)
               targetIndex = items.findIndex(item => item.text === targetText);
 
-              // 2. 模糊匹配 (只匹配买家名字前缀)
+              // 2. 模糊匹配 (匹配买家名字前缀)
               if (targetIndex === -1 && targetText) {
                 const pureName = targetText.split(' ')[0];
                 targetIndex = items.findIndex(item => item.text.startsWith(pureName));
@@ -1089,7 +1110,7 @@
         }
       }
 
-      // 如果实时抓取未命中，尝试使用已存储的 riggingRules 配置
+      // 如果实时抓取未命中，降级尝试静态存储的 riggingRules
       if (targetIndex === -1 && riggingRules[nextRound]) {
         const targetText = riggingRules[nextRound];
         targetIndex = items.findIndex(item => item.text === targetText);
@@ -1099,7 +1120,7 @@
         }
       }
 
-      // 3. 计算旋转角度
+      // 3. 计算旋转角度与动画
       const numSegments = items.length;
       const arcSize = (2 * Math.PI) / numSegments;
       let targetNormalizedAngle;
@@ -1108,7 +1129,7 @@
         console.log(`🎯 成功锁定第 ${nextRound} 轮内定目标:`, items[targetIndex].text);
         targetNormalizedAngle = (targetIndex + 0.5) * arcSize;
       } else {
-        console.log(`🎲 第 ${nextRound} 轮无内定配置或未能匹配到名单，执行随机抽奖`);
+        console.log(`🎲 第 ${nextRound} 轮无内定配置，执行随机抽奖`);
         targetNormalizedAngle = Math.random() * 2 * Math.PI;
       }
 
