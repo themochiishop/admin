@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Mochii Shop - 商品分类可视化管理后台</title>
+  <title>COD 面单打印系统 - The Mochii Shop</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
+
     :root {
       --primary: #ec4899;
       --primary-hover: #db2777;
@@ -14,408 +17,1012 @@
       --text-main: #374151;
     }
 
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-main); }
-
-    .card {
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 900px;
-      margin: 0 auto;
-      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.15);
-      border: 1px solid var(--border-color);
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    
+    body { 
+      margin: 0; 
+      padding: 14px; 
+      background-color: var(--bg-color); 
+      color: var(--text-main); 
+      transition: top 0.2s ease;
     }
 
-    .header {
+    /* 3 栏弹性布局：左(订单信息) - 中(商品清单) - 右(面单预览) */
+    .app-container {
       display: flex;
-      justify-content: space-between;
+      gap: 14px;
+      max-width: 1400px;
+      margin: 0 auto;
+      align-items: flex-start;
+    }
+
+    .panel-card {
+      background: var(--card-bg);
+      padding: 14px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.1);
+      border: 1px solid var(--border-color);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+
+    .left-panel { width: 320px; flex-shrink: 0; }
+    .middle-panel { flex: 1; min-width: 340px; }
+    .preview-panel {
+      width: 380px;
+      flex-shrink: 0;
+      background: #2b2b2b;
+      padding: 14px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .panel-header {
+      display: flex;
       align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
       border-bottom: 2px solid var(--bg-color);
     }
 
-    h2 { margin: 0; color: var(--primary); font-size: 18px; }
+    .panel-title { font-size: 14px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
 
-    .btn {
-      background: var(--primary);
+    .btn-quick-paste {
+      background-color: #8b5cf6;
       color: white;
       border: none;
-      padding: 8px 14px;
-      font-size: 12px;
-      border-radius: 6px;
-      cursor: pointer;
+      padding: 4px 9px;
+      border-radius: 5px;
+      font-size: 11px;
       font-weight: bold;
-      transition: background 0.2s;
+      cursor: pointer;
     }
-    .btn:hover { background: var(--primary-hover); }
+    .btn-quick-paste:hover { background-color: #7c3aed; }
 
-    .btn-add-main {
-      background: #8b5cf6;
-      margin-bottom: 15px;
+    .sync-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 600;
     }
-    .btn-add-main:hover { background: #7c3aed; }
 
+    .form-group { margin-bottom: 8px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 2px; color: var(--text-main); }
+    .form-control {
+      width: 100%;
+      padding: 5px 7px;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      font-size: 11.5px;
+      outline: none;
+    }
+    .form-control:focus { border-color: var(--primary); }
+
+    .input-gear-group { display: flex; gap: 4px; align-items: center; }
     .btn-gear {
       background: #f3f4f6;
-      color: #374151;
       border: 1px solid #d1d5db;
-      padding: 4px 8px;
-      font-size: 12px;
       border-radius: 5px;
+      padding: 4px 7px;
+      font-size: 12px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background 0.2s;
     }
     .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
 
-    .btn-move {
-      background: #8b5cf6;
-      color: white;
-      padding: 3px 7px;
-      font-size: 11px;
-      border: none;
-      border-radius: 4px;
+    /* ⚡ 商品清单标题旁跳转齿轮链接样式 */
+    .btn-gear-link {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 12px;
       cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s;
     }
-    .btn-move:hover { background: #7c3aed; }
+    .btn-gear-link:hover {
+      background: #e5e7eb;
+      border-color: var(--primary);
+    }
 
-    .btn-save-item {
-      background: #10b981;
-      color: white;
-      padding: 3px 8px;
-      font-size: 11px;
-      border: none;
+    .input-msg-group { display: flex; gap: 4px; align-items: center; }
+    .check-msg-label {
+      font-size: 10.5px;
+      font-weight: bold;
+      color: #dc2626;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      background: #fef2f2;
+      padding: 4px 7px;
+      border-radius: 5px;
+      border: 1px solid #fca5a5;
+      white-space: nowrap;
+      height: 28px;
+    }
+
+    .product-row {
+      background-color: #fff5f8;
+      border: 1px dashed var(--border-color);
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .product-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 11px; font-weight: bold; color: var(--primary); }
+    .btn-remove { color: #ef4444; cursor: pointer; border: none; background: none; font-size: 11px; font-weight: bold; }
+
+    .dashed-check-label {
+      font-size: 10.5px;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      margin-top: 4px;
+      font-weight: normal;
+    }
+
+    .btn-toggle-select {
+      background: #f3e8ff;
+      color: #7e22ce;
+      border: 1px solid #d8b4fe;
       border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10.5px;
+      cursor: pointer;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .btn-add {
+      width: 100%;
+      padding: 6px;
+      background: #fdf2f8;
+      border: 1px dashed var(--primary);
+      color: var(--primary);
+      border-radius: 5px;
       cursor: pointer;
       font-weight: bold;
-    }
-    .btn-save-item:hover { background: #059669; }
-
-    .btn-cancel-item {
-      background: #9ca3af;
-      color: white;
-      padding: 3px 8px;
-      font-size: 11px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .btn-cancel-item:hover { background: #6b7280; }
-
-    .btn-danger { background: #ef4444; color: white; border: none; }
-    .btn-danger:hover { background: #dc2626; }
-
-    .btn-sm { padding: 4px 8px; font-size: 11px; border-radius: 5px; cursor: pointer; }
-
-    /* 分类卡片区域 */
-    .catalog-item {
-      background: #fff5f8;
-      border: 1px dashed var(--border-color);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
-      transition: all 0.2s;
-    }
-
-    .catalog-item.editing-mode {
-      background: #f0f9ff;
-      border: 1px dashed #0284c7;
-    }
-
-    .catalog-item-header {
-      display: flex;
-      gap: 6px;
-      align-items: center;
+      font-size: 11.5px;
       margin-bottom: 8px;
     }
 
-    .input-main-title {
-      flex: 1;
-      font-weight: bold;
-      font-size: 13px;
-      padding: 6px 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 5px;
-    }
-
-    .var-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-      padding-left: 10px;
-    }
-
-    .var-chip {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-    }
-
-    .var-chip input {
+    .btn-primary {
+      width: 100%;
+      padding: 7px;
+      background-color: var(--primary);
+      color: white;
       border: none;
-      outline: none;
-      font-size: 12px;
-      width: 100px;
-      background: transparent;
-    }
-
-    .btn-del-chip {
-      color: #9ca3af;
-      cursor: pointer;
+      border-radius: 5px;
+      font-size: 12.5px;
       font-weight: bold;
-      font-size: 14px;
-      line-height: 1;
+      cursor: pointer;
+      margin-top: 8px;
     }
-    .btn-del-chip:hover { color: #ef4444; }
 
-    .actions-bar {
+    .print-btn-group { display: flex; gap: 8px; margin-top: 6px; }
+    .btn-print { flex: 1; padding: 7px; background-color: #10b981; color: white; border: none; border-radius: 5px; font-size: 12.5px; font-weight: bold; cursor: pointer; }
+    .btn-settings { padding: 7px 12px; background-color: #6b7280; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+
+    .awb-card {
+      width: 100%;
+      background: #ffffff;
+      padding: 16px 18px 16px 18px;
+      border-radius: 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      position: relative;
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .awb-main-content { flex: 1; }
+    .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .awb-logo-group { display: flex; align-items: center; gap: 8px; }
+    .awb-logo { margin-left: 15px; width: 40px; height: 40px; object-fit: contain; }
+    .awb-title { padding-left: 20px; font-family: "Georgia", serif; font-size: 20px; font-weight: bold; color: #000; }
+    #barcode { width: 110px; height: 42px; }
+
+    .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
+    .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+    .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 600; color: #000; vertical-align: middle !important; line-height: 1.2; }
+    .awb-info-table td.lbl, .awb-info-table td.colon, #awbBuyer { display: table-cell; vertical-align: middle !important; }
+    .awb-info-table .lbl { font-weight: 600; width: 100px; }
+    .awb-info-table .colon { width: 12px; text-align: center; }
+    .awb-info-table .val { word-break: break-all; }
+
+    .awb-divider-dashed { border-top: 1px dashed #777; margin: 6px 0 8px 0; }
+
+    .awb-product-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 20px;
-      padding-top: 15px;
-      border-top: 2px solid var(--bg-color);
+      gap: 8px;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
+    .awb-product-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .awb-product-title { font-size: 11.5px; font-weight: 800; color: #000; line-height: 1.25; display: flex; align-items: flex-start; gap: 4px; }
+    .awb-product-sub { font-size: 12px; color: #404854; font-weight: 650; margin-left: 19px; }
+    .awb-product-qty { font-weight: 800; color: #374151; border: 1px dotted #5f6b7c; padding: 9px 9px; line-height: 1.2; white-space: nowrap; }
+    #awbBuyer { font-size: 15.5px; font-weight: 600; margin: 0; padding: 0; }
+    
+    .awb-footer { 
+      margin-top: auto; 
+      padding-top: 8px; 
+      text-align: center; 
+      border-top: 1px dashed #e2e8f0; 
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 9999; }
+    .modal-content { background: #fff; padding: 16px; border-radius: 10px; width: 420px; max-width: 90%; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .modal-title { font-size: 14px; font-weight: bold; }
+    .modal-close { cursor: pointer; font-size: 18px; font-weight: bold; color: #9ca3af; }
+    .modal-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11.5px; margin-bottom: 10px; }
+
+    .channel-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
+    .channel-list-item:hover { background: #fdf2f8; border-color: var(--primary); }
+    .btn-item-del { color: #ef4444; font-size: 11px; border: none; background: none; cursor: pointer; }
+
+    .setting-option { display: flex; align-items: center; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
+    .setting-option:hover { border-color: var(--primary); background-color: #fdf2f8; }
+    .setting-option input[type="radio"] { margin-right: 10px; accent-color: var(--primary); }
+    .setting-label { font-size: 12px; font-weight: bold; color: #1f2937; }
+    .setting-desc { font-size: 11px; color: #6b7280; margin-left: auto; }
+
+    .goog-te-banner-frame.skiptranslate { box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important; }
+    .goog-te-gadget-simple { 
+      background-color: #fff !important; 
+      border: 1px solid var(--border-color) !important; 
+      padding: 2px 5px !important; 
+      border-radius: 5px !important; 
+      font-size: 11px !important; 
+      cursor: pointer; 
+    }
+    .goog-te-gadget-icon { display: none !important; }
+
+    @media print {
+      html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; top: 0px !important; }
+      .left-panel, .middle-panel, .modal-overlay, .goog-te-banner-frame { display: none !important; }
+      .app-container { display: block !important; margin: 0 !important; width: 100% !important; height: 100% !important; }
+      .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; min-height: 100vh !important; }
+      
+      .awb-card { 
+        border: none !important; 
+        box-shadow: none !important; 
+        width: 100% !important; 
+        min-height: 100vh !important; 
+        display: flex !important; 
+        flex-direction: column !important; 
+        padding: 15px !important; 
+        box-sizing: border-box !important;
+      }
+      
+      .awb-main-content { flex: 1 0 auto !important; }
+      .awb-product-box, .awb-divider-dashed, .awb-note-section { break-inside: avoid !important; page-break-inside: avoid !important; }
+      .awb-footer { margin-top: auto !important; padding-top: 10px !important; padding-bottom: 5px !important; break-inside: avoid !important; page-break-inside: avoid !important; }
+    }
+  </style>
+
+  <style id="printPageStyle">
+    @media print { @page { size: 100mm 150mm; margin: 0; } }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <div class="header">
-      <h2>📦 商品分类与规格可视化管理后台</h2>
-      <button class="btn" onclick="saveAndDownload()">💾 保存并下载 catalog.json</button>
-    </div>
+  <div class="app-container">
+    <!-- 1. 左侧：基本订单信息面板 -->
+    <div class="panel-card left-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📦 COD 面单录入</span>
+          <div id="google_translate_element"></div>
+        </div>
+      </div>
 
-    <p style="font-size:12px; color:#6b7280;">
-      点击商品分类右侧的 ⚙️ 按钮可开启该分类的“上移/下移排序”与“删除分类”模式。修改完成后请点击“💾 保存并下载”，
-      替换 GitHub 仓库里的 <code>catalog.json</code> 即可！
+      <div class="form-group">
+        <label>USER NAME (买家名)</label>
+        <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e" oninput="renderAWB()">
+      </div>
+
+      <div class="form-group">
+        <label>ORDER ID (订单号)</label>
+        <input type="text" id="orderInput" class="form-control" value="261014HN714REB" oninput="renderAWB()">
+      </div>
+
+      <div class="form-group">
+        <label>SHIPP CHANNEL</label>
+        <div class="input-gear-group">
+          <input type="text" id="channelInput" class="form-control" value="COD" oninput="renderAWB()">
+          <button class="btn-gear" onclick="openChannelModal()" title="选择或管理自定义物流渠道">⚙️</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>STORE (店铺)</label>
+        <input type="text" id="storeInput" class="form-control" value="The MoChii Shop@Shopee" oninput="renderAWB()">
+      </div>
+
+      <div class="form-group">
+        <label>BUYER MESSAGE</label>
+        <div class="input-msg-group">
+          <input type="text" id="msgInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
+          <label class="check-msg-label" title="请确认已打开 Shopee 订单详情页核对是否有买家留言">
+            <input type="checkbox" id="checkMsgBox"> 核对
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>INTERNAL NOTE</label>
+        <input type="text" id="noteInput" class="form-control" value="" placeholder="默认为空白" oninput="renderAWB()">
+      </div>
+
+      <button class="btn-primary" onclick="renderAWB()">🔄 更新面单预览</button>
       
-      <p style="font-size:12px; color:#6b7280;    padding-right: 10px;
-    text-align: right;">#admin/cod/catalog.json </p>
-    </p>
-
-    <button class="btn btn-add-main" onclick="addMainCategory()">➕ 添加新商品主分类</button>
-
-    <div id="catalogContainer">
-      <!-- 动态生成的分类列表 -->
+      <div class="print-btn-group">
+        <button class="btn-print" id="btnPrint" onclick="triggerPrint()">🖨️ 打印面单 AWB</button>
+        <button class="btn-settings" onclick="openSettingsModal()">⚙️ 设置</button>
+      </div>
     </div>
 
-    <div class="actions-bar">
-      <span style="font-size:12px; color:#9ca3af;">修改完成后请记得替换 GitHub 中的 admin/cod/catalog.json</span>
-      <button class="btn" onclick="saveAndDownload()">💾 保存并下载 catalog.json</button>
+    <!-- 2. 中间：商品清单 Product List -->
+    <div class="panel-card middle-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🛍️ 商品清单 Product List</span>
+          <!-- ⚡ 新增的跳转后台齿轮链接按钮 -->
+          <a href="https://admin.themochiishop.com/cod/admin.html" target="_blank" class="btn-gear-link" title="前往📦 商品分类与规格可视化管理后台">⚙️</a>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="syncBadge" class="sync-badge">🔄 正在同步表格分类...</span>
+          <button class="btn-quick-paste" onclick="openPasteModal()">📋 快捷粘贴抓取</button>
+        </div>
+      </div>
+
+      <div id="productContainer"></div>
+      
+      <button class="btn-add" onclick="addProductRow()">+ 增加商品行</button>
+    </div>
+
+    <!-- 3. 右侧：面单预览 -->
+    <div class="preview-panel">
+      <div class="awb-card" id="awbCard">
+        <div class="awb-main-content">
+          <div class="awb-header">
+            <div class="awb-logo-group">
+              <img src="https://admin.themochiishop.com/logo.jpg" alt="Logo" class="awb-logo" onerror="this.src='https://via.placeholder.com/34?text=Mochii'">
+              <span class="awb-title">Order List</span>
+            </div>
+            <svg id="barcode"></svg>
+          </div>
+
+          <div class="awb-divider-thick"></div>
+
+          <table class="awb-info-table">
+            <tr><td class="lbl">USER NAME</td><td class="colon">:</td><td class="val" id="awbBuyer">ssvo10dp9e</td></tr>
+            <tr><td class="lbl">ORDER ID</td><td class="colon">:</td><td class="val" id="awbOrder">261014HN714REB</td></tr>
+            <tr><td class="lbl">SHIPP CHANNEL</td><td class="colon">:</td><td class="val" id="awbChannel">COD</td></tr>
+            <tr><td class="lbl">STORE</td><td class="colon">:</td><td class="val" id="awbStore">The MoChii Shop@Shopee</td></tr>
+            <tr><td class="lbl">TOTAL QTY</td><td class="colon">:</td><td class="val" id="awbTotalQty">0</td></tr>
+          </table>
+
+          <div class="awb-divider-dashed"></div>
+
+          <div id="awbProducts"></div>
+
+          <div class="awb-divider-dashed"></div>
+
+          <table class="awb-info-table awb-note-section">
+            <tr><td class="lbl">BUYER MESSAGE</td><td class="colon">:</td><td class="val" id="awbMsg"></td></tr>
+            <tr><td class="lbl">INTERNAL NOTE</td><td class="colon">:</td><td class="val" id="awbNote"></td></tr>
+          </table>
+        </div>
+
+        <div class="awb-footer">
+          <div class="awb-footer-text">Generated By The Mochii Shop System</div>
+          <div class="awb-footer-text" id="awbTimestamp">18/10/2026 18:35</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="catalogModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">🏷️ 选择表格分类与规格变体</span>
+        <span class="modal-close" onclick="closeCatalogModal()">&times;</span>
+      </div>
+      <p style="font-size:11px; color:#6b7280; margin:0 0 10px 0;">请从表格目录中选择要填入的主分类、变体及数量：</p>
+      
+      <div class="form-group" style="margin-bottom:8px;">
+        <label>1. 选择商品主分类</label>
+        <select id="modalCatSelect" class="form-control" onchange="onModalCatChange(this.value)">
+          <option value="">-- 请选择主分类 --</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:8px;">
+        <label>2. 选择规格变体 (Variation)</label>
+        <select id="modalVarSelect" class="form-control">
+          <option value="">-- 请选择规格变体 --</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>3. 选择数量 (Quantity)</label>
+        <select id="modalQtySelect" class="form-control prod-qty-select"></select>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:6px;">
+        <button onclick="closeCatalogModal()" style="padding:5px 10px; border:1px solid #ccc; background:#fff; border-radius:5px; cursor:pointer; font-size:11px;">取消</button>
+        <button onclick="applyCatalogSelection()" style="padding:5px 12px; background:var(--primary); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">确认填入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="channelModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">⚙️ 选择/自定义 SHIPP CHANNEL 选项</span>
+        <span class="modal-close" onclick="closeChannelModal()">&times;</span>
+      </div>
+      <p style="font-size:11px; color:#6b7280; margin:0 0 10px 0;">点击下方任意选项即可直接填入，或添加你自己的新渠道：</p>
+
+      <div id="channelListContainer" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px;"></div>
+
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="newChannelInput" class="form-control" placeholder="输入自定义的新渠道 (如: Self Pickup)" style="flex:1;">
+        <button onclick="addNewCustomChannel()" style="padding:5px 10px; background:#8b5cf6; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">➕ 保存添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="pasteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">📋 粘贴 Shopee 订单文本</span>
+        <span class="modal-close" onclick="closePasteModal()">&times;</span>
+      </div>
+      <p style="font-size:11px; color:#6b7280; margin:0 0 8px 0;">在 Shopee 订单页面全选/复制内容后粘贴在下方：</p>
+      <textarea id="pasteTextarea" class="modal-textarea" placeholder="在此按下 Ctrl+V 粘贴文本..."></textarea>
+      <div style="display:flex; justify-content:flex-end; gap:6px;">
+        <button onclick="closePasteModal()" style="padding:5px 10px; border:1px solid #ccc; background:#fff; border-radius:5px; cursor:pointer; font-size:11px;">取消</button>
+        <button onclick="processPastedText()" style="padding:5px 10px; background:var(--primary); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">⚡ 智能解析填入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">⚙️ 打印格式与纸张设置</span>
+        <span class="modal-close" onclick="closeSettingsModal()">&times;</span>
+      </div>
+      <p style="font-size:11px; color:#6b7280; margin:0 0 12px 0;">请选择打印面单时使用的纸张格式：</p>
+
+      <label class="setting-option">
+        <input type="radio" name="printFormat" value="AWB" checked>
+        <span class="setting-label">AWB 格式</span>
+        <span class="setting-desc">100mm × 150mm (默认热敏单)</span>
+      </label>
+
+      <label class="setting-option">
+        <input type="radio" name="printFormat" value="A4">
+        <span class="setting-label">A4 格式 （210 × 297 mm）</span>
+      </label>
+
+      <label class="setting-option">
+        <input type="radio" name="printFormat" value="A5">
+        <span class="setting-label">A5 格式 （148 × 210 mm）</span>
+      </label>
+
+      <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:14px;">
+        <button onclick="closeSettingsModal()" style="padding:5px 10px; border:1px solid #ccc; background:#fff; border-radius:5px; cursor:pointer; font-size:11px;">取消</button>
+        <button onclick="applyPrintSettings()" style="padding:5px 12px; background:var(--primary); color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">确认应用</button>
+      </div>
     </div>
   </div>
 
   <script>
-    let rawData = {
-      channels: ["COD", "Cash Payment at Physical Stores", "Dispatched By System(Virtual Goods)", "Own Fleet (SPX)", "Pre-Order"],
-      quantities: ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"],
-      catalog: {}
+    const GITHUB_CATALOG_URL = "./catalog.json";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYLt1EXJkkXT2RbXnXb78hv3fNi1VwAKwpgMXrGLoz0_0-ibz8bZrPEWQAEVb6YA/exec";
+
+    const DEFAULT_CHANNELS = [
+      "COD",
+      "Cash Payment at Physical Stores",
+      "Dispatched By System(Virtual Goods)",
+      "Own Fleet (SPX)",
+      "Pre-Order"
+    ];
+
+    let EXCEL_QUANTITIES = ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10"];
+
+    let EXCEL_CATALOG = {
+      "[Live Play] Handmade Gelang Tangan": ["Normal-3", "Normal-5", "Normal-10", "Normal-20", "Premium-3", "Premium-5", "Premium-10"],
+      "Happy BoomBoom Game | Bingo 49 | Ice Cube Challenge": ["HappyBoomBoom Game", "Bingo 49 Card Game", "Ice Cube Game", "Card Game"],
+      "[Live Play] Sayur Buah-Buah Game": ["Redeem-Redeem", "Kiwi", "Durian", "Nanas", "Tembikai", "Stawbery", "Pisang", "Mangga", "Manggis", "Oren", "Epal", "Broccoli", "Kubis", "Bendi", "Tomato", "Kentang", "Jagung", "Timun", "Labu", "Terung", "Lobak"],
+      "Doraemon Matching | Where is the Wolf | Kid Family Puzzle Game": ["Driver", "Passenger", "1 Game", "3 Game ( Free1 )", "6 Game ( Free1 )"],
+      "[CustomMade Service ] Product design By Kay": ["Mug", "Phone Stand", "Back Case", "Other"],
+      "Authentic Blind Box Figure": ["POP BEAN", "SP Warm", "DIMOO", "Zora", "Hacipupu", "HIRONO", "SP MIRAGE", "Molly", "POP MART", "Kiwiwi", "Plush", "Cry Baby", "Figure"],
+      "Pop Beam Series/Pen/Key chain/Phone chain": ["PEN", "Car Chain", "Phone Chain"],
+      "Display Box / Figure Case": ["Normal", "SP", "HIRONO"],
+      "KeyChain Colour match game": ["1-white", "1-yellow", "1-green", "1-pink", "1-red", "1-orange", "1-blue", "1-light blue", "1-black", "1-puple"],
+      "[NOT FOR SALE] Free Gift Zone": ["Fake Nails", "Kuromi Book", "Pouch", "Night Light", "Premium Pro-Max", "Random"],
+      "[Live] KeyChain | Perfume | Cincin Colour match game": ["Perfume-1", "Perfume-3", "Perfume-5", "Perfume-10", "Keychain-1", "Keychain-3", "Keychain-5", "Keychain-10", "Keychain-20", "Cincin-1", "Cincin-3", "Cincin-5", "Cincin-10", "Cincin-20"],
+      "Tasbih Gelang Premium Handmade by Kay": ["T2,Without Box"],
+      "Silica Gel Desiccant Packets": ["10 pack", "50 pack"],
+      "【Double Layer】 Gelang Tangan Handmade By Kay": ["normal", "with box"],
+      "【Premium Series】 Handmade Gelang Tangan": ["normal", "with box"]
     };
 
-    let editingCategoryIndex = null; // 记录当前哪一行正在开启齿轮编辑模式
-    let tempCatalogBackup = null;   // 备份数据用于“取消”功能还原
+    let activeRowIdForCatalog = null;
 
-    // 页面加载时抓取当前的 catalog.json
-    window.onload = function() {
-      fetch('./catalog.json')
-        .then(res => res.json())
+    function triggerPrint() {
+      const isChecked = document.getElementById('checkMsgBox').checked;
+      if (!isChecked) {
+        alert("⚠️ 请先打开订单核对 Shopee 详细页面是否有买家留言（BUYER MESSAGE），并勾选【核对】后再进行打印！");
+        return;
+      }
+      window.print();
+    }
+
+    function fetchLiveCatalog() {
+      const syncBadge = document.getElementById('syncBadge');
+      syncBadge.innerText = "🔄 正在提取 GitHub 资料库...";
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      fetch(GITHUB_CATALOG_URL, { signal: controller.signal })
+        .then(res => {
+          if (!res.ok) throw new Error("无法读取 catalog.json");
+          return res.json();
+        })
         .then(data => {
-          rawData = data;
-          renderCatalogUI();
+          clearTimeout(timeoutId);
+          if (data && data.catalog) {
+            applyCatalogData(data);
+            syncBadge.innerText = "🟢 已同步 GitHub 资料库数据";
+            syncBadge.style.background = "#dcfce7";
+            syncBadge.style.color = "#15803d";
+          } else {
+            throw new Error("GitHub 数据格式不匹配");
+          }
         })
         .catch(err => {
-          alert('无法自动加载同目录下的 catalog.json，请确认文件路径是否正确。');
+          clearTimeout(timeoutId);
+          console.warn("⚠️ 从 GitHub 提取失败，启动预备方案 (Google Sheets COD表单1):", err);
+          syncBadge.innerText = "🟡 正在连接 COD 表单1 预备库...";
+          fetchFromGoogleSheets();
         });
-    };
+    }
 
-    // 渲染主 UI 列表
-    function renderCatalogUI() {
-      const container = document.getElementById('catalogContainer');
-      container.innerHTML = '';
-
-      const keys = Object.keys(rawData.catalog);
-
-      keys.forEach((mainTitle, index) => {
-        const isEditing = (editingCategoryIndex === index);
-        const itemDiv = document.createElement('div');
-        itemDiv.className = `catalog-item ${isEditing ? 'editing-mode' : ''}`;
-        
-        let varsHTML = '';
-        rawData.catalog[mainTitle].forEach((varItem, varIndex) => {
-          varsHTML += `
-            <div class="var-chip">
-              <input type="text" value="${varItem}" onchange="updateVar('${mainTitle}', ${varIndex}, this.value)">
-              <span class="btn-del-chip" title="删除此规格" onclick="deleteVar('${mainTitle}', ${varIndex})">&times;</span>
-            </div>
-          `;
+    function fetchFromGoogleSheets() {
+      const syncBadge = document.getElementById('syncBadge');
+      fetch(SCRIPT_URL + "?action=getCatalog")
+        .then(res => res.json())
+        .then(data => {
+          if (data && (data.catalog || Object.keys(data).length > 0)) {
+            const catalogObj = data.catalog || data;
+            applyCatalogData({ catalog: catalogObj, channels: data.channels, quantities: data.quantities });
+            syncBadge.innerText = "🟡 已连接 COD 表单1 预备库";
+            syncBadge.style.background = "#fef9c3";
+            syncBadge.style.color = "#854d0e";
+          } else {
+            syncBadge.innerText = "🟠 使用本地离线数据";
+          }
+        })
+        .catch(() => {
+          syncBadge.innerText = "🟠 使用本地离线数据";
         });
+    }
 
-        // 按钮布局逻辑：默认显示 [+ 增加规格] 和 [⚙️ 排序与编辑]
-        // 开启齿轮后展开 [▲ 上移] [▼ 下移] [🗑️ 删除分类] [确定保存] [取消]
-        let controlControlsHTML = '';
-        if (isEditing) {
-          controlControlsHTML = `
-            <button class="btn-move" title="向上移动" onclick="moveCategory(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▲ 上移</button>
-            <button class="btn-move" title="向下移动" onclick="moveCategory(${index}, 1)" ${index === keys.length - 1 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>▼ 下移</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteMainCategory('${mainTitle}')">🗑️ 删除分类</button>
-            <button class="btn-save-item" onclick="saveCategoryEdit()">确定保存</button>
-            <button class="btn-cancel-item" onclick="cancelCategoryEdit()">取消</button>
-          `;
-        } else {
-          controlControlsHTML = `
-            <button class="btn btn-sm" onclick="addVar('${mainTitle}')" style="background:#8b5cf6; color:white;">+ 增加规格</button>
-            <button class="btn-gear" onclick="openCategoryEdit(${index})" title="开启排序与设置模式">⚙️ 排序与编辑</button>
-          `;
-        }
+    function applyCatalogData(data) {
+      if (data.catalog && Object.keys(data.catalog).length > 0) {
+        EXCEL_CATALOG = data.catalog;
+      }
+      if (data.channels && data.channels.length > 0) {
+        localStorage.setItem('custom_shipp_channels', JSON.stringify(data.channels));
+      }
+      if (data.quantities && data.quantities.length > 0) {
+        EXCEL_QUANTITIES = data.quantities;
+      }
+    }
 
-        itemDiv.innerHTML = `
-          <div class="catalog-item-header">
-            <span style="font-size:12px; font-weight:bold; color:${isEditing ? '#0284c7' : 'var(--primary)'}; width:24px;">#${index + 1}</span>
-            <input type="text" class="input-main-title" value="${mainTitle}" onchange="updateMainTitle('${mainTitle}', this.value)">
-            ${controlControlsHTML}
-          </div>
-          <div class="var-list">
-            ${varsHTML}
-          </div>
+    function getStoredChannels() {
+      const saved = localStorage.getItem('custom_shipp_channels');
+      if (saved) {
+        try { return JSON.parse(saved); } catch(e){}
+      }
+      return DEFAULT_CHANNELS;
+    }
+
+    function renderChannelList() {
+      const listContainer = document.getElementById('channelListContainer');
+      const channels = getStoredChannels();
+      listContainer.innerHTML = '';
+
+      channels.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'channel-list-item';
+        div.innerHTML = `
+          <span style="font-size:12px; font-weight:600;" onclick="selectChannel('${item}')">${item}</span>
+          <button class="btn-item-del" onclick="event.stopPropagation(); deleteCustomChannel(${index});">删除</button>
         `;
-
-        container.appendChild(itemDiv);
+        listContainer.appendChild(div);
       });
     }
 
-    // 开启齿轮编辑/排序模式
-    function openCategoryEdit(index) {
-      editingCategoryIndex = index;
-      tempCatalogBackup = JSON.parse(JSON.stringify(rawData.catalog)); // 备份原数据
-      renderCatalogUI();
+    function selectChannel(val) {
+      document.getElementById('channelInput').value = val;
+      renderAWB();
+      closeChannelModal();
     }
 
-    // 确定保存编辑/排序
-    function saveCategoryEdit() {
-      editingCategoryIndex = null;
-      tempCatalogBackup = null;
-      renderCatalogUI();
-    }
+    function addNewCustomChannel() {
+      const input = document.getElementById('newChannelInput');
+      const val = input.value.trim();
+      if (!val) return;
 
-    // 取消编辑/排序，恢复旧数据
-    function cancelCategoryEdit() {
-      if (tempCatalogBackup) {
-        rawData.catalog = JSON.parse(JSON.stringify(tempCatalogBackup));
+      let channels = getStoredChannels();
+      if (!channels.includes(val)) {
+        channels.push(val);
+        localStorage.setItem('custom_shipp_channels', JSON.stringify(channels));
       }
-      editingCategoryIndex = null;
-      tempCatalogBackup = null;
-      renderCatalogUI();
+      input.value = '';
+      renderChannelList();
     }
 
-    // 移动商品主分类位置（上移/下移）
-    function moveCategory(index, direction) {
-      const entries = Object.entries(rawData.catalog);
-      const targetIndex = index + direction;
+    function deleteCustomChannel(index) {
+      let channels = getStoredChannels();
+      channels.splice(index, 1);
+      localStorage.setItem('custom_shipp_channels', JSON.stringify(channels));
+      renderChannelList();
+    }
 
-      if (targetIndex < 0 || targetIndex >= entries.length) return;
+    function openChannelModal() {
+      renderChannelList();
+      document.getElementById('channelModal').style.display = 'flex';
+    }
 
-      // 交换位置
-      const temp = entries[index];
-      entries[index] = entries[targetIndex];
-      entries[targetIndex] = temp;
+    function closeChannelModal() {
+      document.getElementById('channelModal').style.display = 'none';
+    }
 
-      // 保持当前编辑焦点跟随移动
-      editingCategoryIndex = targetIndex;
+    function updateBarcode(orderId) {
+      if(!orderId) orderId = "261014HN714REB";
+      try {
+        JsBarcode("#barcode", orderId, { 
+          format: "CODE128", 
+          lineColor: "#000", 
+          width: 1.1, 
+          height: 32, 
+          displayValue: true,    
+          fontSize: 22,          
+          textMargin: 2,         
+          font: "monospace"      
+        });
+      } catch(e) { console.log(e); }
+    }
 
-      // 重构 rawData.catalog 保证 key 的顺序保持一致
-      const newCatalog = {};
-      entries.forEach(([key, val]) => {
-        newCatalog[key] = val;
+    function addProductRow(titleVal = '', varVal = '', qtyVal = 'x1', isDashed = false) {
+      const container = document.getElementById('productContainer');
+      const count = container.children.length + 1;
+      const rowId = 'prod_row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+
+      let qtyOptionsHTML = '';
+      let isCustomQty = true;
+
+      EXCEL_QUANTITIES.forEach(q => {
+        if (q === qtyVal) isCustomQty = false;
+        qtyOptionsHTML += `<option value="${q}" ${q === qtyVal ? 'selected' : ''}>${q}</option>`;
       });
+      qtyOptionsHTML += `<option value="CUSTOM" ${isCustomQty ? 'selected' : ''}>✍️ 自定义...</option>`;
 
-      rawData.catalog = newCatalog;
-      renderCatalogUI();
+      const div = document.createElement('div');
+      div.className = 'product-row';
+      div.id = rowId;
+      div.innerHTML = `
+        <div class="product-row-header">
+          <span>商品 #${count}</span>
+          <div>
+            <button class="btn-toggle-select" onclick="openCatalogModal('${rowId}')">▼ 选择表格分类</button>
+            <button class="btn-remove" onclick="document.getElementById('${rowId}').remove(); renderAWB();">删除</button>
+          </div>
+        </div>
+
+        <input type="text" class="form-control prod-title" value="${titleVal}" style="margin-bottom:3px;" placeholder="Product Title (商品名称)" oninput="renderAWB()">
+        
+        <div style="display:flex; gap:4px; margin-bottom:3px;">
+          <input type="text" class="form-control prod-var" value="${varVal}" style="flex:1;" placeholder="Variation (规格变体)" oninput="renderAWB()">
+          
+          <select class="form-control prod-qty-select" style="width:75px;" onchange="onQtySelectChange('${rowId}', this.value)">
+            ${qtyOptionsHTML}
+          </select>
+          <input type="text" class="form-control prod-qty-custom" value="${qtyVal}" style="width:65px; ${isCustomQty ? '' : 'display:none;'}" placeholder="数量" oninput="renderAWB()">
+        </div>
+
+        <label class="dashed-check-label">
+          <input type="checkbox" class="prod-dashed-check" ${isDashed ? 'checked' : ''} onchange="renderAWB()">
+          ✂️ 添加虚线
+        </label>
+      `;
+
+      container.appendChild(div);
     }
 
-    // 更新主分类名称
-    function updateMainTitle(oldTitle, newTitle) {
-      newTitle = newTitle.trim();
-      if (!newTitle || oldTitle === newTitle) return;
+    function openCatalogModal(rowId) {
+      activeRowIdForCatalog = rowId;
+      const catSelect = document.getElementById('modalCatSelect');
+      const varSelect = document.getElementById('modalVarSelect');
+      const qtySelect = document.getElementById('modalQtySelect');
+
+      let optionsHTML = `<option value="">-- 请选择主分类 --</option>`;
+      Object.keys(EXCEL_CATALOG).forEach(pName => {
+        optionsHTML += `<option value="${pName}">${pName}</option>`;
+      });
+      catSelect.innerHTML = optionsHTML;
+      varSelect.innerHTML = `<option value="">-- 请选择规格变体 --</option>`;
+
+      let qtyHTML = '';
+      EXCEL_QUANTITIES.forEach(q => {
+        qtyHTML += `<option value="${q}">${q}</option>`;
+      });
+      qtySelect.innerHTML = qtyHTML;
+
+      const rowElem = document.getElementById(rowId);
+      if (rowElem) {
+        const currentTitle = rowElem.querySelector('.prod-title').value.trim();
+        if (currentTitle && EXCEL_CATALOG[currentTitle]) {
+          catSelect.value = currentTitle;
+          onModalCatChange(currentTitle);
+          const currentVar = rowElem.querySelector('.prod-var').value.trim();
+          if (currentVar) varSelect.value = currentVar;
+        }
+
+        const currentQtySelect = rowElem.querySelector('.prod-qty-select').value;
+        const currentQtyCustom = rowElem.querySelector('.prod-qty-custom').value.trim();
+        const currentQty = (currentQtySelect === 'CUSTOM' ? currentQtyCustom : currentQtySelect) || 'x1';
+        if (EXCEL_QUANTITIES.includes(currentQty)) {
+          qtySelect.value = currentQty;
+        }
+      }
+
+      document.getElementById('catalogModal').style.display = 'flex';
+    }
+
+    function closeCatalogModal() {
+      document.getElementById('catalogModal').style.display = 'none';
+      activeRowIdForCatalog = null;
+    }
+
+    function onModalCatChange(catName) {
+      const varSelect = document.getElementById('modalVarSelect');
+      varSelect.innerHTML = `<option value="">-- 请选择规格变体 --</option>`;
+      if (catName && EXCEL_CATALOG[catName]) {
+        EXCEL_CATALOG[catName].forEach(v => {
+          varSelect.innerHTML += `<option value="${v}">${v}</option>`;
+        });
+      }
+    }
+
+    function applyCatalogSelection() {
+      if (!activeRowIdForCatalog) return;
+      const rowElem = document.getElementById(activeRowIdForCatalog);
+      if (rowElem) {
+        const selectedCat = document.getElementById('modalCatSelect').value;
+        const selectedVar = document.getElementById('modalVarSelect').value;
+        const selectedQty = document.getElementById('modalQtySelect').value;
+
+        if (selectedCat) {
+          rowElem.querySelector('.prod-title').value = selectedCat;
+        }
+        if (selectedVar) {
+          rowElem.querySelector('.prod-var').value = selectedVar;
+        }
+        if (selectedQty) {
+          const qtySelectElem = rowElem.querySelector('.prod-qty-select');
+          const qtyCustomElem = rowElem.querySelector('.prod-qty-custom');
+          qtySelectElem.value = selectedQty;
+          qtyCustomElem.style.display = 'none';
+          qtyCustomElem.value = selectedQty;
+        }
+        renderAWB();
+      }
+      closeCatalogModal();
+    }
+
+    function onQtySelectChange(rowId, selectedVal) {
+      const rowElem = document.getElementById(rowId);
+      if (!rowElem) return;
+      const customInput = rowElem.querySelector('.prod-qty-custom');
+
+      if (selectedVal === 'CUSTOM') {
+        customInput.style.display = 'block';
+        customInput.focus();
+      } else {
+        customInput.style.display = 'none';
+        customInput.value = selectedVal;
+      }
+      renderAWB();
+    }
+
+    function renderAWB() {
+      document.getElementById('awbBuyer').innerText = document.getElementById('buyerInput').value;
+      const orderNo = document.getElementById('orderInput').value;
+      document.getElementById('awbOrder').innerText = orderNo;
+      document.getElementById('awbChannel').innerText = document.getElementById('channelInput').value || 'COD';
+      document.getElementById('awbStore').innerText = document.getElementById('storeInput').value || 'The MoChii Shop@Shopee';
       
-      const entries = Object.entries(rawData.catalog);
-      const newCatalog = {};
+      document.getElementById('awbMsg').innerText = document.getElementById('msgInput').value;
+      document.getElementById('awbNote').innerText = document.getElementById('noteInput').value;
 
-      entries.forEach(([key, val]) => {
-        if (key === oldTitle) {
-          newCatalog[newTitle] = val;
-        } else {
-          newCatalog[key] = val;
+      updateBarcode(orderNo);
+
+      const prodContainer = document.getElementById('awbProducts');
+      prodContainer.innerHTML = '';
+
+      const rows = document.querySelectorAll('.product-row');
+      let calculatedTotalQty = 0;
+
+      rows.forEach((rowElem) => {
+        const titleVal = rowElem.querySelector('.prod-title').value.trim();
+        const varVal = rowElem.querySelector('.prod-var').value.trim();
+        
+        const qtySelectVal = rowElem.querySelector('.prod-qty-select').value;
+        const qtyCustomVal = rowElem.querySelector('.prod-qty-custom').value.trim();
+        let qtyVal = (qtySelectVal === 'CUSTOM' ? qtyCustomVal : qtySelectVal) || 'x1';
+
+        const isDashed = rowElem.querySelector('.prod-dashed-check').checked;
+
+        if(titleVal) {
+          const numericQty = parseInt(qtyVal.replace(/[^0-9]/g, '')) || 0;
+          calculatedTotalQty += numericQty;
+
+          const box = document.createElement('div');
+          box.className = 'awb-product-box';
+          box.innerHTML = `
+            <div class="awb-product-left">
+              <div class="awb-product-title">
+                <span>📦</span>
+                <span>Product: ${titleVal}</span>
+              </div>
+              <div class="awb-product-sub">Variation: ${varVal || ''}</div>
+            </div>
+            <div class="awb-product-qty">${qtyVal.startsWith('x') ? qtyVal : 'x' + qtyVal}</div>
+          `;
+          prodContainer.appendChild(box);
+
+          if (isDashed) {
+            const divider = document.createElement('div');
+            divider.className = 'awb-divider-dashed';
+            prodContainer.appendChild(divider);
+          }
         }
       });
 
-      rawData.catalog = newCatalog;
-      renderCatalogUI();
+      document.getElementById('awbTotalQty').innerText = calculatedTotalQty;
+
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('awbTimestamp').innerText = `${day}/${month}/${year} ${hours}:${mins}`;
     }
 
-    // 更新规格名称
-    function updateVar(mainTitle, varIndex, newVarName) {
-      if (rawData.catalog[mainTitle]) {
-        rawData.catalog[mainTitle][varIndex] = newVarName.trim();
-      }
-    }
+    function openPasteModal() { document.getElementById('pasteModal').style.display = 'flex'; }
+    function closePasteModal() { document.getElementById('pasteModal').style.display = 'none'; }
+    function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
-    // 添加新的主分类
-    function addMainCategory() {
-      const newCategoryName = prompt("请输入新的商品主分类名称：");
-      if (newCategoryName && newCategoryName.trim()) {
-        const title = newCategoryName.trim();
-        if (rawData.catalog[title]) {
-          alert("该商品分类已存在！");
-          return;
+    function applyPrintSettings() {
+      const selected = document.querySelector('input[name="printFormat"]:checked');
+      if (selected) {
+        const val = selected.value;
+        const btnPrint = document.getElementById('btnPrint');
+        const styleTag = document.getElementById('printPageStyle');
+
+        if (val === 'AWB') {
+          btnPrint.innerText = '🖨️ 打印面单 AWB';
+          styleTag.innerHTML = '@media print { @page { size: 100mm 150mm; margin: 0; } }';
+        } else if (val === 'A4') {
+          btnPrint.innerText = '🖨️ 打印 A4';
+          styleTag.innerHTML = '@media print { @page { size: A4; margin: 10mm; } }';
+        } else if (val === 'A5') {
+          btnPrint.innerText = '🖨️ 打印 A5';
+          styleTag.innerHTML = '@media print { @page { size: A5; margin: 5mm; } }';
         }
-        rawData.catalog[title] = ["默认规格"];
-        renderCatalogUI();
       }
+      closeSettingsModal();
     }
 
-    // 删除主分类
-    function deleteMainCategory(mainTitle) {
-      if (confirm(`确定要删除分类【${mainTitle}】及其所有规格吗？`)) {
-        delete rawData.catalog[mainTitle];
-        editingCategoryIndex = null;
-        tempCatalogBackup = null;
-        renderCatalogUI();
+    function processPastedText() {
+      const rawText = document.getElementById('pasteTextarea').value;
+      if (!rawText || rawText.trim() === '') return;
+
+      const orderMatch = rawText.match(/订单编号\s*([A-Z0-9]+)/i) || rawText.match(/Order\s*SN\s*([A-Z0-9]+)/i);
+      if (orderMatch) document.getElementById('orderInput').value = orderMatch[1].trim();
+
+      const buyerMatch = rawText.match(/([a-zA-Z0-9_\.]+)\s*订单编号/) || rawText.match(/([a-zA-Z0-9_\.]+)\s*Order\s*SN/);
+      if (buyerMatch) document.getElementById('buyerInput').value = buyerMatch[1].trim();
+
+      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      let productsFound = [];
+      let currentTitle = '';
+      let currentVar = '';
+      let currentQty = 'x1';
+
+      lines.forEach(line => {
+        if (line.includes('Handmade') || line.includes('Gelang') || line.includes('[Live') || line.includes('NOT FOR SALE') || line.includes('Free Gift')) {
+          if (currentTitle) {
+            productsFound.push({ title: currentTitle, variation: currentVar, qty: currentQty });
+            currentVar = ''; currentQty = 'x1';
+          }
+          currentTitle = line.replace(/预购|礼品|现货/g, '').trim();
+        } else if (line.startsWith('规格:') || line.startsWith('规格：') || line.startsWith('Variation:')) {
+          currentVar = line.replace(/规格[:：]|Variation:/g, '').trim();
+        } else if (line.match(/^x\d+\$/)) {
+          currentQty = line;
+        }
+      });
+
+      if (currentTitle) {
+        productsFound.push({ title: currentTitle, variation: currentVar, qty: currentQty });
       }
+
+      if (productsFound.length > 0) {
+        document.getElementById('productContainer').innerHTML = '';
+        productsFound.forEach((p) => {
+          addProductRow(p.title, p.variation, p.qty, false);
+        });
+      }
+
+      document.getElementById('checkMsgBox').checked = false;
+
+      closePasteModal();
+      renderAWB();
     }
 
-    // 为分类添加规格
-    function addVar(mainTitle) {
-      if (rawData.catalog[mainTitle]) {
-        rawData.catalog[mainTitle].push("新规格");
-        renderCatalogUI();
-      }
-    }
+    window.onload = function() {
+      fetchLiveCatalog();
+      addProductRow('[Live Play] Handmade Gelang Tangan', 'Premium-10', 'x1', false);
+      addProductRow('[NOT FOR SALE] Free Gift Zone', 'Premium Pro-Max', 'x1', false);
+      renderAWB();
+    };
+  </script>
 
-    // 删除具体规格
-    function deleteVar(mainTitle, varIndex) {
-      if (rawData.catalog[mainTitle]) {
-        rawData.catalog[mainTitle].splice(varIndex, 1);
-        renderCatalogUI();
-      }
-    }
-
-    // 导出并下载格式化好的 JSON 文件
-    function saveAndDownload() {
-      const jsonStr = JSON.stringify(rawData, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'catalog.json';
-      a.click();
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'zh-CN',
+        includedLanguages: 'zh-CN,en,ms',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+      }, 'google_translate_element');
     }
   </script>
+  <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
