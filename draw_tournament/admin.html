@@ -71,7 +71,7 @@
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">当角逐名单剩最后 1 人时自动定格为独占冠军并完成结算播报。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">普及名单手动选满 3 人（冠亚季）时自动触发大屏全屏恭喜播报。</div>
             </div>
           </label>
 
@@ -79,7 +79,7 @@
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
               <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">剩【安慰奖名额 + 3】人时，先进入安慰奖环节，再进入冠亚季决战环节。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">普及名单手动选满【安慰奖+冠亚季】名额时，触发全局自动结算。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
@@ -459,6 +459,7 @@
       badge.className = "text-amber-400 font-bold";
     }
 
+    // 🌟 核心状态变更与规则判断函数
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
@@ -466,28 +467,15 @@
 
       target.status = newStatus;
 
-      const remainingPending = activeRound.candidates.filter(c => c.status === 'pending');
+      // 仅仅获取【已被管理者点击普及/晋级】的买家名单（pass）
+      const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
-      // 🌟 核心修正：模式 2 逻辑（剩 M+3 人时，触发安慰奖环节提醒）
-      if (isModeEnabled && selectedMode === 'mode2') {
-        const consCount = state.modeConfig.mode2ConsolationCount || 10;
-        const totalThreshold = consCount + 3; // M + 3 名额
-
-        if (remainingPending.length === totalThreshold && newStatus === 'pass') {
-          setTimeout(() => {
-            alert(`🎁【模式 2 安慰奖环节触发】\n\n当前人数已达到设定的人数 (${totalThreshold}人)，包含 ${consCount} 名安慰奖与 头三名(冠亚季)！\n\n系统已为您自动开启【安慰奖环节】，请先从当前名单中抽出/锁定 ${consCount} 名安慰奖获奖者！`);
-          }, 100);
-        }
-      }
-
-      // 🌟 核心修正：当角逐名单剩最后 1 人时自动定格为冠军并弹出全屏恭喜海报
-      if (remainingPending.length === 1) {
-        const champion = remainingPending[0];
-        champion.status = 'pass';
-
-        const winnerNames = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).join('、');
+      // 🌟 修正 1：模式 1 条件（只有当【已普及名单】被手动选满 3 人时，才触发广播）
+      if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length === 3 && newStatus === 'pass') {
+        const winnerNames = passedCandidates.map(c => c.name).join('、');
+        
         state.latestEvent = {
           type: 'finalCongrat',
           timestamp: Date.now(),
@@ -496,8 +484,28 @@
         };
         saveState();
         renderRoundTabs();
-        alert(`👑 🎉 最终冠军已诞生：${champion.name}！公开大屏已实时同步显示冠军画面！`);
+        alert(`👑 🎉【冠亚季军产生】！已成功选择 3 名获奖买家：${winnerNames}！公开大屏已实时同步广播！`);
         return;
+      }
+
+      // 🌟 修正 2：模式 2 条件（当【已普及名单】选满 安慰奖名额+3 时，触发广播）
+      if (isModeEnabled && selectedMode === 'mode2' && newStatus === 'pass') {
+        const consCount = state.modeConfig.mode2ConsolationCount || 10;
+        const totalThreshold = consCount + 3; // 安慰奖 + 冠亚季3名
+
+        if (passedCandidates.length === totalThreshold) {
+          const winnerNames = passedCandidates.map(c => c.name).join('、');
+          state.latestEvent = {
+            type: 'finalCongrat',
+            timestamp: Date.now(),
+            targetRoundIndex: currentRoundIndex,
+            winnerNames: winnerNames
+          };
+          saveState();
+          renderRoundTabs();
+          alert(`👑 🎉【模式 2 全局奖项诞生】！已成功选出 ${consCount} 名安慰奖与冠亚季军（共${totalThreshold}名）：${winnerNames}！公开大屏已实时同步显示！`);
+          return;
+        }
       }
 
       saveState();
