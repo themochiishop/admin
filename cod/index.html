@@ -8,13 +8,17 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
 
+    /* 🏛️ 重新配置正式官方 CSS 变量（Modern Corporate Steel Blue Theme） */
     :root {
-      --primary: #ec4899;
-      --primary-hover: #db2777;
-      --bg-color: #5f5f5f;
-      --border-color: #fbcfe8;
-      --card-bg: #ffffff;
-      --text-main: #374151;
+      --primary: #2563eb;          /* 正式官方科技蓝 */
+      --primary-hover: #1d4ed8;    /* 深蓝色悬停 */
+      --primary-light: #eff6ff;    /* 极浅蓝背景 */
+      --primary-border: #bfdbfe;   /* 浅蓝边框 */
+      --bg-color: #0f172a;         /* 全局深蓝灰背景 (Slate 900) */
+      --border-color: #e2e8f0;     /* 规范灰色边框 */
+      --card-bg: #ffffff;          /* 白色面板背景 */
+      --text-main: #1e293b;        /* 深灰主文字 (Slate 800) */
+      --text-muted: #64748b;       /* 次要灰色文字 (Slate 500) */
     }
 
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -40,8 +44,8 @@
       background: var(--card-bg);
       padding: 14px;
       border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.1);
-      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      border: 1px solid #334155;
       max-height: 92vh;
       overflow-y: auto;
     }
@@ -52,11 +56,12 @@
     /* ⚡ 2. 中间商品清单区域适度缩窄最小宽度 */
     .middle-panel { flex: 1; min-width: 300px; }
     
-    /* 右侧预览面板默认固定宽，不抢占中间空间 */
+    /* 右侧预览面板：沉浸式深灰蓝环境 */
     .preview-panel {
       width: 380px;
       flex-shrink: 0;
-      background: #2b2b2b;
+      background: #1e293b;
+      border: 1px solid #334155;
       padding: 14px;
       border-radius: 10px;
       display: flex;
@@ -72,13 +77,14 @@
       justify-content: space-between;
       margin-bottom: 10px;
       padding-bottom: 6px;
-      border-bottom: 2px solid var(--bg-color);
+      border-bottom: 2px solid #f1f5f9;
     }
 
     .panel-title { font-size: 14px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
 
+    /* 按钮重置为官方靛蓝/深灰色系 */
     .btn-quick-paste {
-      background-color: #8b5cf6;
+      background-color: #4f46e5;
       color: white;
       border: none;
       padding: 4px 9px;
@@ -86,8 +92,9 @@
       font-size: 11px;
       font-weight: bold;
       cursor: pointer;
+      transition: background-color 0.2s;
     }
-    .btn-quick-paste:hover { background-color: #7c3aed; }
+    .btn-quick-paste:hover { background-color: #4338ca; }
 
     .sync-badge {
       font-size: 10px;
@@ -103,29 +110,32 @@
     .form-control {
       width: 100%;
       padding: 5px 7px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #cbd5e1;
       border-radius: 5px;
       font-size: 11.5px;
       outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .form-control:focus { border-color: var(--primary); }
+    .form-control:focus { 
+      border-color: var(--primary); 
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
 
     .input-gear-group { display: flex; gap: 4px; align-items: center; }
     .btn-gear {
-      background: #f3f4f6;
-      border: 1px solid #d1d5db;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
       border-radius: 5px;
       padding: 4px 7px;
       font-size: 12px;
       cursor: pointer;
       transition: background 0.2s;
     }
-    .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
+    .btn-gear:hover { background: #e2e8f0; border-color: var(--primary); }
 
-    /* 商品清单标题旁跳转齿轮链接样式 */
     .btn-gear-link {
-      background: #f3f4f6;
-      border: 1px solid #d1d5db;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
       border-radius: 5px;
       padding: 2px 6px;
       font-size: 12px;
@@ -137,7 +147,7 @@
       transition: background 0.2s, border-color 0.2s;
     }
     .btn-gear-link:hover {
-      background: #e5e7eb;
+      background: #e2e8f0;
       border-color: var(--primary);
     }
 
@@ -158,9 +168,10 @@
       height: 28px;
     }
 
+    /* 🛍️ 商品卡片：重置为清新专业的浅天蓝底色 */
     .product-row {
-      background-color: #fff5f8;
-      border: 1px dashed var(--border-color);
+      background-color: var(--primary-light);
+      border: 1px dashed var(--primary-border);
       padding: 8px;
       border-radius: 6px;
       margin-bottom: 8px;
@@ -170,7 +181,7 @@
 
     .dashed-check-label {
       font-size: 10.5px;
-      color: #6b7280;
+      color: var(--text-muted);
       display: flex;
       align-items: center;
       gap: 3px;
@@ -180,21 +191,27 @@
     }
 
     .btn-toggle-select {
-      background: #f3e8ff;
-      color: #7e22ce;
-      border: 1px solid #d8b4fe;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
       border-radius: 4px;
       padding: 2px 6px;
       font-size: 10.5px;
       cursor: pointer;
       font-weight: 600;
       white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .btn-toggle-select:hover {
+      background: #e2e8f0;
+      color: var(--primary);
+      border-color: var(--primary);
     }
 
     .btn-add {
       width: 100%;
       padding: 6px;
-      background: #fdf2f8;
+      background: #f8fafc;
       border: 1px dashed var(--primary);
       color: var(--primary);
       border-radius: 5px;
@@ -202,7 +219,9 @@
       font-weight: bold;
       font-size: 11.5px;
       margin-bottom: 8px;
+      transition: background 0.2s;
     }
+    .btn-add:hover { background: #eff6ff; }
 
     .btn-primary {
       width: 100%;
@@ -215,19 +234,23 @@
       font-weight: bold;
       cursor: pointer;
       margin-top: 8px;
+      transition: background-color 0.2s;
     }
+    .btn-primary:hover { background-color: var(--primary-hover); }
 
     .print-btn-group { display: flex; gap: 8px; margin-top: 6px; }
-    .btn-print { flex: 1; padding: 7px; background-color: #10b981; color: white; border: none; border-radius: 5px; font-size: 12.5px; font-weight: bold; cursor: pointer; }
-    .btn-settings { padding: 7px 12px; background-color: #6b7280; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .btn-print { flex: 1; padding: 7px; background-color: #059669; color: white; border: none; border-radius: 5px; font-size: 12.5px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+    .btn-print:hover { background-color: #047857; }
+    .btn-settings { padding: 7px 12px; background-color: #475569; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: background-color 0.2s; }
+    .btn-settings:hover { background-color: #334155; }
 
-    /* AWB 预览卡片（默认 AWB 比例：350px 宽，520px 最小高） */
+    /* AWB 预览卡片（保持规范热敏单白底） */
     .awb-card {
       width: 350px;
       background: #ffffff;
       padding: 16px 18px;
       border-radius: 6px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       position: relative;
       min-height: 520px;
       display: flex;
@@ -282,27 +305,30 @@
     }
     .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 9999; }
-    .modal-content { background: #fff; padding: 16px; border-radius: 10px; width: 420px; max-width: 90%; }
+    /* 弹窗样式 */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 9999; }
+    .modal-content { background: #fff; padding: 16px; border-radius: 10px; width: 420px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .modal-title { font-size: 14px; font-weight: bold; }
-    .modal-close { cursor: pointer; font-size: 18px; font-weight: bold; color: #9ca3af; }
-    .modal-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11.5px; margin-bottom: 10px; }
+    .modal-title { font-size: 14px; font-weight: bold; color: var(--text-main); }
+    .modal-close { cursor: pointer; font-size: 18px; font-weight: bold; color: #94a3b8; }
+    .modal-close:hover { color: #0f172a; }
+    .modal-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 11.5px; margin-bottom: 10px; outline: none; }
+    .modal-textarea:focus { border-color: var(--primary); }
 
-    .channel-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
-    .channel-list-item:hover { background: #fdf2f8; border-color: var(--primary); }
+    .channel-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; }
+    .channel-list-item:hover { background: #eff6ff; border-color: var(--primary); }
     .btn-item-del { color: #ef4444; font-size: 11px; border: none; background: none; cursor: pointer; }
 
-    .setting-option { display: flex; align-items: center; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
-    .setting-option:hover { border-color: var(--primary); background-color: #fdf2f8; }
+    .setting-option { display: flex; align-items: center; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; }
+    .setting-option:hover { border-color: var(--primary); background-color: #eff6ff; }
     .setting-option input[type="radio"] { margin-right: 10px; accent-color: var(--primary); }
-    .setting-label { font-size: 12px; font-weight: bold; color: #1f2937; }
-    .setting-desc { font-size: 11px; color: #6b7280; margin-left: auto; }
+    .setting-label { font-size: 12px; font-weight: bold; color: #1e293b; }
+    .setting-desc { font-size: 11px; color: #64748b; margin-left: auto; }
 
     .goog-te-banner-frame.skiptranslate { box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important; }
     .goog-te-gadget-simple { 
       background-color: #fff !important; 
-      border: 1px solid var(--border-color) !important; 
+      border: 1px solid #cbd5e1 !important; 
       padding: 2px 5px !important; 
       border-radius: 5px !important; 
       font-size: 11px !important; 
@@ -314,7 +340,7 @@
       html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; top: 0px !important; }
       .left-panel, .middle-panel, .modal-overlay, .goog-te-banner-frame { display: none !important; }
       .app-container { display: block !important; margin: 0 !important; width: 100% !important; height: 100% !important; }
-      .preview-panel { width: 100% !important; background: white !important; padding: 0 !important; display: block !important; min-height: 100vh !important; }
+      .preview-panel { width: 100% !important; background: white !important; border: none !important; padding: 0 !important; display: block !important; min-height: 100vh !important; }
       
       .awb-card { 
         border: none !important; 
@@ -501,7 +527,7 @@
 
       <div style="display:flex; gap:6px;">
         <input type="text" id="newChannelInput" class="form-control" placeholder="输入自定义的新渠道 (如: Self Pickup)" style="flex:1;">
-        <button onclick="addNewCustomChannel()" style="padding:5px 10px; background:#8b5cf6; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">➕ 保存添加</button>
+        <button onclick="addNewCustomChannel()" style="padding:5px 10px; background:#4f46e5; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">➕ 保存添加</button>
       </div>
     </div>
   </div>
