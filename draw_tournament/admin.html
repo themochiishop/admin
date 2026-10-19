@@ -20,10 +20,10 @@
       </div>
       
       <div class="flex items-center space-x-3">
-        <!-- ⚙️ 模式显示与齿轮设置按钮 -->
-        <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs">
-          <span id="currentModeBadge" class="text-amber-400 font-bold">⚙️ 模式: 冠亚季模式</span>
-          <button onclick="openConfigModal()" class="text-slate-300 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式">
+        <!-- 🌟 已移除前面的齿轮图标，仅保留纯文字模式显示 -->
+        <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-inner">
+          <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
+          <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式规则">
             ⚙️
           </button>
         </div>
@@ -61,32 +61,30 @@
       </h3>
 
       <div class="space-y-4 text-xs">
-        <!-- 启用开关 -->
         <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
           <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
           <span class="font-bold text-slate-200">启用模式规则 (必须勾选后方能生效)</span>
         </label>
 
-        <!-- 模式选择 RADIO -->
         <div id="modeRadioGroup" class="space-y-2 opacity-50 pointer-events-none transition-all">
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
-            <input type="radio" name="drawMode" value="mode1" onchange="updateModeSelection()" class="mt-0.5">
+            <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季模式 (默认)</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">剩余 3 人时提示决战，剩 1 人时自动定格为终极冠军。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">剩 3 人时提示决战，剩 1 人时自动定格为终极冠军。</div>
             </div>
           </label>
 
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
-            <input type="radio" name="drawMode" value="mode2" onchange="updateModeSelection()" class="mt-0.5">
+            <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div>
               <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">支持大基数选拔，在剩余 5 人时进行决战提示。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">在剩余 5 人时进行决战提示。</div>
             </div>
           </label>
 
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
-            <input type="radio" name="drawMode" value="mode3" onchange="updateModeSelection()" class="mt-0.5">
+            <input type="radio" name="drawMode" value="mode3" class="mt-0.5">
             <div class="flex-1">
               <div class="font-bold text-blue-300">模式 3：自定义模式</div>
               <div class="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-2">
@@ -110,10 +108,8 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     
-    <!-- 轮次 Tabs -->
     <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
-      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
-      </div>
+      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto"></div>
       <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold" data-i18n="btnResetAll">⚠️ 重置所有轮次数据</button>
     </div>
 
@@ -298,10 +294,6 @@
       }
     }
 
-    function updateModeSelection() {
-      // Radio toggle handled on save
-    }
-
     function saveConfigModal() {
       const isEnabled = document.getElementById('enableModeCheckbox').checked;
       const radios = document.getElementsByName('drawMode');
@@ -334,14 +326,14 @@
       const badge = document.getElementById('currentModeBadge');
       if (!badge) return;
       if (!state.modeConfig || !state.modeConfig.enabled) {
-        badge.innerText = "⚙️ 模式: 未启用规则";
+        badge.innerText = "模式: 未启用规则";
         badge.className = "text-slate-400 font-bold";
         return;
       }
       const m = state.modeConfig.selectedMode;
-      if (m === 'mode1') badge.innerText = "⚙️ 模式: 冠亚季模式";
-      else if (m === 'mode2') badge.innerText = "⚙️ 模式: 安慰奖模式";
-      else if (m === 'mode3') badge.innerText = `⚙️ 模式: 自定义(剩${state.modeConfig.customThreshold}人)`;
+      if (m === 'mode1') badge.innerText = "模式: 冠亚季模式";
+      else if (m === 'mode2') badge.innerText = "模式: 安慰奖模式";
+      else if (m === 'mode3') badge.innerText = `模式: 自定义(剩${state.modeConfig.customThreshold}人)`;
       badge.className = "text-amber-400 font-bold";
     }
 
@@ -364,7 +356,7 @@
       const remainingPending = activeRound.candidates.filter(c => c.status === 'pending');
       const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
 
-      // 🌟 1. 当只剩 1 人时：自动定格为终极冠军
+      // 🌟 剩 1 人时自动冠军判定
       if (remainingPending.length === 1) {
         activeRound.isFinal = true;
         const champion = remainingPending[0];
@@ -383,7 +375,7 @@
         return;
       }
 
-      // 🌟 2. 模式触发阈值 N 人确认
+      // 模式触发阈值 N 人确认
       const thresholdN = getActiveThresholdN();
       if (newStatus === 'pass' && remainingPending.length === thresholdN && state.modeConfig && state.modeConfig.enabled) {
         setTimeout(() => {
@@ -543,7 +535,7 @@
         passedContainer.innerHTML = passedList.map(c => 
           '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
-            '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo) + '</span>' +
+            '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
             '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 rounded">✕</button>' +
           '</div>'
         ).join('');
@@ -574,7 +566,7 @@
           '<div>' +
             '<div class="flex justify-between items-start mb-2"><span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
             '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
-            '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '-') + '</div>' +
+            '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
           '</div>' +
           '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-2">' +
             (c.status !== 'out' ? `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1.5 text-xs rounded bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold">${i18n[currentLang].btnPass}</button>` : '') +
