@@ -89,6 +89,17 @@
       </div>
     </div>
 
+    <!-- 🔥 Shopee 直播间当前正在 4 人投票组公开展示 -->
+    <div id="publicActiveGroupDisplay" class="mb-6 hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 shadow-xl">
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl animate-bounce">🔥</span>
+          <h3 class="text-sm font-bold text-amber-400">Shopee 直播间正在 4 人盲抽投票中！(快去直播间为您支持的买家投票)</h3>
+        </div>
+      </div>
+      <div id="publicActiveGroupGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"></div>
+    </div>
+
     <!-- 统计卡片区 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
@@ -187,20 +198,13 @@
         allDone: "本轮全员判定完毕",
         noOut: "暂无淘汰人员",
         finalTitle: "👑 恭喜买家成功获得普及荣誉！",
-        finalSubPrefix: "恭喜：",
         autoCloseText: "将在",
         autoCloseSuffix: "秒后自动切回大屏榜单...",
         unitPeople: "人",
         modePrefix: "模式: ",
         mode1: "冠亚季模式",
         mode2: "包含安慰奖模式",
-        mode3: "自定义模式",
-        modeDisabled: "未启用规则",
-        champion: "👑 冠军: ",
-        runnerUp: "🥈 亚军: ",
-        thirdPlace: "🥉 季军: ",
-        consolation: "🎁 安慰奖名额: ",
-        unitPerson: "名"
+        modeDisabled: "未启用规则"
       },
       en: {
         publicTitle: "Mochiishop Monthly Draw Leaderboard",
@@ -221,24 +225,17 @@
         passedTitle: "Passed / Advanced List",
         pendingTitle: "Active Candidates",
         noPassed: "No qualified buyers yet...",
-        noCandidates: "Syncing candidates list, stay tuned...",
+        noCandidates: "Syncing candidates list...",
         allDone: "All candidates processed",
         noOut: "No eliminated candidates",
         finalTitle: "👑 Winner Announcement!",
-        finalSubPrefix: "Congratulations: ",
         autoCloseText: "Auto returning in",
         autoCloseSuffix: "seconds...",
         unitPeople: "",
         modePrefix: "Mode: ",
         mode1: "Podium Mode",
         mode2: "Consolation Mode",
-        mode3: "Custom Mode",
-        modeDisabled: "Disabled Rules",
-        champion: "👑 Champion: ",
-        runnerUp: "🥈 Runner-up: ",
-        thirdPlace: "🥉 3rd Place: ",
-        consolation: "🎁 Consolation: ",
-        unitPerson: " winner(s)"
+        modeDisabled: "Disabled Rules"
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
@@ -263,20 +260,13 @@
         allDone: "Semua calon telah diproses",
         noOut: "Tiada calon tersingkir",
         finalTitle: "👑 Pengumuman Pemenang!",
-        finalSubPrefix: "Tahniah: ",
         autoCloseText: "Kembali secara automatik dalam",
         autoCloseSuffix: "saat...",
         unitPeople: " orang",
         modePrefix: "Mod: ",
         mode1: "Mod Tiga Teratas",
         mode2: "Mod Saguhati",
-        mode3: "Mod Khas",
-        modeDisabled: "Peraturan Nyahaktif",
-        champion: "👑 Juara: ",
-        runnerUp: "🥈 Naib Juara: ",
-        thirdPlace: "🥉 Tempat Ke-3: ",
-        consolation: "🎁 Saguhati: ",
-        unitPerson: " orang"
+        modeDisabled: "Peraturan Nyahaktif"
       }
     };
 
@@ -292,9 +282,7 @@
 
       ['zh', 'en', 'ms'].forEach(l => {
         const btn = document.getElementById(`langBtn-${l}`);
-        if (btn) {
-          btn.className = (l === lang) ? "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
-        }
+        if (btn) btn.className = (l === lang) ? "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
       });
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -329,18 +317,18 @@
       if (m === 'mode1') {
         badge.innerText = `${lang.modePrefix}${lang.mode1}`;
         tooltip.innerHTML = `
-          <div class="flex justify-between items-center text-amber-300"><span>${lang.champion}</span><span class="font-bold">1名</span></div>
-          <div class="flex justify-between items-center text-slate-300"><span>${lang.runnerUp}</span><span class="font-bold">1名</span></div>
-          <div class="flex justify-between items-center text-amber-600"><span>${lang.thirdPlace}</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-amber-300"><span>👑 冠军:</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-slate-300"><span>🥈 亚军:</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-amber-600"><span>🥉 季军:</span><span class="font-bold">1名</span></div>
         `;
       } else if (m === 'mode2') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
         badge.innerText = `${lang.modePrefix}${lang.mode2}`;
         tooltip.innerHTML = `
-          <div class="flex justify-between items-center text-amber-300"><span>${lang.champion}</span><span class="font-bold">1名</span></div>
-          <div class="flex justify-between items-center text-slate-300"><span>${lang.runnerUp}</span><span class="font-bold">1名</span></div>
-          <div class="flex justify-between items-center text-amber-600"><span>${lang.thirdPlace}</span><span class="font-bold">1名</span></div>
-          <div class="flex justify-between items-center text-emerald-400 pt-1 border-t border-slate-800/80"><span>${lang.consolation}</span><span class="font-bold">${consCount}名</span></div>
+          <div class="flex justify-between items-center text-amber-300"><span>👑 冠军:</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-slate-300"><span>🥈 亚军:</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-amber-600"><span>🥉 季军:</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-emerald-400 pt-1 border-t border-slate-800/80"><span>🎁 安慰奖:</span><span class="font-bold">${consCount}名</span></div>
         `;
       }
     }
@@ -368,7 +356,6 @@
             currentRoundIndex = Math.max(0, state.rounds.length - 1);
           }
 
-          // 🌟 修复关键：监听后台生成的定格事件，展示全屏恭喜弹窗
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') {
@@ -458,6 +445,24 @@
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
+      // 0. 公开展示当前直播间 4 人 PK 组
+      const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
+      const publicGroupGrid = document.getElementById('publicActiveGroupGrid');
+      
+      if (state.activeGroupIds && state.activeGroupIds.length > 0) {
+        publicGroupContainer.classList.remove('hidden');
+        const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
+        publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
+          <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-3 shadow text-center">
+            <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">香水 #${idx + 1}</span>
+            <div class="font-bold text-amber-300 text-sm truncate">${escapeHtml(c.name)}</div>
+            <div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || '无订单号')}</div>
+          </div>
+        `).join('');
+      } else {
+        publicGroupContainer.classList.add('hidden');
+      }
+
       // 1. 已普及/获胜买家
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
@@ -484,15 +489,21 @@
       } else if (pendingList.length === 0) {
         pendingContainer.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${i18n[currentLang].allDone}</p></div>`;
       } else {
-        const cardsHtml = pendingList.map((c, index) => 
-          '<div class="p-3.5 rounded-xl border border-slate-700 bg-slate-800/80 transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
+        const cardsHtml = pendingList.map((c, index) => {
+          let extraStyle = 'border-slate-700 bg-slate-800/80';
+          let pkBadge = '';
+          if (state.activeGroupIds && state.activeGroupIds.includes(c.id)) {
+            extraStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
+            pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
+          }
+          return '<div class="p-3.5 rounded-xl border ' + extraStyle + ' transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
             '<div>' +
-              '<div class="text-[11px] font-mono text-slate-400 mb-1">#' + (index + 1) + '</div>' +
+              '<div class="text-[11px] font-mono text-slate-400 mb-1">#' + (index + 1) + pkBadge + '</div>' +
               '<div class="font-bold text-slate-100 text-sm truncate">' + escapeHtml(c.name) + '</div>' +
               '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
             '</div>' +
-          '</div>'
-        ).join('');
+          '</div>';
+        }).join('');
 
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3 min-w-[600px]">' + cardsHtml + '</div>';
       }
