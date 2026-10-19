@@ -8,14 +8,14 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 -->
+  <!-- 🌟 全屏豪华恭喜弹窗 (轮次推进 / 冠军诞生时触发) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-24 -right-24 w-56 h-56 bg-emerald-500/30 rounded-full blur-3xl"></div>
 
       <div class="text-7xl mb-4 animate-bounce">👑</div>
-      <h2 id="congratBadge" class="text-xs font-black tracking-widest text-amber-400 uppercase mb-1">FINAL WINNER ANNOUNCEMENT</h2>
+      <h2 id="congratBadge" class="text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
       <h3 id="congratModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-2">
         热烈祝贺！成功获得普及荣誉！
       </h3>
@@ -24,7 +24,7 @@
 
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow">
         <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-        <span><span data-i18n="autoCloseText">将在</span> <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">10</span> <span data-i18n="autoCloseSuffix">秒后自动切回大屏榜单...</span></span>
+        <span><span data-i18n="autoCloseText">将在</span> <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">5</span> <span data-i18n="autoCloseSuffix">秒后自动切回大屏榜单...</span></span>
       </div>
     </div>
   </div>
@@ -41,12 +41,12 @@
       </div>
       
       <div class="flex items-center space-x-4">
-        <!-- 🌟 已移除齿轮图标的模式徽章 -->
-        <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner">
-          模式: 加载中...
-        </span>
+        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+          <span data-i18n="liveSyncText">直播实时同步中...</span>
+        </div>
 
-        <!-- 🌐 语言切换选择器 (修复语言切换功能) -->
+        <!-- 🌐 语言切换选择器 -->
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
             <span>🇨🇳</span> <span class="text-[11px]">ZH</span>
@@ -158,7 +158,7 @@
     let currentRoundIndex = 0;
     let lastSeenEventTime = 0;
     let popupTimer = null;
-    let state = { modeConfig: { enabled: true, selectedMode: 'mode1', customThreshold: 2 }, rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
 
     const i18n = {
       zh: {
@@ -176,18 +176,16 @@
         searchPlaceholder: "🔍 搜索您的名字或订单号...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
-        finalRoundTitle: "🏆 最终轮",
         passedTitle: "已普及/晋级名单",
         pendingTitle: "角逐中买家名单",
         noPassed: "本轮暂无普及买家，直播抽出中...",
         noCandidates: "本轮抽奖名单同步中，请关注直播间...",
         allDone: "本轮全员判定完毕",
         noOut: "暂无淘汰人员",
-        modePrefix: "模式: ",
-        mode1: "冠亚季模式",
-        mode2: "包含安慰奖模式",
-        mode3: "自定义模式",
-        modeDisabled: "未启用规则",
+        promotedTitle: "🎉 恭喜进入 ",
+        promotedSub: "上一轮普及人员已继承，开启下一轮角逐！",
+        finalTitle: "👑 恭喜买家成功获得普及荣誉！",
+        finalSubPrefix: "恭喜：",
         autoCloseText: "将在",
         autoCloseSuffix: "秒后自动切回大屏榜单...",
         unitPeople: "人"
@@ -207,18 +205,16 @@
         searchPlaceholder: "🔍 Search name or order no...",
         roundPrefix: "Round ",
         roundSuffix: "",
-        finalRoundTitle: "🏆 Final Round",
         passedTitle: "Passed / Advanced List",
         pendingTitle: "Active Candidates",
         noPassed: "No qualified buyers yet...",
         noCandidates: "Syncing candidates list, stay tuned...",
         allDone: "All candidates processed",
         noOut: "No eliminated candidates",
-        modePrefix: "Mode: ",
-        mode1: "Podium (Top 3)",
-        mode2: "With Consolation",
-        mode3: "Custom Mode",
-        modeDisabled: "Disabled",
+        promotedTitle: "🎉 Advanced to ",
+        promotedSub: "Qualified buyers carried over, starting next round!",
+        finalTitle: "👑 Winner Announcement!",
+        finalSubPrefix: "Congratulations: ",
         autoCloseText: "Auto returning in",
         autoCloseSuffix: "seconds...",
         unitPeople: ""
@@ -238,18 +234,16 @@
         searchPlaceholder: "🔍 Cari nama atau no pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
-        finalRoundTitle: "🏆 Pusingan Akhir",
         passedTitle: "Senarai Layak / Lulus",
         pendingTitle: "Calon Bersaing",
         noPassed: "Belum ada pembeli layak...",
         noCandidates: "Menyelaraskan senarai calon...",
         allDone: "Semua calon telah diproses",
         noOut: "Tiada calon tersingkir",
-        modePrefix: "Mod: ",
-        mode1: "Mod Tiga Teratas",
-        mode2: "Mod Saguhati",
-        mode3: "Mod Khas",
-        modeDisabled: "Nyahaktif",
+        promotedTitle: "🎉 Layak ke ",
+        promotedSub: "Pembeli layak dari pusingan sebelumnya dimuatkan!",
+        finalTitle: "👑 Pengumuman Pemenang!",
+        finalSubPrefix: "Tahniah: ",
         autoCloseText: "Kembali secara automatik dalam",
         autoCloseSuffix: "saat...",
         unitPeople: " orang"
@@ -259,7 +253,7 @@
     window.onload = function() {
       setLanguage(currentLang);
       loadAndRender();
-      setInterval(loadAndRender, 2000);
+      setInterval(loadAndRender, 1500); // 1.5秒高效高频同步
     };
 
     function setLanguage(lang) {
@@ -290,27 +284,9 @@
       renderRoundTabs();
       renderPublicView();
       updateStats();
-      updatePublicModeBadge();
-    }
-
-    function updatePublicModeBadge() {
-      const badge = document.getElementById('publicModeBadge');
-      if (!badge) return;
-      if (!state.modeConfig || !state.modeConfig.enabled) {
-        badge.innerText = `${i18n[currentLang].modePrefix}${i18n[currentLang].modeDisabled}`;
-        return;
-      }
-      const m = state.modeConfig.selectedMode;
-      let text = i18n[currentLang].mode1;
-      if (m === 'mode2') text = i18n[currentLang].mode2;
-      else if (m === 'mode3') text = `${i18n[currentLang].mode3}(${state.modeConfig.customThreshold || 2})`;
-
-      badge.innerText = `${i18n[currentLang].modePrefix}${text}`;
     }
 
     function getRoundTitle(idx) {
-      const r = state.rounds[idx];
-      if (r && r.isFinal) return i18n[currentLang].finalRoundTitle;
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
@@ -323,17 +299,28 @@
             state = parsed;
           }
 
+          // 🌟 自动跟随控制台推进轮次 / 事件响应
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
-            if (state.latestEvent.type === 'finalCongrat') {
-              showPopup("👑 恭喜买家成功获得普及荣誉！", "恭喜：" + (state.latestEvent.winnerNames || ""), 10);
+            
+            if (state.latestEvent.type === 'advance') {
+              // 自动跟推进度到最新一轮
+              currentRoundIndex = state.latestEvent.targetRoundIndex;
+              showPopup(`${i18n[currentLang].promotedTitle}${getRoundTitle(currentRoundIndex)}!`, i18n[currentLang].promotedSub, 5);
+            } else if (state.latestEvent.type === 'prevRound') {
+              currentRoundIndex = state.latestEvent.targetRoundIndex;
+            } else if (state.latestEvent.type === 'finalCongrat') {
+              showPopup(i18n[currentLang].finalTitle, `${i18n[currentLang].finalSubPrefix}${state.latestEvent.winnerNames || ""}`, 10);
             }
+          }
+
+          if (currentRoundIndex >= state.rounds.length) {
+            currentRoundIndex = Math.max(0, state.rounds.length - 1);
           }
 
           renderRoundTabs();
           renderPublicView();
           updateStats();
-          updatePublicModeBadge();
         } catch(e){}
       }
     }
