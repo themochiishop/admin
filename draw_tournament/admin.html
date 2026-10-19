@@ -74,12 +74,13 @@
       </div>
     </div>
 
-    <!-- 顶栏 2：同步状态与短搜索框 -->
+    <!-- 顶栏 2：同步状态与短搜索框 (第2轮及后续轮次自动禁用同步按钮) -->
     <div class="mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
       <div class="text-xs text-slate-400 flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
         <span id="syncStatusText">已连接至 Google Sheets 数据源</span>
-        <button onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow">
+        <!-- 🌟 第 2 轮及以上将自动加 disabled 灰色属性 -->
+        <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
           <span>🔄 从表格更新第 1 轮名单</span>
         </button>
       </div>
@@ -128,6 +129,11 @@
     };
 
     function fetchGoogleSheetsData(isManual) {
+      if (currentRoundIndex !== 0) {
+        alert("禁止在第 2 轮及后续轮次刷新表格，以免覆盖晋级数据！请先切换回【第 1 轮】。");
+        return;
+      }
+
       const syncStatus = document.getElementById('syncStatusText');
       if (syncStatus) syncStatus.innerText = "正在从 Google Sheets 同步中...";
 
@@ -175,22 +181,19 @@
       renderRoundTabs();
     }
 
-    // 🌟 返回至上一轮（若处于最后一轮则删除误创建的该轮，恢复至上一轮状态）
     function goToPrevRound() {
       if (currentRoundIndex === 0) {
         alert("当前已经是第 1 轮，无法再返回上一轮。");
         return;
       }
 
-      if (confirm(`确认返回至上一轮（第 ${currentRoundIndex} 轮）？如果当前轮次是刚创建的，会自动清除当前轮并切回上一轮。`)) {
-        // 如果当前处在最后一个轮次且只有两轮以上，删除最后一个多余的轮次
+      if (confirm(`确认返回至上一轮（第 ${currentRoundIndex} 轮）？`)) {
         if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) {
           state.rounds.pop();
         }
         
         currentRoundIndex = Math.max(0, currentRoundIndex - 1);
 
-        // 写入返回事件，通知公开大屏同步切回
         state.latestEvent = {
           type: 'prevRound',
           timestamp: Date.now(),
@@ -299,6 +302,18 @@
 
       document.getElementById('passedTitleText').innerText = `${activeRound.roundName || '第 1 轮'} 已普及/晋级名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
+
+      // 🌟 核心保护：第二轮及后续轮次，禁用从表格同步第一轮按钮，防止误点击
+      const refreshBtn = document.getElementById('refreshSheetsBtn');
+      if (refreshBtn) {
+        if (currentRoundIndex !== 0) {
+          refreshBtn.setAttribute('disabled', 'disabled');
+          refreshBtn.title = '第 2 轮及后续轮次禁止刷新表格，防止覆盖晋级数据！';
+        } else {
+          refreshBtn.removeAttribute('disabled');
+          refreshBtn.title = '从表格更新第 1 轮名单';
+        }
+      }
     }
 
     function changeStatus(id, newStatus) {
@@ -345,7 +360,7 @@
         ).join('');
       }
 
-      // 2. 待角逐/淘汰卡片区 (已普及的卡片移至上方)
+      // 2. 待角逐 / 淘汰卡片区
       const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending' || c.status === 'out');
 
@@ -360,7 +375,7 @@
 
         if (c.status === 'out') {
           borderStyle = 'border-slate-800 bg-slate-900/60 opacity-50';
-          statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">已淘汰</span>';
+          statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">❌ 已淘汰</span>';
         }
 
         const btnPassStyle = 'bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold';
