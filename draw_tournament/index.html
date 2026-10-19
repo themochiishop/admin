@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 -->
+  <!-- 🌟 全屏豪华恭喜弹窗 (10秒自动切回大屏) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -17,9 +17,9 @@
       <div class="text-7xl mb-4 animate-bounce">👑</div>
       <h2 id="congratBadge" class="text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
       <h3 id="congratModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-2">
-        热烈祝贺！成功获得普及荣誉！
+        热烈祝贺！成功获得荣誉！
       </h3>
-      <p id="congratWinnerNames" class="text-lg font-bold text-emerald-300 my-4 bg-emerald-950/80 py-3 px-4 rounded-xl border border-emerald-500/40 leading-relaxed shadow-inner">
+      <p id="congratWinnerNames" class="text-xl font-black text-emerald-300 my-5 bg-emerald-950/80 py-4 px-4 rounded-xl border border-emerald-500/40 leading-relaxed shadow-inner">
       </p>
 
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow">
@@ -41,7 +41,7 @@
       </div>
       
       <div class="flex items-center space-x-4">
-        <!-- ⚙️ 当前生效模式徽章 + Hover 规则提示框 -->
+        <!-- 当前生效模式徽章 + Hover 规则提示框 -->
         <div class="relative group cursor-pointer">
           <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
             模式: 加载中...
@@ -197,7 +197,7 @@
         noCandidates: "本轮抽奖名单同步中，请关注直播间...",
         allDone: "本轮全员判定完毕",
         noOut: "暂无淘汰人员",
-        finalTitle: "👑 恭喜买家成功获得普及荣誉！",
+        finalTitle: "👑 恭喜买家成功获得荣誉！",
         autoCloseText: "将在",
         autoCloseSuffix: "秒后自动切回大屏榜单...",
         unitPeople: "人",
@@ -273,7 +273,7 @@
     window.onload = function() {
       setLanguage(currentLang);
       loadAndRender();
-      setInterval(loadAndRender, 800); // 800ms 快速轮询同步
+      setInterval(loadAndRender, 800);
     };
 
     function setLanguage(lang) {
@@ -356,6 +356,7 @@
             currentRoundIndex = Math.max(0, state.rounds.length - 1);
           }
 
+          // 🌟 监听季军/冠亚军事件并触发 10 秒倒计时自动关闭全屏弹窗
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') {
