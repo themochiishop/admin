@@ -3,17 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mochiishop 每月抽奖晋级榜</title>
-  <!-- Tailwind CSS CDN 用于精美样式 -->
+  <title>Mochiishop 每月抽奖普及/晋级榜</title>
+  <!-- Tailwind CSS CDN 用于样式 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* 晋级树线连接效果 */
-    .bracket-connector {
-      position: relative;
-    }
-    .bracket-card {
-      transition: all 0.3s ease;
-    }
     .status-pass {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: white;
@@ -22,10 +15,6 @@
       background: #f3f4f6;
       color: #9ca3af;
       text-decoration: line-through;
-    }
-    .status-pending {
-      background: #ffffff;
-      border: 2px dashed #cbd5e1;
     }
   </style>
 </head>
@@ -37,8 +26,8 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🏆</span>
         <div>
-          <h1 class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖晋级盛典</h1>
-          <p class="text-xs text-slate-400">实时更新 · 买家公示公示栏</p>
+          <h1 class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖普及榜</h1>
+          <p class="text-xs text-slate-400">实时更新 · 买家公示栏</p>
         </div>
       </div>
       <div class="flex items-center space-x-2">
@@ -58,7 +47,7 @@
     <!-- 数据概览卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本月晋级总名额</span>
+        <span class="text-xs text-slate-400 block">本月普及/晋级总名额</span>
         <span id="statTotalQuota" class="text-2xl font-black text-amber-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
@@ -78,21 +67,19 @@
     <!-- 搜索过滤 -->
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-800 p-3 rounded-xl border border-slate-700">
       <div class="relative w-full sm:w-80">
-        <input type="text" id="searchInput" oninput="renderPublicView()" placeholder="🔍 搜索您的名字或订单号..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+        <input type="text" id="searchInput" oninput="renderPublicView()" placeholder="🔍 搜索买家名字或订单号..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400">
       </div>
       <div class="text-xs text-slate-400">
-        📌 仅限管理员可操作晋级，数据实时发布更新
+        📌 管理员后台修改后实时自动同步展示
       </div>
     </div>
 
-    <!-- 晋级展现区：卡片网格模式 & 树状晋级模式 -->
+    <!-- 动态展区 -->
     <div id="bracketContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
-      <!-- 动态生成展示区 -->
     </div>
 
   </main>
 
-  <!-- Footer -->
   <footer class="bg-slate-950 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
     © Mochiishop Shopee Monthly Event. All rights reserved.
   </footer>
@@ -112,52 +99,49 @@
         </div>
       </div>
 
-      <!-- 后台控制中心 (验证后显示) -->
+      <!-- 后台控制面板 -->
       <div id="adminPanelSection" class="hidden flex-1 flex flex-col overflow-hidden">
         <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-4">
-          <h2 class="text-lg font-bold text-amber-400">⚙️ 赛事控制台</h2>
+          <h2 class="text-lg font-bold text-amber-400">⚙️ 普及/晋级控制台</h2>
           <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
         </div>
 
         <div class="overflow-y-auto flex-1 space-y-6 pr-2">
           
-          <!-- 1. 设置普及名额 -->
+          <!-- 1. 设置名额 -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
             <label class="block text-sm font-semibold text-slate-300 mb-2">步骤 1：设置本月普及/晋级名额上限</label>
             <div class="flex items-center space-x-3">
               <input type="number" id="quotaInput" min="1" max="128" value="8" class="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white w-28 focus:outline-none focus:border-amber-400">
               <button onclick="updateQuota()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition">保存名额</button>
-              <span class="text-xs text-slate-400">建议设置为 4, 8, 16, 32 等数值</span>
             </div>
           </div>
 
-          <!-- 2. 导入/追加买家名单 -->
+          <!-- 2. 批量导入名单 -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
             <label class="block text-sm font-semibold text-slate-300 mb-1">步骤 2：导入入围买家名单</label>
-            <p class="text-xs text-slate-400 mb-2">每行一位买家，格式推荐：<code class="text-amber-300">买家名称 #订单编号</code></p>
-            <textarea id="bulkImportInput" rows="4" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400" placeholder="例如：&#10;scarlet1217 #260930E8&#10;fatihintyka #260101EA&#10;meilinggirlie #260930E0"></textarea>
+            <p class="text-xs text-slate-400 mb-2">格式示例：<code class="text-amber-300">scarlet1217 #260930E8</code> （每行一位买家）</p>
+            <textarea id="bulkImportInput" rows="4" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400" placeholder="scarlet1217 #260930E8&#10;fatihintyka #260101EA"></textarea>
             <div class="mt-2 flex space-x-2">
               <button onclick="importCandidates(false)" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition">追加导入</button>
-              <button onclick="importCandidates(true)" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-sm font-medium transition">覆盖并重新导入</button>
+              <button onclick="importCandidates(true)" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-sm font-medium transition">覆盖重新导入</button>
             </div>
           </div>
 
-          <!-- 3. 管理与手动切晋级控制 -->
+          <!-- 3. 管理与控制普及 -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
             <div class="flex justify-between items-center mb-3">
-              <label class="text-sm font-semibold text-slate-300">步骤 3：控制普及状态</label>
+              <label class="text-sm font-semibold text-slate-300">步骤 3：修改买家普及/普及状态</label>
               <button onclick="clearAllData()" class="text-xs text-rose-400 hover:underline">⚠️ 清空下月重置</button>
             </div>
-            
             <div id="adminCandidateList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-              <!-- 动态构建名单控制条目 -->
             </div>
           </div>
 
         </div>
 
         <div class="pt-4 border-t border-slate-700 flex justify-end">
-          <button onclick="closeAdminModal()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-lg transition">发布并更新页面</button>
+          <button onclick="closeAdminModal()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-lg transition">发布并关闭</button>
         </div>
       </div>
 
@@ -165,31 +149,26 @@
   </div>
 
   <script>
-    // 系统配置与状态保存
     const ADMIN_PIN = "1234";
     let isMasterAdmin = false;
-    let currentViewType = "grid"; // 'grid' 或 'tree'
+    let currentViewType = "grid";
 
-    // 状态数据存储结构
     let state = {
       quota: 8,
       candidates: [
         { id: 1, name: "razakkj", orderNo: "#261001EAM29", status: "pass" },
         { id: 2, name: "scarlet1217", orderNo: "#260930E8G5", status: "pass" },
         { id: 3, name: "fatihintyka0815", orderNo: "#260930DXQX", status: "out" },
-        { id: 4, name: "meilinggirlie", orderNo: "#260930E0BP", status: "pending" },
-        { id: 5, name: "nurfatinnr", orderNo: "#260930E1YU", status: "pending" }
+        { id: 4, name: "meilinggirlie", orderNo: "#260930E0BP", status: "pending" }
       ]
     };
 
-    // 初始化运行
     window.onload = function() {
       loadState();
       renderPublicView();
       updateStats();
     };
 
-    // 读写 LocalStorage
     function loadState() {
       const saved = localStorage.getItem('mochii_tournament_state');
       if (saved) {
@@ -203,7 +182,6 @@
       renderPublicView();
     }
 
-    // 更新统计顶部面板
     function updateStats() {
       const passed = state.candidates.filter(c => c.status === 'pass').length;
       document.getElementById('statTotalQuota').innerText = state.quota;
@@ -212,29 +190,21 @@
       document.getElementById('statRemainingQuota').innerText = Math.max(0, state.quota - passed);
     }
 
-    // 渲染前端公共展示区域
     function renderPublicView() {
       const container = document.getElementById('bracketContainer');
-      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
-      // 过滤列表
       const list = state.candidates.filter(c => 
         c.name.toLowerCase().includes(search) || c.orderNo.toLowerCase().includes(search)
       );
 
       if (state.candidates.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-12 text-slate-500">
-            <p class="text-4xl mb-2">📋</p>
-            <p>本月入围名单尚未导入，请等待管理员发布。</p>
-          </div>
-        `;
+        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月入围名单尚未导入，请等待管理员发布。</p></div>`;
         return;
       }
 
       if (currentViewType === 'grid') {
         let html = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
-        
         list.forEach((c, index) => {
           let statusBadge = '';
           let cardStyle = '';
@@ -261,11 +231,9 @@
             </div>
           `;
         });
-
         html += `</div>`;
         container.innerHTML = html;
       } else {
-        // 普及榜分组简易树状模式
         const passedList = state.candidates.filter(c => c.status === 'pass');
         const pendingList = state.candidates.filter(c => c.status === 'pending');
 
@@ -273,7 +241,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">
               <h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center">
-                <span>🏆 已成功普及名单 (${passedList.length}/${state.quota})</span>
+                <span>🏆 已普及名单 (${passedList.length}/${state.quota})</span>
               </h3>
               <div class="space-y-2">
                 ${passedList.map(c => `
@@ -282,15 +250,15 @@
                       <div class="font-bold text-emerald-200">\${escapeHtml(c.name)}</div>
                       <div class="text-xs text-slate-400 font-mono">\${escapeHtml(c.orderNo)}</div>
                     </div>
-                    <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">普及代表</span>
+                    <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">普及选手</span>
                   </div>
-                `).join('') || '<p class="text-xs text-slate-500">暂无普及晋级选手</p>'}
+                `).join('') || '<p class="text-xs text-slate-500">暂无普及选手</p>'}
               </div>
             </div>
 
             <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
               <h3 class="text-amber-400 font-bold text-md mb-3 flex items-center">
-                <span>⚡ 角逐中/候补角逐名单 (${pendingList.length})</span>
+                <span>⚡ 角逐中名单 (${pendingList.length})</span>
               </h3>
               <div class="space-y-2">
                 ${pendingList.map(c => `
@@ -299,7 +267,7 @@
                       <div class="font-bold text-slate-200">\${escapeHtml(c.name)}</div>
                       <div class="text-xs text-slate-400 font-mono">\${escapeHtml(c.orderNo)}</div>
                     </div>
-                    <span class="text-xs text-amber-400">待审核/抽奖</span>
+                    <span class="text-xs text-amber-400">待审核</span>
                   </div>
                 `).join('') || '<p class="text-xs text-slate-500">全员结果已公布</p>'}
               </div>
@@ -310,22 +278,16 @@
       }
     }
 
-    // 切换视觉模式
     function toggleViewMode() {
       currentViewType = (currentViewType === 'grid') ? 'tree' : 'grid';
       renderPublicView();
     }
 
-    // 后台验证
     function openAdminModal() {
       document.getElementById('adminModal').classList.remove('hidden');
       if (isMasterAdmin) {
         showAdminPanel();
       }
-    }
-
-    function closeModal('adminModal') {
-      document.getElementById('adminModal').classList.add('hidden');
     }
 
     function closeAdminModal() {
@@ -349,17 +311,15 @@
       renderAdminCandidateList();
     }
 
-    // 修改名额
     function updateQuota() {
       const q = parseInt(document.getElementById('quotaInput').value);
       if (q && q > 0) {
         state.quota = q;
         saveState();
-        alert(`晋级普及名额已成功设置为：${q} 人`);
+        alert(`名额已成功设置为：${q} 人`);
       }
     }
 
-    // 批量导入
     function importCandidates(override) {
       const text = document.getElementById('bulkImportInput').value.trim();
       if (!text) return;
@@ -392,7 +352,6 @@
       renderAdminCandidateList();
     }
 
-    // 后台掌控普及/普及状态
     function setCandidateStatus(id, newStatus) {
       const target = state.candidates.find(c => c.id === id);
       if (target) {
