@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -118,10 +118,20 @@
       const saved = localStorage.getItem('mochii_tournament_state');
       if (saved) {
         try { 
-          state = JSON.parse(saved); 
-          if (!state.rounds || state.rounds.length === 0) {
-            state.rounds = [{ roundName: "第 1 轮", candidates: state.candidates || [] }];
+          const parsed = JSON.parse(saved); 
+          if (parsed && Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
+            state = parsed;
+          } else if (parsed && parsed.candidates) {
+            state = { rounds: [{ roundName: "第 1 轮", candidates: parsed.candidates }] };
+          } else {
+            state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
           }
+
+          // 超出范围防御
+          if (currentRoundIndex >= state.rounds.length) {
+            currentRoundIndex = 0;
+          }
+
           renderRoundTabs();
           renderPublicView();
           updateStats();
@@ -136,8 +146,9 @@
       container.innerHTML = state.rounds.map((r, idx) => {
         const isActive = (idx === currentRoundIndex);
         const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+        const title = r.roundName || `第 ${idx + 1} 轮`;
         return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
-          ${escapeHtml(r.roundName)} (${(r.candidates || []).filter(c => c.status === 'pass').length} 晋级)
+          ${escapeHtml(title)} (${(r.candidates || []).filter(c => c.status === 'pass').length} 晋级)
         </button>`;
       }).join('');
     }
@@ -150,7 +161,7 @@
     }
 
     function updateStats() {
-      const activeRound = state.rounds[currentRoundIndex] || { candidates: [] };
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const candidates = activeRound.candidates || [];
 
       const total = candidates.length;
@@ -161,14 +172,15 @@
       document.getElementById('statPassedCount').innerText = passed;
       document.getElementById('statPendingCount').innerText = pending;
       
-      document.getElementById('passedTitleText').innerText = `${activeRound.roundName} 已普及/晋级名单`;
-      document.getElementById('pendingTitleText').innerText = `${activeRound.roundName} 角逐中买家名单`;
+      const titleName = activeRound.roundName || `第 ${currentRoundIndex + 1} 轮`;
+      document.getElementById('passedTitleText').innerText = `${titleName} 已普及/晋级名单`;
+      document.getElementById('pendingTitleText').innerText = `${titleName} 角逐中买家名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
       document.getElementById('pendingCountBadge').innerText = '共 ' + pending + ' 人待角逐';
     }
 
     function renderPublicView() {
-      const activeRound = state.rounds[currentRoundIndex] || { candidates: [] };
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
       const list = (activeRound.candidates || []).filter(c => 
@@ -194,7 +206,7 @@
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
-      if (activeRound.candidates.length === 0) {
+      if (!activeRound.candidates || activeRound.candidates.length === 0) {
         pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本轮抽奖名单同步中，请关注直播间...</p></div>';
         return;
       }
