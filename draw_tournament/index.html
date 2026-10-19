@@ -4,19 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖普及/晋级榜</title>
-  <!-- Tailwind CSS CDN 用于样式 -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .status-pass {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-    }
-    .status-out {
-      background: #f3f4f6;
-      color: #9ca3af;
-      text-decoration: line-through;
-    }
-  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
@@ -32,7 +21,7 @@
       </div>
       <div class="flex items-center space-x-2">
         <button id="viewToggleBtn" onclick="toggleViewMode()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded-lg border border-slate-600 transition">
-          📊 视图转换
+          📊 切换视图: <span id="viewModeText" class="text-amber-400 font-bold">卡片模式</span>
         </button>
         <button onclick="openAdminModal()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-sm rounded-lg transition shadow">
           ⚙️ 管理员后台
@@ -64,10 +53,20 @@
       </div>
     </div>
 
-    <!-- 搜索过滤（添加 autocomplete="off" 防止浏览器自动填充电邮导致空白） -->
+    <!-- 搜索过滤 (强力防浏览器邮箱自动填充) -->
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-800 p-3 rounded-xl border border-slate-700">
       <div class="relative w-full sm:w-80">
-        <input type="text" id="searchInput" autocomplete="off" oninput="renderPublicView()" placeholder="🔍 搜索买家名字或订单号..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+        <input 
+          type="search" 
+          id="searchInput" 
+          name="search_buyer_no_autofill"
+          autocomplete="new-password" 
+          readonly 
+          onfocus="this.removeAttribute('readonly');" 
+          oninput="renderPublicView()" 
+          placeholder="🔍 搜索买家名字或订单号..." 
+          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+        >
       </div>
       <div class="text-xs text-slate-400">
         📌 管理员后台修改后实时自动同步展示
@@ -131,7 +130,7 @@
           <!-- 3. 管理与控制普及 -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
             <div class="flex justify-between items-center mb-3">
-              <label class="text-sm font-semibold text-slate-300">步骤 3：修改买家普及/普及状态</label>
+              <label class="text-sm font-semibold text-slate-300">步骤 3：修改买家普及/晋级状态</label>
               <button onclick="clearAllData()" class="text-xs text-rose-400 hover:underline">⚠️ 清空下月重置</button>
             </div>
             <div id="adminCandidateList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -151,22 +150,25 @@
   <script>
     const ADMIN_PIN = "1234";
     let isMasterAdmin = false;
-    let currentViewType = "grid";
+    let currentViewType = "grid"; // 'grid' 或 'list'
 
     let state = {
       quota: 8,
       candidates: [
         { id: 1, name: "razakkj", orderNo: "#261001EAM29", status: "pass" },
         { id: 2, name: "scarlet1217", orderNo: "#260930E8G5", status: "pass" },
-        { id: 3, name: "fatihintyka0815", orderNo: "#260930DXQX", status: "out" },
-        { id: 4, name: "meilinggirlie", orderNo: "#260930E0BP", status: "pending" }
+        { id: 3, name: "fatihintyka0815", orderNo: "#260930DXQX", status: "pass" },
+        { id: 4, name: "meilinggirlie", orderNo: "#260930E0BP", status: "pass" }
       ]
     };
 
     window.onload = function() {
-      // 显式清空搜索框，防止浏览器保存的电邮地址误填导致数据过滤为空
-      const searchEl = document.getElementById('searchInput');
-      if (searchEl) searchEl.value = '';
+      // 强行清理任何可能残余的自动填充
+      setTimeout(() => {
+        const searchEl = document.getElementById('searchInput');
+        if (searchEl) searchEl.value = '';
+        renderPublicView();
+      }, 100);
 
       loadState();
       renderPublicView();
@@ -196,14 +198,25 @@
 
     function renderPublicView() {
       const container = document.getElementById('bracketContainer');
-      const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      if (!container) return;
 
-      const list = state.candidates.filter(c => 
-        (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
-      );
+      const searchInput = document.getElementById('searchInput');
+      const search = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
+
+      // 过滤列表
+      const list = state.candidates.filter(c => {
+        const nameMatch = c.name ? String(c.name).toLowerCase().includes(search) : false;
+        const orderMatch = c.orderNo ? String(c.orderNo).toLowerCase().includes(search) : false;
+        return nameMatch || orderMatch;
+      });
 
       if (state.candidates.length === 0) {
         container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月入围名单尚未导入，请等待管理员发布。</p></div>`;
+        return;
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">🔍</p><p>未找到匹配的买家或订单号</p></div>`;
         return;
       }
 
@@ -238,15 +251,17 @@
         html += `</div>`;
         container.innerHTML = html;
       } else {
-        // 普及分组视图（已优化字符串编码与 CSS 宽度截断防乱码）
+        // 分组榜单视图
         const passedList = list.filter(c => c.status === 'pass');
         const pendingList = list.filter(c => c.status === 'pending');
+        const outList = list.filter(c => c.status === 'out');
 
         let html = `
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">
-              <h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center">
-                <span>🏆 已成功普及名单 (${passedList.length}/${state.quota})</span>
+              <h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">
+                <span>🏆 已成功普及名单</span>
+                <span class="text-xs font-normal text-slate-400">${passedList.length}/${state.quota}</span>
               </h3>
               <div class="space-y-2">
                 ${passedList.map(c => `
@@ -255,15 +270,16 @@
                       <div class="font-bold text-emerald-200 truncate">\${escapeHtml(c.name)}</div>
                       <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
                     </div>
-                    <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded shrink-0">普及选手</span>
+                    <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded shrink-0">晋级选手</span>
                   </div>
-                `).join('') || '<p class="text-xs text-slate-500">暂无普及选手</p>'}
+                `).join('') || '<p class="text-xs text-slate-500 py-2">暂无普及选手</p>'}
               </div>
             </div>
 
             <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
-              <h3 class="text-amber-400 font-bold text-md mb-3 flex items-center">
-                <span>⚡ 角逐中/待审核名单 (${pendingList.length})</span>
+              <h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">
+                <span>⚡ 待普及/未公布名单</span>
+                <span class="text-xs font-normal text-slate-400">${pendingList.length} 人</span>
               </h3>
               <div class="space-y-2">
                 ${pendingList.map(c => `
@@ -272,9 +288,9 @@
                       <div class="font-bold text-slate-200 truncate">\${escapeHtml(c.name)}</div>
                       <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
                     </div>
-                    <span class="text-xs text-amber-400 shrink-0">待审核</span>
+                    <span class="text-xs text-amber-400 shrink-0">角逐中</span>
                   </div>
-                `).join('') || '<p class="text-xs text-slate-500">全员结果已公布</p>'}
+                `).join('') || '<p class="text-xs text-slate-500 py-2">暂无待角逐选手</p>'}
               </div>
             </div>
           </div>
@@ -284,7 +300,11 @@
     }
 
     function toggleViewMode() {
-      currentViewType = (currentViewType === 'grid') ? 'tree' : 'grid';
+      currentViewType = (currentViewType === 'grid') ? 'list' : 'grid';
+      const btnText = document.getElementById('viewModeText');
+      if (btnText) {
+        btnText.innerText = (currentViewType === 'grid') ? '卡片模式' : '分组列表';
+      }
       renderPublicView();
     }
 
@@ -374,6 +394,8 @@
 
     function renderAdminCandidateList() {
       const listContainer = document.getElementById('adminCandidateList');
+      if (!listContainer) return;
+
       if (state.candidates.length === 0) {
         listContainer.innerHTML = `<p class="text-xs text-slate-500 py-2">列表中尚无数据</p>`;
         return;
@@ -403,7 +425,6 @@
       }
     }
 
-    // 严谨转义 HTML 字符防止乱码
     function escapeHtml(str) {
       if (!str) return '';
       return String(str)
