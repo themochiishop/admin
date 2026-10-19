@@ -57,7 +57,7 @@
       </div>
     </div>
 
-    <!-- 顶栏 1：已普及名单展示区 (点击 ✕ 可快速撤回) -->
+    <!-- 顶栏 1：已普及名单展示区 -->
     <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
@@ -67,7 +67,6 @@
           <span class="text-[11px] text-slate-400 ml-2">💡 点击小标签旁的 ✕ 可撤回改待定</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
-          <!-- 动态渲染普及买家 -->
         </div>
       </div>
     </div>
@@ -173,7 +172,6 @@
       renderRoundTabs();
     }
 
-    // 🌟 核心逻辑：推进至下一轮并触发大屏海报弹窗事件
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -198,15 +196,16 @@
 
       currentRoundIndex = state.rounds.length - 1;
 
-      // 写入推进事件对象，供公开大屏触发弹窗海报
-      state.latestAdvanceEvent = {
+      // 5秒推进事件
+      state.latestEvent = {
+        type: 'advance',
         timestamp: Date.now(),
         targetRoundIndex: currentRoundIndex
       };
 
       saveState();
       renderRoundTabs();
-      alert(`🎉 已成功开启【第 ${nextRoundNumber} 轮】！大屏已自动弹出晋级海报并切换至新一轮。`);
+      alert(`🎉 已成功开启【第 ${nextRoundNumber} 轮】！公开大屏已自动同步显示。`);
     }
 
     function renderRoundTabs() {
@@ -273,11 +272,24 @@
       document.getElementById('passedBadgeCount').innerText = passed + '人';
     }
 
+    // 🌟 状态改变（点击普及/淘汰）
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
       if (target) {
         target.status = newStatus;
+
+        // 🌟 自动判断：如果本轮参选人数 <= 2 人，且点击了普及，触发 10 秒豪华大屏动画事件！
+        if (newStatus === 'pass' && activeRound.candidates.length <= 2) {
+          const winnerNames = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).join('、');
+          state.latestEvent = {
+            type: 'finalCongrat',
+            timestamp: Date.now(),
+            targetRoundIndex: currentRoundIndex,
+            winnerNames: winnerNames
+          };
+        }
+
         saveState();
       }
     }
