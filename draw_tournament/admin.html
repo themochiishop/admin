@@ -71,7 +71,7 @@
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">剩余 2 人时自动结算冠亚季军并触发全屏恭喜弹窗。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">当角逐名单剩最后 1 人时自动定格为独占冠军并完成结算播报。</div>
             </div>
           </label>
 
@@ -470,23 +470,7 @@
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
-      // 🌟 核心修改 1：模式 1 条件（剩 2 人时，自动定格冠亚季军并弹窗）
-      if (isModeEnabled && selectedMode === 'mode1' && remainingPending.length === 2) {
-        const winnerNames = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).concat(remainingPending.map(c => c.name)).join('、');
-        
-        state.latestEvent = {
-          type: 'finalCongrat',
-          timestamp: Date.now(),
-          targetRoundIndex: currentRoundIndex,
-          winnerNames: winnerNames
-        };
-        saveState();
-        renderRoundTabs();
-        alert(`👑 🎉【模式 1 冠亚季军自动定格】！获奖买家：${winnerNames}，公开大屏已实时同步广播！`);
-        return;
-      }
-
-      // 🌟 核心修改 2：模式 2 条件（剩 M+3 人时自动提醒进入安慰奖环节）
+      // 🌟 核心修正：模式 2 逻辑（剩 M+3 人时，触发安慰奖环节提醒）
       if (isModeEnabled && selectedMode === 'mode2') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
         const totalThreshold = consCount + 3; // M + 3 名额
@@ -498,7 +482,7 @@
         }
       }
 
-      // 保留兜底：剩 1 人时自动定格冠军
+      // 🌟 核心修正：当角逐名单剩最后 1 人时自动定格为冠军并弹出全屏恭喜海报
       if (remainingPending.length === 1) {
         const champion = remainingPending[0];
         champion.status = 'pass';
@@ -600,7 +584,6 @@
       
       let stageLabel = `第 ${nextRoundNumber} 轮`;
 
-      // 🌟 核心逻辑 2：模式 2 自动识别切换阶段标签名称
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
         if (passedCandidates.length === consCount + 3) {
