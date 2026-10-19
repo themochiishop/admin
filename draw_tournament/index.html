@@ -53,14 +53,14 @@
       </div>
     </div>
 
-    <!-- 搜索过滤 (强力防浏览器邮箱自动填充) -->
+    <!-- 搜索过滤 (拦截浏览器自动填写邮箱) -->
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-800 p-3 rounded-xl border border-slate-700">
       <div class="relative w-full sm:w-80">
         <input 
           type="search" 
           id="searchInput" 
           name="search_buyer_no_autofill"
-          autocomplete="new-password" 
+          autocomplete="off" 
           readonly 
           onfocus="this.removeAttribute('readonly');" 
           oninput="renderPublicView()" 
@@ -163,12 +163,12 @@
     };
 
     window.onload = function() {
-      // 强行清理任何可能残余的自动填充
-      setTimeout(() => {
-        const searchEl = document.getElementById('searchInput');
+      // 强行清理搜索框中的任何邮箱自动填充
+      setTimeout(function() {
+        var searchEl = document.getElementById('searchInput');
         if (searchEl) searchEl.value = '';
         renderPublicView();
-      }, 100);
+      }, 50);
 
       loadState();
       renderPublicView();
@@ -176,7 +176,7 @@
     };
 
     function loadState() {
-      const saved = localStorage.getItem('mochii_tournament_state');
+      var saved = localStorage.getItem('mochii_tournament_state');
       if (saved) {
         try { state = JSON.parse(saved); } catch(e){}
       }
@@ -189,7 +189,7 @@
     }
 
     function updateStats() {
-      const passed = state.candidates.filter(c => c.status === 'pass').length;
+      var passed = state.candidates.filter(function(c) { return c.status === 'pass'; }).length;
       document.getElementById('statTotalQuota').innerText = state.quota;
       document.getElementById('statTotalCandidates').innerText = state.candidates.length;
       document.getElementById('statPassedCount').innerText = passed;
@@ -197,111 +197,107 @@
     }
 
     function renderPublicView() {
-      const container = document.getElementById('bracketContainer');
+      var container = document.getElementById('bracketContainer');
       if (!container) return;
 
-      const searchInput = document.getElementById('searchInput');
-      const search = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
+      var searchInput = document.getElementById('searchInput');
+      var search = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
 
-      // 过滤列表
-      const list = state.candidates.filter(c => {
-        const nameMatch = c.name ? String(c.name).toLowerCase().includes(search) : false;
-        const orderMatch = c.orderNo ? String(c.orderNo).toLowerCase().includes(search) : false;
+      // 过滤买家列表
+      var list = state.candidates.filter(function(c) {
+        var nameMatch = c.name ? String(c.name).toLowerCase().indexOf(search) !== -1 : false;
+        var orderMatch = c.orderNo ? String(c.orderNo).toLowerCase().indexOf(search) !== -1 : false;
         return nameMatch || orderMatch;
       });
 
       if (state.candidates.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月入围名单尚未导入，请等待管理员发布。</p></div>`;
+        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月入围名单尚未导入，请等待管理员发布。</p></div>';
         return;
       }
 
       if (list.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">🔍</p><p>未找到匹配的买家或订单号</p></div>`;
+        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">🔍</p><p>未找到匹配的买家或订单号</p></div>';
         return;
       }
 
       if (currentViewType === 'grid') {
-        let html = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
-        list.forEach((c, index) => {
-          let statusBadge = '';
-          let cardStyle = '';
+        var html = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
+        list.forEach(function(c, index) {
+          var statusBadge = '';
+          var cardStyle = '';
 
           if (c.status === 'pass') {
-            statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">🏆 成功普及/晋级</span>`;
+            statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">🏆 成功普及/晋级</span>';
             cardStyle = 'border-emerald-500/50 bg-slate-800 shadow-lg shadow-emerald-950/20';
           } else if (c.status === 'out') {
-            statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">已淘汰</span>`;
+            statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">已淘汰</span>';
             cardStyle = 'border-slate-700 bg-slate-900/60 opacity-60';
           } else {
-            statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">⌛ 待定/角逐中</span>`;
+            statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">⌛ 待定/角逐中</span>';
             cardStyle = 'border-slate-700 bg-slate-800';
           }
 
-          html += `
-            <div class="p-4 rounded-xl border ${cardStyle} transition hover:border-amber-400 relative overflow-hidden">
-              <div class="flex justify-between items-start mb-2">
-                <span class="text-xs font-mono text-slate-400">#${index + 1}</span>
-                ${statusBadge}
-              </div>
-              <div class="font-bold text-slate-100 text-base truncate">${escapeHtml(c.name)}</div>
-              <div class="text-xs text-amber-400/80 font-mono mt-1 truncate">${escapeHtml(c.orderNo || '无订单号')}</div>
-            </div>
-          `;
+          html += '<div class="p-4 rounded-xl border ' + cardStyle + ' transition hover:border-amber-400 relative overflow-hidden">' +
+                    '<div class="flex justify-between items-start mb-2">' +
+                      '<span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' +
+                      statusBadge +
+                    '</div>' +
+                    '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
+                    '<div class="text-xs text-amber-400/80 font-mono mt-1 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+                  '</div>';
         });
-        html += `</div>`;
+        html += '</div>';
         container.innerHTML = html;
       } else {
-        // 分组榜单视图
-        const passedList = list.filter(c => c.status === 'pass');
-        const pendingList = list.filter(c => c.status === 'pending');
-        const outList = list.filter(c => c.status === 'out');
+        // 分组列表视图 (修复字符串拼接，正确显示名字与订单号)
+        var passedList = list.filter(function(c) { return c.status === 'pass'; });
+        var pendingList = list.filter(function(c) { return c.status === 'pending'; });
 
-        let html = `
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">
-              <h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">
-                <span>🏆 已成功普及名单</span>
-                <span class="text-xs font-normal text-slate-400">${passedList.length}/${state.quota}</span>
-              </h3>
-              <div class="space-y-2">
-                ${passedList.map(c => `
-                  <div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg flex justify-between items-center">
-                    <div class="min-w-0 flex-1 pr-2">
-                      <div class="font-bold text-emerald-200 truncate">\${escapeHtml(c.name)}</div>
-                      <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
-                    </div>
-                    <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded shrink-0">晋级选手</span>
-                  </div>
-                `).join('') || '<p class="text-xs text-slate-500 py-2">暂无普及选手</p>'}
-              </div>
-            </div>
+        var passedHtml = passedList.map(function(c) {
+          return '<div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg flex justify-between items-center">' +
+                   '<div class="min-w-0 flex-1 pr-2">' +
+                     '<div class="font-bold text-emerald-200 truncate">' + escapeHtml(c.name) + '</div>' +
+                     '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
+                   '</div>' +
+                   '<span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded shrink-0">普及选手</span>' +
+                 '</div>';
+        }).join('') || '<p class="text-xs text-slate-500 py-2">暂无普及选手</p>';
 
-            <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
-              <h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">
-                <span>⚡ 待普及/未公布名单</span>
-                <span class="text-xs font-normal text-slate-400">${pendingList.length} 人</span>
-              </h3>
-              <div class="space-y-2">
-                ${pendingList.map(c => `
-                  <div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700">
-                    <div class="min-w-0 flex-1 pr-2">
-                      <div class="font-bold text-slate-200 truncate">\${escapeHtml(c.name)}</div>
-                      <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
-                    </div>
-                    <span class="text-xs text-amber-400 shrink-0">角逐中</span>
-                  </div>
-                `).join('') || '<p class="text-xs text-slate-500 py-2">暂无待角逐选手</p>'}
-              </div>
-            </div>
-          </div>
-        `;
-        container.innerHTML = html;
+        var pendingHtml = pendingList.map(function(c) {
+          return '<div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700">' +
+                   '<div class="min-w-0 flex-1 pr-2">' +
+                     '<div class="font-bold text-slate-200 truncate">' + escapeHtml(c.name) + '</div>' +
+                     '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
+                   '</div>' +
+                   '<span class="text-xs text-amber-400 shrink-0">待审核</span>' +
+                 '</div>';
+        }).join('') || '<p class="text-xs text-slate-500 py-2">暂无待角逐选手</p>';
+
+        var listHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
+          '<div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">' +
+            '<h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">' +
+              '<span>🏆 已成功普及名单</span>' +
+              '<span class="text-xs font-normal text-slate-400">' + passedList.length + '/' + state.quota + '</span>' +
+            '</h3>' +
+            '<div class="space-y-2">' + passedHtml + '</div>' +
+          '</div>' +
+
+          '<div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">' +
+            '<h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">' +
+              '<span>⚡ 待普及/角逐中名单</span>' +
+              '<span class="text-xs font-normal text-slate-400">' + pendingList.length + ' 人</span>' +
+            '</h3>' +
+            '<div class="space-y-2">' + pendingHtml + '</div>' +
+          '</div>' +
+        '</div>';
+
+        container.innerHTML = listHtml;
       }
     }
 
     function toggleViewMode() {
       currentViewType = (currentViewType === 'grid') ? 'list' : 'grid';
-      const btnText = document.getElementById('viewModeText');
+      var btnText = document.getElementById('viewModeText');
       if (btnText) {
         btnText.innerText = (currentViewType === 'grid') ? '卡片模式' : '分组列表';
       }
@@ -320,7 +316,7 @@
     }
 
     function verifyAdmin() {
-      const pin = document.getElementById('adminPin').value;
+      var pin = document.getElementById('adminPin').value;
       if (pin === ADMIN_PIN) {
         isMasterAdmin = true;
         showAdminPanel();
@@ -337,26 +333,26 @@
     }
 
     function updateQuota() {
-      const q = parseInt(document.getElementById('quotaInput').value);
+      var q = parseInt(document.getElementById('quotaInput').value);
       if (q && q > 0) {
         state.quota = q;
         saveState();
-        alert(`名额已成功设置为：${q} 人`);
+        alert("名额已成功设置为：" + q + " 人");
       }
     }
 
     function importCandidates(override) {
-      const text = document.getElementById('bulkImportInput').value.trim();
+      var text = document.getElementById('bulkImportInput').value.trim();
       if (!text) return;
 
-      const lines = text.split('\n');
-      const newItems = [];
+      var lines = text.split('\n');
+      var newItems = [];
 
-      lines.forEach((line, idx) => {
+      lines.forEach(function(line, idx) {
         if (!line.trim()) return;
-        const parts = line.trim().split(/\s+/);
-        const name = parts[0];
-        const orderNo = parts.slice(1).join(' ') || '';
+        var parts = line.trim().split(/\s+/);
+        var name = parts[0];
+        var orderNo = parts.slice(1).join(' ') || '';
 
         newItems.push({
           id: Date.now() + idx,
@@ -378,7 +374,7 @@
     }
 
     function setCandidateStatus(id, newStatus) {
-      const target = state.candidates.find(c => c.id === id);
+      var target = state.candidates.find(function(c) { return c.id === id; });
       if (target) {
         target.status = newStatus;
         saveState();
@@ -387,34 +383,34 @@
     }
 
     function deleteCandidate(id) {
-      state.candidates = state.candidates.filter(c => c.id !== id);
+      state.candidates = state.candidates.filter(function(c) { return c.id !== id; });
       saveState();
       renderAdminCandidateList();
     }
 
     function renderAdminCandidateList() {
-      const listContainer = document.getElementById('adminCandidateList');
+      var listContainer = document.getElementById('adminCandidateList');
       if (!listContainer) return;
 
       if (state.candidates.length === 0) {
-        listContainer.innerHTML = `<p class="text-xs text-slate-500 py-2">列表中尚无数据</p>`;
+        listContainer.innerHTML = '<p class="text-xs text-slate-500 py-2">列表中尚无数据</p>';
         return;
       }
 
-      listContainer.innerHTML = state.candidates.map(c => `
-        <div class="flex items-center justify-between p-2 bg-slate-800 rounded-lg text-xs border border-slate-700">
-          <div class="truncate max-w-[180px]">
-            <span class="font-bold text-slate-200">${escapeHtml(c.name)}</span>
-            <span class="text-slate-400 font-mono ml-1">${escapeHtml(c.orderNo)}</span>
-          </div>
-          <div class="flex items-center space-x-1">
-            <button onclick="setCandidateStatus(${c.id}, 'pass')" class="px-2 py-1 ${c.status==='pass'?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'} rounded hover:bg-emerald-500">普及/晋级</button>
-            <button onclick="setCandidateStatus(${c.id}, 'out')" class="px-2 py-1 ${c.status==='out'?'bg-rose-600 text-white':'bg-slate-700 text-slate-300'} rounded hover:bg-rose-500">淘汰</button>
-            <button onclick="setCandidateStatus(${c.id}, 'pending')" class="px-2 py-1 ${c.status==='pending'?'bg-amber-600 text-white':'bg-slate-700 text-slate-300'} rounded">待定</button>
-            <button onclick="deleteCandidate(${c.id})" class="text-slate-500 hover:text-rose-400 px-1">✕</button>
-          </div>
-        </div>
-      `).join('');
+      listContainer.innerHTML = state.candidates.map(function(c) {
+        return '<div class="flex items-center justify-between p-2 bg-slate-800 rounded-lg text-xs border border-slate-700">' +
+                 '<div class="truncate max-w-[180px]">' +
+                   '<span class="font-bold text-slate-200">' + escapeHtml(c.name) + '</span>' +
+                   '<span class="text-slate-400 font-mono ml-1">' + escapeHtml(c.orderNo) + '</span>' +
+                 '</div>' +
+                 '<div class="flex items-center space-x-1">' +
+                   '<button onclick="setCandidateStatus(' + c.id + ', \'pass\')" class="px-2 py-1 ' + (c.status === 'pass' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300') + ' rounded hover:bg-emerald-500">普及/晋级</button>' +
+                   '<button onclick="setCandidateStatus(' + c.id + ', \'out\')" class="px-2 py-1 ' + (c.status === 'out' ? 'bg-rose-600 text-white' : 'bg-slate-700 text-slate-300') + ' rounded hover:bg-rose-500">淘汰</button>' +
+                   '<button onclick="setCandidateStatus(' + c.id + ', \'pending\')" class="px-2 py-1 ' + (c.status === 'pending' ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-300') + ' rounded">待定</button>' +
+                   '<button onclick="deleteCandidate(' + c.id + ')" class="text-slate-500 hover:text-rose-400 px-1">✕</button>' +
+                 '</div>' +
+               '</div>';
+      }).join('');
     }
 
     function clearAllData() {
