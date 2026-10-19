@@ -15,15 +15,17 @@
         <span class="text-2xl">🎬</span>
         <div>
           <h1 class="text-xl font-bold text-amber-400" data-i18n="adminTitle">Mochiishop 每月抽奖 - 直播控制台</h1>
-          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">管理者专属 · 多轮晋级控盘系统</p>
+          <p class="text-xs text-slate-400 flex items-center space-x-2">
+            <span data-i18n="adminSubTitle">管理者专属 · 多轮晋级控盘系统</span>
+            <span id="currentModeBadge" class="hidden bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[11px] font-bold"></span>
+          </p>
         </div>
       </div>
       <div class="flex items-center space-x-3">
         
-        <!-- ⚙️ 齿轮设置按钮 -->
-        <button onclick="openConfigModal()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded-lg border border-slate-700 transition shadow flex items-center space-x-1.5">
-          <span class="text-base">⚙️</span>
-          <span data-i18n="btnSettings">决战规则设置</span>
+        <!-- ⚙️ 模式设置齿轮按钮 -->
+        <button onclick="openSettingsModal()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-amber-400 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow" title="设置比赛模式">
+          <span>⚙️</span> <span data-i18n="btnSettings">模式设置</span>
         </button>
 
         <!-- 🌐 语言切换按钮 -->
@@ -55,6 +57,7 @@
     <!-- 轮次切换 Tabs 区域 -->
     <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
+        <!-- 动态生成轮次选项卡 -->
       </div>
       <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold" data-i18n="btnResetAll">⚠️ 重置所有轮次数据</button>
     </div>
@@ -120,50 +123,39 @@
 
   </main>
 
-  <!-- ⚙️ 决战规则高级设置弹窗 Modal -->
-  <div id="configModalOverlay" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <!-- ⚙️ 比赛模式设置弹窗 -->
+  <div id="settingsModalOverlay" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
-      <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      <button onclick="closeSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold">✕</button>
       <div class="flex items-center space-x-2 mb-4">
-        <span class="text-2xl">⚙️</span>
-        <h3 class="text-lg font-bold text-amber-400">决战模式与奖项规则设置</h3>
+        <span class="text-xl">⚙️</span>
+        <h3 class="text-lg font-bold text-amber-400">比赛模式设置</h3>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">勾选后模式生效，大屏与控制台将显示当前活动规则模式：</p>
+      
+      <div class="space-y-3 mb-6">
+        <!-- 模式 1 -->
+        <label class="flex items-start space-x-3 p-3 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-amber-400/50 transition">
+          <input type="checkbox" id="mode1Checkbox" onchange="toggleModeCheck('mode1')" class="mt-1 w-4 h-4 text-amber-500 rounded border-slate-600 focus:ring-0 bg-slate-800">
+          <div>
+            <div class="text-xs font-bold text-slate-200">模式 1：冠亚季模式 (Standard Podiums)</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">标准角逐，直至决出前三名（冠亚季军）。</div>
+          </div>
+        </label>
+
+        <!-- 模式 2 -->
+        <label class="flex items-start space-x-3 p-3 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-amber-400/50 transition">
+          <input type="checkbox" id="mode2Checkbox" onchange="toggleModeCheck('mode2')" class="mt-1 w-4 h-4 text-amber-500 rounded border-slate-600 focus:ring-0 bg-slate-800">
+          <div>
+            <div class="text-xs font-bold text-slate-200">模式 2：包含安慰奖模式 (Consolation Prize Mode)</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">未晋级人员额外获得普惠/安慰奖参与资格。</div>
+          </div>
+        </label>
       </div>
 
-      <div class="space-y-4 text-xs">
-        <!-- 决战提示阈值 -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-700">
-          <label class="block text-slate-300 font-bold mb-1">🚨 决战提示阈值 (剩 N 人时弹窗询问):</label>
-          <div class="flex items-center space-x-2 mt-2">
-            <span class="text-slate-400">剩余</span>
-            <input type="number" id="cfgThresholdN" value="2" min="1" max="10" class="w-16 bg-slate-800 border border-amber-500/50 rounded px-2 py-1 text-center text-amber-300 font-bold focus:outline-none">
-            <span class="text-slate-400">名候选买家时触发弹窗</span>
-          </div>
-        </div>
-
-        <!-- 决战模式配置 -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-700 space-y-3">
-          <span class="block text-slate-300 font-bold border-b border-slate-800 pb-1.5">🏆 奖项名额模式设定:</span>
-          
-          <div class="flex justify-between items-center">
-            <span class="text-emerald-400 font-bold">🥇 冠军名额 (Champion):</span>
-            <input type="number" id="cfgChampionQuota" value="1" min="1" max="5" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center font-bold">
-          </div>
-
-          <div class="flex justify-between items-center">
-            <span class="text-amber-400 font-bold">🥈 前三名/季亚军 (Top 3):</span>
-            <input type="number" id="cfgTop3Quota" value="2" min="0" max="10" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center font-bold">
-          </div>
-
-          <div class="flex justify-between items-center">
-            <span class="text-blue-400 font-bold">🎁 安慰奖名额 (Consolation):</span>
-            <input type="number" id="cfgConsolationQuota" value="5" min="0" max="50" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center font-bold">
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-6 flex justify-end space-x-2">
-        <button onclick="closeConfigModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg transition">取消</button>
-        <button onclick="saveConfigSettings()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition shadow">保存配置</button>
+      <div class="flex justify-end space-x-2">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg transition">取消</button>
+        <button onclick="saveModeSettings()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition">保存设置</button>
       </div>
     </div>
   </div>
@@ -177,21 +169,13 @@
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
-    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
-
-    // 默认配置
-    let drawConfig = JSON.parse(localStorage.getItem('mochii_draw_config')) || {
-      thresholdN: 2,
-      championQuota: 1,
-      top3Quota: 2,
-      consolationQuota: 5
-    };
+    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
 
     const i18n = {
       zh: {
         adminTitle: "Mochiishop 每月抽奖 - 直播控制台",
         adminSubTitle: "管理者专属 · 多轮晋级控盘系统",
-        btnSettings: "决战规则设置",
+        btnSettings: "模式设置",
         btnPrevRound: "🔙 返回至上一轮",
         btnNextRound: "⏩ 推进本轮普及人员至下一轮",
         btnFinalRound: "🏆 已是最终轮",
@@ -221,7 +205,7 @@
       en: {
         adminTitle: "Mochiishop Monthly Draw - Admin Control",
         adminSubTitle: "Exclusive Admin · Multi-Round Tournament System",
-        btnSettings: "Rules Settings",
+        btnSettings: "Mode Settings",
         btnPrevRound: "🔙 Back to Previous Round",
         btnNextRound: "⏩ Advance Qualified to Next Round",
         btnFinalRound: "🏆 Final Round Reached",
@@ -251,7 +235,7 @@
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
         adminSubTitle: "Pengurus Eksklusif · Sistem Pertandingan Pelbagai Pusingan",
-        btnSettings: "Tetapan Peraturan",
+        btnSettings: "Tetapan Mod",
         btnPrevRound: "🔙 Kembali ke Pusingan Sebelumnya",
         btnNextRound: "⏩ Majukan Calon Layak ke Pusingan Seterusnya",
         btnFinalRound: "🏆 Pusingan Akhir",
@@ -290,31 +274,9 @@
         renderRoundTabs();
         renderAdminView();
         updateStats();
+        updateModeBadge();
       }
     };
-
-    function openConfigModal() {
-      document.getElementById('cfgThresholdN').value = drawConfig.thresholdN || 2;
-      document.getElementById('cfgChampionQuota').value = drawConfig.championQuota || 1;
-      document.getElementById('cfgTop3Quota').value = drawConfig.top3Quota || 2;
-      document.getElementById('cfgConsolationQuota').value = drawConfig.consolationQuota || 5;
-      document.getElementById('configModalOverlay').classList.remove('hidden');
-    }
-
-    function closeConfigModal() {
-      document.getElementById('configModalOverlay').classList.add('hidden');
-    }
-
-    function saveConfigSettings() {
-      drawConfig.thresholdN = parseInt(document.getElementById('cfgThresholdN').value, 10) || 2;
-      drawConfig.championQuota = parseInt(document.getElementById('cfgChampionQuota').value, 10) || 1;
-      drawConfig.top3Quota = parseInt(document.getElementById('cfgTop3Quota').value, 10) || 2;
-      drawConfig.consolationQuota = parseInt(document.getElementById('cfgConsolationQuota').value, 10) || 5;
-
-      localStorage.setItem('mochii_draw_config', JSON.stringify(drawConfig));
-      closeConfigModal();
-      alert("⚙️ 决战规则与奖项模式已更新保存！");
-    }
 
     function setLanguage(lang) {
       currentLang = lang;
@@ -344,6 +306,7 @@
       renderRoundTabs();
       renderAdminView();
       updateStats();
+      updateModeBadge();
     }
 
     function getRoundTitle(idx) {
@@ -357,6 +320,54 @@
         return `${i18n[currentLang].roundPrefix}${num}${i18n[currentLang].roundSuffix}`;
       }
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
+    }
+
+    /* ⚙️ 模式弹窗与切换逻辑 */
+    function openSettingsModal() {
+      document.getElementById('mode1Checkbox').checked = (state.currentMode === 'mode1');
+      document.getElementById('mode2Checkbox').checked = (state.currentMode === 'mode2');
+      document.getElementById('settingsModalOverlay').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModalOverlay').classList.add('hidden');
+    }
+
+    function toggleModeCheck(selected) {
+      if (selected === 'mode1' && document.getElementById('mode1Checkbox').checked) {
+        document.getElementById('mode2Checkbox').checked = false;
+      } else if (selected === 'mode2' && document.getElementById('mode2Checkbox').checked) {
+        document.getElementById('mode1Checkbox').checked = false;
+      }
+    }
+
+    function saveModeSettings() {
+      const isMode1 = document.getElementById('mode1Checkbox').checked;
+      const isMode2 = document.getElementById('mode2Checkbox').checked;
+
+      if (isMode1) state.currentMode = 'mode1';
+      else if (isMode2) state.currentMode = 'mode2';
+      else state.currentMode = null;
+
+      saveState();
+      updateModeBadge();
+      closeSettingsModal();
+      alert("⚙️ 模式设置已保存更新！");
+    }
+
+    function updateModeBadge() {
+      const badge = document.getElementById('currentModeBadge');
+      if (!badge) return;
+
+      if (state.currentMode === 'mode1') {
+        badge.innerText = "🏆 冠亚季模式";
+        badge.classList.remove('hidden');
+      } else if (state.currentMode === 'mode2') {
+        badge.innerText = "🎁 安慰奖模式";
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
     }
 
     function fetchGoogleSheetsData(isManual) {
@@ -504,15 +515,15 @@
           if (parsed && Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
             state = parsed;
           } else if (parsed && parsed.candidates) {
-            state = { rounds: [{ roundName: "第 1 轮", candidates: parsed.candidates }] };
+            state = { rounds: [{ roundName: "第 1 轮", candidates: parsed.candidates }], currentMode: null };
           } else {
-            state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+            state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
           }
         } catch(e){
-          state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+          state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
         }
       } else {
-        state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+        state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
       }
     }
 
@@ -563,7 +574,7 @@
       }
     }
 
-    // 🌟 核心升级：自动剩最后1名成冠军 + 阈值弹窗询问
+    /* 🌟 核心升级：当只剩 1 人时自动夺冠，无需开启下一轮 */
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
@@ -571,51 +582,32 @@
 
       target.status = newStatus;
 
-      const remainingPending = activeRound.candidates.filter(c => c.status === 'pending');
-      const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
+      const remainingPendingList = activeRound.candidates.filter(c => c.status === 'pending');
 
-      // 1. 自动判定：当只剩最后 1 名待角逐人员时，自动将其与已普及名单汇总判定，设为最终冠军！
-      if (remainingPending.length === 1 && newStatus === 'pass') {
+      // 自动逻辑：当点击普及后，如果剩余待角逐的人数只剩【最后 1 名】
+      if (newStatus === 'pass' && remainingPendingList.length === 1) {
+        const lastCandidate = remainingPendingList[0];
+        lastCandidate.status = 'pass'; // 自动将最后这 1 名晋级为最终冠军
+
         activeRound.isFinal = true;
         activeRound.roundName = "最终轮";
 
-        const winnerNames = passedCandidates.map(c => c.name).join('、');
+        const allWinners = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).join('、');
+
         state.latestEvent = {
           type: 'finalCongrat',
           timestamp: Date.now(),
           targetRoundIndex: currentRoundIndex,
-          winnerNames: winnerNames
+          winnerNames: allWinners
         };
+
         saveState();
         renderRoundTabs();
-        alert(`👑 恭喜！当前已降至最后 1 名，自动成为【最终冠军】：${winnerNames}！全屏霸屏公示中！`);
-        return;
-      }
 
-      // 2. 达到设置的阈值 $N$ 人时，弹窗询问
-      const thresholdN = drawConfig.thresholdN || 2;
-      if (newStatus === 'pass' && remainingPending.length === thresholdN) {
         setTimeout(() => {
-          const isFinalRound = confirm(`🏆 提示：当前剩余角逐人数为 ${thresholdN} 人！\n\n请确认：这是最后一轮决战吗？\n\n【确定】= 是的，公布最终获胜者（标记为最终轮）\n【取消】= 不是，继续下一轮`);
-          
-          if (isFinalRound) {
-            activeRound.isFinal = true;
-            activeRound.roundName = "最终轮";
-
-            const winnerNames = passedCandidates.map(c => c.name).join('、');
-            state.latestEvent = {
-              type: 'finalCongrat',
-              timestamp: Date.now(),
-              targetRoundIndex: currentRoundIndex,
-              winnerNames: winnerNames
-            };
-            saveState();
-            renderRoundTabs();
-            alert(`👑 最终普及获胜者已确认：${winnerNames}！系统已自动设为最终轮！`);
-          } else {
-            saveState();
-          }
+          alert(`👑 终极判定！角逐名单仅剩最后 1 名【${lastCandidate.name}】，已自动夺冠！本轮设为最终轮，公开大屏已广播冠军结果！`);
         }, 100);
+
       } else {
         saveState();
       }
@@ -695,7 +687,8 @@
         state = {
           rounds: [
             { roundName: "第 1 轮", candidates: [] }
-          ]
+          ],
+          currentMode: null
         };
         localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
         fetchGoogleSheetsData(true);
