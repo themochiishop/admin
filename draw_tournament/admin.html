@@ -6,7 +6,7 @@
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
   <!-- 顶部 Header -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
@@ -15,18 +15,18 @@
         <span class="text-2xl">🎬</span>
         <div>
           <h1 class="text-xl font-bold text-amber-400" data-i18n="adminTitle">Mochiishop 每月抽奖 - 直播控制台</h1>
-          <p class="text-xs text-slate-400 flex items-center space-x-2">
-            <span data-i18n="adminSubTitle">管理者专属 · 多轮晋级控盘系统</span>
-            <span id="currentModeBadge" class="hidden bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[11px] font-bold"></span>
-          </p>
+          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">管理者专属 · 多轮晋级控盘系统</p>
         </div>
       </div>
+      
       <div class="flex items-center space-x-3">
-        
-        <!-- ⚙️ 模式设置齿轮按钮 -->
-        <button onclick="openSettingsModal()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-amber-400 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow" title="设置比赛模式">
-          <span>⚙️</span> <span data-i18n="btnSettings">模式设置</span>
-        </button>
+        <!-- ⚙️ 模式显示与齿轮设置按钮 -->
+        <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs">
+          <span id="currentModeBadge" class="text-amber-400 font-bold">⚙️ 模式: 冠亚季模式</span>
+          <button onclick="openConfigModal()" class="text-slate-300 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式">
+            ⚙️
+          </button>
+        </div>
 
         <!-- 🌐 语言切换按钮 -->
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
@@ -44,25 +44,80 @@
         <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" data-i18n="btnPrevRound">
           🔙 返回至上一轮
         </button>
-        <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600">
+        <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1 disabled:opacity-40 disabled:cursor-not-allowed">
           <span id="advanceNextRoundBtnText" data-i18n="btnNextRound">⏩ 推进本轮普及人员至下一轮</span>
         </button>
       </div>
     </div>
   </header>
 
+  <!-- ⚙️ 抽奖模式设置弹窗 -->
+  <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+      <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
+      <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center space-x-2">
+        <span>⚙️</span>
+        <span>抽奖模式与规则配置</span>
+      </h3>
+
+      <div class="space-y-4 text-xs">
+        <!-- 启用开关 -->
+        <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
+          <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
+          <span class="font-bold text-slate-200">启用模式规则 (必须勾选后方能生效)</span>
+        </label>
+
+        <!-- 模式选择 RADIO -->
+        <div id="modeRadioGroup" class="space-y-2 opacity-50 pointer-events-none transition-all">
+          <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
+            <input type="radio" name="drawMode" value="mode1" onchange="updateModeSelection()" class="mt-0.5">
+            <div>
+              <div class="font-bold text-amber-300">模式 1：冠亚季模式 (默认)</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">剩余 3 人时提示决战，剩 1 人时自动定格为终极冠军。</div>
+            </div>
+          </label>
+
+          <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
+            <input type="radio" name="drawMode" value="mode2" onchange="updateModeSelection()" class="mt-0.5">
+            <div>
+              <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">支持大基数选拔，在剩余 5 人时进行决战提示。</div>
+            </div>
+          </label>
+
+          <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
+            <input type="radio" name="drawMode" value="mode3" onchange="updateModeSelection()" class="mt-0.5">
+            <div class="flex-1">
+              <div class="font-bold text-blue-300">模式 3：自定义模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-2">
+                <span>剩余</span>
+                <input type="number" id="customThresholdInput" value="2" min="1" max="20" class="w-12 bg-slate-800 border border-slate-600 rounded px-1 text-center font-bold text-amber-300">
+                <span>人时提示决战问询</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end space-x-2">
+        <button onclick="saveConfigModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition">
+          💾 保存设置
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     
-    <!-- 轮次切换 Tabs 区域 -->
+    <!-- 轮次 Tabs -->
     <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
-        <!-- 动态生成轮次选项卡 -->
       </div>
       <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold" data-i18n="btnResetAll">⚠️ 重置所有轮次数据</button>
     </div>
 
-    <!-- 数据概览面板 -->
+    <!-- 数据概览 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
         <span class="text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
@@ -82,83 +137,38 @@
       </div>
     </div>
 
-    <!-- 顶栏 1：已普及名单展示区 -->
-    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
+    <!-- 已普及区 -->
+    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg">
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
           <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
-          <span class="text-[11px] text-slate-400 ml-2" data-i18n="undoTip">💡 点击小标签旁的 ✕ 可撤回改待定</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
         </div>
       </div>
     </div>
 
-    <!-- 顶栏 2：同步状态与短搜索框 -->
+    <!-- 同步状态 & 搜索栏 -->
     <div class="mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
       <div class="text-xs text-slate-400 flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
         <span id="syncStatusText" data-i18n="syncConnected">已连接至 Google Sheets 数据源</span>
-        <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
+        <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow disabled:opacity-40">
           <span data-i18n="btnRefreshSheets">🔄 从表格更新第 1 轮名单</span>
         </button>
       </div>
 
       <div class="relative w-full sm:w-64">
-        <input 
-          type="search" 
-          id="searchInput" 
-          oninput="renderAdminView()" 
-          placeholder="🔍 快速查找本轮买家/订单..." 
-          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
-        >
+        <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 快速查找本轮买家/订单..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400">
       </div>
     </div>
 
-    <!-- 底部：待角逐中 / 淘汰买家卡片展区 -->
     <div id="adminViewContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
     </div>
 
   </main>
-
-  <!-- ⚙️ 比赛模式设置弹窗 -->
-  <div id="settingsModalOverlay" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
-      <button onclick="closeSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold">✕</button>
-      <div class="flex items-center space-x-2 mb-4">
-        <span class="text-xl">⚙️</span>
-        <h3 class="text-lg font-bold text-amber-400">比赛模式设置</h3>
-      </div>
-      <p class="text-xs text-slate-400 mb-4">勾选后模式生效，大屏与控制台将显示当前活动规则模式：</p>
-      
-      <div class="space-y-3 mb-6">
-        <!-- 模式 1 -->
-        <label class="flex items-start space-x-3 p-3 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-amber-400/50 transition">
-          <input type="checkbox" id="mode1Checkbox" onchange="toggleModeCheck('mode1')" class="mt-1 w-4 h-4 text-amber-500 rounded border-slate-600 focus:ring-0 bg-slate-800">
-          <div>
-            <div class="text-xs font-bold text-slate-200">模式 1：冠亚季模式 (Standard Podiums)</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">标准角逐，直至决出前三名（冠亚季军）。</div>
-          </div>
-        </label>
-
-        <!-- 模式 2 -->
-        <label class="flex items-start space-x-3 p-3 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-amber-400/50 transition">
-          <input type="checkbox" id="mode2Checkbox" onchange="toggleModeCheck('mode2')" class="mt-1 w-4 h-4 text-amber-500 rounded border-slate-600 focus:ring-0 bg-slate-800">
-          <div>
-            <div class="text-xs font-bold text-slate-200">模式 2：包含安慰奖模式 (Consolation Prize Mode)</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">未晋级人员额外获得普惠/安慰奖参与资格。</div>
-          </div>
-        </label>
-      </div>
-
-      <div class="flex justify-end space-x-2">
-        <button onclick="closeSettingsModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg transition">取消</button>
-        <button onclick="saveModeSettings()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition">保存设置</button>
-      </div>
-    </div>
-  </div>
 
   <footer class="bg-slate-950 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
     © Mochiishop Shopee Monthly Event. All rights reserved.
@@ -169,13 +179,15 @@
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
-    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
+    let state = {
+      modeConfig: { enabled: true, selectedMode: 'mode1', customThreshold: 2 },
+      rounds: [{ roundName: "第 1 轮", candidates: [] }]
+    };
 
     const i18n = {
       zh: {
         adminTitle: "Mochiishop 每月抽奖 - 直播控制台",
         adminSubTitle: "管理者专属 · 多轮晋级控盘系统",
-        btnSettings: "模式设置",
         btnPrevRound: "🔙 返回至上一轮",
         btnNextRound: "⏩ 推进本轮普及人员至下一轮",
         btnFinalRound: "🏆 已是最终轮",
@@ -184,7 +196,6 @@
         statPassed: "本轮已普及/晋级",
         statPending: "本轮角逐中人数",
         statOut: "本轮已淘汰人数",
-        undoTip: "💡 点击小标签旁的 ✕ 可撤回改待定",
         syncConnected: "已连接至 Google Sheets 数据源",
         syncing: "正在从 Google Sheets 同步中...",
         syncSuccess: "已成功从 Google Sheets 同步！",
@@ -205,7 +216,6 @@
       en: {
         adminTitle: "Mochiishop Monthly Draw - Admin Control",
         adminSubTitle: "Exclusive Admin · Multi-Round Tournament System",
-        btnSettings: "Mode Settings",
         btnPrevRound: "🔙 Back to Previous Round",
         btnNextRound: "⏩ Advance Qualified to Next Round",
         btnFinalRound: "🏆 Final Round Reached",
@@ -214,7 +224,6 @@
         statPassed: "Passed / Qualified",
         statPending: "In Battle",
         statOut: "Eliminated",
-        undoTip: "💡 Click ✕ on badge to undo",
         syncConnected: "Connected to Google Sheets",
         syncing: "Syncing from Google Sheets...",
         syncSuccess: "Successfully synced from Sheets!",
@@ -235,7 +244,6 @@
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
         adminSubTitle: "Pengurus Eksklusif · Sistem Pertandingan Pelbagai Pusingan",
-        btnSettings: "Tetapan Mod",
         btnPrevRound: "🔙 Kembali ke Pusingan Sebelumnya",
         btnNextRound: "⏩ Majukan Calon Layak ke Pusingan Seterusnya",
         btnFinalRound: "🏆 Pusingan Akhir",
@@ -244,7 +252,6 @@
         statPassed: "Lulus / Layak",
         statPending: "Dalam Bersaing",
         statOut: "Tersingkir",
-        undoTip: "💡 Klik ✕ pada lencana untuk batalkan",
         syncConnected: "Telah disambungkan ke Google Sheets",
         syncing: "Menyelaraskan dari Google Sheets...",
         syncSuccess: "Berjaya diselaraskan dari Sheets!",
@@ -267,6 +274,7 @@
     window.onload = function() {
       setLanguage(currentLang);
       loadState();
+      syncModalUIWithState();
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
         fetchGoogleSheetsData();
@@ -274,9 +282,131 @@
         renderRoundTabs();
         renderAdminView();
         updateStats();
-        updateModeBadge();
       }
     };
+
+    function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
+    function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+
+    function toggleModeEnable() {
+      const isChecked = document.getElementById('enableModeCheckbox').checked;
+      const group = document.getElementById('modeRadioGroup');
+      if (isChecked) {
+        group.classList.remove('opacity-50', 'pointer-events-none');
+      } else {
+        group.classList.add('opacity-50', 'pointer-events-none');
+      }
+    }
+
+    function updateModeSelection() {
+      // Radio toggle handled on save
+    }
+
+    function saveConfigModal() {
+      const isEnabled = document.getElementById('enableModeCheckbox').checked;
+      const radios = document.getElementsByName('drawMode');
+      let selected = 'mode1';
+      for (let r of radios) { if (r.checked) selected = r.value; }
+
+      const customVal = parseInt(document.getElementById('customThresholdInput').value, 10) || 2;
+
+      state.modeConfig = { enabled: isEnabled, selectedMode: selected, customThreshold: customVal };
+      saveState();
+      updateModeBadgeUI();
+      closeConfigModal();
+      alert("⚙️ 模式与规则已成功更新！");
+    }
+
+    function syncModalUIWithState() {
+      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', customThreshold: 2 };
+      document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled;
+      toggleModeEnable();
+
+      const radios = document.getElementsByName('drawMode');
+      for (let r of radios) {
+        if (r.value === state.modeConfig.selectedMode) r.checked = true;
+      }
+      document.getElementById('customThresholdInput').value = state.modeConfig.customThreshold || 2;
+      updateModeBadgeUI();
+    }
+
+    function updateModeBadgeUI() {
+      const badge = document.getElementById('currentModeBadge');
+      if (!badge) return;
+      if (!state.modeConfig || !state.modeConfig.enabled) {
+        badge.innerText = "⚙️ 模式: 未启用规则";
+        badge.className = "text-slate-400 font-bold";
+        return;
+      }
+      const m = state.modeConfig.selectedMode;
+      if (m === 'mode1') badge.innerText = "⚙️ 模式: 冠亚季模式";
+      else if (m === 'mode2') badge.innerText = "⚙️ 模式: 安慰奖模式";
+      else if (m === 'mode3') badge.innerText = `⚙️ 模式: 自定义(剩${state.modeConfig.customThreshold}人)`;
+      badge.className = "text-amber-400 font-bold";
+    }
+
+    function getActiveThresholdN() {
+      if (!state.modeConfig || !state.modeConfig.enabled) return 2;
+      const m = state.modeConfig.selectedMode;
+      if (m === 'mode1') return 3;
+      if (m === 'mode2') return 5;
+      if (m === 'mode3') return state.modeConfig.customThreshold || 2;
+      return 2;
+    }
+
+    function changeStatus(id, newStatus) {
+      const activeRound = state.rounds[currentRoundIndex];
+      const target = activeRound.candidates.find(c => c.id === id);
+      if (!target) return;
+
+      target.status = newStatus;
+
+      const remainingPending = activeRound.candidates.filter(c => c.status === 'pending');
+      const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
+
+      // 🌟 1. 当只剩 1 人时：自动定格为终极冠军
+      if (remainingPending.length === 1) {
+        activeRound.isFinal = true;
+        const champion = remainingPending[0];
+        champion.status = 'pass';
+
+        const winnerNames = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).join('、');
+        state.latestEvent = {
+          type: 'finalCongrat',
+          timestamp: Date.now(),
+          targetRoundIndex: currentRoundIndex,
+          winnerNames: winnerNames
+        };
+        saveState();
+        renderRoundTabs();
+        alert(`👑 🎉 最终冠军已诞生：${champion.name}！公开大屏已实时显示海报！`);
+        return;
+      }
+
+      // 🌟 2. 模式触发阈值 N 人确认
+      const thresholdN = getActiveThresholdN();
+      if (newStatus === 'pass' && remainingPending.length === thresholdN && state.modeConfig && state.modeConfig.enabled) {
+        setTimeout(() => {
+          const isFinalRound = confirm(`🏆 提示：当前剩余角逐人数为 ${thresholdN} 人！\n\n请确认：这是最后一轮决战吗？\n\n【确定】= 是的，公布最终获胜者\n【取消】= 不是，继续下一轮`);
+          if (isFinalRound) {
+            activeRound.isFinal = true;
+            const winnerNames = passedCandidates.map(c => c.name).join('、');
+            state.latestEvent = {
+              type: 'finalCongrat',
+              timestamp: Date.now(),
+              targetRoundIndex: currentRoundIndex,
+              winnerNames: winnerNames
+            };
+            saveState();
+            renderRoundTabs();
+          } else {
+            saveState();
+          }
+        }, 100);
+      } else {
+        saveState();
+      }
+    }
 
     function setLanguage(lang) {
       currentLang = lang;
@@ -284,164 +414,55 @@
 
       ['zh', 'en', 'ms'].forEach(l => {
         const btn = document.getElementById(`langBtn-${l}`);
-        if (btn) {
-          if (l === lang) {
-            btn.className = "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold";
-          } else {
-            btn.className = "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
-          }
-        }
+        if (btn) btn.className = (l === lang) ? "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
       });
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (i18n[lang][key] !== undefined) {
-          el.innerText = i18n[lang][key];
-        }
+        if (i18n[lang][key] !== undefined) el.innerText = i18n[lang][key];
       });
-
-      const searchInp = document.getElementById('searchInput');
-      if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
       renderRoundTabs();
       renderAdminView();
       updateStats();
-      updateModeBadge();
     }
 
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
-      if (r && r.isFinal) {
-        return i18n[currentLang].finalRoundTitle;
-      }
-      if (r && r.roundName) {
-        const match = r.roundName.match(/\d+/);
-        const num = match ? match[0] : (idx + 1);
-        return `${i18n[currentLang].roundPrefix}${num}${i18n[currentLang].roundSuffix}`;
-      }
+      if (r && r.isFinal) return i18n[currentLang].finalRoundTitle;
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
-    /* ⚙️ 模式弹窗与切换逻辑 */
-    function openSettingsModal() {
-      document.getElementById('mode1Checkbox').checked = (state.currentMode === 'mode1');
-      document.getElementById('mode2Checkbox').checked = (state.currentMode === 'mode2');
-      document.getElementById('settingsModalOverlay').classList.remove('hidden');
-    }
-
-    function closeSettingsModal() {
-      document.getElementById('settingsModalOverlay').classList.add('hidden');
-    }
-
-    function toggleModeCheck(selected) {
-      if (selected === 'mode1' && document.getElementById('mode1Checkbox').checked) {
-        document.getElementById('mode2Checkbox').checked = false;
-      } else if (selected === 'mode2' && document.getElementById('mode2Checkbox').checked) {
-        document.getElementById('mode1Checkbox').checked = false;
-      }
-    }
-
-    function saveModeSettings() {
-      const isMode1 = document.getElementById('mode1Checkbox').checked;
-      const isMode2 = document.getElementById('mode2Checkbox').checked;
-
-      if (isMode1) state.currentMode = 'mode1';
-      else if (isMode2) state.currentMode = 'mode2';
-      else state.currentMode = null;
-
-      saveState();
-      updateModeBadge();
-      closeSettingsModal();
-      alert("⚙️ 模式设置已保存更新！");
-    }
-
-    function updateModeBadge() {
-      const badge = document.getElementById('currentModeBadge');
-      if (!badge) return;
-
-      if (state.currentMode === 'mode1') {
-        badge.innerText = "🏆 冠亚季模式";
-        badge.classList.remove('hidden');
-      } else if (state.currentMode === 'mode2') {
-        badge.innerText = "🎁 安慰奖模式";
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
-    }
-
     function fetchGoogleSheetsData(isManual) {
-      if (currentRoundIndex !== 0) {
-        alert("禁止在第 2 轮及后续轮次刷新表格，以免覆盖晋级数据！请先切换回【第 1 轮】。");
-        return;
-      }
-
-      const syncStatus = document.getElementById('syncStatusText');
-      if (syncStatus) syncStatus.innerText = i18n[currentLang].syncing;
-
+      if (currentRoundIndex !== 0) { alert("仅限在第 1 轮刷新表格数据！"); return; }
       fetch(SHEET_CSV_URL)
         .then(response => response.text())
         .then(csvText => {
           parseCSVToFirstRound(csvText);
-          if (syncStatus) syncStatus.innerText = i18n[currentLang].syncSuccess;
           if (isManual) alert(i18n[currentLang].syncSuccess);
-        })
-        .catch(err => console.error("读取失败", err));
+        });
     }
 
     function parseCSVToFirstRound(csvText) {
       const lines = csvText.split('\n');
       const candidates = [];
-
       lines.forEach((line, idx) => {
         if (!line.trim()) return;
-        const cleanLine = line.replace(/"/g, '');
-        const parts = cleanLine.split(',');
-
-        if (parts.length >= 1) {
-          const name = parts[0] ? parts[0].trim() : '';
-          const orderNo = parts[1] ? parts[1].trim() : '';
-
-          if (name && name !== '买家姓名' && name !== 'Name') {
-            candidates.push({
-              id: Date.now() + idx,
-              name: name,
-              orderNo: orderNo,
-              status: 'pending'
-            });
-          }
+        const parts = line.replace(/"/g, '').split(',');
+        if (parts[0] && parts[0].trim() !== '买家姓名' && parts[0].trim() !== 'Name') {
+          candidates.push({ id: Date.now() + idx, name: parts[0].trim(), orderNo: parts[1] ? parts[1].trim() : '', status: 'pending' });
         }
       });
-
-      if (!state.rounds || state.rounds.length === 0) {
-        state.rounds = [{ roundName: "第 1 轮", candidates: candidates }];
-      } else {
-        state.rounds[0].candidates = candidates;
-      }
-
+      state.rounds[0].candidates = candidates;
       saveState();
       renderRoundTabs();
     }
 
     function goToPrevRound() {
-      if (currentRoundIndex === 0) {
-        alert("当前已经是第 1 轮，无法再返回上一轮。");
-        return;
-      }
-
-      if (confirm(`确认返回至上一轮（第 ${currentRoundIndex} 轮）？`)) {
-        if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) {
-          state.rounds.pop();
-        }
-        
+      if (currentRoundIndex === 0) return;
+      if (confirm("确认返回上一轮？")) {
+        if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) state.rounds.pop();
         currentRoundIndex = Math.max(0, currentRoundIndex - 1);
-
-        state.latestEvent = {
-          type: 'prevRound',
-          timestamp: Date.now(),
-          targetRoundIndex: currentRoundIndex
-        };
-
         saveState();
         renderRoundTabs();
       }
@@ -449,81 +470,35 @@
 
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
-      if (currentRound && currentRound.isFinal) {
-        alert("当前已是最终轮，无法继续推进！");
-        return;
-      }
-
+      if (currentRound && currentRound.isFinal) { alert("当前已是最终轮，无法推进！"); return; }
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
+      if (passedCandidates.length === 0) { alert("必须先选择晋级买家！"); return; }
 
-      if (passedCandidates.length === 0) {
-        alert("当前轮次尚未选择任何普及/晋级买家，请先点击【普及】按钮选出晋级选手！");
-        return;
-      }
-
-      const nextRoundNumber = state.rounds.length + 1;
-      const nextRoundCandidates = passedCandidates.map((c, idx) => ({
-        id: Date.now() + idx,
-        name: c.name,
-        orderNo: c.orderNo,
-        status: 'pending'
-      }));
-
-      state.rounds.push({
-        roundName: `第 ${nextRoundNumber} 轮`,
-        candidates: nextRoundCandidates
-      });
-
+      const nextRoundCandidates = passedCandidates.map((c, idx) => ({ id: Date.now() + idx, name: c.name, orderNo: c.orderNo, status: 'pending' }));
+      state.rounds.push({ roundName: `第 ${state.rounds.length + 1} 轮`, candidates: nextRoundCandidates });
       currentRoundIndex = state.rounds.length - 1;
-
-      state.latestEvent = {
-        type: 'advance',
-        timestamp: Date.now(),
-        targetRoundIndex: currentRoundIndex
-      };
-
       saveState();
       renderRoundTabs();
-      alert(`🎉 已成功开启【第 ${nextRoundNumber} 轮】！公开大屏已自动同步显示。`);
     }
 
     function renderRoundTabs() {
       const container = document.getElementById('roundTabsContainer');
       if (!container) return;
-
       container.innerHTML = state.rounds.map((r, idx) => {
-        const isActive = (idx === currentRoundIndex);
-        const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
-        return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
-          ${escapeHtml(getRoundTitle(idx))}
-        </button>`;
+        const activeClass = (idx === currentRoundIndex) ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+        return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">${escapeHtml(getRoundTitle(idx))}</button>`;
       }).join('');
     }
 
-    function switchRound(idx) {
-      currentRoundIndex = idx;
-      renderRoundTabs();
-      renderAdminView();
-      updateStats();
-    }
+    function switchRound(idx) { currentRoundIndex = idx; renderRoundTabs(); renderAdminView(); updateStats(); }
 
     function loadState() {
       const saved = localStorage.getItem('mochii_tournament_state');
       if (saved) {
-        try { 
-          const parsed = JSON.parse(saved); 
-          if (parsed && Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
-            state = parsed;
-          } else if (parsed && parsed.candidates) {
-            state = { rounds: [{ roundName: "第 1 轮", candidates: parsed.candidates }], currentMode: null };
-          } else {
-            state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
-          }
-        } catch(e){
-          state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
-        }
-      } else {
-        state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.rounds)) state = parsed;
+        } catch(e){}
       }
     }
 
@@ -537,23 +512,13 @@
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
 
-      const total = candidates.length;
-      const passed = candidates.filter(c => c.status === 'pass').length;
-      const pending = candidates.filter(c => c.status === 'pending').length;
-      const out = candidates.filter(c => c.status === 'out').length;
-
-      document.getElementById('statTotalCandidates').innerText = total;
-      document.getElementById('statPassedCount').innerText = passed;
-      document.getElementById('statPendingCount').innerText = pending;
-      document.getElementById('statOutCount').innerText = out;
-
-      const titleName = getRoundTitle(currentRoundIndex);
-      document.getElementById('passedTitleText').innerText = `${titleName} ${i18n[currentLang].passedTitle}`;
-      document.getElementById('passedBadgeCount').innerText = passed + i18n[currentLang].unitPeople;
+      document.getElementById('statTotalCandidates').innerText = candidates.length;
+      document.getElementById('statPassedCount').innerText = candidates.filter(c => c.status === 'pass').length;
+      document.getElementById('statPendingCount').innerText = candidates.filter(c => c.status === 'pending').length;
+      document.getElementById('statOutCount').innerText = candidates.filter(c => c.status === 'out').length;
 
       const advanceBtn = document.getElementById('advanceNextRoundBtn');
       const advanceBtnText = document.getElementById('advanceNextRoundBtnText');
-
       if (activeRound.isFinal) {
         if (advanceBtn) advanceBtn.setAttribute('disabled', 'disabled');
         if (advanceBtnText) advanceBtnText.innerText = i18n[currentLang].btnFinalRound;
@@ -561,67 +526,14 @@
         if (advanceBtn) advanceBtn.removeAttribute('disabled');
         if (advanceBtnText) advanceBtnText.innerText = i18n[currentLang].btnNextRound;
       }
-
-      const refreshBtn = document.getElementById('refreshSheetsBtn');
-      if (refreshBtn) {
-        if (currentRoundIndex !== 0) {
-          refreshBtn.setAttribute('disabled', 'disabled');
-          refreshBtn.title = '第 2 轮及后续轮次禁止刷新表格，防止覆盖晋级数据！';
-        } else {
-          refreshBtn.removeAttribute('disabled');
-          refreshBtn.title = '从表格更新第 1 轮名单';
-        }
-      }
-    }
-
-    /* 🌟 核心升级：当只剩 1 人时自动夺冠，无需开启下一轮 */
-    function changeStatus(id, newStatus) {
-      const activeRound = state.rounds[currentRoundIndex];
-      const target = activeRound.candidates.find(c => c.id === id);
-      if (!target) return;
-
-      target.status = newStatus;
-
-      const remainingPendingList = activeRound.candidates.filter(c => c.status === 'pending');
-
-      // 自动逻辑：当点击普及后，如果剩余待角逐的人数只剩【最后 1 名】
-      if (newStatus === 'pass' && remainingPendingList.length === 1) {
-        const lastCandidate = remainingPendingList[0];
-        lastCandidate.status = 'pass'; // 自动将最后这 1 名晋级为最终冠军
-
-        activeRound.isFinal = true;
-        activeRound.roundName = "最终轮";
-
-        const allWinners = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).join('、');
-
-        state.latestEvent = {
-          type: 'finalCongrat',
-          timestamp: Date.now(),
-          targetRoundIndex: currentRoundIndex,
-          winnerNames: allWinners
-        };
-
-        saveState();
-        renderRoundTabs();
-
-        setTimeout(() => {
-          alert(`👑 终极判定！角逐名单仅剩最后 1 名【${lastCandidate.name}】，已自动夺冠！本轮设为最终轮，公开大屏已广播冠军结果！`);
-        }, 100);
-
-      } else {
-        saveState();
-      }
     }
 
     function renderAdminView() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
-      let list = (activeRound.candidates || []).filter(c => 
-        (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
-      );
+      let list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
-      // 1. 普及区
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
@@ -632,12 +544,11 @@
           '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
             '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo) + '</span>' +
-            '<button onclick="changeStatus(' + c.id + ', \'pending\')" title="Undo" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 bg-emerald-900/50 rounded hover:bg-rose-950 transition">✕</button>' +
+            '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 rounded">✕</button>' +
           '</div>'
         ).join('');
       }
 
-      // 2. 待角逐 / 淘汰卡片区
       const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending' || c.status === 'out');
 
@@ -654,25 +565,19 @@
         if (c.status === 'out') {
           borderStyle = 'border-slate-800 bg-slate-900/60 opacity-60';
           statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400 font-bold">${i18n[currentLang].badgeOut}</span>`;
-          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'pending')" class="flex-1 py-1.5 text-xs rounded transition bg-amber-600 hover:bg-amber-500 text-white font-bold shadow">${i18n[currentLang].btnUndoOut}</button>`;
+          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'pending')" class="flex-1 py-1.5 text-xs rounded bg-amber-600 hover:bg-amber-500 text-white font-bold">${i18n[currentLang].btnUndoOut}</button>`;
         } else {
-          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded transition bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>`;
+          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>`;
         }
 
-        const btnPassStyle = 'bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold';
-
-        return '<div class="p-4 rounded-xl border ' + borderStyle + ' transition relative flex flex-col justify-between shadow">' +
+        return '<div class="p-4 rounded-xl border ' + borderStyle + ' flex flex-col justify-between shadow">' +
           '<div>' +
-            '<div class="flex justify-between items-start mb-2">' +
-              '<span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' +
-              statusBadge +
-            '</div>' +
+            '<div class="flex justify-between items-start mb-2"><span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
             '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
             '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '-') + '</div>' +
           '</div>' +
-
           '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-2">' +
-            (c.status !== 'out' ? `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1.5 text-xs rounded transition ${btnPassStyle}">${i18n[currentLang].btnPass}</button>` : '') +
+            (c.status !== 'out' ? `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1.5 text-xs rounded bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold">${i18n[currentLang].btnPass}</button>` : '') +
             btnOutHtml +
           '</div>' +
         '</div>';
@@ -682,23 +587,15 @@
     }
 
     function resetRounds() {
-      if (confirm("确认重置所有轮次数据？这会清除所有轮次并重新从 Google 表格同步第 1 轮。")) {
+      if (confirm("确认重置所有数据？")) {
         currentRoundIndex = 0;
-        state = {
-          rounds: [
-            { roundName: "第 1 轮", candidates: [] }
-          ],
-          currentMode: null
-        };
-        localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
+        state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
+        saveState();
         fetchGoogleSheetsData(true);
       }
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
+    function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>
 </html>
