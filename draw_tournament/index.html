@@ -20,10 +20,6 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
-        <!-- 实时刷新按钮 -->
-        <button onclick="fetchGoogleSheetsData()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition flex items-center space-x-1 shadow">
-          <span>🔄 刷新表格数据</span>
-        </button>
         <button id="viewToggleBtn" onclick="toggleViewMode()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded-lg border border-slate-600 transition">
           📊 切换视图: <span id="viewModeText" class="text-amber-400 font-bold">卡片模式</span>
         </button>
@@ -41,7 +37,7 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
         <span class="text-xs text-slate-400 block">本月普及/晋级总名额</span>
-        <span id="statTotalQuota" class="text-2xl font-black text-amber-400">0</span>
+        <span id="statTotalQuota" class="text-2xl font-black text-amber-400">自动计算</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
         <span class="text-xs text-slate-400 block">入围总人数</span>
@@ -57,7 +53,7 @@
       </div>
     </div>
 
-    <!-- 搜索过滤 -->
+    <!-- 搜索过滤与状态栏 (刷新按钮放在状态提示文字后面) -->
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-800 p-3 rounded-xl border border-slate-700">
       <div class="relative w-full sm:w-80">
         <input 
@@ -72,9 +68,14 @@
           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
         >
       </div>
-      <div class="text-xs text-slate-400 flex items-center space-x-1">
+      
+      <!-- 同步状态提示 + 刷新按钮 -->
+      <div class="text-xs text-slate-400 flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
         <span id="syncStatusText">已连接至 Google Sheets 数据源</span>
+        <button onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition flex items-center space-x-1 shadow text-xs">
+          <span>🔄 刷新表格数据</span>
+        </button>
       </div>
     </div>
 
@@ -112,19 +113,21 @@
 
         <div class="overflow-y-auto flex-1 space-y-6 pr-2">
           
-          <!-- 1. 设置名额 -->
+          <!-- 1. 设置名额 (默认自动) -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
             <label class="block text-sm font-semibold text-slate-300 mb-2">步骤 1：设置本月普及/晋级名额上限</label>
             <div class="flex items-center space-x-3">
-              <input type="number" id="quotaInput" min="1" max="128" value="8" class="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white w-28 focus:outline-none focus:border-amber-400">
-              <button onclick="updateQuota()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition">保存名额</button>
+              <input type="number" id="quotaInput" min="1" max="500" placeholder="默认自动" class="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white w-32 focus:outline-none focus:border-amber-400 text-sm">
+              <button onclick="updateQuota()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition">保存手动名额</button>
+              <button onclick="resetAutoQuota()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg text-xs font-medium transition">恢复默认自动</button>
             </div>
+            <p class="text-xs text-slate-400 mt-2">💡 默认自动：跟随 Google 表格载入的普及人数自适应；若填入数值则进行手动固定。</p>
           </div>
 
-          <!-- 2. 手动同步/导入 -->
+          <!-- 2. 数据同步选项 -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
             <label class="block text-sm font-semibold text-slate-300 mb-1">步骤 2：数据同步选项</label>
-            <p class="text-xs text-slate-400 mb-3">系统已关联 Google 表格《每月抽奖》[1]。您可随时点击从表格重新拉取最新数据。</p>
+            <p class="text-xs text-slate-400 mb-3">系统已关联 Google 表格《每月抽奖》。您可随时点击重新抓取最新数据。</p>
             <button onclick="fetchGoogleSheetsData(true)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition">
               📥 从 Google Sheets 重新同步数据
             </button>
@@ -151,7 +154,6 @@
   </div>
 
   <script>
-    // Google Sheets CSV 导出专属 URL (对应【每月抽奖】表格) [1]
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
     const ADMIN_PIN = "1234";
@@ -159,12 +161,11 @@
     let currentViewType = "grid";
 
     let state = {
-      quota: 8,
+      quota: 'auto', // 'auto' 或 手动数值
       candidates: []
     };
 
     window.onload = function() {
-      // 防止浏览器记住历史搜索词
       setTimeout(function() {
         var searchEl = document.getElementById('searchInput');
         if (searchEl) searchEl.value = '';
@@ -172,7 +173,6 @@
 
       loadState();
 
-      // 如果本地没有保存过名单，自动从 Google Sheets 读取 [1]
       if (!state.candidates || state.candidates.length === 0) {
         fetchGoogleSheetsData();
       } else {
@@ -181,7 +181,6 @@
       }
     };
 
-    // 从 Google Sheets 抓取数据并解析 [1]
     function fetchGoogleSheetsData(isManual) {
       const syncStatus = document.getElementById('syncStatusText');
       if (syncStatus) syncStatus.innerText = "正在从 Google Sheets 同步中...";
@@ -198,16 +197,14 @@
         })
         .catch(err => {
           console.error(err);
-          if (syncStatus) syncStatus.innerText = "连接失败，请确保 Google Sheets 权限为【知道链接者可查看】";
+          if (syncStatus) syncStatus.innerText = "连接失败，请检查表格公开权限";
         });
     }
 
-    // 解析 CSV 数据并保留先前的晋级/普及状态 [1]
     function parseCSVAndMerge(csvText) {
       const lines = csvText.split('\n');
       const existingStatusMap = {};
 
-      // 备份现有的晋级/普及状态
       state.candidates.forEach(c => {
         if (c.name) existingStatusMap[c.name.trim()] = c.status;
       });
@@ -217,7 +214,6 @@
       lines.forEach((line, idx) => {
         if (!line.trim()) return;
         
-        // 去除 CSV 字段中的双引号 [1]
         const cleanLine = line.replace(/"/g, '');
         const parts = cleanLine.split(',');
 
@@ -225,9 +221,9 @@
           const name = parts[0] ? parts[0].trim() : '';
           const orderNo = parts[1] ? parts[1].trim() : '';
 
-          // 过滤表头或无效内容 [1]
           if (name && name !== '买家姓名' && name !== 'Name') {
-            const preservedStatus = existingStatusMap[name] || 'pending';
+            // 默认从表格拉取的名单均为普及/普及状态 ('pass')
+            const preservedStatus = existingStatusMap[name] || 'pass';
             newCandidates.push({
               id: Date.now() + idx,
               name: name,
@@ -255,12 +251,22 @@
       renderPublicView();
     }
 
+    function getEffectiveQuota() {
+      if (state.quota === 'auto' || !state.quota) {
+        // 自动名额：等于当前已晋级/普及的总人数
+        return state.candidates.filter(c => c.status === 'pass').length;
+      }
+      return parseInt(state.quota) || 0;
+    }
+
     function updateStats() {
       var passed = state.candidates.filter(function(c) { return c.status === 'pass'; }).length;
-      document.getElementById('statTotalQuota').innerText = state.quota;
+      var effectiveQuota = getEffectiveQuota();
+
+      document.getElementById('statTotalQuota').innerText = (state.quota === 'auto' || !state.quota) ? `${effectiveQuota} (自动)` : effectiveQuota;
       document.getElementById('statTotalCandidates').innerText = state.candidates.length;
       document.getElementById('statPassedCount').innerText = passed;
-      document.getElementById('statRemainingQuota').innerText = Math.max(0, state.quota - passed);
+      document.getElementById('statRemainingQuota').innerText = Math.max(0, effectiveQuota - passed);
     }
 
     function renderPublicView() {
@@ -285,6 +291,8 @@
         container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">🔍</p><p>未找到匹配的买家或订单号</p></div>';
         return;
       }
+
+      var effectiveQuota = getEffectiveQuota();
 
       if (currentViewType === 'grid') {
         var html = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
@@ -342,7 +350,7 @@
           '<div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">' +
             '<h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">' +
               '<span>🏆 已成功普及名单</span>' +
-              '<span class="text-xs font-normal text-slate-400">' + passedList.length + '/' + state.quota + '</span>' +
+              '<span class="text-xs font-normal text-slate-400">' + passedList.length + '/' + effectiveQuota + '</span>' +
             '</h3>' +
             '<div class="space-y-2">' + passedHtml + '</div>' +
           '</div>' +
@@ -393,17 +401,26 @@
     function showAdminPanel() {
       document.getElementById('adminAuthSection').classList.add('hidden');
       document.getElementById('adminPanelSection').classList.remove('hidden');
-      document.getElementById('quotaInput').value = state.quota;
+      document.getElementById('quotaInput').value = (state.quota === 'auto') ? '' : state.quota;
       renderAdminCandidateList();
     }
 
     function updateQuota() {
-      var q = parseInt(document.getElementById('quotaInput').value);
-      if (q && q > 0) {
-        state.quota = q;
+      var val = document.getElementById('quotaInput').value.trim();
+      if (val !== '' && !isNaN(val) && parseInt(val) > 0) {
+        state.quota = parseInt(val);
         saveState();
-        alert("名额已成功设置为：" + q + " 人");
+        alert("已将普及名额手动设定为：" + state.quota + " 人");
+      } else {
+        alert("请输入有效的名额数字，或点击【恢复默认自动】");
       }
+    }
+
+    function resetAutoQuota() {
+      state.quota = 'auto';
+      document.getElementById('quotaInput').value = '';
+      saveState();
+      alert("已恢复为默认自动名额模式");
     }
 
     function setCandidateStatus(id, newStatus) {
@@ -449,6 +466,7 @@
     function clearAllData() {
       if (confirm('确认重置本地普及控制状态？这会重新载入表格的初始状态。')) {
         localStorage.removeItem('mochii_tournament_state');
+        state.quota = 'auto';
         fetchGoogleSheetsData(true);
       }
     }
