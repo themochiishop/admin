@@ -19,11 +19,7 @@
         </div>
       </div>
       <div class="flex items-center space-x-3">
-        <!-- 视图切换按钮 -->
-        <button id="viewToggleBtn" onclick="toggleViewMode()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg border border-slate-600 transition shadow">
-          📊 视图切换: <span id="viewModeText" class="text-amber-400 font-bold">卡片模式 (1排5张)</span>
-        </button>
-        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400 border-l border-slate-700 pl-3">
+        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span>直播实时同步中...</span>
         </div>
@@ -50,24 +46,47 @@
       </div>
     </div>
 
-    <!-- 买家个人搜索栏 -->
-    <div class="mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
-      <div class="relative w-full sm:w-80">
+    <!-- 顶栏：已普及名单展示区 (原搜索框位置) + 右侧短搜索框 -->
+    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
+      
+      <!-- 已普及名单 (原本搜索框的位置) -->
+      <div class="flex-1 w-full">
+        <div class="flex items-center space-x-2 mb-2">
+          <span class="text-lg">🏆</span>
+          <h2 class="text-md font-bold text-emerald-400">已普及/晋级名单</h2>
+          <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
+        </div>
+        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1">
+          <!-- 动态渲染晋级买家小卡片/标签 -->
+        </div>
+      </div>
+
+      <!-- 右移短搜索框 -->
+      <div class="w-full md:w-auto flex-shrink-0 self-end md:self-center">
         <input 
           type="search" 
           id="searchInput" 
           oninput="renderPublicView()" 
-          placeholder="🔍 搜索您的名字或订单号..." 
-          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+          placeholder="🔍 搜索买家/订单..." 
+          class="w-full md:w-56 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
         >
       </div>
-      <div class="text-xs text-slate-400">
-        📌 每 3 秒自动获取主播最新抽奖判定
-      </div>
+
     </div>
 
-    <!-- 动态展示区 -->
-    <div id="publicContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
+    <!-- 底部：⌛ 角逐中买家卡片分类展区 (取消卡片内重复状态标签，一排5个) -->
+    <div class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-700/80 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-lg">⌛</span>
+          <h2 class="text-md font-bold text-amber-400">角逐中买家名单</h2>
+        </div>
+        <span id="pendingCountBadge" class="text-xs text-slate-400">共 0 人待角逐</span>
+      </div>
+
+      <div id="pendingGridContainer">
+        <!-- 动态渲染一排 5 个角逐中买家卡片 -->
+      </div>
     </div>
 
   </main>
@@ -77,14 +96,10 @@
   </footer>
 
   <script>
-    let currentViewType = "grid"; // 'grid' (卡片模式) 或 'list' (分组列表)
-    let state = {
-      candidates: []
-    };
+    let state = { candidates: [] };
 
     window.onload = function() {
       loadAndRender();
-      // 自动轮询：每 3 秒自动拉取并更新界面
       setInterval(loadAndRender, 3000);
     };
 
@@ -107,106 +122,57 @@
       document.getElementById('statTotalCandidates').innerText = total;
       document.getElementById('statPassedCount').innerText = passed;
       document.getElementById('statPendingCount').innerText = pending;
-    }
-
-    function toggleViewMode() {
-      currentViewType = (currentViewType === 'grid') ? 'list' : 'grid';
-      const btnText = document.getElementById('viewModeText');
-      if (btnText) {
-        btnText.innerText = (currentViewType === 'grid') ? '卡片模式 (1排5张)' : '分组列表';
-      }
-      renderPublicView();
+      document.getElementById('passedBadgeCount').innerText = passed + '人';
+      document.getElementById('pendingCountBadge').innerText = '共 ' + pending + ' 人待角逐';
     }
 
     function renderPublicView() {
-      const container = document.getElementById('publicContainer');
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
       const list = state.candidates.filter(c => 
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      if (state.candidates.length === 0) {
-        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月抽奖名单同步中，请关注直播间...</p></div>';
-        return;
-      }
+      // 1. 渲染顶部【已普及名单】区
+      const passedContainer = document.getElementById('passedListContainer');
+      const passedList = list.filter(c => c.status === 'pass');
 
-      if (list.length === 0) {
-        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">🔍</p><p>未找到匹配的买家或订单号</p></div>';
-        return;
-      }
-
-      if (currentViewType === 'grid') {
-        // 卡片模式：利用 Tailwind CSS 实现大屏 1 排 5 列布局 (xl:grid-cols-5)
-        const cardsHtml = list.map((c, index) => {
-          let borderStyle = 'border-slate-700 bg-slate-800';
-          let statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">⌛ 角逐中</span>';
-
-          if (c.status === 'pass') {
-            borderStyle = 'border-emerald-500/50 bg-slate-800 shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-500/40';
-            statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500 text-slate-950 font-bold">🏆 已普及/晋级</span>';
-          } else if (c.status === 'out') {
-            borderStyle = 'border-slate-800 bg-slate-900/60 opacity-50';
-            statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">已淘汰</span>';
-          }
-
-          return '<div class="p-4 rounded-xl border ' + borderStyle + ' transition hover:border-amber-400 relative overflow-hidden flex flex-col justify-between">' +
-            '<div>' +
-              '<div class="flex justify-between items-start mb-2">' +
-                '<span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' +
-                statusBadge +
-              '</div>' +
-              '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-xs text-amber-400/80 font-mono mt-1 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-
-        container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
+      if (passedList.length === 0) {
+        passedContainer.innerHTML = '<span class="text-xs text-slate-500 italic">暂无普及买家，直播抽出中...</span>';
       } else {
-        // 分组列表模式
-        const passedList = list.filter(c => c.status === 'pass');
-        const pendingList = list.filter(c => c.status === 'pending');
-
-        const passedHtml = passedList.map(c => 
-          '<div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg flex justify-between items-center">' +
-            '<div class="min-w-0 flex-1 pr-2">' +
-              '<div class="font-bold text-emerald-200 text-base truncate">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
-            '</div>' +
-            '<span class="text-xs font-bold text-emerald-400 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 rounded-full shrink-0">普及选手</span>' +
+        passedContainer.innerHTML = passedList.map(c => 
+          '<div class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
+            '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
+            '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo) + '</span>' +
           '</div>'
-        ).join('') || '<p class="text-xs text-slate-500 py-4 text-center">暂无普及买家，直播抽出中...</p>';
-
-        const pendingHtml = pendingList.map(c => 
-          '<div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700">' +
-            '<div class="min-w-0 flex-1 pr-2">' +
-              '<div class="font-bold text-slate-200 truncate">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
-            '</div>' +
-            '<span class="text-xs text-amber-400 shrink-0">待角逐</span>' +
-          '</div>'
-        ).join('') || '<p class="text-xs text-slate-500 py-4 text-center">全员抽奖公布完毕</p>';
-
-        container.innerHTML = 
-          '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
-            '<div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30 shadow-lg shadow-emerald-950/20">' +
-              '<h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">' +
-                '<span>🏆 已成功普及/晋级名单</span>' +
-                '<span class="text-xs font-normal text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">' + passedList.length + ' 人</span>' +
-              '</h3>' +
-              '<div class="space-y-2">' + passedHtml + '</div>' +
-            '</div>' +
-
-            '<div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">' +
-              '<h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">' +
-                '<span>⚡ 待抽奖/角逐中名单</span>' +
-                '<span class="text-xs font-normal text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">' + pendingList.length + ' 人</span>' +
-              '</h3>' +
-              '<div class="space-y-2">' + pendingHtml + '</div>' +
-            '</div>' +
-          '</div>';
+        ).join('');
       }
+
+      // 2. 渲染底部【⌛ 角逐中】卡片区 (一排5列，卡片内不再显示重复的角逐中标签)
+      const pendingContainer = document.getElementById('pendingGridContainer');
+      const pendingList = list.filter(c => c.status === 'pending');
+
+      if (state.candidates.length === 0) {
+        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月抽奖名单同步中，请关注直播间...</p></div>';
+        return;
+      }
+
+      if (pendingList.length === 0) {
+        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>全员角逐完毕或未找到匹配的待定买家</p></div>';
+        return;
+      }
+
+      const cardsHtml = pendingList.map((c, index) => 
+        '<div class="p-4 rounded-xl border border-slate-700 bg-slate-800/80 transition hover:border-amber-400/80 relative overflow-hidden flex flex-col justify-between shadow">' +
+          '<div>' +
+            '<div class="text-xs font-mono text-slate-400 mb-1">#' + (index + 1) + '</div>' +
+            '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
+            '<div class="text-xs text-amber-400/80 font-mono mt-1 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+          '</div>' +
+        '</div>'
+      ).join('');
+
+      pendingContainer.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
     }
 
     function escapeHtml(str) {
