@@ -16,10 +16,14 @@
         <span class="text-2xl">🏆</span>
         <div>
           <h1 class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖普及榜</h1>
-          <p class="text-xs text-slate-400">实时更新 · 买家公示栏</p>
+          <p class="text-xs text-slate-400">实时连接 Google Sheets · 买家公示栏</p>
         </div>
       </div>
       <div class="flex items-center space-x-2">
+        <!-- 实时刷新按钮 -->
+        <button onclick="fetchGoogleSheetsData()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition flex items-center space-x-1 shadow">
+          <span>🔄 刷新表格数据</span>
+        </button>
         <button id="viewToggleBtn" onclick="toggleViewMode()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded-lg border border-slate-600 transition">
           📊 切换视图: <span id="viewModeText" class="text-amber-400 font-bold">卡片模式</span>
         </button>
@@ -53,7 +57,7 @@
       </div>
     </div>
 
-    <!-- 搜索过滤 (拦截浏览器自动填写邮箱) -->
+    <!-- 搜索过滤 -->
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-800 p-3 rounded-xl border border-slate-700">
       <div class="relative w-full sm:w-80">
         <input 
@@ -68,8 +72,9 @@
           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400"
         >
       </div>
-      <div class="text-xs text-slate-400">
-        📌 管理员后台修改后实时自动同步展示
+      <div class="text-xs text-slate-400 flex items-center space-x-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+        <span id="syncStatusText">已连接至 Google Sheets 数据源</span>
       </div>
     </div>
 
@@ -116,22 +121,20 @@
             </div>
           </div>
 
-          <!-- 2. 批量导入名单 -->
+          <!-- 2. 手动同步/导入 -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
-            <label class="block text-sm font-semibold text-slate-300 mb-1">步骤 2：导入入围买家名单</label>
-            <p class="text-xs text-slate-400 mb-2">格式示例：<code class="text-amber-300">scarlet1217 #260930E8</code> （每行一位买家）</p>
-            <textarea id="bulkImportInput" rows="4" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400" placeholder="scarlet1217 #260930E8&#10;fatihintyka #260101EA"></textarea>
-            <div class="mt-2 flex space-x-2">
-              <button onclick="importCandidates(false)" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition">追加导入</button>
-              <button onclick="importCandidates(true)" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-sm font-medium transition">覆盖重新导入</button>
-            </div>
+            <label class="block text-sm font-semibold text-slate-300 mb-1">步骤 2：数据同步选项</label>
+            <p class="text-xs text-slate-400 mb-3">系统已关联 Google 表格《每月抽奖》[1]。您可随时点击从表格重新拉取最新数据。</p>
+            <button onclick="fetchGoogleSheetsData(true)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition">
+              📥 从 Google Sheets 重新同步数据
+            </button>
           </div>
 
-          <!-- 3. 管理与控制普及 -->
+          <!-- 3. 管理普及/晋级状态 -->
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
             <div class="flex justify-between items-center mb-3">
               <label class="text-sm font-semibold text-slate-300">步骤 3：修改买家普及/晋级状态</label>
-              <button onclick="clearAllData()" class="text-xs text-rose-400 hover:underline">⚠️ 清空下月重置</button>
+              <button onclick="clearAllData()" class="text-xs text-rose-400 hover:underline">⚠️ 重置本地状态</button>
             </div>
             <div id="adminCandidateList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
             </div>
@@ -148,32 +151,96 @@
   </div>
 
   <script>
+    // Google Sheets CSV 导出专属 URL (对应【每月抽奖】表格) [1]
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
+
     const ADMIN_PIN = "1234";
     let isMasterAdmin = false;
-    let currentViewType = "grid"; // 'grid' 或 'list'
+    let currentViewType = "grid";
 
     let state = {
       quota: 8,
-      candidates: [
-        { id: 1, name: "razakkj", orderNo: "#261001EAM29", status: "pass" },
-        { id: 2, name: "scarlet1217", orderNo: "#260930E8G5", status: "pass" },
-        { id: 3, name: "fatihintyka0815", orderNo: "#260930DXQX", status: "pass" },
-        { id: 4, name: "meilinggirlie", orderNo: "#260930E0BP", status: "pass" }
-      ]
+      candidates: []
     };
 
     window.onload = function() {
-      // 强行清理搜索框中的任何邮箱自动填充
+      // 防止浏览器记住历史搜索词
       setTimeout(function() {
         var searchEl = document.getElementById('searchInput');
         if (searchEl) searchEl.value = '';
-        renderPublicView();
       }, 50);
 
       loadState();
-      renderPublicView();
-      updateStats();
+
+      // 如果本地没有保存过名单，自动从 Google Sheets 读取 [1]
+      if (!state.candidates || state.candidates.length === 0) {
+        fetchGoogleSheetsData();
+      } else {
+        renderPublicView();
+        updateStats();
+      }
     };
+
+    // 从 Google Sheets 抓取数据并解析 [1]
+    function fetchGoogleSheetsData(isManual) {
+      const syncStatus = document.getElementById('syncStatusText');
+      if (syncStatus) syncStatus.innerText = "正在从 Google Sheets 同步中...";
+
+      fetch(SHEET_CSV_URL)
+        .then(response => {
+          if (!response.ok) throw new Error("无法读取表格");
+          return response.text();
+        })
+        .then(csvText => {
+          parseCSVAndMerge(csvText);
+          if (syncStatus) syncStatus.innerText = "已成功从 Google Sheets 同步！";
+          if (isManual) alert("同步成功！已载入 Google Sheets 的最新买家名单。");
+        })
+        .catch(err => {
+          console.error(err);
+          if (syncStatus) syncStatus.innerText = "连接失败，请确保 Google Sheets 权限为【知道链接者可查看】";
+        });
+    }
+
+    // 解析 CSV 数据并保留先前的晋级/普及状态 [1]
+    function parseCSVAndMerge(csvText) {
+      const lines = csvText.split('\n');
+      const existingStatusMap = {};
+
+      // 备份现有的晋级/普及状态
+      state.candidates.forEach(c => {
+        if (c.name) existingStatusMap[c.name.trim()] = c.status;
+      });
+
+      const newCandidates = [];
+
+      lines.forEach((line, idx) => {
+        if (!line.trim()) return;
+        
+        // 去除 CSV 字段中的双引号 [1]
+        const cleanLine = line.replace(/"/g, '');
+        const parts = cleanLine.split(',');
+
+        if (parts.length >= 1) {
+          const name = parts[0] ? parts[0].trim() : '';
+          const orderNo = parts[1] ? parts[1].trim() : '';
+
+          // 过滤表头或无效内容 [1]
+          if (name && name !== '买家姓名' && name !== 'Name') {
+            const preservedStatus = existingStatusMap[name] || 'pending';
+            newCandidates.push({
+              id: Date.now() + idx,
+              name: name,
+              orderNo: orderNo,
+              status: preservedStatus
+            });
+          }
+        }
+      });
+
+      state.candidates = newCandidates;
+      saveState();
+    }
 
     function loadState() {
       var saved = localStorage.getItem('mochii_tournament_state');
@@ -203,7 +270,6 @@
       var searchInput = document.getElementById('searchInput');
       var search = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
 
-      // 过滤买家列表
       var list = state.candidates.filter(function(c) {
         var nameMatch = c.name ? String(c.name).toLowerCase().indexOf(search) !== -1 : false;
         var orderMatch = c.orderNo ? String(c.orderNo).toLowerCase().indexOf(search) !== -1 : false;
@@ -211,7 +277,7 @@
       });
 
       if (state.candidates.length === 0) {
-        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月入围名单尚未导入，请等待管理员发布。</p></div>';
+        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>表格中暂无买家数据或连接加载中...</p></div>';
         return;
       }
 
@@ -249,7 +315,6 @@
         html += '</div>';
         container.innerHTML = html;
       } else {
-        // 分组列表视图 (修复字符串拼接，正确显示名字与订单号)
         var passedList = list.filter(function(c) { return c.status === 'pass'; });
         var pendingList = list.filter(function(c) { return c.status === 'pending'; });
 
@@ -269,9 +334,9 @@
                      '<div class="font-bold text-slate-200 truncate">' + escapeHtml(c.name) + '</div>' +
                      '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
                    '</div>' +
-                   '<span class="text-xs text-amber-400 shrink-0">待审核</span>' +
+                   '<span class="text-xs text-amber-400 shrink-0">待普及</span>' +
                  '</div>';
-        }).join('') || '<p class="text-xs text-slate-500 py-2">暂无待角逐选手</p>';
+        }).join('') || '<p class="text-xs text-slate-500 py-2">暂无待普及选手</p>';
 
         var listHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
           '<div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">' +
@@ -341,38 +406,6 @@
       }
     }
 
-    function importCandidates(override) {
-      var text = document.getElementById('bulkImportInput').value.trim();
-      if (!text) return;
-
-      var lines = text.split('\n');
-      var newItems = [];
-
-      lines.forEach(function(line, idx) {
-        if (!line.trim()) return;
-        var parts = line.trim().split(/\s+/);
-        var name = parts[0];
-        var orderNo = parts.slice(1).join(' ') || '';
-
-        newItems.push({
-          id: Date.now() + idx,
-          name: name,
-          orderNo: orderNo,
-          status: 'pending'
-        });
-      });
-
-      if (override) {
-        state.candidates = newItems;
-      } else {
-        state.candidates = state.candidates.concat(newItems);
-      }
-
-      document.getElementById('bulkImportInput').value = '';
-      saveState();
-      renderAdminCandidateList();
-    }
-
     function setCandidateStatus(id, newStatus) {
       var target = state.candidates.find(function(c) { return c.id === id; });
       if (target) {
@@ -414,10 +447,9 @@
     }
 
     function clearAllData() {
-      if (confirm('确认清空所有列表买家名单并重置本月数据？')) {
-        state.candidates = [];
-        saveState();
-        renderAdminCandidateList();
+      if (confirm('确认重置本地普及控制状态？这会重新载入表格的初始状态。')) {
+        localStorage.removeItem('mochii_tournament_state');
+        fetchGoogleSheetsData(true);
       }
     }
 
