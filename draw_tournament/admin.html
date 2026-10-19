@@ -218,7 +218,7 @@
 
       const remainingPending = activeRound.candidates.filter(c => c.status === 'pending');
 
-      // 当只剩 1 人时：自动定格为独占冠军并弹窗播报
+      // 当只剩 1 人时：自动定格为冠军并弹窗播报
       if (remainingPending.length === 1) {
         const champion = remainingPending[0];
         champion.status = 'pass';
@@ -430,6 +430,7 @@
       if (confirm("确认重置所有数据？")) {
         currentRoundIndex = 0;
         state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
+        delete state.latestEvent; // 清理事件字段
         saveState();
         fetchGoogleSheetsData(true);
       }
