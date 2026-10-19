@@ -49,60 +49,68 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     
-    <!-- 概览数据面板 (3 列) -->
-    <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 flex justify-between items-center">
-        <span class="text-xs text-slate-400">本轮参选人数</span>
-        <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
+    <!-- 1. 最顶层：轮次切换 Tabs 区域 (样式与管理者页面保持高度统一) -->
+    <div class="mb-6 flex items-center justify-between border-b border-slate-800 pb-3">
+      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
+        <!-- 动态生成：第 1 轮、第 2 轮选项卡 -->
       </div>
-      <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 flex justify-between items-center">
-        <span class="text-xs text-slate-400">本轮已普及/晋级</span>
-        <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
-      </div>
-      <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 flex justify-between items-center">
-        <span class="text-xs text-slate-400">本轮角逐中 / 淘汰</span>
-        <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
+      <div class="text-xs text-slate-400 hidden sm:block">
+        📌 点击选项卡自由切换查看各轮次普及榜
       </div>
     </div>
 
-    <!-- 轮次切换 Tabs 区域 + 右侧集成搜索框 (替代了原本的文字提示位置) -->
-    <div class="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto w-full sm:w-auto">
-        <!-- 动态生成：第 1 轮、第 2 轮选项卡 -->
+    <!-- 2. 第二层：4 块概览数据统计卡片 (完全参照管理者页面布局) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+        <span class="text-xs text-slate-400 block">本轮参选人数</span>
+        <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
       </div>
-      
-      <!-- 搜索框架移至原本选项卡右侧提示文字的位置 -->
-      <div class="relative w-full sm:w-64 flex-shrink-0">
+      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+        <span class="text-xs text-slate-400 block">本轮已普及/晋级</span>
+        <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
+      </div>
+      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+        <span class="text-xs text-slate-400 block">本轮角逐中人数</span>
+        <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
+      </div>
+      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+        <span class="text-xs text-slate-400 block">本轮已淘汰人数</span>
+        <span id="statOutCount" class="text-2xl font-black text-slate-400">0</span>
+      </div>
+    </div>
+
+    <!-- 3. 第三层：已普及/晋级名单展示框 (右侧整合搜索框) -->
+    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
+      <div class="flex-1 w-full">
+        <div class="flex items-center space-x-2 mb-2">
+          <span class="text-lg">🏆</span>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
+          <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
+        </div>
+        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+          <!-- 动态渲染普及买家卡片 -->
+        </div>
+      </div>
+
+      <!-- 搜索框置于普及名单框右侧 -->
+      <div class="relative w-full sm:w-64 flex-shrink-0 self-end md:self-center">
         <input 
           type="search" 
           id="searchInput" 
           oninput="renderPublicView()" 
           placeholder="🔍 搜索您的名字或订单号..." 
-          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner"
+          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
         >
       </div>
     </div>
 
-    <!-- 1. 已普及/晋级名单展示区 -->
-    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 shadow-lg shadow-emerald-950/20">
-      <div class="flex items-center space-x-2 mb-3">
-        <span class="text-lg">🏆</span>
-        <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
-        <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
-      </div>
-      <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
-        <!-- 动态渲染晋级买家 -->
-      </div>
-    </div>
-
-    <!-- 2. 本轮角逐中买家卡片展区 (一排5列，右上角共 N 人待角逐 N 为黄色) -->
+    <!-- 4. 第四层：本轮角逐中 / 淘汰买家卡片展区 (一排5列，右上角带黄色数字) -->
     <div class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
       <div class="flex items-center justify-between mb-4 border-b border-slate-700/80 pb-3">
         <div class="flex items-center space-x-2">
           <span class="text-lg">⚡</span>
           <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">角逐中买家名单</h2>
         </div>
-        <!-- 角逐中买家名单之后接着 共 N 人待角逐，N 为黄色 -->
         <div id="pendingCountBadge" class="text-xs text-slate-300">
           共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> 人待角逐
         </div>
@@ -207,7 +215,7 @@
 
       container.innerHTML = state.rounds.map((r, idx) => {
         const isActive = (idx === currentRoundIndex);
-        const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+        const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
         const title = r.roundName || `第 ${idx + 1} 轮`;
         return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
           ${escapeHtml(title)} (${(r.candidates || []).filter(c => c.status === 'pass').length} 晋级)
@@ -228,20 +236,20 @@
 
       const total = candidates.length;
       const passed = candidates.filter(c => c.status === 'pass').length;
-      const pendingAndOut = candidates.filter(c => c.status !== 'pass').length;
-      const pendingOnlyCount = candidates.filter(c => c.status === 'pending').length;
+      const pendingCount = candidates.filter(c => c.status === 'pending').length;
+      const outCount = candidates.filter(c => c.status === 'out').length;
 
       document.getElementById('statTotalCandidates').innerText = total;
       document.getElementById('statPassedCount').innerText = passed;
-      document.getElementById('statPendingCount').innerText = pendingAndOut;
+      document.getElementById('statPendingCount').innerText = pendingCount;
+      document.getElementById('statOutCount').innerText = outCount;
       
       const titleName = activeRound.roundName || `第 ${currentRoundIndex + 1} 轮`;
       document.getElementById('passedTitleText').innerText = `${titleName} 已普及/晋级名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
       
-      // 角逐中买家名单之后接着 共 N 人待角逐，N 为黄色
       const numEl = document.getElementById('pendingNumberYellow');
-      if (numEl) numEl.innerText = pendingOnlyCount;
+      if (numEl) numEl.innerText = pendingCount;
     }
 
     function renderPublicView() {
