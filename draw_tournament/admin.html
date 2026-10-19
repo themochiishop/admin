@@ -15,7 +15,7 @@
         <span class="text-2xl">🎬</span>
         <div>
           <h1 class="text-xl font-bold text-amber-400" data-i18n="adminTitle">Mochiishop 每月抽奖 - 直播控制台</h1>
-          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">管理者专属 · 多轮晋级控盘系统</p>
+          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">管理者专属 · 实物PK多轮晋级控盘系统</p>
         </div>
       </div>
       
@@ -71,7 +71,7 @@
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">普及名单手动选满 3 人（冠亚季）时自动触发大屏全屏恭喜播报。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">手动普及选满 3 名中奖人（冠亚季）时，自动向大屏广播恭喜海报。</div>
             </div>
           </label>
 
@@ -79,7 +79,7 @@
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
               <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">普及名单手动选满【安慰奖+冠亚季】名额时，触发全局自动结算。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">普及选满【安慰奖名额 + 3】时触发最终定格广播。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
@@ -189,11 +189,11 @@
         <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已普及/晋级</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已普及/胜出</span>
         <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block" data-i18n="statPending">本轮角逐中人数</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPending">本轮待PK人数</span>
         <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
@@ -202,12 +202,12 @@
       </div>
     </div>
 
-    <!-- 已普及区 -->
+    <!-- 已普及/晋级区 -->
     <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg">
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
-          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 胜出普及名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1"></div>
@@ -260,13 +260,13 @@
     const i18n = {
       zh: {
         adminTitle: "Mochiishop 每月抽奖 - 直播控制台",
-        adminSubTitle: "管理者专属 · 多轮晋级控盘系统",
+        adminSubTitle: "管理者专属 · 实物PK多轮晋级控盘系统",
         btnPrevRound: "🔙 返回至上一轮",
-        btnNextRound: "⏩ 推进本轮普及人员至下一轮",
+        btnNextRound: "⏩ 推进本轮胜出人员至下一轮",
         btnResetAll: "⚠️ 重置所有轮次数据",
         statTotal: "本轮参选人数",
-        statPassed: "本轮已普及/晋级",
-        statPending: "本轮角逐中人数",
+        statPassed: "本轮普及/胜出",
+        statPending: "本轮待PK人数",
         statOut: "本轮已淘汰人数",
         syncConnected: "已连接至 Google Sheets 数据源",
         syncing: "正在从 Google Sheets 同步中...",
@@ -275,9 +275,9 @@
         searchPlaceholder: "🔍 快速查找本轮买家/订单...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
-        passedTitle: "已普及/晋级名单",
-        noPassed: "本轮暂无普及买家，等待您点击普及...",
-        noPendingList: "本轮普及判定已完成！可点击右上角【⏩ 推进本轮普及人员至下一轮】",
+        passedTitle: "胜出普及名单",
+        noPassed: "本轮暂无胜出买家，等待您点击普及...",
+        noPendingList: "本轮选拔已完成！可点击右上角【⏩ 推进本轮普及人员至下一轮】",
         btnPass: "🏆 普及",
         btnOut: "❌ 淘汰",
         btnUndoOut: "↩️ 撤回淘汰",
@@ -459,7 +459,7 @@
       badge.className = "text-amber-400 font-bold";
     }
 
-    // 🌟 核心状态变更与规则判断函数
+    // 🌟 纯粹基于管理者【手动点击普及区】的获胜判定
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
@@ -467,12 +467,11 @@
 
       target.status = newStatus;
 
-      // 仅仅获取【已被管理者点击普及/晋级】的买家名单（pass）
       const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
-      // 🌟 修正 1：模式 1 条件（只有当【已普及名单】被手动选满 3 人时，才触发广播）
+      // 1. 模式 1：管理者手动将普及选满 3 人时，弹出冠军/前三定格海报
       if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length === 3 && newStatus === 'pass') {
         const winnerNames = passedCandidates.map(c => c.name).join('、');
         
@@ -484,14 +483,14 @@
         };
         saveState();
         renderRoundTabs();
-        alert(`👑 🎉【冠亚季军产生】！已成功选择 3 名获奖买家：${winnerNames}！公开大屏已实时同步广播！`);
+        alert(`👑 🎉【冠亚季军定格】！已选出 3 名获奖买家：${winnerNames}！公开大屏已实时同步显示！`);
         return;
       }
 
-      // 🌟 修正 2：模式 2 条件（当【已普及名单】选满 安慰奖名额+3 时，触发广播）
+      // 2. 模式 2：管理者手动选满【安慰奖名额 + 3人】时，弹出全局定格海报
       if (isModeEnabled && selectedMode === 'mode2' && newStatus === 'pass') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
-        const totalThreshold = consCount + 3; // 安慰奖 + 冠亚季3名
+        const totalThreshold = consCount + 3; 
 
         if (passedCandidates.length === totalThreshold) {
           const winnerNames = passedCandidates.map(c => c.name).join('、');
@@ -503,7 +502,7 @@
           };
           saveState();
           renderRoundTabs();
-          alert(`👑 🎉【模式 2 全局奖项诞生】！已成功选出 ${consCount} 名安慰奖与冠亚季军（共${totalThreshold}名）：${winnerNames}！公开大屏已实时同步显示！`);
+          alert(`👑 🎉【模式 2 最终获胜名单定格】！已选出 ${consCount} 名安慰奖与冠亚季军（共${totalThreshold}名）：${winnerNames}！公开大屏已实时同步！`);
           return;
         }
       }
@@ -583,7 +582,7 @@
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
 
       if (passedCandidates.length === 0) {
-        alert("必须先选择普及/晋级买家！");
+        alert("必须先在上方选择胜出普及的买家！");
         return;
       }
 
@@ -597,7 +596,7 @@
         if (passedCandidates.length === consCount + 3) {
           stageLabel = `🎁 安慰奖环节 (共${consCount}名额)`;
         } else if (passedCandidates.length <= 3) {
-          stageLabel = `🏆 冠亚季头三决战环节`;
+          stageLabel = `🏆 冠亚季决战环节`;
         }
       }
 
@@ -612,7 +611,7 @@
 
       saveState();
       renderRoundTabs();
-      alert(`🎉 已成功推进开启【${stageLabel}】！买家公开大屏已自动跟随更新。`);
+      alert(`🎉 已成功推进开启【${stageLabel}】！已继承上一轮的 ${passedCandidates.length} 名胜出买家。公开大屏已自动同步！`);
     }
 
     function renderRoundTabs() {
