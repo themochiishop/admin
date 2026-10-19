@@ -6,7 +6,30 @@
   <title>Mochiishop 每月抽奖 - 实时晋级大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
+
+  <!-- 🌟 晋级第 N 轮全屏动画弹窗 (自动 5 秒后关闭) -->
+  <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
+    <div class="bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-400/60 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all" id="advanceModalCard">
+      <!-- 背景光晕装饰 -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
+
+      <div class="text-6xl mb-4 animate-bounce">🏆</div>
+      <h2 class="text-xs font-bold tracking-widest text-amber-400 uppercase mb-1">PROMOTION ANNOUNCEMENT</h2>
+      <h3 id="advanceModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3">
+        恭喜晋级第 2 轮！
+      </h3>
+      <p id="advanceModalSub" class="text-sm text-slate-300 mb-6">
+        上一轮普及买家已成功载入，准备开启下一轮角逐！
+      </p>
+
+      <div class="inline-flex items-center space-x-2 bg-slate-800/80 border border-slate-700 rounded-full px-4 py-1.5 text-xs text-slate-400">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+        <span>将在 <span id="popupCountdown" class="text-amber-400 font-bold text-sm">5</span> 秒后自动进入新一轮...</span>
+      </div>
+    </div>
+  </div>
 
   <!-- 顶部 Header -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
@@ -103,6 +126,8 @@
 
   <script>
     let currentRoundIndex = 0;
+    let lastSeenAdvanceTime = 0; // 记录已弹出的推进事件戳，防止重复弹窗
+    let popupTimer = null;
     let state = {
       rounds: [
         { roundName: "第 1 轮", candidates: [] }
@@ -111,7 +136,7 @@
 
     window.onload = function() {
       loadAndRender();
-      setInterval(loadAndRender, 3000); // 3 秒轮询同步
+      setInterval(loadAndRender, 2000); // 2 秒轮询同步
     };
 
     function loadAndRender() {
@@ -127,7 +152,18 @@
             state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
           }
 
-          // 超出范围防御
+          // 🌟 检查是否有新增的推进下一轮事件
+          if (state.latestAdvanceEvent && state.latestAdvanceEvent.timestamp > lastSeenAdvanceTime) {
+            lastSeenAdvanceTime = state.latestAdvanceEvent.timestamp;
+            const targetRoundIdx = state.latestAdvanceEvent.targetRoundIndex;
+            
+            // 自动把轮次切到最新推进的这一轮
+            currentRoundIndex = targetRoundIdx;
+            
+            // 触发 5 秒海报弹窗动画
+            triggerAdvancePopup(state.rounds[targetRoundIdx]?.roundName || `第 ${targetRoundIdx + 1} 轮`);
+          }
+
           if (currentRoundIndex >= state.rounds.length) {
             currentRoundIndex = 0;
           }
@@ -137,6 +173,33 @@
           updateStats();
         } catch(e){}
       }
+    }
+
+    // 🌟 触发弹窗与 5 秒倒计时自动关闭逻辑
+    function triggerAdvancePopup(roundTitle) {
+      const modal = document.getElementById('advanceModal');
+      const modalTitle = document.getElementById('advanceModalTitle');
+      const countdownEl = document.getElementById('popupCountdown');
+
+      if (!modal || !modalTitle) return;
+
+      modalTitle.innerText = `恭喜晋级 ${roundTitle}！`;
+      modal.classList.remove('hidden');
+
+      let timeLeft = 5;
+      if (countdownEl) countdownEl.innerText = timeLeft;
+
+      if (popupTimer) clearInterval(popupTimer);
+
+      popupTimer = setInterval(() => {
+        timeLeft--;
+        if (countdownEl) countdownEl.innerText = timeLeft;
+
+        if (timeLeft <= 0) {
+          clearInterval(popupTimer);
+          modal.classList.add('hidden'); // 5秒后自动关闭
+        }
+      }, 1000);
     }
 
     function renderRoundTabs() {
