@@ -34,7 +34,7 @@
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
         <!-- 动态生成轮次选项卡 -->
       </div>
-      <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline">⚠️ 重置所有轮次数据</button>
+      <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold">⚠️ 重置所有轮次数据</button>
     </div>
 
     <!-- 数据概览面板 -->
@@ -93,7 +93,7 @@
       </div>
     </div>
 
-    <!-- 底部：待角逐中卡片展区 (选择普及后卡片会自动移除腾空间) -->
+    <!-- 底部：待角逐中卡片展区 -->
     <div id="adminViewContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
     </div>
 
@@ -115,7 +115,7 @@
 
     window.onload = function() {
       loadState();
-      const activeRound = state.rounds[currentRoundIndex] || { candidates: [] };
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
         fetchGoogleSheetsData();
       } else {
@@ -173,7 +173,6 @@
       renderRoundTabs();
     }
 
-    // 🌟 核心逻辑：将上一轮普及人员推进创建【下一轮】
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -188,7 +187,7 @@
         id: Date.now() + idx,
         name: c.name,
         orderNo: c.orderNo,
-        status: 'pending' // 继承到新一轮时状态重置为待定
+        status: 'pending'
       }));
 
       state.rounds.push({
@@ -196,7 +195,7 @@
         candidates: nextRoundCandidates
       });
 
-      currentRoundIndex = state.rounds.length - 1; // 自动切换到新建的轮次
+      currentRoundIndex = state.rounds.length - 1;
       saveState();
       renderRoundTabs();
       alert(`🎉 已成功开启【第 ${nextRoundNumber} 轮】！已继承上一轮普及的 ${nextRoundCandidates.length} 位买家名单。`);
@@ -226,11 +225,19 @@
       const saved = localStorage.getItem('mochii_tournament_state');
       if (saved) {
         try { 
-          state = JSON.parse(saved); 
-          if (!state.rounds || state.rounds.length === 0) {
-            state.rounds = [{ roundName: "第 1 轮", candidates: state.candidates || [] }];
+          const parsed = JSON.parse(saved); 
+          if (parsed && Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
+            state = parsed;
+          } else if (parsed && parsed.candidates) {
+            state = { rounds: [{ roundName: "第 1 轮", candidates: parsed.candidates }] };
+          } else {
+            state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
           }
-        } catch(e){}
+        } catch(e){
+          state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+        }
+      } else {
+        state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
       }
     }
 
@@ -241,7 +248,7 @@
     }
 
     function updateStats() {
-      const activeRound = state.rounds[currentRoundIndex] || { candidates: [] };
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const candidates = activeRound.candidates || [];
 
       const total = candidates.length;
@@ -254,7 +261,7 @@
       document.getElementById('statPendingCount').innerText = pending;
       document.getElementById('statOutCount').innerText = out;
 
-      document.getElementById('passedTitleText').innerText = `${activeRound.roundName} 已普及/晋级名单`;
+      document.getElementById('passedTitleText').innerText = `${activeRound.roundName || '第 1 轮'} 已普及/晋级名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
     }
 
@@ -268,14 +275,14 @@
     }
 
     function renderAdminView() {
-      const activeRound = state.rounds[currentRoundIndex] || { candidates: [] };
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
       let list = (activeRound.candidates || []).filter(c => 
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      // 1. 渲染普及区
+      // 1. 普及区
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
@@ -291,7 +298,7 @@
         ).join('');
       }
 
-      // 2. 渲染待角逐卡片区 (已被选择为普及的卡片会隐藏)
+      // 2. 待角逐卡片区
       const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending' || c.status === 'out');
 
@@ -332,11 +339,16 @@
       container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
     }
 
+    // 🌟 彻底修复：重置时写入标准数据结构，防止公开大屏显示 undefined
     function resetRounds() {
-      if (confirm("确认重置所有轮次数据？这会清除第 2 轮及之后的数据并重新加载表格。")) {
-        localStorage.removeItem('mochii_tournament_state');
-        state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
+      if (confirm("确认重置所有轮次数据？这会清除所有轮次并重新从 Google 表格同步第 1 轮。")) {
         currentRoundIndex = 0;
+        state = {
+          rounds: [
+            { roundName: "第 1 轮", candidates: [] }
+          ]
+        };
+        localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
         fetchGoogleSheetsData(true);
       }
     }
