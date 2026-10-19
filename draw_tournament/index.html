@@ -8,9 +8,9 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜中奖弹窗 -->
+  <!-- 🌟 全屏豪华恭喜弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
-    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
+    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-24 -right-24 w-56 h-56 bg-emerald-500/30 rounded-full blur-3xl"></div>
 
@@ -19,7 +19,7 @@
       <h3 id="congratModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-2">
         热烈祝贺！成功获得普及荣誉！
       </h3>
-      <p id="congratWinnerNames" class="text-lg font-bold text-emerald-300 my-4 bg-emerald-950/60 py-3 px-4 rounded-xl border border-emerald-500/40 whitespace-pre-wrap leading-relaxed">
+      <p id="congratWinnerNames" class="text-lg font-bold text-emerald-300 my-4 bg-emerald-950/80 py-3 px-4 rounded-xl border border-emerald-500/40 leading-relaxed shadow-inner">
       </p>
 
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow">
@@ -41,11 +41,21 @@
       </div>
       
       <div class="flex items-center space-x-4">
-        <!-- 当前模式徽章 -->
+        <!-- ⚙️ 当前生效模式徽章 + Hover 规则提示框 -->
         <div class="relative group cursor-pointer">
           <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
-            模式: 冠亚季模式
+            模式: 加载中...
           </span>
+
+          <div class="absolute right-0 top-full mt-2 w-64 p-3 bg-slate-950/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
+            <div class="font-bold text-amber-400 mb-1.5 pb-1 border-b border-slate-800 flex items-center space-x-1">
+              <span>📋</span>
+              <span data-i18n="tooltipTitle">当前模式奖励规则详情</span>
+            </div>
+            <div id="modeTooltipContent" class="space-y-1 text-slate-300 text-[11px]">
+              模式规则加载中...
+            </div>
+          </div>
         </div>
 
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
@@ -146,6 +156,7 @@
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
     let lastSeenEventTime = 0; 
+    let userManuallySelectedRound = false; 
     let popupTimer = null;
     let state = { 
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
@@ -157,6 +168,7 @@
         publicTitle: "Mochiishop 每月抽奖普及榜",
         publicSubTitle: "直播实时同步 · 买家公开公示大屏",
         liveSyncText: "直播实时同步中...",
+        tooltipTitle: "当前模式奖励规则详情",
         statTotal: "本轮参选人数",
         statPassed: "本轮已普及/晋级",
         statPending: "本轮待PK人数",
@@ -174,15 +186,27 @@
         noCandidates: "本轮抽奖名单同步中，请关注直播间...",
         allDone: "本轮全员判定完毕",
         noOut: "暂无淘汰人员",
-        finalTitle: "👑 恭喜获胜买家荣耀普及！",
+        finalTitle: "👑 恭喜买家成功获得普及荣誉！",
+        finalSubPrefix: "恭喜：",
         autoCloseText: "将在",
         autoCloseSuffix: "秒后自动切回大屏榜单...",
-        unitPeople: "人"
+        unitPeople: "人",
+        modePrefix: "模式: ",
+        mode1: "冠亚季模式",
+        mode2: "包含安慰奖模式",
+        mode3: "自定义模式",
+        modeDisabled: "未启用规则",
+        champion: "👑 冠军: ",
+        runnerUp: "🥈 亚军: ",
+        thirdPlace: "🥉 季军: ",
+        consolation: "🎁 安慰奖名额: ",
+        unitPerson: "名"
       },
       en: {
         publicTitle: "Mochiishop Monthly Draw Leaderboard",
         publicSubTitle: "Live Synchronization · Public Display Screen",
         liveSyncText: "Syncing Live...",
+        tooltipTitle: "Current Mode Rules Detail",
         statTotal: "Round Candidates",
         statPassed: "Passed / Advanced",
         statPending: "Currently In Battle",
@@ -200,15 +224,27 @@
         noCandidates: "Syncing candidates list, stay tuned...",
         allDone: "All candidates processed",
         noOut: "No eliminated candidates",
-        finalTitle: "👑 Congratulations Winners!",
+        finalTitle: "👑 Winner Announcement!",
+        finalSubPrefix: "Congratulations: ",
         autoCloseText: "Auto returning in",
         autoCloseSuffix: "seconds...",
-        unitPeople: ""
+        unitPeople: "",
+        modePrefix: "Mode: ",
+        mode1: "Podium Mode",
+        mode2: "Consolation Mode",
+        mode3: "Custom Mode",
+        modeDisabled: "Disabled Rules",
+        champion: "👑 Champion: ",
+        runnerUp: "🥈 Runner-up: ",
+        thirdPlace: "🥉 3rd Place: ",
+        consolation: "🎁 Consolation: ",
+        unitPerson: " winner(s)"
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
         publicSubTitle: "Masa Nyata Siaran Langsung · Paparan Awam",
         liveSyncText: "Diselaraskan Masa Nyata...",
+        tooltipTitle: "Butiran Peraturan Mod Semasa",
         statTotal: "Jumlah Calon Pusingan",
         statPassed: "Lulus / Layak",
         statPending: "Dalam Bersaing",
@@ -226,17 +262,28 @@
         noCandidates: "Menyelaraskan senarai calon...",
         allDone: "Semua calon telah diproses",
         noOut: "Tiada calon tersingkir",
-        finalTitle: "👑 Tahniah Kepada Pemenang!",
+        finalTitle: "👑 Pengumuman Pemenang!",
+        finalSubPrefix: "Tahniah: ",
         autoCloseText: "Kembali secara automatik dalam",
         autoCloseSuffix: "saat...",
-        unitPeople: " orang"
+        unitPeople: " orang",
+        modePrefix: "Mod: ",
+        mode1: "Mod Tiga Teratas",
+        mode2: "Mod Saguhati",
+        mode3: "Mod Khas",
+        modeDisabled: "Peraturan Nyahaktif",
+        champion: "👑 Juara: ",
+        runnerUp: "🥈 Naib Juara: ",
+        thirdPlace: "🥉 Tempat Ke-3: ",
+        consolation: "🎁 Saguhati: ",
+        unitPerson: " orang"
       }
     };
 
     window.onload = function() {
       setLanguage(currentLang);
       loadAndRender();
-      setInterval(loadAndRender, 800); 
+      setInterval(loadAndRender, 800); // 800ms 快速轮询同步
     };
 
     function setLanguage(lang) {
@@ -261,6 +308,41 @@
       renderRoundTabs();
       renderPublicView();
       updateStats();
+      updatePublicModeUI();
+    }
+
+    function updatePublicModeUI() {
+      const badge = document.getElementById('publicModeBadge');
+      const tooltip = document.getElementById('modeTooltipContent');
+      if (!badge || !tooltip) return;
+
+      const lang = i18n[currentLang];
+
+      if (!state.modeConfig || state.modeConfig.enabled === false) {
+        badge.innerText = `${lang.modePrefix}${lang.modeDisabled}`;
+        tooltip.innerHTML = `<div class="text-slate-400 italic">${lang.modeDisabled}</div>`;
+        return;
+      }
+
+      const m = state.modeConfig.selectedMode || 'mode1';
+
+      if (m === 'mode1') {
+        badge.innerText = `${lang.modePrefix}${lang.mode1}`;
+        tooltip.innerHTML = `
+          <div class="flex justify-between items-center text-amber-300"><span>${lang.champion}</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-slate-300"><span>${lang.runnerUp}</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-amber-600"><span>${lang.thirdPlace}</span><span class="font-bold">1名</span></div>
+        `;
+      } else if (m === 'mode2') {
+        const consCount = state.modeConfig.mode2ConsolationCount || 10;
+        badge.innerText = `${lang.modePrefix}${lang.mode2}`;
+        tooltip.innerHTML = `
+          <div class="flex justify-between items-center text-amber-300"><span>${lang.champion}</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-slate-300"><span>${lang.runnerUp}</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-amber-600"><span>${lang.thirdPlace}</span><span class="font-bold">1名</span></div>
+          <div class="flex justify-between items-center text-emerald-400 pt-1 border-t border-slate-800/80"><span>${lang.consolation}</span><span class="font-bold">${consCount}名</span></div>
+        `;
+      }
     }
 
     function getRoundTitle(idx) {
@@ -278,21 +360,26 @@
             state = parsed;
           }
 
-          // 保持大屏自动跟随至后台控制台所在的最新轮次
-          currentRoundIndex = state.rounds.length - 1;
+          if (!userManuallySelectedRound) {
+            currentRoundIndex = state.rounds.length - 1;
+          }
 
-          // 🌟 核心修复：精准监听事件 timestamp，只要发生变动（大于上一次记录的时间）立即强行弹出弹窗！
-          if (state.latestEvent && state.latestEvent.timestamp && state.latestEvent.timestamp > lastSeenEventTime) {
+          if (currentRoundIndex >= state.rounds.length) {
+            currentRoundIndex = Math.max(0, state.rounds.length - 1);
+          }
+
+          // 🌟 修复关键：监听后台生成的定格事件，展示全屏恭喜弹窗
+          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
-            
             if (state.latestEvent.type === 'finalCongrat') {
-              showPopup(i18n[currentLang].finalTitle, state.latestEvent.winnerNames || "", 12);
+              showPopup(i18n[currentLang].finalTitle, state.latestEvent.winnerNames || "", 10);
             }
           }
 
           renderRoundTabs();
           renderPublicView();
           updateStats();
+          updatePublicModeUI();
         } catch(e){}
       }
     }
@@ -334,6 +421,7 @@
 
     function switchRound(idx) {
       currentRoundIndex = idx;
+      userManuallySelectedRound = true; 
       renderRoundTabs();
       renderPublicView();
       updateStats();
@@ -370,7 +458,7 @@
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      // 1. 已普及买家
+      // 1. 已普及/获胜买家
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
@@ -378,9 +466,9 @@
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${i18n[currentLang].noPassed}</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => {
-          const rankBadge = c.rankTitle ? `<span class="bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${c.rankTitle}</span>` : '';
+          const rankTag = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${c.rankTitle}</span>` : '';
           return '<div class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
-            rankBadge +
+            rankTag +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
             '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
           '</div>';
