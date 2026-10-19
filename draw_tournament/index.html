@@ -45,7 +45,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span data-i18n="liveSyncText">直播实时同步中...</span>
         </div>
-        <!-- 🌐 语言切换选择器 (国旗显示) -->
+        <!-- 🌐 语言切换选择器 -->
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
             <span>🇨🇳</span> <span class="text-[11px]">ZH</span>
@@ -180,6 +180,7 @@
         searchPlaceholder: "🔍 搜索您的名字或订单号...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
+        finalRoundTitle: "🏆 最终轮",
         passedTitle: "已普及/晋级名单",
         pendingTitle: "角逐中买家名单",
         noPassed: "本轮暂无普及买家，直播抽出中...",
@@ -209,6 +210,7 @@
         searchPlaceholder: "🔍 Search name or order no...",
         roundPrefix: "Round ",
         roundSuffix: "",
+        finalRoundTitle: "🏆 Final Round",
         passedTitle: "Passed / Advanced List",
         pendingTitle: "Active Candidates",
         noPassed: "No qualified buyers yet, waiting for live draw...",
@@ -238,6 +240,7 @@
         searchPlaceholder: "🔍 Cari nama atau no pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
+        finalRoundTitle: "🏆 Pusingan Akhir",
         passedTitle: "Senarai Layak / Lulus",
         pendingTitle: "Calon Bersaing",
         noPassed: "Belum ada pembeli layak, tunggu cabutan langsung...",
@@ -264,7 +267,6 @@
       currentLang = lang;
       localStorage.setItem('mochii_lang', lang);
 
-      // 切换按钮高亮
       ['zh', 'en', 'ms'].forEach(l => {
         const btn = document.getElementById(`langBtn-${l}`);
         if (btn) {
@@ -276,7 +278,6 @@
         }
       });
 
-      // 静态文本翻译
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (i18n[lang][key] !== undefined) {
@@ -284,7 +285,6 @@
         }
       });
 
-      // 搜索框 Placeholder
       const searchInp = document.getElementById('searchInput');
       if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
@@ -295,8 +295,10 @@
 
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
+      if (r && r.isFinal) {
+        return i18n[currentLang].finalRoundTitle;
+      }
       if (r && r.roundName) {
-        // 如果原本存的是中文“第 N 轮”转换显示
         const match = r.roundName.match(/\d+/);
         const num = match ? match[0] : (idx + 1);
         return `${i18n[currentLang].roundPrefix}${num}${i18n[currentLang].roundSuffix}`;
