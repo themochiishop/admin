@@ -46,10 +46,13 @@
       overflow-y: auto;
     }
 
-    .left-panel { width: 320px; flex-shrink: 0; }
-    .middle-panel { flex: 1; min-width: 340px; }
+    /* ⚡ 1. 左侧面单录入区域调宽至 360px */
+    .left-panel { width: 360px; flex-shrink: 0; }
     
-    /* ⚡ 还原 preview-panel 默认固定宽，不抢占中间空间 */
+    /* ⚡ 2. 中间商品清单区域适度缩窄最小宽度 */
+    .middle-panel { flex: 1; min-width: 300px; }
+    
+    /* 右侧预览面板默认固定宽，不抢占中间空间 */
     .preview-panel {
       width: 380px;
       flex-shrink: 0;
@@ -943,7 +946,6 @@
     function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
     function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
-    /* ⚡ 仅在应用设置时，外框与卡片才随选定格式展开 */
     function applyPrintSettings() {
       const selected = document.querySelector('input[name="printFormat"]:checked');
       if (selected) {
