@@ -41,13 +41,12 @@
       </div>
       
       <div class="flex items-center space-x-4">
-        <!-- 🌟 当前生效模式徽章 + 鼠标悬停（Hover）规则提示框 -->
+        <!-- 当前生效模式徽章 + Hover 规则提示框 -->
         <div class="relative group cursor-pointer">
           <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
             模式: 加载中...
           </span>
 
-          <!-- 悬停时弹出的详细规则框 (Tooltip) -->
           <div class="absolute right-0 top-full mt-2 w-64 p-3 bg-slate-950/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
             <div class="font-bold text-amber-400 mb-1.5 pb-1 border-b border-slate-800 flex items-center space-x-1">
               <span>📋</span>
@@ -83,23 +82,14 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     
-    <!-- 1. 顶层：轮次 Tabs + 搜索框 -->
     <div class="mb-6 flex items-center justify-between border-b border-slate-800 pb-3 gap-4">
-      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
-      </div>
-      
+      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto"></div>
       <div class="relative w-full sm:w-64 flex-shrink-0">
-        <input 
-          type="search" 
-          id="searchInput" 
-          oninput="renderPublicView()" 
-          placeholder="🔍 搜索您的名字或订单号..." 
-          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner"
-        >
+        <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍 搜索您的名字或订单号..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
       </div>
     </div>
 
-    <!-- 2. 统计卡片区 -->
+    <!-- 统计卡片区 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
         <span class="text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
@@ -119,7 +109,7 @@
       </div>
     </div>
 
-    <!-- 3. 已普及/晋级名单 -->
+    <!-- 已普及/晋级名单 -->
     <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
@@ -127,15 +117,12 @@
           <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">已普及/晋级名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
-        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
-        </div>
+        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1"></div>
       </div>
     </div>
 
-    <!-- 4. 角逐中买家 (左) & 已淘汰买家 (右) -->
+    <!-- 角逐中买家 (左) & 已淘汰买家 (右) -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      
-      <!-- ⚡ 角逐中买家名单 -->
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
           <span class="text-lg">⚡</span>
@@ -144,12 +131,9 @@
             <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span>
           </span>
         </div>
-
-        <div id="pendingGridContainer" class="overflow-x-auto pb-2">
-        </div>
+        <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
       </div>
 
-      <!-- ❌ 已淘汰名单 -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
@@ -158,11 +142,8 @@
           </div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
         </div>
-
-        <div id="outListContainer" class="space-y-2 flex-1 overflow-y-auto max-h-[500px] pr-1">
-        </div>
+        <div id="outListContainer" class="space-y-2 flex-1 overflow-y-auto max-h-[500px] pr-1"></div>
       </div>
-
     </div>
 
   </main>
@@ -174,7 +155,6 @@
   <script>
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
-    
     let lastSeenEventTime = Date.now(); 
     let userManuallySelectedRound = false; 
     let lastRoundsCount = 1;
@@ -183,13 +163,7 @@
       modeConfig: {
         enabled: true,
         selectedMode: 'mode1',
-        mode2ConsolationCount: 10,
-        mode3Rules: {
-          enableChampion: true, championCount: 1,
-          enableRunnerUp: true, runnerUpCount: 1,
-          enableThirdPlace: true, thirdPlaceCount: 1,
-          enableConsolation: false, consolationCount: 5
-        }
+        mode2ConsolationCount: 10
       }, 
       rounds: [{ roundName: "第 1 轮", candidates: [] }] 
     };
@@ -226,9 +200,9 @@
         unitPeople: "人",
         modePrefix: "模式: ",
         mode1: "冠亚季模式",
-        mode2: "安慰奖模式",
+        mode2: "包含安慰奖模式",
         mode3: "自定义模式",
-        modeDisabled: "自由模式 (未启用规则)",
+        modeDisabled: "未启用规则",
         champion: "👑 冠军名额: ",
         runnerUp: "🥈 亚军名额: ",
         thirdPlace: "🥉 季军名额: ",
@@ -330,19 +304,13 @@
       ['zh', 'en', 'ms'].forEach(l => {
         const btn = document.getElementById(`langBtn-${l}`);
         if (btn) {
-          if (l === lang) {
-            btn.className = "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold";
-          } else {
-            btn.className = "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
-          }
+          btn.className = (l === lang) ? "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
         }
       });
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (i18n[lang][key] !== undefined) {
-          el.innerText = i18n[lang][key];
-        }
+        if (i18n[lang][key] !== undefined) el.innerText = i18n[lang][key];
       });
 
       const searchInp = document.getElementById('searchInput');
@@ -354,7 +322,6 @@
       updatePublicModeUI();
     }
 
-    // 🌟 更新模式徽章与 Hover 提示框的内容
     function updatePublicModeUI() {
       const badge = document.getElementById('publicModeBadge');
       const tooltip = document.getElementById('modeTooltipContent');
@@ -364,12 +331,10 @@
 
       if (!state.modeConfig || state.modeConfig.enabled === false) {
         badge.innerText = `${lang.modePrefix}${lang.modeDisabled}`;
-        badge.className = "text-xs font-bold text-slate-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-slate-500";
         tooltip.innerHTML = `<div class="text-slate-400 italic">${lang.modeDisabled}</div>`;
         return;
       }
 
-      badge.className = "text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60";
       const m = state.modeConfig.selectedMode || 'mode1';
 
       if (m === 'mode1') {
@@ -403,6 +368,8 @@
     }
 
     function getRoundTitle(idx) {
+      const r = state.rounds[idx];
+      if (r && r.stageName) return r.stageName;
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
@@ -535,7 +502,7 @@
         ).join('');
       }
 
-      // 2. ⚡ 角逐中买家卡片 (强制一排 5 列)
+      // 2. 角逐中买家卡片
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
@@ -557,7 +524,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3 min-w-[600px]">' + cardsHtml + '</div>';
       }
 
-      // 3. ❌ 已淘汰买家
+      // 3. 已淘汰买家
       const outContainer = document.getElementById('outListContainer');
       const outList = list.filter(c => c.status === 'out');
 
