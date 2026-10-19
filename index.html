@@ -51,6 +51,7 @@
     }
     .card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.08); border-color: #cbd5e1; }
     .card-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 14px; }
+    .card-draw .card-icon { background: #fef3c7; color: #d97706; }
     .card-cod .card-icon { background: #fff3ed; color: #ff5722; }
     .card-wheel .card-icon { background: #eff6ff; color: #2563eb; }
     .card-search .card-icon { background: #f0fdf4; color: #16a34a; }
@@ -71,9 +72,12 @@
       transition: background 0.2s;
       text-decoration: none;
       color: #fff;
+      border: none;
+      cursor: pointer;
     }
     
-    /* 补充了 btn-orange 和 btn-cod 的样式 */
+    .btn-amber { background: #d97706; }
+    .btn-amber:hover { background: #b45309; }
     .btn-orange, .btn-cod { background: #ff5722; }
     .btn-orange:hover, .btn-cod:hover { background: #f4511e; }
     .btn-blue { background: #2563eb; }
@@ -83,6 +87,55 @@
     .btn-purple { background: #9333ea; }
     .btn-purple:hover { background: #7e22ce; }
     
+    /* 弹窗 Modal 样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 420px;
+      padding: 28px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      position: relative;
+      text-align: center;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none; border: none;
+      font-size: 1.2rem; cursor: pointer; color: #94a3b8;
+    }
+    .modal-close:hover { color: #0f172a; }
+    .modal-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .modal-desc { font-size: 0.88rem; color: #64748b; margin-bottom: 20px; }
+    .modal-links { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    .modal-link-btn {
+      padding: 12px 16px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      border-radius: 10px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-admin-portal { background: #0f172a; color: #fbbf24; }
+    .btn-admin-portal:hover { background: #1e293b; }
+    .btn-public-portal { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
+    .btn-public-portal:hover { background: #e2e8f0; }
+
     footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 0.85rem; }
   </style>
 </head>
@@ -97,13 +150,21 @@
   <div class="admin-container">
     <div class="dashboard-header">
       <h3>管理控制台 Dashboard</h3>
-      <p>欢迎回来！处理 COD 手动 AWB 打印、直播大转盘、买家订单查询与动态更新。</p>
+      <p>欢迎回来！处理 COD 手动 AWB 打印、直播大转盘、每月抽奖晋级控盘、买家订单查询与动态更新。</p>
     </div>
 
-    <!-- 所有 4 个卡片都包含在 action-grid 网格布局内 -->
     <div class="action-grid">
       
-     
+      <!-- 1. 新增：每月抽奖 Monthly Draw -->
+      <div class="card card-draw">
+        <div>
+          <div class="card-icon">🎁</div>
+          <div class="card-title">每月抽奖 Monthly Draw</div>
+          <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
+        </div>
+        <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
+      </div>
+
       <!-- 2. 幸运大转盘 Wheel -->
       <div class="card card-wheel">
         <div>
@@ -133,7 +194,8 @@
         </div>
         <a href="my-admin-status/admin.html" class="card-btn btn-purple">状态动态管理 ⚙️</a>
       </div>
- <!-- 1. COD 面单打印系统 -->
+
+      <!-- 5. COD 面单打印系统 -->
       <div class="card card-cod">
         <div>
           <div class="card-icon">📦</div>
@@ -147,5 +209,41 @@
 
     <footer>© 2026 themochiishop. All rights reserved.</footer>
   </div>
+
+  <!-- 🎁 每月抽奖 - 系统入口弹窗 -->
+  <div id="drawModalOverlay" class="modal-overlay">
+    <div class="modal-card">
+      <button onclick="closeDrawModal()" class="modal-close">✕</button>
+      <div style="font-size: 2.5rem; margin-bottom: 10px;">🏆</div>
+      <div class="modal-title">每月抽奖活动入口</div>
+      <div class="modal-desc">密码验证通过！请选择您要前往的系统页面：</div>
+      <div class="modal-links">
+        <a href="./monthly-draw/admin.html" class="modal-link-btn btn-admin-portal">
+          🎬 进入抽奖控制台 (Admin)
+        </a>
+        <a href="./monthly-draw/index.html" class="modal-link-btn btn-public-portal" target="_blank">
+          🏆 打开买家公开普及大屏 (Public)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openDrawModal() {
+      // 密码验证提示
+      const pwd = prompt("请输入6位数密码");
+      if (pwd === null) return; // 用户点击取消
+
+      if (pwd === "023457") {
+        document.getElementById('drawModalOverlay').classList.add('active');
+      } else {
+        alert("🔒 密码错误，请重新输入！");
+      }
+    }
+
+    function closeDrawModal() {
+      document.getElementById('drawModalOverlay').classList.remove('active');
+    }
+  </script>
 </body>
 </html>
