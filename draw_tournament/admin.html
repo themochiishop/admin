@@ -20,7 +20,7 @@
       </div>
       
       <div class="flex items-center space-x-3">
-        <!-- ⚙️ 模式显示与齿轮设置按钮 (已完整恢复) -->
+        <!-- ⚙️ 模式显示与齿轮设置按钮 -->
         <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-inner">
           <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
           <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式规则">
@@ -51,7 +51,7 @@
     </div>
   </header>
 
-  <!-- ⚙️ 抽奖模式与规则高级设置主弹窗 -->
+  <!-- ⚙️ 抽奖模式与规则配置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -61,30 +61,25 @@
       </h3>
 
       <div class="space-y-4 text-xs">
-        <!-- 规则总开关 -->
         <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
           <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
           <span class="font-bold text-slate-200">启用模式规则 (必须勾选后方能生效)</span>
         </label>
 
-        <!-- 模式 Radio 组 -->
         <div id="modeRadioGroup" class="space-y-3 opacity-50 pointer-events-none transition-all">
-          
-          <!-- 模式 1：冠亚季模式 -->
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">默认 1 名冠军、1 名亚军、1 名季军。剩 1 人时自动定格为冠军。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">剩余 2 人时自动结算冠亚季军并触发全屏恭喜弹窗。</div>
             </div>
           </label>
 
-          <!-- 模式 2：安慰奖模式 (可自定义安慰奖名额) -->
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
-              <div class="font-bold text-emerald-300">模式 2：安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">包含 1 冠、1 亚、1 季，以及可自定义名额的安慰奖。</div>
+              <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">剩【安慰奖名额 + 3】人时，先进入安慰奖环节，再进入冠亚季决战环节。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
@@ -93,7 +88,6 @@
             </div>
           </label>
 
-          <!-- 模式 3：自定义模式 (包含各个规则框架) -->
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
             <input type="radio" name="drawMode" value="mode3" class="mt-0.5">
             <div class="flex-1">
@@ -103,10 +97,9 @@
                   ⚙️ 自定义规则设置 ➔
                 </button>
               </div>
-              <div id="mode3SummaryText" class="text-[11px] text-slate-400 mt-1">点击右侧按钮进入框架，勾选并设置冠/亚/季/安慰奖名额。</div>
+              <div id="mode3SummaryText" class="text-[11px] text-slate-400 mt-1">勾选并设定各奖项名额。</div>
             </div>
           </label>
-
         </div>
       </div>
 
@@ -118,7 +111,7 @@
     </div>
   </div>
 
-  <!-- ⚙️ 模式 3 专属：自定义规则详细框架弹窗 -->
+  <!-- 模式 3 自定义规则框架弹窗 -->
   <div id="mode3CustomSubModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border-2 border-blue-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
       <button onclick="closeMode3CustomSubModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -184,7 +177,6 @@
 
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
-    
     <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto"></div>
       <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold" data-i18n="btnResetAll">⚠️ 重置所有轮次数据</button>
@@ -360,7 +352,6 @@
       }
     };
 
-    // 弹窗控制函数
     function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
     function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
 
@@ -476,8 +467,38 @@
       target.status = newStatus;
 
       const remainingPending = activeRound.candidates.filter(c => c.status === 'pending');
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
-      // 剩 1 人时自动定格冠军
+      // 🌟 核心修改 1：模式 1 条件（剩 2 人时，自动定格冠亚季军并弹窗）
+      if (isModeEnabled && selectedMode === 'mode1' && remainingPending.length === 2) {
+        const winnerNames = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).concat(remainingPending.map(c => c.name)).join('、');
+        
+        state.latestEvent = {
+          type: 'finalCongrat',
+          timestamp: Date.now(),
+          targetRoundIndex: currentRoundIndex,
+          winnerNames: winnerNames
+        };
+        saveState();
+        renderRoundTabs();
+        alert(`👑 🎉【模式 1 冠亚季军自动定格】！获奖买家：${winnerNames}，公开大屏已实时同步广播！`);
+        return;
+      }
+
+      // 🌟 核心修改 2：模式 2 条件（剩 M+3 人时自动提醒进入安慰奖环节）
+      if (isModeEnabled && selectedMode === 'mode2') {
+        const consCount = state.modeConfig.mode2ConsolationCount || 10;
+        const totalThreshold = consCount + 3; // M + 3 名额
+
+        if (remainingPending.length === totalThreshold && newStatus === 'pass') {
+          setTimeout(() => {
+            alert(`🎁【模式 2 安慰奖环节触发】\n\n当前人数已达到设定的人数 (${totalThreshold}人)，包含 ${consCount} 名安慰奖与 头三名(冠亚季)！\n\n系统已为您自动开启【安慰奖环节】，请先从当前名单中抽出/锁定 ${consCount} 名安慰奖获奖者！`);
+          }, 100);
+        }
+      }
+
+      // 保留兜底：剩 1 人时自动定格冠军
       if (remainingPending.length === 1) {
         const champion = remainingPending[0];
         champion.status = 'pass';
@@ -518,6 +539,8 @@
     }
 
     function getRoundTitle(idx) {
+      const r = state.rounds[idx];
+      if (r && r.stageName) return r.stageName;
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
@@ -575,7 +598,19 @@
       const nextRoundNumber = state.rounds.length + 1;
       const nextRoundCandidates = passedCandidates.map((c, idx) => ({ id: Date.now() + idx, name: c.name, orderNo: c.orderNo, status: 'pending' }));
       
-      state.rounds.push({ roundName: `第 ${nextRoundNumber} 轮`, candidates: nextRoundCandidates });
+      let stageLabel = `第 ${nextRoundNumber} 轮`;
+
+      // 🌟 核心逻辑 2：模式 2 自动识别切换阶段标签名称
+      if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2') {
+        const consCount = state.modeConfig.mode2ConsolationCount || 10;
+        if (passedCandidates.length === consCount + 3) {
+          stageLabel = `🎁 安慰奖环节 (共${consCount}名额)`;
+        } else if (passedCandidates.length <= 3) {
+          stageLabel = `🏆 冠亚季头三决战环节`;
+        }
+      }
+
+      state.rounds.push({ roundName: stageLabel, stageName: stageLabel, candidates: nextRoundCandidates });
       currentRoundIndex = state.rounds.length - 1;
 
       state.latestEvent = {
@@ -586,7 +621,7 @@
 
       saveState();
       renderRoundTabs();
-      alert(`🎉 已成功推进开启【第 ${nextRoundNumber} 轮】！买家公开大屏已自动跟随更新。`);
+      alert(`🎉 已成功推进开启【${stageLabel}】！买家公开大屏已自动跟随更新。`);
     }
 
     function renderRoundTabs() {
