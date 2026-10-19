@@ -19,6 +19,9 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
+        <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">
+          🔙 返回至上一轮
+        </button>
         <button onclick="createNewRound()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
           <span>⏩ 推进本轮普及人员至下一轮</span>
         </button>
@@ -92,7 +95,7 @@
       </div>
     </div>
 
-    <!-- 底部：待角逐中卡片展区 -->
+    <!-- 底部：待角逐中 / 淘汰买家卡片展区 -->
     <div id="adminViewContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
     </div>
 
@@ -172,6 +175,33 @@
       renderRoundTabs();
     }
 
+    // 🌟 返回至上一轮（若处于最后一轮则删除误创建的该轮，恢复至上一轮状态）
+    function goToPrevRound() {
+      if (currentRoundIndex === 0) {
+        alert("当前已经是第 1 轮，无法再返回上一轮。");
+        return;
+      }
+
+      if (confirm(`确认返回至上一轮（第 ${currentRoundIndex} 轮）？如果当前轮次是刚创建的，会自动清除当前轮并切回上一轮。`)) {
+        // 如果当前处在最后一个轮次且只有两轮以上，删除最后一个多余的轮次
+        if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) {
+          state.rounds.pop();
+        }
+        
+        currentRoundIndex = Math.max(0, currentRoundIndex - 1);
+
+        // 写入返回事件，通知公开大屏同步切回
+        state.latestEvent = {
+          type: 'prevRound',
+          timestamp: Date.now(),
+          targetRoundIndex: currentRoundIndex
+        };
+
+        saveState();
+        renderRoundTabs();
+      }
+    }
+
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -196,7 +226,6 @@
 
       currentRoundIndex = state.rounds.length - 1;
 
-      // 5秒推进事件
       state.latestEvent = {
         type: 'advance',
         timestamp: Date.now(),
@@ -272,14 +301,12 @@
       document.getElementById('passedBadgeCount').innerText = passed + '人';
     }
 
-    // 🌟 状态改变（点击普及/淘汰）
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
       if (target) {
         target.status = newStatus;
 
-        // 🌟 自动判断：如果本轮参选人数 <= 2 人，且点击了普及，触发 10 秒豪华大屏动画事件！
         if (newStatus === 'pass' && activeRound.candidates.length <= 2) {
           const winnerNames = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).join('、');
           state.latestEvent = {
@@ -318,7 +345,7 @@
         ).join('');
       }
 
-      // 2. 待角逐卡片区
+      // 2. 待角逐/淘汰卡片区 (已普及的卡片移至上方)
       const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending' || c.status === 'out');
 
