@@ -71,7 +71,7 @@
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">手动普及选满 3 名中奖人（冠亚季）时，自动向大屏广播恭喜海报。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">在前三决战轮中选满 3 名最终获奖人时，触发大屏全屏恭喜海报。</div>
             </div>
           </label>
 
@@ -79,7 +79,7 @@
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
               <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">普及选满【安慰奖名额 + 3】时触发最终定格广播。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">在决战阶段选满【安慰奖名额 + 3】名额时，触发最终定格广播。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
@@ -189,7 +189,7 @@
         <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已普及/胜出</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮普及/胜出</span>
         <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
@@ -251,7 +251,7 @@
           enableChampion: true, championCount: 1,
           enableRunnerUp: true, runnerUpCount: 1,
           enableThirdPlace: true, thirdPlaceCount: 1,
-          enableConsolation: false, consolationCount: 5
+          enableConsolation: false, consolidationCount: 5
         }
       },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
@@ -459,7 +459,7 @@
       badge.className = "text-amber-400 font-bold";
     }
 
-    // 🌟 纯粹基于管理者【手动点击普及区】的获胜判定
+    // 🌟 核心状态变更与规则判断函数（仅在决战轮触发全局弹窗）
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
@@ -471,29 +471,14 @@
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
-      // 1. 模式 1：管理者手动将普及选满 3 人时，弹出冠军/前三定格海报
-      if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length === 3 && newStatus === 'pass') {
-        const winnerNames = passedCandidates.map(c => c.name).join('、');
-        
-        state.latestEvent = {
-          type: 'finalCongrat',
-          timestamp: Date.now(),
-          targetRoundIndex: currentRoundIndex,
-          winnerNames: winnerNames
-        };
-        saveState();
-        renderRoundTabs();
-        alert(`👑 🎉【冠亚季军定格】！已选出 3 名获奖买家：${winnerNames}！公开大屏已实时同步显示！`);
-        return;
-      }
+      // 🌟 判定是否处于【决战阶段/最后一轮】：前期的海选轮（如第1轮40人）绝对不触发冠亚季军海报！
+      const isFinalPhase = activeRound.isFinalStage || activeRound.candidates.length <= 15;
 
-      // 2. 模式 2：管理者手动选满【安慰奖名额 + 3人】时，弹出全局定格海报
-      if (isModeEnabled && selectedMode === 'mode2' && newStatus === 'pass') {
-        const consCount = state.modeConfig.mode2ConsolationCount || 10;
-        const totalThreshold = consCount + 3; 
-
-        if (passedCandidates.length === totalThreshold) {
+      if (isFinalPhase && newStatus === 'pass') {
+        // 1. 模式 1：海选后进入决战阶段，选满 3 人时，触发冠亚季广播
+        if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length === 3) {
           const winnerNames = passedCandidates.map(c => c.name).join('、');
+          
           state.latestEvent = {
             type: 'finalCongrat',
             timestamp: Date.now(),
@@ -502,8 +487,28 @@
           };
           saveState();
           renderRoundTabs();
-          alert(`👑 🎉【模式 2 最终获胜名单定格】！已选出 ${consCount} 名安慰奖与冠亚季军（共${totalThreshold}名）：${winnerNames}！公开大屏已实时同步！`);
+          alert(`👑 🎉【冠亚季军定格】！已选出 3 名获奖买家：${winnerNames}！公开大屏已实时同步显示！`);
           return;
+        }
+
+        // 2. 模式 2：决战阶段，选满【安慰奖名额 + 3人】时，触发全局定格海报
+        if (isModeEnabled && selectedMode === 'mode2') {
+          const consCount = state.modeConfig.mode2ConsolationCount || 10;
+          const totalThreshold = consCount + 3; 
+
+          if (passedCandidates.length === totalThreshold) {
+            const winnerNames = passedCandidates.map(c => c.name).join('、');
+            state.latestEvent = {
+              type: 'finalCongrat',
+              timestamp: Date.now(),
+              targetRoundIndex: currentRoundIndex,
+              winnerNames: winnerNames
+            };
+            saveState();
+            renderRoundTabs();
+            alert(`👑 🎉【模式 2 最终获胜名单定格】！已选出 ${consCount} 名安慰奖与冠亚季军（共${totalThreshold}名）：${winnerNames}！公开大屏已实时同步！`);
+            return;
+          }
         }
       }
 
@@ -590,17 +595,29 @@
       const nextRoundCandidates = passedCandidates.map((c, idx) => ({ id: Date.now() + idx, name: c.name, orderNo: c.orderNo, status: 'pending' }));
       
       let stageLabel = `第 ${nextRoundNumber} 轮`;
+      let isFinal = false;
+
+      // 如果剩余人数降到了 15 人以内（如海选40人选出10人进第2轮），自动打上决战轮标识
+      if (passedCandidates.length <= 15) {
+        isFinal = true;
+      }
 
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
         if (passedCandidates.length === consCount + 3) {
-          stageLabel = `🎁 安慰奖环节 (共${consCount}名额)`;
+          stageLabel = `🎁 安慰奖与决战阶段 (共${consCount + 3}名额)`;
         } else if (passedCandidates.length <= 3) {
           stageLabel = `🏆 冠亚季决战环节`;
         }
       }
 
-      state.rounds.push({ roundName: stageLabel, stageName: stageLabel, candidates: nextRoundCandidates });
+      state.rounds.push({ 
+        roundName: stageLabel, 
+        stageName: stageLabel, 
+        candidates: nextRoundCandidates,
+        isFinalStage: isFinal
+      });
+      
       currentRoundIndex = state.rounds.length - 1;
 
       state.latestEvent = {
