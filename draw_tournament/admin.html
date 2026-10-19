@@ -173,6 +173,7 @@
       renderRoundTabs();
     }
 
+    // 🌟 核心逻辑：推进至下一轮并触发大屏海报弹窗事件
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -196,9 +197,16 @@
       });
 
       currentRoundIndex = state.rounds.length - 1;
+
+      // 写入推进事件对象，供公开大屏触发弹窗海报
+      state.latestAdvanceEvent = {
+        timestamp: Date.now(),
+        targetRoundIndex: currentRoundIndex
+      };
+
       saveState();
       renderRoundTabs();
-      alert(`🎉 已成功开启【第 ${nextRoundNumber} 轮】！已继承上一轮普及的 ${nextRoundCandidates.length} 位买家名单。`);
+      alert(`🎉 已成功开启【第 ${nextRoundNumber} 轮】！大屏已自动弹出晋级海报并切换至新一轮。`);
     }
 
     function renderRoundTabs() {
@@ -339,7 +347,6 @@
       container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
     }
 
-    // 🌟 彻底修复：重置时写入标准数据结构，防止公开大屏显示 undefined
     function resetRounds() {
       if (confirm("确认重置所有轮次数据？这会清除所有轮次并重新从 Google 表格同步第 1 轮。")) {
         currentRoundIndex = 0;
