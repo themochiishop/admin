@@ -8,25 +8,25 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 晋级第 N 轮全屏动画弹窗 (自动 5 秒后关闭) -->
-  <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
-    <div class="bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-400/60 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all" id="advanceModalCard">
-      <!-- 背景光晕装饰 -->
-      <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
+  <!-- 🌟 全屏豪华恭喜弹窗 (只剩最后2名/决战普及成功时触发 10 秒倒计时) -->
+  <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
+    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
+      <!-- 炫彩背景特效 -->
+      <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-24 -right-24 w-56 h-56 bg-emerald-500/30 rounded-full blur-3xl"></div>
 
-      <div class="text-6xl mb-4 animate-bounce">🏆</div>
-      <h2 class="text-xs font-bold tracking-widest text-amber-400 uppercase mb-1">PROMOTION ANNOUNCEMENT</h2>
-      <h3 id="advanceModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3">
-        恭喜晋级第 2 轮！
+      <div class="text-7xl mb-4 animate-bounce">👑</div>
+      <h2 id="congratBadge" class="text-xs font-black tracking-widest text-amber-400 uppercase mb-1">FINAL WINNER ANNOUNCEMENT</h2>
+      <h3 id="congratModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-2">
+        热烈祝贺！成功获得普及荣誉！
       </h3>
-      <p id="advanceModalSub" class="text-sm text-slate-300 mb-6">
-        上一轮普及买家已成功载入，准备开启下一轮角逐！
+      <p id="congratWinnerNames" class="text-lg font-bold text-emerald-300 my-4 bg-emerald-950/60 py-2.5 px-4 rounded-xl border border-emerald-500/40">
+        <!-- 动态显示获得普及的买家姓名 -->
       </p>
 
-      <div class="inline-flex items-center space-x-2 bg-slate-800/80 border border-slate-700 rounded-full px-4 py-1.5 text-xs text-slate-400">
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-        <span>将在 <span id="popupCountdown" class="text-amber-400 font-bold text-sm">5</span> 秒后自动进入新一轮...</span>
+      <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+        <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">10</span> 秒后自动切回大屏榜单...</span>
       </div>
     </div>
   </div>
@@ -126,7 +126,7 @@
 
   <script>
     let currentRoundIndex = 0;
-    let lastSeenAdvanceTime = 0; // 记录已弹出的推进事件戳，防止重复弹窗
+    let lastSeenEventTime = 0; // 记录最新弹窗事件戳
     let popupTimer = null;
     let state = {
       rounds: [
@@ -136,7 +136,7 @@
 
     window.onload = function() {
       loadAndRender();
-      setInterval(loadAndRender, 2000); // 2 秒轮询同步
+      setInterval(loadAndRender, 2000); // 2 秒自动同步
     };
 
     function loadAndRender() {
@@ -152,16 +152,19 @@
             state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
           }
 
-          // 🌟 检查是否有新增的推进下一轮事件
-          if (state.latestAdvanceEvent && state.latestAdvanceEvent.timestamp > lastSeenAdvanceTime) {
-            lastSeenAdvanceTime = state.latestAdvanceEvent.timestamp;
-            const targetRoundIdx = state.latestAdvanceEvent.targetRoundIndex;
+          // 🌟 检测是否有新增的恭喜/推进事件
+          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
+            lastSeenEventTime = state.latestEvent.timestamp;
             
-            // 自动把轮次切到最新推进的这一轮
-            currentRoundIndex = targetRoundIdx;
-            
-            // 触发 5 秒海报弹窗动画
-            triggerAdvancePopup(state.rounds[targetRoundIdx]?.roundName || `第 ${targetRoundIdx + 1} 轮`);
+            if (state.latestEvent.type === 'advance') {
+              // 推进下一轮事件 (5秒)
+              currentRoundIndex = state.latestEvent.targetRoundIndex;
+              showPopup("🎉 恭喜进入 " + (state.rounds[currentRoundIndex]?.roundName || "下一轮") + "！", "上一轮普及人员已继承，开启下一轮角逐！", 5);
+            } else if (state.latestEvent.type === 'finalCongrat') {
+              // 🌟 只剩最后2名时的终极普及恭喜事件 (10秒)
+              currentRoundIndex = state.latestEvent.targetRoundIndex;
+              showPopup("👑 恭喜买家成功获得普及荣誉！", "恭喜：" + (state.latestEvent.winnerNames || ""), 10);
+            }
           }
 
           if (currentRoundIndex >= state.rounds.length) {
@@ -175,18 +178,21 @@
       }
     }
 
-    // 🌟 触发弹窗与 5 秒倒计时自动关闭逻辑
-    function triggerAdvancePopup(roundTitle) {
-      const modal = document.getElementById('advanceModal');
-      const modalTitle = document.getElementById('advanceModalTitle');
-      const countdownEl = document.getElementById('popupCountdown');
+    // 🌟 10秒 / 5秒 定时器弹窗处理函数
+    function showPopup(titleText, winnerSubText, durationSeconds) {
+      const modal = document.getElementById('congratModal');
+      const modalTitle = document.getElementById('congratModalTitle');
+      const winnerNamesEl = document.getElementById('congratWinnerNames');
+      const countdownEl = document.getElementById('congratCountdown');
 
-      if (!modal || !modalTitle) return;
+      if (!modal) return;
 
-      modalTitle.innerText = `恭喜晋级 ${roundTitle}！`;
+      if (modalTitle) modalTitle.innerText = titleText;
+      if (winnerNamesEl) winnerNamesEl.innerText = winnerSubText;
+
       modal.classList.remove('hidden');
 
-      let timeLeft = 5;
+      let timeLeft = durationSeconds;
       if (countdownEl) countdownEl.innerText = timeLeft;
 
       if (popupTimer) clearInterval(popupTimer);
@@ -197,7 +203,7 @@
 
         if (timeLeft <= 0) {
           clearInterval(popupTimer);
-          modal.classList.add('hidden'); // 5秒后自动关闭
+          modal.classList.add('hidden'); // 10秒倒计时完毕自动关闭
         }
       }, 1000);
     }
@@ -275,7 +281,7 @@
       }
 
       if (pendingList.length === 0) {
-        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>本轮角逐完毕，下一轮即将开启</p></div>';
+        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>本轮角逐完毕，请关注最新通知</p></div>';
         return;
       }
 
