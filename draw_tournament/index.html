@@ -104,7 +104,7 @@
     <!-- 4. 第四层：拆分为【左边角逐中买家】与【右边独立一列已淘汰名单】 -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       
-      <!-- 左侧：⚡ 角逐中买家名单 (占 4 列空间，内部卡片设置一排 5 个) -->
+      <!-- 左侧：⚡ 角逐中买家名单 (占 4 列空间，内部卡片强制所有分辨率下一排 5 张) -->
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
           <span class="text-lg">⚡</span>
@@ -115,8 +115,8 @@
           </span>
         </div>
 
-        <div id="pendingGridContainer">
-          <!-- 动态渲染 1 排 5 个角逐买家卡片 -->
+        <div id="pendingGridContainer" class="overflow-x-auto pb-2">
+          <!-- 动态渲染强制 5 列角逐买家卡片 -->
         </div>
       </div>
 
@@ -296,7 +296,7 @@
         ).join('');
       }
 
-      // 2. 左侧：⚡ 角逐中买家渲染 (设定为 1 排 5 列，去除了卡内“角逐中”标签)
+      // 2. 左侧：⚡ 角逐中买家渲染 (🌟 强制设为硬性 grid-cols-5，不论分辨率均强行每行 5 张)
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
@@ -306,17 +306,17 @@
         pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>本轮全员判定完毕</p></div>';
       } else {
         const cardsHtml = pendingList.map((c, index) => 
-          '<div class="p-4 rounded-xl border border-slate-700 bg-slate-800/80 transition hover:border-amber-400/80 relative overflow-hidden flex flex-col justify-between shadow">' +
+          '<div class="p-3.5 rounded-xl border border-slate-700 bg-slate-800/80 transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
             '<div>' +
-              '<div class="text-xs font-mono text-slate-400 mb-1.5">#' + (index + 1) + '</div>' +
-              '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-xs text-amber-400/80 font-mono mt-1 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+              '<div class="text-[11px] font-mono text-slate-400 mb-1">#' + (index + 1) + '</div>' +
+              '<div class="font-bold text-slate-100 text-sm truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
             '</div>' +
           '</div>'
         ).join('');
 
-        // 🌟 设置为一排 5 个卡片：grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5
-        pendingContainer.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
+        // 🌟 强行 5 列：grid grid-cols-5 gap-3 (不加响应式断点)
+        pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3 min-w-[600px]">' + cardsHtml + '</div>';
       }
 
       // 3. 右侧：❌ 已淘汰名单单独竖排渲染 (状态为 out 的买家)
