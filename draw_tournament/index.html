@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head> 
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 实时晋级榜</title>
@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <!-- 顶部 Header (已移除管理员后台与刷新按钮) -->
+  <!-- 顶部 Header -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center space-x-3">
@@ -56,7 +56,7 @@
         >
       </div>
       <div class="text-xs text-slate-400 hidden sm:block">
-        📌 页面每 3 秒自动拉取主播最新晋级判定
+        📌 页面自动拉取主播最新晋级判定
       </div>
     </div>
 
@@ -77,7 +77,6 @@
 
     window.onload = function() {
       loadAndRender();
-      // 自动轮询：每 3 秒同步一次主播的最新点击结果
       setInterval(loadAndRender, 3000);
     };
 
@@ -111,54 +110,51 @@
       );
 
       if (state.candidates.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月抽奖名单同步中，请关注直播间...</p></div>`;
+        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月抽奖名单同步中，请关注直播间...</p></div>';
         return;
       }
 
       const passedList = list.filter(c => c.status === 'pass');
       const pendingList = list.filter(c => c.status === 'pending');
 
-      container.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- 普及/晋级荣誉榜 -->
-          <div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30 shadow-lg shadow-emerald-950/20">
-            <h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">
-              <span>🏆 已成功普及/晋级名单</span>
-              <span class="text-xs font-normal text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">${passedList.length} 人</span>
-            </h3>
-            <div class="space-y-2">
-              ${passedList.map(c => `
-                <div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg flex justify-between items-center">
-                  <div class="min-w-0 flex-1 pr-2">
-                    <div class="font-bold text-emerald-200 text-base truncate">\${escapeHtml(c.name)}</div>
-                    <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
-                  </div>
-                  <span class="text-xs font-bold text-emerald-400 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 rounded-full">晋级成功</span>
-                </div>
-              `).join('') || '<p class="text-xs text-slate-500 py-4 text-center">暂无晋级买家，直播抽出中...</p>'}
-            </div>
-          </div>
+      const passedHtml = passedList.map(c => 
+        '<div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg flex justify-between items-center">' +
+          '<div class="min-w-0 flex-1 pr-2">' +
+            '<div class="font-bold text-emerald-200 text-base truncate">' + escapeHtml(c.name) + '</div>' +
+            '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
+          '</div>' +
+          '<span class="text-xs font-bold text-emerald-400 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 rounded-full">晋级成功</span>' +
+        '</div>'
+      ).join('') || '<p class="text-xs text-slate-500 py-4 text-center">暂无晋级买家，直播抽出中...</p>';
 
-          <!-- 待抽奖角逐榜 -->
-          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
-            <h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">
-              <span>⚡ 待抽奖/角逐中名单</span>
-              <span class="text-xs font-normal text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">${pendingList.length} 人</span>
-            </h3>
-            <div class="space-y-2">
-              ${pendingList.map(c => `
-                <div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700">
-                  <div class="min-w-0 flex-1 pr-2">
-                    <div class="font-bold text-slate-200 truncate">\${escapeHtml(c.name)}</div>
-                    <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
-                  </div>
-                  <span class="text-xs text-amber-400">待角逐</span>
-                </div>
-              `).join('') || '<p class="text-xs text-slate-500 py-4 text-center">全员抽奖公布完毕</p>'}
-            </div>
-          </div>
-        </div>
-      `;
+      const pendingHtml = pendingList.map(c => 
+        '<div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700">' +
+          '<div class="min-w-0 flex-1 pr-2">' +
+            '<div class="font-bold text-slate-200 truncate">' + escapeHtml(c.name) + '</div>' +
+            '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
+          '</div>' +
+          '<span class="text-xs text-amber-400">待角逐</span>' +
+        '</div>'
+      ).join('') || '<p class="text-xs text-slate-500 py-4 text-center">全员抽奖公布完毕</p>';
+
+      container.innerHTML = 
+        '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
+          '<div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30 shadow-lg shadow-emerald-950/20">' +
+            '<h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">' +
+              '<span>🏆 已成功普及/晋级名单</span>' +
+              '<span class="text-xs font-normal text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">' + passedList.length + ' 人</span>' +
+            '</h3>' +
+            '<div class="space-y-2">' + passedHtml + '</div>' +
+          '</div>' +
+
+          '<div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">' +
+            '<h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">' +
+              '<span>⚡ 待抽奖/角逐中名单</span>' +
+              '<span class="text-xs font-normal text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">' + pendingList.length + ' 人</span>' +
+            '</h3>' +
+            '<div class="space-y-2">' + pendingHtml + '</div>' +
+          '</div>' +
+        '</div>';
     }
 
     function escapeHtml(str) {
