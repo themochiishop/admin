@@ -81,6 +81,13 @@
 
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
+
+    <!-- 🌟 动态终极大奖公示横幅 (季军/冠军专属提示) -->
+    <div id="winnerAnnouncementBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
+      <div id="winnerBannerContent" class="text-lg font-black text-amber-300 tracking-wide">
+        <!-- 动态注入横幅信息 -->
+      </div>
+    </div>
     
     <div class="mb-6 flex items-center justify-between border-b border-slate-800 pb-3 gap-4">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto"></div>
@@ -368,7 +375,38 @@
           renderPublicView();
           updateStats();
           updatePublicModeUI();
+          updateWinnerBannerUI(); // 🌟 更新顶部的季军/冠亚军提示横幅
         } catch(e){}
+      }
+    }
+
+    // 🌟 动态更新顶部的大奖公示横幅（剩 3 人显示季军，决战 2 选 1 显示冠亚军）
+    function updateWinnerBannerUI() {
+      const banner = document.getElementById('winnerAnnouncementBanner');
+      const content = document.getElementById('winnerBannerContent');
+      if (!banner || !content) return;
+
+      // 检索所有轮次中带有 rankTitle 标记的买家
+      let championName = "";
+      let runnerUpName = "";
+      let thirdPlaceName = "";
+
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => {
+          if (c.rankTitle === "👑 冠军") championName = c.name;
+          if (c.rankTitle === "🥈 亚军") runnerUpName = c.name;
+          if (c.rankTitle === "🥉 季军") thirdPlaceName = c.name;
+        });
+      });
+
+      if (championName && runnerUpName) {
+        banner.classList.remove('hidden');
+        content.innerHTML = `🎉 👑 <span class="text-amber-400">冠军得主是：</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1">${escapeHtml(championName)}</span>  |  🥈 <span class="text-slate-300">亚军得主是：</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1">${escapeHtml(runnerUpName)}</span>`;
+      } else if (thirdPlaceName) {
+        banner.classList.remove('hidden');
+        content.innerHTML = `🎉 🥉 <span class="text-amber-400">季军得主是：</span><span class="text-white bg-amber-600/30 px-3 py-1 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal ml-2">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
+      } else {
+        banner.classList.add('hidden');
       }
     }
 
