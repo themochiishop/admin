@@ -48,9 +48,11 @@
 
     .left-panel { width: 320px; flex-shrink: 0; }
     .middle-panel { flex: 1; min-width: 340px; }
+    
+    /* ⚡ 还原 preview-panel 默认固定宽，不抢占中间空间 */
     .preview-panel {
-      flex: 1;
-      min-width: 380px;
+      width: 380px;
+      flex-shrink: 0;
       background: #2b2b2b;
       padding: 14px;
       border-radius: 10px;
@@ -58,6 +60,7 @@
       justify-content: center;
       align-items: flex-start;
       overflow-x: auto;
+      transition: width 0.3s ease;
     }
 
     .panel-header {
@@ -408,7 +411,7 @@
     </div>
 
     <!-- 3. 右侧：面单预览 -->
-    <div class="preview-panel">
+    <div class="preview-panel" id="previewPanel">
       <div class="awb-card" id="awbCard">
         <div class="awb-main-content">
           <div class="awb-header">
@@ -940,7 +943,7 @@
     function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
     function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
-    /* ⚡ 应用打印格式与调整右侧预览卡片比例 */
+    /* ⚡ 仅在应用设置时，外框与卡片才随选定格式展开 */
     function applyPrintSettings() {
       const selected = document.querySelector('input[name="printFormat"]:checked');
       if (selected) {
@@ -948,20 +951,24 @@
         const btnPrint = document.getElementById('btnPrint');
         const styleTag = document.getElementById('printPageStyle');
         const awbCard = document.getElementById('awbCard');
+        const previewPanel = document.getElementById('previewPanel');
 
         if (val === 'AWB') {
           btnPrint.innerText = '🖨️ 打印面单 AWB';
           styleTag.innerHTML = '@media print { @page { size: 100mm 150mm; margin: 0; } }';
+          previewPanel.style.width = '380px';
           awbCard.style.width = '350px';
           awbCard.style.minHeight = '520px';
         } else if (val === 'A4') {
           btnPrint.innerText = '🖨️ 打印 A4';
           styleTag.innerHTML = '@media print { @page { size: A4; margin: 10mm; } }';
+          previewPanel.style.width = '510px';
           awbCard.style.width = '480px';
           awbCard.style.minHeight = '680px';
         } else if (val === 'A5') {
           btnPrint.innerText = '🖨️ 打印 A5';
           styleTag.innerHTML = '@media print { @page { size: A5; margin: 5mm; } }';
+          previewPanel.style.width = '440px';
           awbCard.style.width = '410px';
           awbCard.style.minHeight = '580px';
         }
