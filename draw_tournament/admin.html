@@ -19,7 +19,6 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
-        <!-- 视图切换按钮 -->
         <button id="viewToggleBtn" onclick="toggleViewMode()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg border border-slate-600 transition">
           📊 视图切换: <span id="viewModeText" class="text-amber-400 font-bold">卡片直控</span>
         </button>
@@ -62,7 +61,6 @@
         >
       </div>
 
-      <!-- 数据同步提示 + 刷新表格数据按钮 -->
       <div class="text-xs text-slate-400 flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
         <span id="syncStatusText">已连接至 Google Sheets 数据源</span>
@@ -85,7 +83,7 @@
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
-    let currentViewType = "grid"; // 'grid' (卡片直控) 或 'list' (分组列表)
+    let currentViewType = "grid"; 
     let state = {
       candidates: []
     };
@@ -205,94 +203,86 @@
       );
 
       if (list.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🔍</p><p>未找到符合条件的买家</p></div>`;
+        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🔍</p><p>未找到符合条件的买家</p></div>';
         return;
       }
 
       if (currentViewType === 'grid') {
-        // 卡片直控视图
-        container.innerHTML = `
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            ${list.map((c, index) => {
-              let borderStyle = 'border-slate-700 bg-slate-800';
-              let statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300">⌛ 角逐中</span>`;
+        const cardsHtml = list.map((c, index) => {
+          let borderStyle = 'border-slate-700 bg-slate-800';
+          let statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300">⌛ 角逐中</span>';
 
-              if (c.status === 'pass') {
-                borderStyle = 'border-emerald-500 bg-slate-800 shadow-lg shadow-emerald-950/30 ring-1 ring-emerald-500';
-                statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-emerald-500 text-slate-950 font-bold">🏆 已普及/晋级</span>`;
-              } else if (c.status === 'out') {
-                borderStyle = 'border-slate-800 bg-slate-900/60 opacity-50';
-                statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">已淘汰</span>`;
-              }
+          if (c.status === 'pass') {
+            borderStyle = 'border-emerald-500 bg-slate-800 shadow-lg shadow-emerald-950/30 ring-1 ring-emerald-500';
+            statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500 text-slate-950 font-bold">🏆 已普及/晋级</span>';
+          } else if (c.status === 'out') {
+            borderStyle = 'border-slate-800 bg-slate-900/60 opacity-50';
+            statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">已淘汰</span>';
+          }
 
-              return `
-                <div class="p-4 rounded-xl border \${borderStyle} transition relative flex flex-col justify-between">
-                  <div>
-                    <div class="flex justify-between items-start mb-2">
-                      <span class="text-xs font-mono text-slate-400">#${index + 1}</span>${statusBadge}
-                    </div>
-                    <div class="font-bold text-slate-100 text-lg truncate">\${escapeHtml(c.name)}</div>
-                    <div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">\${escapeHtml(c.orderNo || '无订单号')}</div>
-                  </div>
+          const btnPassStyle = (c.status === 'pass') ? 'bg-emerald-500 text-slate-950 font-bold' : 'bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white';
+          const btnPendingStyle = (c.status === 'pending') ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-700 text-amber-400 hover:bg-amber-600 hover:text-white';
+          const btnOutStyle = (c.status === 'out') ? 'bg-rose-500 text-white font-bold' : 'bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white';
 
-                  <div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-1">
-                    <button onclick="changeStatus(\${c.id}, 'pass')" class="flex-1 py-1.5 text-xs font-bold rounded \${c.status==='pass'?'bg-emerald-500 text-slate-950':'bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white'} transition">
-                      🏆 晋级
-                    </button>
-                    <button onclick="changeStatus(\${c.id}, 'pending')" class="px-2 py-1.5 text-xs rounded \${c.status==='pending'?'bg-amber-500 text-slate-950':'bg-slate-700 text-amber-400 hover:bg-amber-600 hover:text-white'} transition">
-                      ⌛ 待定
-                    </button>
-                    <button onclick="changeStatus(\${c.id}, 'out')" class="px-2 py-1.5 text-xs rounded \${c.status==='out'?'bg-rose-500 text-white':'bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white'} transition">
-                      ❌ 淘汰
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `;
+          return '<div class="p-4 rounded-xl border ' + borderStyle + ' transition relative flex flex-col justify-between">' +
+            '<div>' +
+              '<div class="flex justify-between items-start mb-2">' +
+                '<span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' +
+                statusBadge +
+              '</div>' +
+              '<div class="font-bold text-slate-100 text-lg truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+            '</div>' +
+
+            '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-1">' +
+              '<button onclick="changeStatus(' + c.id + ', \'pass\')" class="flex-1 py-1.5 text-xs rounded transition ' + btnPassStyle + '">🏆 晋级</button>' +
+              '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="px-2 py-1.5 text-xs rounded transition ' + btnPendingStyle + '">⌛ 待定</button>' +
+              '<button onclick="changeStatus(' + c.id + ', \'out\')" class="px-2 py-1.5 text-xs rounded transition ' + btnOutStyle + '">❌ 淘汰</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">' + cardsHtml + '</div>';
       } else {
-        // 分组列表视图
         const passedList = list.filter(c => c.status === 'pass');
         const pendingList = list.filter(c => c.status === 'pending');
 
-        container.innerHTML = `
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">
-              <h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">
-                <span>🏆 已普及名单 (${passedList.length} 人)</span>
-              </h3>
-              <div class="space-y-2">
-                ${passedList.map(c => `
-                  <div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg flex justify-between items-center">
-                    <div class="min-w-0 flex-1 pr-2">
-                      <div class="font-bold text-emerald-200 truncate">\${escapeHtml(c.name)}</div>
-                      <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
-                    </div>
-                    <button onclick="changeStatus(\${c.id}, 'pending')" class="text-xs bg-slate-700 hover:bg-amber-600 text-amber-300 hover:text-white px-2 py-1 rounded">撤销/改待定</button>
-                  </div>
-                `).join('') || '<p class="text-xs text-slate-500 py-2">暂无普及买家</p>'}
-              </div>
-            </div>
+        const passedHtml = passedList.map(c => 
+          '<div class="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg flex justify-between items-center">' +
+            '<div class="min-w-0 flex-1 pr-2">' +
+              '<div class="font-bold text-emerald-200 truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
+            '</div>' +
+            '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="text-xs bg-slate-700 hover:bg-amber-600 text-amber-300 hover:text-white px-2 py-1 rounded">撤销/改待定</button>' +
+          '</div>'
+        ).join('') || '<p class="text-xs text-slate-500 py-2">暂无普及买家</p>';
 
-            <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
-              <h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">
-                <span>⚡ 待抽奖/角逐中名单 (${pendingList.length} 人)</span>
-              </h3>
-              <div class="space-y-2">
-                ${pendingList.map(c => `
-                  <div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700">
-                    <div class="min-w-0 flex-1 pr-2">
-                      <div class="font-bold text-slate-200 truncate">\${escapeHtml(c.name)}</div>
-                      <div class="text-xs text-slate-400 font-mono truncate">\${escapeHtml(c.orderNo)}</div>
-                    </div>
-                    <button onclick="changeStatus(\${c.id}, 'pass')" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2 py-1 rounded">点此晋级</button>
-                  </div>
-                `).join('') || '<p class="text-xs text-slate-500 py-2">全员公布完毕</p>'}
-              </div>
-            </div>
-          </div>
-        `;
+        const pendingHtml = pendingList.map(c => 
+          '<div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700">' +
+            '<div class="min-w-0 flex-1 pr-2">' +
+              '<div class="font-bold text-slate-200 truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-xs text-slate-400 font-mono truncate">' + escapeHtml(c.orderNo) + '</div>' +
+            '</div>' +
+            '<button onclick="changeStatus(' + c.id + ', \'pass\')" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2 py-1 rounded">点此晋级</button>' +
+          '</div>'
+        ).join('') || '<p class="text-xs text-slate-500 py-2">全员公布完毕</p>';
+
+        container.innerHTML = 
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
+            '<div class="bg-slate-900/80 p-4 rounded-xl border border-emerald-500/30">' +
+              '<h3 class="text-emerald-400 font-bold text-md mb-3 flex items-center justify-between">' +
+                '<span>🏆 已普及名单 (' + passedList.length + ' 人)</span>' +
+              '</h3>' +
+              '<div class="space-y-2">' + passedHtml + '</div>' +
+            '</div>' +
+
+            '<div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">' +
+              '<h3 class="text-amber-400 font-bold text-md mb-3 flex items-center justify-between">' +
+                '<span>⚡ 待抽奖/角逐中名单 (' + pendingList.length + ' 人)</span>' +
+              '</h3>' +
+              '<div class="space-y-2">' + pendingHtml + '</div>' +
+            '</div>' +
+          '</div>';
       }
     }
 
