@@ -20,7 +20,7 @@
       </div>
       
       <div class="flex items-center space-x-3">
-        <!-- 🌟 已移除前面的齿轮图标，仅保留纯文字模式显示 -->
+        <!-- 纯文字模式显示 + 齿轮按钮 -->
         <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-inner">
           <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
           <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式规则">
@@ -51,9 +51,9 @@
     </div>
   </header>
 
-  <!-- ⚙️ 抽奖模式设置弹窗 -->
+  <!-- ⚙️ 抽奖模式与规则高级设置主弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
       <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center space-x-2">
         <span>⚙️</span>
@@ -61,45 +61,126 @@
       </h3>
 
       <div class="space-y-4 text-xs">
+        <!-- 规则总开关 -->
         <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
           <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
           <span class="font-bold text-slate-200">启用模式规则 (必须勾选后方能生效)</span>
         </label>
 
-        <div id="modeRadioGroup" class="space-y-2 opacity-50 pointer-events-none transition-all">
+        <!-- 模式 Radio 组 -->
+        <div id="modeRadioGroup" class="space-y-3 opacity-50 pointer-events-none transition-all">
+          
+          <!-- 模式 1：冠亚季模式 -->
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
-            <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
+            <input type="radio" name="drawMode" value="mode1" onchange="onModeRadioChange()" class="mt-0.5">
             <div>
-              <div class="font-bold text-amber-300">模式 1：冠亚季模式 (默认)</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">剩 3 人时提示决战，剩 1 人时自动定格为终极冠军。</div>
+              <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">默认 1 名冠军、1 名亚军、1 名季军（共 3 人）。剩余 3 人时提示决战，剩 1 人时自动定格为冠军。</div>
             </div>
           </label>
 
+          <!-- 模式 2：安慰奖模式 (可自定义安慰奖名额) -->
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
-            <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
-            <div>
-              <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">在剩余 5 人时进行决战提示。</div>
-            </div>
-          </label>
-
-          <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
-            <input type="radio" name="drawMode" value="mode3" class="mt-0.5">
+            <input type="radio" name="drawMode" value="mode2" onchange="onModeRadioChange()" class="mt-0.5">
             <div class="flex-1">
-              <div class="font-bold text-blue-300">模式 3：自定义模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-2">
-                <span>剩余</span>
-                <input type="number" id="customThresholdInput" value="2" min="1" max="20" class="w-12 bg-slate-800 border border-slate-600 rounded px-1 text-center font-bold text-amber-300">
-                <span>人时提示决战问询</span>
+              <div class="font-bold text-emerald-300">模式 2：安慰奖模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">包含 1 冠、1 亚、1 季，以及可自定义名额的安慰奖。</div>
+              <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                <span class="text-slate-300">安慰奖名额:</span>
+                <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
+                <span class="text-slate-400">人 (默认10名)</span>
               </div>
             </div>
           </label>
+
+          <!-- 模式 3：自定义模式 (点击跳出包含各个规则的框架) -->
+          <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
+            <input type="radio" name="drawMode" value="mode3" onchange="onModeRadioChange()" class="mt-0.5">
+            <div class="flex-1">
+              <div class="flex justify-between items-center">
+                <div class="font-bold text-blue-300">模式 3：自定义模式</div>
+                <button type="button" onclick="openMode3CustomSubModal()" class="px-2 py-1 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 rounded transition font-bold text-[11px]">
+                  ⚙️ 自定义规则设置 ➔
+                </button>
+              </div>
+              <div id="mode3SummaryText" class="text-[11px] text-slate-400 mt-1">点击右侧按钮进入详细框架，勾选并设置冠/亚/季/安慰奖名额。</div>
+            </div>
+          </label>
+
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end space-x-2 border-t border-slate-700/60 pt-4">
+        <button onclick="saveConfigModal()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow">
+          💾 保存设置
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚙️ 模式 3 专属：自定义规则详细框架弹窗 -->
+  <div id="mode3CustomSubModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border-2 border-blue-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+      <button onclick="closeMode3CustomSubModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
+      <h3 class="text-md font-bold text-blue-400 mb-1 flex items-center space-x-2">
+        <span>🛠️</span>
+        <span>模式 3：自定义规则框架配置</span>
+      </h3>
+      <p class="text-xs text-slate-400 mb-4">请勾选需要生效的奖项规则，并设定对应的获胜人数：</p>
+
+      <div class="space-y-3 text-xs">
+        <!-- 1. 冠军规则 -->
+        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 border border-slate-700 rounded-xl">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="m3EnableChampion" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
+            <span class="font-bold text-amber-300">👑 冠军规则</span>
+          </label>
+          <div class="flex items-center space-x-1">
+            <span class="text-slate-400">人数:</span>
+            <input type="number" id="m3ChampionCount" value="1" min="1" max="20" class="w-14 bg-slate-800 border border-slate-600 rounded px-1 py-0.5 text-center font-bold text-amber-400">
+          </div>
+        </div>
+
+        <!-- 2. 亚军规则 -->
+        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 border border-slate-700 rounded-xl">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="m3EnableRunnerUp" class="w-4 h-4 text-slate-400 rounded focus:ring-0">
+            <span class="font-bold text-slate-300">🥈 亚军规则</span>
+          </label>
+          <div class="flex items-center space-x-1">
+            <span class="text-slate-400">人数:</span>
+            <input type="number" id="m3RunnerUpCount" value="1" min="1" max="20" class="w-14 bg-slate-800 border border-slate-600 rounded px-1 py-0.5 text-center font-bold text-slate-200">
+          </div>
+        </div>
+
+        <!-- 3. 季军规则 -->
+        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 border border-slate-700 rounded-xl">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="m3EnableThirdPlace" class="w-4 h-4 text-amber-700 rounded focus:ring-0">
+            <span class="font-bold text-amber-600">🥉 季军规则</span>
+          </label>
+          <div class="flex items-center space-x-1">
+            <span class="text-slate-400">人数:</span>
+            <input type="number" id="m3ThirdPlaceCount" value="1" min="1" max="20" class="w-14 bg-slate-800 border border-slate-600 rounded px-1 py-0.5 text-center font-bold text-amber-500">
+          </div>
+        </div>
+
+        <!-- 4. 安慰奖规则 -->
+        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 border border-slate-700 rounded-xl">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="m3EnableConsolation" class="w-4 h-4 text-emerald-500 rounded focus:ring-0">
+            <span class="font-bold text-emerald-400">🎁 安慰奖规则</span>
+          </label>
+          <div class="flex items-center space-x-1">
+            <span class="text-slate-400">人数:</span>
+            <input type="number" id="m3ConsolationCount" value="5" min="1" max="100" class="w-14 bg-slate-800 border border-slate-600 rounded px-1 py-0.5 text-center font-bold text-emerald-300">
+          </div>
         </div>
       </div>
 
       <div class="mt-6 flex justify-end space-x-2">
-        <button onclick="saveConfigModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition">
-          💾 保存设置
+        <button onclick="saveMode3CustomSubModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs transition">
+          ✅ 确认并保存自定义规则
         </button>
       </div>
     </div>
@@ -141,8 +222,7 @@
           <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
-        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
-        </div>
+        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1"></div>
       </div>
     </div>
 
@@ -161,8 +241,7 @@
       </div>
     </div>
 
-    <div id="adminViewContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
-    </div>
+    <div id="adminViewContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]"></div>
 
   </main>
 
@@ -176,7 +255,17 @@
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
     let state = {
-      modeConfig: { enabled: true, selectedMode: 'mode1', customThreshold: 2 },
+      modeConfig: {
+        enabled: true,
+        selectedMode: 'mode1',
+        mode2ConsolationCount: 10,
+        mode3Rules: {
+          enableChampion: true, championCount: 1,
+          enableRunnerUp: true, runnerUpCount: 1,
+          enableThirdPlace: true, thirdPlaceCount: 1,
+          enableConsolation: false, consolationCount: 5
+        }
+      },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
@@ -281,17 +370,55 @@
       }
     };
 
+    // 弹窗控制
     function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
     function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+
+    function openMode3CustomSubModal() { document.getElementById('mode3CustomSubModal').classList.remove('hidden'); }
+    function closeMode3CustomSubModal() { document.getElementById('mode3CustomSubModal').classList.add('hidden'); }
 
     function toggleModeEnable() {
       const isChecked = document.getElementById('enableModeCheckbox').checked;
       const group = document.getElementById('modeRadioGroup');
-      if (isChecked) {
-        group.classList.remove('opacity-50', 'pointer-events-none');
-      } else {
-        group.classList.add('opacity-50', 'pointer-events-none');
-      }
+      if (isChecked) group.classList.remove('opacity-50', 'pointer-events-none');
+      else group.classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    function onModeRadioChange() {
+      // Handle radio changes if needed
+    }
+
+    function saveMode3CustomSubModal() {
+      const rules = {
+        enableChampion: document.getElementById('m3EnableChampion').checked,
+        championCount: parseInt(document.getElementById('m3ChampionCount').value, 10) || 1,
+        enableRunnerUp: document.getElementById('m3EnableRunnerUp').checked,
+        runnerUpCount: parseInt(document.getElementById('m3RunnerUpCount').value, 10) || 1,
+        enableThirdPlace: document.getElementById('m3EnableThirdPlace').checked,
+        thirdPlaceCount: parseInt(document.getElementById('m3ThirdPlaceCount').value, 10) || 1,
+        enableConsolation: document.getElementById('m3EnableConsolation').checked,
+        consolationCount: parseInt(document.getElementById('m3ConsolationCount').value, 10) || 5,
+      };
+
+      if (!state.modeConfig) state.modeConfig = {};
+      state.modeConfig.mode3Rules = rules;
+      updateMode3SummaryText();
+      closeMode3CustomSubModal();
+      alert("✅ 模式 3 自定义规则配置已成功保存！");
+    }
+
+    function updateMode3SummaryText() {
+      const el = document.getElementById('mode3SummaryText');
+      if (!el) return;
+      const r = (state.modeConfig && state.modeConfig.mode3Rules) ? state.modeConfig.mode3Rules : {};
+      let parts = [];
+      if (r.enableChampion) parts.push(`冠军${r.championCount}名`);
+      if (r.enableRunnerUp) parts.push(`亚军${r.runnerUpCount}名`);
+      if (r.enableThirdPlace) parts.push(`季军${r.thirdPlaceCount}名`);
+      if (r.enableConsolation) parts.push(`安慰奖${r.consolationCount}名`);
+
+      if (parts.length === 0) el.innerText = "尚未勾选任何自定义规则（点击右侧设置）。";
+      else el.innerText = `已激活规则: ${parts.join(' + ')}`;
     }
 
     function saveConfigModal() {
@@ -300,9 +427,13 @@
       let selected = 'mode1';
       for (let r of radios) { if (r.checked) selected = r.value; }
 
-      const customVal = parseInt(document.getElementById('customThresholdInput').value, 10) || 2;
+      const mode2Cons = parseInt(document.getElementById('mode2ConsolationCount').value, 10) || 10;
 
-      state.modeConfig = { enabled: isEnabled, selectedMode: selected, customThreshold: customVal };
+      if (!state.modeConfig) state.modeConfig = {};
+      state.modeConfig.enabled = isEnabled;
+      state.modeConfig.selectedMode = selected;
+      state.modeConfig.mode2ConsolationCount = mode2Cons;
+
       saveState();
       updateModeBadgeUI();
       closeConfigModal();
@@ -310,15 +441,30 @@
     }
 
     function syncModalUIWithState() {
-      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', customThreshold: 2 };
-      document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled;
+      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 };
+      
+      document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
       toggleModeEnable();
 
       const radios = document.getElementsByName('drawMode');
       for (let r of radios) {
-        if (r.value === state.modeConfig.selectedMode) r.checked = true;
+        if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true;
       }
-      document.getElementById('customThresholdInput').value = state.modeConfig.customThreshold || 2;
+
+      document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
+
+      // 同步模式 3 表单
+      const m3 = state.modeConfig.mode3Rules || { enableChampion: true, championCount: 1, enableRunnerUp: true, runnerUpCount: 1, enableThirdPlace: true, thirdPlaceCount: 1, enableConsolation: false, consolationCount: 5 };
+      document.getElementById('m3EnableChampion').checked = !!m3.enableChampion;
+      document.getElementById('m3ChampionCount').value = m3.championCount || 1;
+      document.getElementById('m3EnableRunnerUp').checked = !!m3.enableRunnerUp;
+      document.getElementById('m3RunnerUpCount').value = m3.runnerUpCount || 1;
+      document.getElementById('m3EnableThirdPlace').checked = !!m3.enableThirdPlace;
+      document.getElementById('m3ThirdPlaceCount').value = m3.thirdPlaceCount || 1;
+      document.getElementById('m3EnableConsolation').checked = !!m3.enableConsolation;
+      document.getElementById('m3ConsolationCount').value = m3.consolationCount || 5;
+
+      updateMode3SummaryText();
       updateModeBadgeUI();
     }
 
@@ -332,18 +478,27 @@
       }
       const m = state.modeConfig.selectedMode;
       if (m === 'mode1') badge.innerText = "模式: 冠亚季模式";
-      else if (m === 'mode2') badge.innerText = "模式: 安慰奖模式";
-      else if (m === 'mode3') badge.innerText = `模式: 自定义(剩${state.modeConfig.customThreshold}人)`;
+      else if (m === 'mode2') badge.innerText = `模式: 安慰奖模式(${state.modeConfig.mode2ConsolationCount || 10}名安慰奖)`;
+      else if (m === 'mode3') badge.innerText = `模式: 自定义模式`;
       badge.className = "text-amber-400 font-bold";
     }
 
+    // 计算当前模式对应的决战触发阈值 $N$
     function getActiveThresholdN() {
-      if (!state.modeConfig || !state.modeConfig.enabled) return 2;
+      if (!state.modeConfig || !state.modeConfig.enabled) return 3;
       const m = state.modeConfig.selectedMode;
-      if (m === 'mode1') return 3;
-      if (m === 'mode2') return 5;
-      if (m === 'mode3') return state.modeConfig.customThreshold || 2;
-      return 2;
+      if (m === 'mode1') return 3; // 冠亚季模式
+      if (m === 'mode2') return (state.modeConfig.mode2ConsolationCount || 10) + 3; // 安慰奖名额 + 冠亚季3名
+      if (m === 'mode3') {
+        const r = state.modeConfig.mode3Rules || {};
+        let total = 0;
+        if (r.enableChampion) total += (r.championCount || 1);
+        if (r.enableRunnerUp) total += (r.runnerUpCount || 1);
+        if (r.enableThirdPlace) total += (r.thirdPlaceCount || 1);
+        if (r.enableConsolation) total += (r.consolationCount || 5);
+        return total > 0 ? total : 3;
+      }
+      return 3;
     }
 
     function changeStatus(id, newStatus) {
@@ -356,7 +511,7 @@
       const remainingPending = activeRound.candidates.filter(c => c.status === 'pending');
       const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
 
-      // 🌟 剩 1 人时自动冠军判定
+      // 🌟 独占自动冠军判定：当只剩 1 人时自动定格冠军
       if (remainingPending.length === 1) {
         activeRound.isFinal = true;
         const champion = remainingPending[0];
@@ -371,7 +526,7 @@
         };
         saveState();
         renderRoundTabs();
-        alert(`👑 🎉 最终冠军已诞生：${champion.name}！公开大屏已实时显示海报！`);
+        alert(`👑 🎉 最终冠军已自动诞生：${champion.name}！公开大屏已实时同步画面！`);
         return;
       }
 
