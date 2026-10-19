@@ -79,7 +79,6 @@
       <div class="text-xs text-slate-400 flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
         <span id="syncStatusText">已连接至 Google Sheets 数据源</span>
-        <!-- 🌟 第 2 轮及以上将自动加 disabled 灰色属性 -->
         <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
           <span>🔄 从表格更新第 1 轮名单</span>
         </button>
@@ -303,7 +302,6 @@
       document.getElementById('passedTitleText').innerText = `${activeRound.roundName || '第 1 轮'} 已普及/晋级名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
 
-      // 🌟 核心保护：第二轮及后续轮次，禁用从表格同步第一轮按钮，防止误点击
       const refreshBtn = document.getElementById('refreshSheetsBtn');
       if (refreshBtn) {
         if (currentRoundIndex !== 0) {
@@ -372,14 +370,18 @@
       const cardsHtml = pendingList.map((c, index) => {
         let borderStyle = 'border-slate-700 bg-slate-800';
         let statusBadge = '';
+        let btnOutHtml = '';
 
         if (c.status === 'out') {
-          borderStyle = 'border-slate-800 bg-slate-900/60 opacity-50';
-          statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">❌ 已淘汰</span>';
+          borderStyle = 'border-slate-800 bg-slate-900/60 opacity-60';
+          statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400 font-bold">❌ 已淘汰</span>';
+          // 🌟 淘汰后按钮自动变更为【↩️ 撤回淘汰】
+          btnOutHtml = '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="flex-1 py-1.5 text-xs rounded transition bg-amber-600 hover:bg-amber-500 text-white font-bold shadow">↩️ 撤回淘汰</button>';
+        } else {
+          btnOutHtml = '<button onclick="changeStatus(' + c.id + ', \'out\')" class="px-3 py-1.5 text-xs rounded transition bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">❌ 淘汰</button>';
         }
 
         const btnPassStyle = 'bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold';
-        const btnOutStyle = (c.status === 'out') ? 'bg-rose-500 text-white font-bold' : 'bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white';
 
         return '<div class="p-4 rounded-xl border ' + borderStyle + ' transition relative flex flex-col justify-between shadow">' +
           '<div>' +
@@ -392,8 +394,8 @@
           '</div>' +
 
           '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-2">' +
-            '<button onclick="changeStatus(' + c.id + ', \'pass\')" class="flex-1 py-1.5 text-xs rounded transition ' + btnPassStyle + '">🏆 普及</button>' +
-            '<button onclick="changeStatus(' + c.id + ', \'out\')" class="px-3 py-1.5 text-xs rounded transition ' + btnOutStyle + '">❌ 淘汰</button>' +
+            (c.status !== 'out' ? '<button onclick="changeStatus(' + c.id + ', \'pass\')" class="flex-1 py-1.5 text-xs rounded transition ' + btnPassStyle + '">🏆 普及</button>' : '') +
+            btnOutHtml +
           '</div>' +
         '</div>';
       }).join('');
