@@ -49,43 +49,37 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     
-    <!-- 顶部独立搜索框与概览 -->
-    <div class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-      <!-- 独立短搜索框 -->
-      <div class="md:col-span-1 bg-slate-800 p-3 rounded-xl border border-slate-700 flex items-center">
+    <!-- 概览数据面板 (3 列) -->
+    <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 flex justify-between items-center">
+        <span class="text-xs text-slate-400">本轮参选人数</span>
+        <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
+      </div>
+      <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 flex justify-between items-center">
+        <span class="text-xs text-slate-400">本轮已普及/晋级</span>
+        <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
+      </div>
+      <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700 flex justify-between items-center">
+        <span class="text-xs text-slate-400">本轮角逐中 / 淘汰</span>
+        <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
+      </div>
+    </div>
+
+    <!-- 轮次切换 Tabs 区域 + 右侧集成搜索框 (替代了原本的文字提示位置) -->
+    <div class="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto w-full sm:w-auto">
+        <!-- 动态生成：第 1 轮、第 2 轮选项卡 -->
+      </div>
+      
+      <!-- 搜索框架移至原本选项卡右侧提示文字的位置 -->
+      <div class="relative w-full sm:w-64 flex-shrink-0">
         <input 
           type="search" 
           id="searchInput" 
           oninput="renderPublicView()" 
           placeholder="🔍 搜索您的名字或订单号..." 
-          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
+          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner"
         >
-      </div>
-
-      <!-- 概览面板 -->
-      <div class="md:col-span-3 grid grid-cols-3 gap-3">
-        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
-          <span class="text-xs text-slate-400">本轮参选人数</span>
-          <span id="statTotalCandidates" class="text-xl font-black text-blue-400">0</span>
-        </div>
-        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
-          <span class="text-xs text-slate-400">本轮已普及/晋级</span>
-          <span id="statPassedCount" class="text-xl font-black text-emerald-400">0</span>
-        </div>
-        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
-          <span class="text-xs text-slate-400">本轮角逐中 / 淘汰</span>
-          <span id="statPendingCount" class="text-xl font-black text-amber-400">0</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 轮次切换 Tabs 区域 -->
-    <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
-      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
-        <!-- 动态生成：第 1 轮、第 2 轮选项卡 -->
-      </div>
-      <div class="text-xs text-slate-400">
-        📌 点击选项卡自由切换查看各轮次晋级榜
       </div>
     </div>
 
@@ -101,14 +95,17 @@
       </div>
     </div>
 
-    <!-- 2. 本轮角逐中 / 淘汰买家卡片展区 (一排5列) -->
+    <!-- 2. 本轮角逐中买家卡片展区 (一排5列，右上角共 N 人待角逐 N 为黄色) -->
     <div class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
       <div class="flex items-center justify-between mb-4 border-b border-slate-700/80 pb-3">
         <div class="flex items-center space-x-2">
           <span class="text-lg">⚡</span>
-          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">第 1 轮 角逐中 / 淘汰买家名单</h2>
+          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">角逐中买家名单</h2>
         </div>
-        <span id="pendingCountBadge" class="text-xs text-slate-400">共 0 人待角逐/淘汰</span>
+        <!-- 角逐中买家名单之后接着 共 N 人待角逐，N 为黄色 -->
+        <div id="pendingCountBadge" class="text-xs text-slate-300">
+          共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> 人待角逐
+        </div>
       </div>
 
       <div id="pendingGridContainer">
@@ -150,7 +147,6 @@
             state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
           }
 
-          // 🌟 检查是否有管理者触发的事件（推进下一轮、返回上一轮、终极普及等）
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
             
@@ -158,7 +154,6 @@
               currentRoundIndex = state.latestEvent.targetRoundIndex;
               showPopup("🎉 恭喜进入 " + (state.rounds[currentRoundIndex]?.roundName || "下一轮") + "！", "上一轮普及人员已继承，开启下一轮角逐！", 5);
             } else if (state.latestEvent.type === 'prevRound') {
-              // 🌟 实时同步管理者返回上一轮
               currentRoundIndex = state.latestEvent.targetRoundIndex;
             } else if (state.latestEvent.type === 'finalCongrat') {
               currentRoundIndex = state.latestEvent.targetRoundIndex;
@@ -234,6 +229,7 @@
       const total = candidates.length;
       const passed = candidates.filter(c => c.status === 'pass').length;
       const pendingAndOut = candidates.filter(c => c.status !== 'pass').length;
+      const pendingOnlyCount = candidates.filter(c => c.status === 'pending').length;
 
       document.getElementById('statTotalCandidates').innerText = total;
       document.getElementById('statPassedCount').innerText = passed;
@@ -241,9 +237,11 @@
       
       const titleName = activeRound.roundName || `第 ${currentRoundIndex + 1} 轮`;
       document.getElementById('passedTitleText').innerText = `${titleName} 已普及/晋级名单`;
-      document.getElementById('pendingTitleText').innerText = `${titleName} 角逐中 / 淘汰买家名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
-      document.getElementById('pendingCountBadge').innerText = '共 ' + pendingAndOut + ' 人待角逐/已淘汰';
+      
+      // 角逐中买家名单之后接着 共 N 人待角逐，N 为黄色
+      const numEl = document.getElementById('pendingNumberYellow');
+      if (numEl) numEl.innerText = pendingOnlyCount;
     }
 
     function renderPublicView() {
