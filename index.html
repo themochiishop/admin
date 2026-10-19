@@ -154,18 +154,7 @@
     </div>
 
     <div class="action-grid">
-      
-      <!-- 1. 新增：每月抽奖 Monthly Draw -->
-      <div class="card card-draw">
-        <div>
-          <div class="card-icon">🎁</div>
-          <div class="card-title">每月抽奖 Monthly Draw</div>
-          <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
-        </div>
-        <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
-      </div>
-
-      <!-- 2. 幸运大转盘 Wheel -->
+      <!-- 1. 幸运大转盘 Wheel -->
       <div class="card card-wheel">
         <div>
           <div class="card-icon">🎡</div>
@@ -175,7 +164,7 @@
         <a href="wheel/" class="card-btn btn-blue">打开大转盘 🎡</a>
       </div>
 
-      <!-- 3. 买家订单查询 buyer-order-search -->
+      <!-- 2. 买家订单查询 buyer-order-search -->
       <div class="card card-search">
         <div>
           <div class="card-icon">🔍</div>
@@ -185,7 +174,7 @@
         <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
       </div>
 
-      <!-- 4. 社交圈动态 my-admin-status -->
+      <!-- 3. 社交圈动态 my-admin-status -->
       <div class="card card-status">
         <div>
           <div class="card-icon">⚙️</div>
@@ -195,7 +184,7 @@
         <a href="my-admin-status/admin.html" class="card-btn btn-purple">状态动态管理 ⚙️</a>
       </div>
 
-      <!-- 5. COD 面单打印系统 -->
+      <!-- 4. COD 面单打印系统 -->
       <div class="card card-cod">
         <div>
           <div class="card-icon">📦</div>
@@ -204,7 +193,16 @@
         </div>
         <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
       </div>
-
+     
+<!-- 5. 新增：每月抽奖 Monthly Draw -->
+      <div class="card card-draw">
+        <div>
+          <div class="card-icon">🎁</div>
+          <div class="card-title">每月抽奖 Monthly Draw</div>
+          <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
+        </div>
+        <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
+      </div>
     </div>
 
     <footer>© 2026 themochiishop. All rights reserved.</footer>
@@ -218,7 +216,7 @@
       <div class="modal-title">每月抽奖活动入口</div>
       <div class="modal-desc">密码验证通过！请选择您要前往的系统页面：</div>
       <div class="modal-links">
-        <a href="./draw_tournament/admin.html" class="modal-link-btn btn-admin-portal">
+        <a href="./draw_tournament/admin.html" class="modal-link-btn btn-admin-portal" target="_blank">
           🎬 进入抽奖控制台 (Admin)
         </a>
         <a href="./draw_tournament/index.html" class="modal-link-btn btn-public-portal" target="_blank">
