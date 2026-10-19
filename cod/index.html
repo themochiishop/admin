@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/jpeg" href="logo.jpg">
   <title>COD 面单打印系统 - The Mochii Shop</title>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
@@ -20,7 +19,6 @@
 
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     
-    /* ⚡ 1. 允许页面正常避让 Google 顶部翻译条，并添加全局边距 */
     body { 
       margin: 0; 
       padding: 14px; 
@@ -29,7 +27,7 @@
       transition: top 0.2s ease;
     }
 
-    /* ⚡ 3 栏弹性布局：左(订单信息) - 中(商品清单) - 右(面单预览) */
+    /* 3 栏弹性布局：左(订单信息) - 中(商品清单) - 右(面单预览) */
     .app-container {
       display: flex;
       gap: 14px;
@@ -38,7 +36,6 @@
       align-items: flex-start;
     }
 
-    /* 通用卡片容器 */
     .panel-card {
       background: var(--card-bg);
       padding: 14px;
@@ -49,19 +46,8 @@
       overflow-y: auto;
     }
 
-    /* 左侧：基本订单信息 */
-    .left-panel {
-      width: 320px;
-      flex-shrink: 0;
-    }
-
-    /* 中间：商品清单列表 */
-    .middle-panel {
-      flex: 1;
-      min-width: 340px;
-    }
-
-    /* 右侧：面单预览区 */
+    .left-panel { width: 320px; flex-shrink: 0; }
+    .middle-panel { flex: 1; min-width: 340px; }
     .preview-panel {
       width: 380px;
       flex-shrink: 0;
@@ -116,11 +102,7 @@
     }
     .form-control:focus { border-color: var(--primary); }
 
-    .input-gear-group {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
+    .input-gear-group { display: flex; gap: 4px; align-items: center; }
     .btn-gear {
       background: #f3f4f6;
       border: 1px solid #d1d5db;
@@ -132,12 +114,26 @@
     }
     .btn-gear:hover { background: #e5e7eb; border-color: var(--primary); }
 
-    /* BUYER MESSAGE 输入框与右侧核对框组合样式 */
-    .input-msg-group {
-      display: flex;
-      gap: 4px;
+    /* ⚡ 商品清单标题旁跳转齿轮链接样式 */
+    .btn-gear-link {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s;
     }
+    .btn-gear-link:hover {
+      background: #e5e7eb;
+      border-color: var(--primary);
+    }
+
+    .input-msg-group { display: flex; gap: 4px; align-items: center; }
     .check-msg-label {
       font-size: 10.5px;
       font-weight: bold;
@@ -154,7 +150,6 @@
       height: 28px;
     }
 
-    /* 商品行卡片样式 */
     .product-row {
       background-color: #fff5f8;
       border: 1px dashed var(--border-color);
@@ -218,7 +213,6 @@
     .btn-print { flex: 1; padding: 7px; background-color: #10b981; color: white; border: none; border-radius: 5px; font-size: 12.5px; font-weight: bold; cursor: pointer; }
     .btn-settings { padding: 7px 12px; background-color: #6b7280; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
 
-    /* AWB 预览卡片 */
     .awb-card {
       width: 100%;
       background: #ffffff;
@@ -240,7 +234,6 @@
     #barcode { width: 110px; height: 42px; }
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
-    
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
     .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 600; color: #000; vertical-align: middle !important; line-height: 1.2; }
     .awb-info-table td.lbl, .awb-info-table td.colon, #awbBuyer { display: table-cell; vertical-align: middle !important; }
@@ -279,7 +272,6 @@
     }
     .awb-footer-text { font-family: 'Roboto Mono', monospace !important; font-size: 9.5px; color: #aaaaaa; }
 
-    /* 弹窗 Modal 样式 */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 9999; }
     .modal-content { background: #fff; padding: 16px; border-radius: 10px; width: 420px; max-width: 90%; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -297,10 +289,7 @@
     .setting-label { font-size: 12px; font-weight: bold; color: #1f2937; }
     .setting-desc { font-size: 11px; color: #6b7280; margin-left: auto; }
 
-    /* ⚡ 2. Google 翻译组件美化与适配 */
-    .goog-te-banner-frame.skiptranslate {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
-    }
+    .goog-te-banner-frame.skiptranslate { box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important; }
     .goog-te-gadget-simple { 
       background-color: #fff !important; 
       border: 1px solid var(--border-color) !important; 
@@ -311,7 +300,6 @@
     }
     .goog-te-gadget-icon { display: none !important; }
 
-    /* 打印优化：隐去左右控制面板，只保留 AWB 预览 */
     @media print {
       html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; top: 0px !important; }
       .left-panel, .middle-panel, .modal-overlay, .goog-te-banner-frame { display: none !important; }
@@ -342,7 +330,6 @@
 <body>
 
   <div class="app-container">
-    
     <!-- 1. 左侧：基本订单信息面板 -->
     <div class="panel-card left-panel">
       <div class="panel-header">
@@ -403,6 +390,8 @@
       <div class="panel-header">
         <div class="panel-title">
           <span>🛍️ 商品清单 Product List</span>
+          <!-- ⚡ 新增的跳转后台齿轮链接按钮 -->
+          <a href="https://admin.themochiishop.com/cod/admin.html" target="_blank" class="btn-gear-link" title="前往📦 商品分类与规格可视化管理后台">⚙️</a>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <span id="syncBadge" class="sync-badge">🔄 正在同步表格分类...</span>
@@ -410,9 +399,7 @@
         </div>
       </div>
 
-      <div id="productContainer">
-        <!-- 动态生成商品行 -->
-      </div>
+      <div id="productContainer"></div>
       
       <button class="btn-add" onclick="addProductRow()">+ 增加商品行</button>
     </div>
@@ -457,10 +444,8 @@
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- 选择表格商品/变体弹窗 Modal -->
   <div class="modal-overlay" id="catalogModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -485,9 +470,7 @@
 
       <div class="form-group" style="margin-bottom:14px;">
         <label>3. 选择数量 (Quantity)</label>
-        <select id="modalQtySelect" class="form-control prod-qty-select">
-          <!-- 动态加载 -->
-        </select>
+        <select id="modalQtySelect" class="form-control prod-qty-select"></select>
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:6px;">
@@ -497,19 +480,15 @@
     </div>
   </div>
 
-  <!-- ⚙️ SHIPP CHANNEL 快捷选择与自定义管理弹窗 -->
   <div class="modal-overlay" id="channelModal">
     <div class="modal-content">
       <div class="modal-header">
         <span class="modal-title">⚙️ 选择/自定义 SHIPP CHANNEL 选项</span>
         <span class="modal-close" onclick="closeChannelModal()">&times;</span>
       </div>
-      
       <p style="font-size:11px; color:#6b7280; margin:0 0 10px 0;">点击下方任意选项即可直接填入，或添加你自己的新渠道：</p>
 
-      <div id="channelListContainer" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px;">
-        <!-- 动态渲染 -->
-      </div>
+      <div id="channelListContainer" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px;"></div>
 
       <div style="display:flex; gap:6px;">
         <input type="text" id="newChannelInput" class="form-control" placeholder="输入自定义的新渠道 (如: Self Pickup)" style="flex:1;">
@@ -518,7 +497,6 @@
     </div>
   </div>
 
-  <!-- 快捷粘贴弹窗 -->
   <div class="modal-overlay" id="pasteModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -534,7 +512,6 @@
     </div>
   </div>
 
-  <!-- ⚙️ 打印设置弹窗 Modal -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -1036,7 +1013,6 @@
     };
   </script>
 
-  <!-- Google 翻译官方脚本组件加载 -->
   <script type="text/javascript">
     function googleTranslateElementInit() {
       new google.translate.TranslateElement({
