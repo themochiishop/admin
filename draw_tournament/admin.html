@@ -15,7 +15,7 @@
         <span class="text-2xl">🎬</span>
         <div>
           <h1 class="text-xl font-bold text-amber-400" data-i18n="adminTitle">Mochiishop 每月抽奖 - 直播控制台</h1>
-          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">管理者专属 · 实物PK多轮晋级控盘系统</p>
+          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">香水盲抽 · Shopee直播4人分组PK控盘系统</p>
         </div>
       </div>
       
@@ -42,10 +42,10 @@
         </div>
 
         <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" data-i18n="btnPrevRound">
-          🔙 返回至上一轮
+          🔙 返回上一轮
         </button>
         <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
-          <span id="advanceNextRoundBtnText" data-i18n="btnNextRound">⏩ 锁定本轮并推进下一轮</span>
+          <span id="advanceNextRoundBtnText" data-i18n="btnNextRound">⏩ 锁定本轮普及者并推进下一轮</span>
         </button>
       </div>
     </div>
@@ -71,19 +71,19 @@
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季排位模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">3人待定时，选择1人定为季军；下一轮2选1，选中者为冠军，落选者为亚军。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">3人待定时选1人定位【季军】；下一轮2选1决赛，胜者定为【冠军】，落选者定为【亚军】。</div>
             </div>
           </label>
 
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
-              <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">普及选满【安慰奖名额 + 冠亚季】时触发最终定格。</div>
+              <div class="font-bold text-emerald-300">模式 2：冠亚季 + 安慰奖模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">除了冠亚季外，保留 N 名安慰奖名额。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
-                <span class="text-slate-400">人 (默认10名)</span>
+                <span class="text-slate-400">人</span>
               </div>
             </div>
           </label>
@@ -137,21 +137,43 @@
       </div>
     </div>
 
-    <!-- 同步状态 & 搜索栏 -->
-    <div class="mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
-      <div class="text-xs text-slate-400 flex items-center space-x-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-        <span id="syncStatusText" data-i18n="syncConnected">已连接至 Google Sheets 数据源</span>
-        <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow disabled:opacity-40">
-          <span data-i18n="btnRefreshSheets">🔄 从表格更新第 1 轮名单</span>
+    <!-- ⚡ Shopee 直播 4 人PK控制操作栏 -->
+    <div class="mb-6 bg-slate-800 p-3.5 rounded-xl border border-slate-700 flex flex-col md:flex-row justify-between items-center gap-3">
+      <div class="flex items-center space-x-2 w-full md:w-auto">
+        <button onclick="pickRandomGroup4()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95">
+          <span>🎲</span>
+          <span>随机盲抽 4 人组 (对应4支香水)</span>
+        </button>
+        <button onclick="clearCurrentActiveGroup()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition font-bold">
+          清空当前4人组
         </button>
       </div>
 
-      <div class="relative w-full sm:w-64">
-        <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 快速查找买家/订单..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400">
+      <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+        <div class="text-xs text-slate-400 flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+          <span id="syncStatusText">Google Sheets 数据同步已就绪</span>
+          <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow">
+            🔄 刷新第 1 轮名单
+          </button>
+        </div>
+        <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 快速查找买家/订单..." class="w-48 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400">
       </div>
     </div>
 
+    <!-- 当前选中的 4 人 PK 组展示区 -->
+    <div id="activeGroupDisplay" class="mb-6 hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 shadow-xl">
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">🔥</span>
+          <h3 class="text-sm font-bold text-amber-400">当前正在 Shopee 直播间 4 人投票组 (盲抽香水编号 1-4)</h3>
+        </div>
+        <span class="text-xs text-slate-400">投出1位后点击【⚡ 组内胜出】，系统将自动普及该选手并淘汰同组另外3人</span>
+      </div>
+      <div id="activeGroupGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"></div>
+    </div>
+
+    <!-- 主卡片网格 -->
     <div id="adminViewContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]"></div>
 
   </main>
@@ -165,6 +187,8 @@
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
+    let activeGroup4Ids = []; // 当前抽出的 4 人组 ID
+
     let state = {
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
@@ -173,23 +197,18 @@
     const i18n = {
       zh: {
         adminTitle: "Mochiishop 每月抽奖 - 直播控制台",
-        adminSubTitle: "管理者专属 · 实物PK多轮晋级控盘系统",
-        btnPrevRound: "🔙 返回至上一轮",
-        btnNextRound: "⏩ 锁定本轮并推进【胜出普及者】至下一轮",
+        adminSubTitle: "香水盲抽 · Shopee直播4人分组PK控盘系统",
+        btnPrevRound: "🔙 返回上一轮",
+        btnNextRound: "⏩ 锁定本轮普及者并推进下一轮",
         btnResetAll: "⚠️ 重置所有轮次数据",
         statTotal: "本轮参选人数",
         statPassed: "本轮普及/胜出",
         statPending: "本轮待PK人数",
         statOut: "本轮已淘汰人数",
-        syncConnected: "已连接至 Google Sheets 数据源",
-        syncSuccess: "已成功从 Google Sheets 同步！",
-        btnRefreshSheets: "🔄 从表格更新第 1 轮名单",
-        searchPlaceholder: "🔍 快速查找买家/订单...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
-        passedTitle: "胜出普及名单",
-        noPassed: "本轮暂无胜出买家，请点击下方的【🏆 普及】...",
-        noPendingList: "本轮选拔已完成！未普及人员已划入淘汰区。请点击右上角【⏩ 推进下一轮】",
+        noPassed: "本轮暂无胜出买家，请点击卡片【🏆 普及】...",
+        noPendingList: "本轮选拔已完成！请点击右上角【⏩ 锁定本轮普及者并推进下一轮】",
         btnPass: "🏆 普及",
         btnOut: "❌ 淘汰",
         btnUndoOut: "↩️ 撤回淘汰",
@@ -197,45 +216,35 @@
       },
       en: {
         adminTitle: "Mochiishop Monthly Draw - Admin Control",
-        adminSubTitle: "Exclusive Admin · Multi-Round Tournament System",
-        btnPrevRound: "🔙 Back to Previous Round",
-        btnNextRound: "⏩ Lock & Advance Qualified Buyers",
-        btnResetAll: "⚠️ Reset All Rounds Data",
+        adminSubTitle: "Perfume Blind Draw · Shopee Live 4-Buyer Voting",
+        btnPrevRound: "🔙 Previous Round",
+        btnNextRound: "⏩ Advance Qualified Buyers",
+        btnResetAll: "⚠️ Reset All",
         statTotal: "Total Candidates",
-        statPassed: "Passed / Qualified",
+        statPassed: "Passed",
         statPending: "In Battle",
         statOut: "Eliminated",
-        syncConnected: "Connected to Google Sheets",
-        syncSuccess: "Successfully synced from Sheets!",
-        btnRefreshSheets: "🔄 Refresh Round 1 List",
-        searchPlaceholder: "🔍 Fast search name/order...",
         roundPrefix: "Round ",
         roundSuffix: "",
-        passedTitle: "Passed / Qualified List",
-        noPassed: "No qualified buyers yet in this round",
-        noPendingList: "Round completed! Click 'Advance Qualified' on top right.",
+        noPassed: "No passed buyers yet in this round",
+        noPendingList: "Round completed! Click Advance on top right.",
         btnPass: "🏆 Pass",
         btnOut: "❌ Out",
-        btnUndoOut: "↩️ Undo Out",
+        btnUndoOut: "↩️ Undo",
         badgeOut: "❌ Out"
       },
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
-        adminSubTitle: "Pengurus Eksklusif · Sistem Pertandingan Pelbagai Pusingan",
-        btnPrevRound: "🔙 Kembali ke Pusingan Sebelumnya",
-        btnNextRound: "⏩ Kunci & Majukan Calon Layak",
-        btnResetAll: "⚠️ Tetap Semula Semua Data",
+        adminSubTitle: "Cabutan Minyak Wangi · Undian 4 Pembeli Shopee Live",
+        btnPrevRound: "🔙 Pusingan Sebelum",
+        btnNextRound: "⏩ Majukan Calon Layak",
+        btnResetAll: "⚠️ Tetap Semula",
         statTotal: "Jumlah Calon",
-        statPassed: "Lulus / Layak",
+        statPassed: "Lulus",
         statPending: "Dalam Bersaing",
         statOut: "Tersingkir",
-        syncConnected: "Telah disambungkan ke Google Sheets",
-        syncSuccess: "Berjaya diselaraskan dari Sheets!",
-        btnRefreshSheets: "🔄 Kemas Kini Senarai Pusingan 1",
-        searchPlaceholder: "🔍 Cari cepat nama/pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
-        passedTitle: "Senarai Layak / Lulus",
         noPassed: "Belum ada pembeli layak dalam pusingan ini",
         noPendingList: "Pusingan selesai!",
         btnPass: "🏆 Layak",
@@ -315,6 +324,89 @@
       badge.className = "text-amber-400 font-bold";
     }
 
+    // 🎲 随机抽取 4 人盲抽组（对应香水贴纸 1-4）
+    function pickRandomGroup4() {
+      const activeRound = state.rounds[currentRoundIndex];
+      const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
+
+      if (pendingList.length === 0) {
+        alert("⚠️ 当前没有可待 PK 的买家！");
+        return;
+      }
+
+      // 随机打乱并取前 4 人
+      const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, Math.min(4, shuffled.length));
+      activeGroup4Ids = selected.map(c => c.id);
+
+      state.activeGroupIds = activeGroup4Ids;
+      saveState();
+      renderActiveGroupUI();
+      renderAdminView();
+    }
+
+    function clearCurrentActiveGroup() {
+      activeGroup4Ids = [];
+      delete state.activeGroupIds;
+      saveState();
+      document.getElementById('activeGroupDisplay').classList.add('hidden');
+      renderAdminView();
+    }
+
+    // ⚡ 组内胜出快捷键：选中的人【普及】，组内其他 3 人直接【淘汰】
+    function passWinnerAndEliminateOthers(winnerId) {
+      const activeRound = state.rounds[currentRoundIndex];
+      
+      activeGroup4Ids.forEach(id => {
+        const target = activeRound.candidates.find(c => c.id === id);
+        if (target) {
+          if (id === winnerId) {
+            target.status = 'pass';
+          } else {
+            target.status = 'out';
+          }
+        }
+      });
+
+      // 清空当前组
+      activeGroup4Ids = [];
+      delete state.activeGroupIds;
+      
+      changeStatus(winnerId, 'pass'); // 触发冠亚季特殊判定逻辑
+      saveState();
+      renderActiveGroupUI();
+    }
+
+    function renderActiveGroupUI() {
+      const displayContainer = document.getElementById('activeGroupDisplay');
+      const grid = document.getElementById('activeGroupGrid');
+      
+      if (!activeGroup4Ids || activeGroup4Ids.length === 0) {
+        displayContainer.classList.add('hidden');
+        return;
+      }
+
+      displayContainer.classList.remove('hidden');
+      const activeRound = state.rounds[currentRoundIndex];
+      const groupMembers = (activeRound.candidates || []).filter(c => activeGroup4Ids.includes(c.id));
+
+      grid.innerHTML = groupMembers.map((c, idx) => {
+        return `<div class="bg-slate-900/90 border border-amber-500/40 rounded-xl p-3 flex flex-col justify-between shadow">
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded">香水 #${idx + 1}</span>
+              <span class="text-[10px] font-mono text-slate-400">ID: ${c.id.toString().slice(-4)}</span>
+            </div>
+            <div class="font-bold text-amber-300 text-sm truncate">${escapeHtml(c.name)}</div>
+            <div class="text-[11px] text-slate-400 font-mono truncate">${escapeHtml(c.orderNo || '无订单号')}</div>
+          </div>
+          <button onclick="passWinnerAndEliminateOthers(${c.id})" class="mt-3 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition shadow">
+            ⚡ 投票胜出 (普及选他)
+          </button>
+        </div>`;
+      }).join('');
+    }
+
     // 🌟 核心排位状态变更判断：
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
@@ -328,14 +420,16 @@
 
       if (isModeEnabled && selectedMode === 'mode1') {
         const totalCandidates = activeRound.candidates;
-        const pendingList = totalCandidates.filter(c => c.status === 'pending');
         const passedList = totalCandidates.filter(c => c.status === 'pass');
 
-        // 特殊场景 A：2选1终极冠军争夺战
+        // 特殊场景 A：2 选 1 终极冠军争夺战
         if (totalCandidates.length === 2 && newStatus === 'pass') {
           const winner = target.name;
           const runnerUpObj = totalCandidates.find(c => c.id !== target.id);
           const runnerUpName = runnerUpObj ? runnerUpObj.name : "未知买家";
+
+          target.rankTitle = "👑 冠军";
+          if (runnerUpObj) runnerUpObj.rankTitle = "🥈 亚军";
 
           state.latestEvent = {
             type: 'finalCongrat',
@@ -344,14 +438,14 @@
             winnerNames: `👑 冠军: ${winner} | 🥈 亚军: ${runnerUpName}`
           };
           saveState();
-          alert(`👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：${winner}\n🥈 亚军：${runnerUpName}\n\n公开大屏已同步向全场播放恭喜海报！`);
+          alert(`👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：${winner}\n🥈 亚军：${runnerUpName}\n\n前台公开大屏已同步推送恭喜海报！`);
           return;
         }
 
-        // 特殊场景 B：3人待定环节，首位选择普及的人锁定为【季军】
+        // 特殊场景 B：3 人待定环节，首位选择普及的人锁定为【季军】
         if (totalCandidates.length === 3 && passedList.length === 1 && newStatus === 'pass') {
           target.rankTitle = "🥉 季军";
-          alert(`🥉 恭喜买家【${target.name}】获得 🥉 季军！系统已自动锁定季军位，请点击右上角【⏩ 推进下一轮】开启👑 冠亚军决战！`);
+          alert(`🥉 恭喜买家【${target.name}】获得 🥉 季军！系统已自动锁定季军位，请点击右上角【⏩ 锁定本轮普及者】开启 👑 冠亚军决战！`);
         }
       }
 
@@ -389,7 +483,7 @@
         .then(response => response.text())
         .then(csvText => {
           parseCSVToFirstRound(csvText);
-          if (isManual) alert(i18n[currentLang].syncSuccess);
+          if (isManual) alert("✅ 已成功从 Google Sheets 同步名单！");
         });
     }
 
@@ -418,7 +512,7 @@
       }
     }
 
-    // 🌟 核心推进逻辑：根据模式 1 规则处理 3人 选 1季军，余下 2人 自动开启冠军争夺战
+    // 🌟 核心推进逻辑：针对 4 人一组 PK 后剩下的买家推进下一轮
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -490,9 +584,12 @@
       });
 
       currentRoundIndex = state.rounds.length - 1;
+      activeGroup4Ids = [];
+      delete state.activeGroupIds;
+
       saveState();
       renderRoundTabs();
-      alert(`🎉 成功开启【${stageLabel}】！只保留普及成功的 ${passedCandidates.length} 名买家。`);
+      alert(`🎉 成功开启【${stageLabel}】！只保留普及成功的 ${passedCandidates.length} 名买家进入下一轮 PK。`);
     }
 
     function renderRoundTabs() {
@@ -511,7 +608,10 @@
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && Array.isArray(parsed.rounds)) state = parsed;
+          if (parsed && Array.isArray(parsed.rounds)) {
+            state = parsed;
+            if (state.activeGroupIds) activeGroup4Ids = state.activeGroupIds;
+          }
         } catch(e){}
       }
     }
@@ -533,6 +633,7 @@
     }
 
     function renderAdminView() {
+      renderActiveGroupUI();
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
@@ -568,6 +669,11 @@
         let statusBadge = '';
         let btnOutHtml = '';
 
+        if (activeGroup4Ids.includes(c.id)) {
+          borderStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500 text-slate-950 font-black">🔥 在PK组</span>`;
+        }
+
         if (c.status === 'out') {
           borderStyle = 'border-slate-800 bg-slate-900/60 opacity-60';
           statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400 font-bold">${i18n[currentLang].badgeOut}</span>`;
@@ -576,7 +682,7 @@
           btnOutHtml = `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>`;
         }
 
-        return '<div class="p-4 rounded-xl border ' + borderStyle + ' flex flex-col justify-between shadow">' +
+        return '<div class="p-4 rounded-xl border ' + borderStyle + ' flex flex-col justify-between shadow transition">' +
           '<div>' +
             '<div class="flex justify-between items-start mb-2"><span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
             '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
@@ -596,6 +702,8 @@
       if (confirm("确认重置所有数据？")) {
         currentRoundIndex = 0;
         state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
+        activeGroup4Ids = [];
+        delete state.activeGroupIds;
         delete state.latestEvent;
         saveState();
         fetchGoogleSheetsData(true);
