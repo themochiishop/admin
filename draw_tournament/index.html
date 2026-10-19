@@ -11,7 +11,6 @@
   <!-- 🌟 全屏豪华恭喜弹窗 (只剩最后2名/决战普及成功时触发 10 秒倒计时) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
-      <!-- 炫彩背景特效 -->
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-24 -right-24 w-56 h-56 bg-emerald-500/30 rounded-full blur-3xl"></div>
 
@@ -21,7 +20,6 @@
         热烈祝贺！成功获得普及荣誉！
       </h3>
       <p id="congratWinnerNames" class="text-lg font-bold text-emerald-300 my-4 bg-emerald-950/60 py-2.5 px-4 rounded-xl border border-emerald-500/40">
-        <!-- 动态显示获得普及的买家姓名 -->
       </p>
 
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow">
@@ -75,7 +73,7 @@
           <span id="statPassedCount" class="text-xl font-black text-emerald-400">0</span>
         </div>
         <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
-          <span class="text-xs text-slate-400">本轮角逐中</span>
+          <span class="text-xs text-slate-400">本轮角逐中 / 淘汰</span>
           <span id="statPendingCount" class="text-xl font-black text-amber-400">0</span>
         </div>
       </div>
@@ -103,18 +101,18 @@
       </div>
     </div>
 
-    <!-- 2. 本轮角逐中买家卡片分类展区 (一排5列) -->
+    <!-- 2. 本轮角逐中 / 淘汰买家卡片展区 (一排5列) -->
     <div class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
       <div class="flex items-center justify-between mb-4 border-b border-slate-700/80 pb-3">
         <div class="flex items-center space-x-2">
           <span class="text-lg">⚡</span>
-          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">第 1 轮 角逐中买家名单</h2>
+          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">第 1 轮 角逐中 / 淘汰买家名单</h2>
         </div>
-        <span id="pendingCountBadge" class="text-xs text-slate-400">共 0 人待角逐</span>
+        <span id="pendingCountBadge" class="text-xs text-slate-400">共 0 人待角逐/淘汰</span>
       </div>
 
       <div id="pendingGridContainer">
-        <!-- 动态渲染一排 5 个角逐卡片 -->
+        <!-- 动态渲染一排 5 个卡片 -->
       </div>
     </div>
 
@@ -126,7 +124,7 @@
 
   <script>
     let currentRoundIndex = 0;
-    let lastSeenEventTime = 0; // 记录最新弹窗事件戳
+    let lastSeenEventTime = 0;
     let popupTimer = null;
     let state = {
       rounds: [
@@ -136,7 +134,7 @@
 
     window.onload = function() {
       loadAndRender();
-      setInterval(loadAndRender, 2000); // 2 秒自动同步
+      setInterval(loadAndRender, 2000);
     };
 
     function loadAndRender() {
@@ -152,23 +150,24 @@
             state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
           }
 
-          // 🌟 检测是否有新增的恭喜/推进事件
+          // 🌟 检查是否有管理者触发的事件（推进下一轮、返回上一轮、终极普及等）
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
             
             if (state.latestEvent.type === 'advance') {
-              // 推进下一轮事件 (5秒)
               currentRoundIndex = state.latestEvent.targetRoundIndex;
               showPopup("🎉 恭喜进入 " + (state.rounds[currentRoundIndex]?.roundName || "下一轮") + "！", "上一轮普及人员已继承，开启下一轮角逐！", 5);
+            } else if (state.latestEvent.type === 'prevRound') {
+              // 🌟 实时同步管理者返回上一轮
+              currentRoundIndex = state.latestEvent.targetRoundIndex;
             } else if (state.latestEvent.type === 'finalCongrat') {
-              // 🌟 只剩最后2名时的终极普及恭喜事件 (10秒)
               currentRoundIndex = state.latestEvent.targetRoundIndex;
               showPopup("👑 恭喜买家成功获得普及荣誉！", "恭喜：" + (state.latestEvent.winnerNames || ""), 10);
             }
           }
 
           if (currentRoundIndex >= state.rounds.length) {
-            currentRoundIndex = 0;
+            currentRoundIndex = Math.max(0, state.rounds.length - 1);
           }
 
           renderRoundTabs();
@@ -178,7 +177,6 @@
       }
     }
 
-    // 🌟 10秒 / 5秒 定时器弹窗处理函数
     function showPopup(titleText, winnerSubText, durationSeconds) {
       const modal = document.getElementById('congratModal');
       const modalTitle = document.getElementById('congratModalTitle');
@@ -203,7 +201,7 @@
 
         if (timeLeft <= 0) {
           clearInterval(popupTimer);
-          modal.classList.add('hidden'); // 10秒倒计时完毕自动关闭
+          modal.classList.add('hidden');
         }
       }, 1000);
     }
@@ -235,17 +233,17 @@
 
       const total = candidates.length;
       const passed = candidates.filter(c => c.status === 'pass').length;
-      const pending = candidates.filter(c => c.status === 'pending').length;
+      const pendingAndOut = candidates.filter(c => c.status !== 'pass').length;
 
       document.getElementById('statTotalCandidates').innerText = total;
       document.getElementById('statPassedCount').innerText = passed;
-      document.getElementById('statPendingCount').innerText = pending;
+      document.getElementById('statPendingCount').innerText = pendingAndOut;
       
       const titleName = activeRound.roundName || `第 ${currentRoundIndex + 1} 轮`;
       document.getElementById('passedTitleText').innerText = `${titleName} 已普及/晋级名单`;
-      document.getElementById('pendingTitleText').innerText = `${titleName} 角逐中买家名单`;
+      document.getElementById('pendingTitleText').innerText = `${titleName} 角逐中 / 淘汰买家名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
-      document.getElementById('pendingCountBadge').innerText = '共 ' + pending + ' 人待角逐';
+      document.getElementById('pendingCountBadge').innerText = '共 ' + pendingAndOut + ' 人待角逐/已淘汰';
     }
 
     function renderPublicView() {
@@ -256,7 +254,7 @@
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      // 1. 渲染普及名单
+      // 1. 普及名单
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
@@ -271,29 +269,40 @@
         ).join('');
       }
 
-      // 2. 渲染角逐中名单
+      // 2. 本轮角逐中 / 淘汰名单 (包含待定和淘汰)
       const pendingContainer = document.getElementById('pendingGridContainer');
-      const pendingList = list.filter(c => c.status === 'pending');
+      const pendingAndOutList = list.filter(c => c.status !== 'pass');
 
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
         pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本轮抽奖名单同步中，请关注直播间...</p></div>';
         return;
       }
 
-      if (pendingList.length === 0) {
+      if (pendingAndOutList.length === 0) {
         pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>本轮角逐完毕，请关注最新通知</p></div>';
         return;
       }
 
-      const cardsHtml = pendingList.map((c, index) => 
-        '<div class="p-4 rounded-xl border border-slate-700 bg-slate-800/80 transition hover:border-amber-400/80 relative overflow-hidden flex flex-col justify-between shadow">' +
+      const cardsHtml = pendingAndOutList.map((c, index) => {
+        let cardStyle = 'border-slate-700 bg-slate-800/80';
+        let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">⌛ 角逐中</span>';
+
+        if (c.status === 'out') {
+          cardStyle = 'border-slate-800 bg-slate-900/60 opacity-50';
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-700 text-slate-400">❌ 已淘汰</span>';
+        }
+
+        return '<div class="p-4 rounded-xl border ' + cardStyle + ' transition hover:border-amber-400/80 relative overflow-hidden flex flex-col justify-between shadow">' +
           '<div>' +
-            '<div class="text-xs font-mono text-slate-400 mb-1">#' + (index + 1) + '</div>' +
+            '<div class="flex justify-between items-center mb-1">' +
+              '<span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' +
+              statusBadge +
+            '</div>' +
             '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
             '<div class="text-xs text-amber-400/80 font-mono mt-1 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
           '</div>' +
-        '</div>'
-      ).join('');
+        '</div>';
+      }).join('');
 
       pendingContainer.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
     }
