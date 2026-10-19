@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 (只剩最后2名/决战普及成功时触发 10 秒倒计时) -->
+  <!-- 🌟 全屏豪华恭喜弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -36,7 +36,11 @@
         <span class="text-2xl">🏆</span>
         <div>
           <h1 class="text-xl font-bold text-amber-400" data-i18n="publicTitle">Mochiishop 每月抽奖普及榜</h1>
-          <p class="text-xs text-slate-400" data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</p>
+          <p class="text-xs text-slate-400 flex items-center space-x-2">
+            <span data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</span>
+            <!-- 模式标签展示 -->
+            <span id="publicModeBadge" class="hidden bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[11px] font-bold"></span>
+          </p>
         </div>
       </div>
       <div class="flex items-center space-x-4">
@@ -162,7 +166,7 @@
     let currentRoundIndex = 0;
     let lastSeenEventTime = 0;
     let popupTimer = null;
-    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
 
     const i18n = {
       zh: {
@@ -291,6 +295,7 @@
       renderRoundTabs();
       renderPublicView();
       updateStats();
+      updateModeBadge();
     }
 
     function getRoundTitle(idx) {
@@ -306,6 +311,21 @@
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
+    function updateModeBadge() {
+      const badge = document.getElementById('publicModeBadge');
+      if (!badge) return;
+
+      if (state.currentMode === 'mode1') {
+        badge.innerText = "🏆 冠亚季模式";
+        badge.classList.remove('hidden');
+      } else if (state.currentMode === 'mode2') {
+        badge.innerText = "🎁 安慰奖模式";
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
     function loadAndRender() {
       const saved = localStorage.getItem('mochii_tournament_state');
       if (saved) {
@@ -314,9 +334,9 @@
           if (parsed && Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
             state = parsed;
           } else if (parsed && parsed.candidates) {
-            state = { rounds: [{ roundName: "第 1 轮", candidates: parsed.candidates }] };
+            state = { rounds: [{ roundName: "第 1 轮", candidates: parsed.candidates }], currentMode: null };
           } else {
-            state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+            state = { rounds: [{ roundName: "第 1 轮", candidates: [] }], currentMode: null };
           }
 
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
@@ -340,6 +360,7 @@
           renderRoundTabs();
           renderPublicView();
           updateStats();
+          updateModeBadge();
         } catch(e){}
       }
     }
