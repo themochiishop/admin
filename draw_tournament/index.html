@@ -82,7 +82,7 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
 
-    <!-- 🌟 动态终极大奖公示横幅 (季军/冠军专属提示) -->
+    <!-- 🌟 动态终极大奖公示/预告横幅 (3人角逐/季军/冠亚军专属提示) -->
     <div id="winnerAnnouncementBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
       <div id="winnerBannerContent" class="text-lg font-black text-amber-300 tracking-wide">
         <!-- 动态注入横幅信息 -->
@@ -375,18 +375,21 @@
           renderPublicView();
           updateStats();
           updatePublicModeUI();
-          updateWinnerBannerUI(); // 🌟 更新顶部的季军/冠亚军提示横幅
+          updateWinnerBannerUI(); // 🌟 更新顶部的预告与获胜者公示横幅
         } catch(e){}
       }
     }
 
-    // 🌟 动态更新顶部的大奖公示横幅（剩 3 人显示季军，决战 2 选 1 显示冠亚军）
+    // 🌟 动态更新顶部的大奖公示横幅（支持 3 人角逐预告、季军公示、冠亚军公示）
     function updateWinnerBannerUI() {
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
       if (!banner || !content) return;
 
-      // 检索所有轮次中带有 rankTitle 标记的买家
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+
       let championName = "";
       let runnerUpName = "";
       let thirdPlaceName = "";
@@ -399,13 +402,23 @@
         });
       });
 
+      // 1. 冠军与亚军均诞生
       if (championName && runnerUpName) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 👑 <span class="text-amber-400">冠军得主是：</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1">${escapeHtml(championName)}</span>  |  🥈 <span class="text-slate-300">亚军得主是：</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1">${escapeHtml(runnerUpName)}</span>`;
-      } else if (thirdPlaceName) {
+        content.innerHTML = `🎉 👑 <span class="text-amber-400">冠军得主是：</span><span class="text-white bg-amber-500/30 px-2.5 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span>  |  🥈 <span class="text-slate-300">亚军得主是：</span><span class="text-white bg-slate-700 px-2.5 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
+      } 
+      // 2. 季军已诞生，进入冠亚军决战 2 选 1
+      else if (thirdPlaceName) {
         banner.classList.remove('hidden');
         content.innerHTML = `🎉 🥉 <span class="text-amber-400">季军得主是：</span><span class="text-white bg-amber-600/30 px-3 py-1 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal ml-2">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
-      } else {
+      } 
+      // 3. 模式1下，当前轮次仅剩 3 人角逐，提前预告季军角逐
+      else if (isModeEnabled && selectedMode === 'mode1' && activeRound.candidates && activeRound.candidates.length === 3) {
+        banner.classList.remove('hidden');
+        content.innerHTML = `🔥 <span class="text-amber-300">冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
+      } 
+      // 其他场景隐藏
+      else {
         banner.classList.add('hidden');
       }
     }
