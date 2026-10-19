@@ -71,7 +71,7 @@
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
               <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">在前三决战轮中选满 3 名最终获奖人时，触发大屏全屏恭喜海报。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">全员判定完毕且普及区刚好 3 人时，触发大屏冠亚季军海报。</div>
             </div>
           </label>
 
@@ -79,7 +79,7 @@
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
               <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">在决战阶段选满【安慰奖名额 + 3】名额时，触发最终定格广播。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">全员判定完毕且普及区选满【安慰奖+冠亚季】名额时触发大屏海报。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
@@ -251,7 +251,7 @@
           enableChampion: true, championCount: 1,
           enableRunnerUp: true, runnerUpCount: 1,
           enableThirdPlace: true, thirdPlaceCount: 1,
-          enableConsolation: false, consolidationCount: 5
+          enableConsolation: false, consolationCount: 5
         }
       },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
@@ -433,7 +433,7 @@
       const m3 = state.modeConfig.mode3Rules || { enableChampion: true, championCount: 1, enableRunnerUp: true, runnerUpCount: 1, enableThirdPlace: true, thirdPlaceCount: 1, enableConsolation: false, consolationCount: 5 };
       document.getElementById('m3EnableChampion').checked = !!m3.enableChampion;
       document.getElementById('m3ChampionCount').value = m3.championCount || 1;
-      document.getElementById('m3EnableRunnerUp').checked = !!m3.enableRunnerUp;
+      document.getElementById('m3EnableRunnerUp').checked = !!m3.EnableRunnerUp;
       document.getElementById('m3RunnerUpCount').value = m3.runnerUpCount || 1;
       document.getElementById('m3EnableThirdPlace').checked = !!m3.enableThirdPlace;
       document.getElementById('m3ThirdPlaceCount').value = m3.thirdPlaceCount || 1;
@@ -459,7 +459,7 @@
       badge.className = "text-amber-400 font-bold";
     }
 
-    // 🌟 核心状态变更与规则判断函数（仅在决战轮触发全局弹窗）
+    // 🌟 核心状态变更与规则判断函数（仅当下方待定买家全员判定完成，即 pending === 0 时才触发最终广播）
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
@@ -468,14 +468,14 @@
       target.status = newStatus;
 
       const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
+      const pendingCandidates = activeRound.candidates.filter(c => c.status === 'pending');
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
-      // 🌟 判定是否处于【决战阶段/最后一轮】：前期的海选轮（如第1轮40人）绝对不触发冠亚季军海报！
-      const isFinalPhase = activeRound.isFinalStage || activeRound.candidates.length <= 15;
-
-      if (isFinalPhase && newStatus === 'pass') {
-        // 1. 模式 1：海选后进入决战阶段，选满 3 人时，触发冠亚季广播
+      // 🌟 关键校验：下方必须没有待角逐的买家了 (pendingCandidates.length === 0)！
+      if (pendingCandidates.length === 0 && newStatus !== 'pending') {
+        
+        // 1. 模式 1：全员判定完毕，且普及区正好是 3 人（冠亚季军）
         if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length === 3) {
           const winnerNames = passedCandidates.map(c => c.name).join('、');
           
@@ -487,11 +487,11 @@
           };
           saveState();
           renderRoundTabs();
-          alert(`👑 🎉【冠亚季军定格】！已选出 3 名获奖买家：${winnerNames}！公开大屏已实时同步显示！`);
+          alert(`👑 🎉【冠亚季军判定完成】！本轮胜出 3 名终极买家：${winnerNames}！公开大屏已实时同步广播！`);
           return;
         }
 
-        // 2. 模式 2：决战阶段，选满【安慰奖名额 + 3人】时，触发全局定格海报
+        // 2. 模式 2：全员判定完毕，且普及区选满【安慰奖名额 + 3】
         if (isModeEnabled && selectedMode === 'mode2') {
           const consCount = state.modeConfig.mode2ConsolationCount || 10;
           const totalThreshold = consCount + 3; 
@@ -595,12 +595,6 @@
       const nextRoundCandidates = passedCandidates.map((c, idx) => ({ id: Date.now() + idx, name: c.name, orderNo: c.orderNo, status: 'pending' }));
       
       let stageLabel = `第 ${nextRoundNumber} 轮`;
-      let isFinal = false;
-
-      // 如果剩余人数降到了 15 人以内（如海选40人选出10人进第2轮），自动打上决战轮标识
-      if (passedCandidates.length <= 15) {
-        isFinal = true;
-      }
 
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
@@ -614,8 +608,7 @@
       state.rounds.push({ 
         roundName: stageLabel, 
         stageName: stageLabel, 
-        candidates: nextRoundCandidates,
-        isFinalStage: isFinal
+        candidates: nextRoundCandidates
       });
       
       currentRoundIndex = state.rounds.length - 1;
