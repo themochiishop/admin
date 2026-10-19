@@ -35,7 +35,7 @@
           <span class="text-slate-400">人弹窗</span>
         </div>
 
-        <!-- 🌐 语言切换按钮 (国旗显示) -->
+        <!-- 🌐 语言切换按钮 -->
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
             <span>🇨🇳</span> <span class="text-[11px]">ZH</span>
@@ -51,8 +51,9 @@
         <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" data-i18n="btnPrevRound">
           🔙 返回至上一轮
         </button>
-        <button onclick="createNewRound()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
-          <span data-i18n="btnNextRound">⏩ 推进本轮普及人员至下一轮</span>
+        <!-- 🌟 推进按钮，最终轮时自动变灰色禁用并显示【🏆 已是最终轮】 -->
+        <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600">
+          <span id="advanceNextRoundBtnText" data-i18n="btnNextRound">⏩ 推进本轮普及人员至下一轮</span>
         </button>
       </div>
     </div>
@@ -147,6 +148,7 @@
         adminSubTitle: "管理者专属 · 多轮晋级控盘系统",
         btnPrevRound: "🔙 返回至上一轮",
         btnNextRound: "⏩ 推进本轮普及人员至下一轮",
+        btnFinalRound: "🏆 已是最终轮",
         btnResetAll: "⚠️ 重置所有轮次数据",
         statTotal: "本轮参选人数",
         statPassed: "本轮已普及/晋级",
@@ -160,6 +162,7 @@
         searchPlaceholder: "🔍 快速查找本轮买家/订单...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
+        finalRoundTitle: "🏆 最终轮",
         passedTitle: "已普及/晋级名单",
         noPassed: "本轮暂无普及买家，等待您点击普及...",
         noPendingList: "本轮普及判定已完成！可点击右上角【⏩ 推进普及名单至下一轮】",
@@ -174,6 +177,7 @@
         adminSubTitle: "Exclusive Admin · Multi-Round Tournament System",
         btnPrevRound: "🔙 Back to Previous Round",
         btnNextRound: "⏩ Advance Qualified to Next Round",
+        btnFinalRound: "🏆 Final Round Reached",
         btnResetAll: "⚠️ Reset All Rounds Data",
         statTotal: "Total Candidates",
         statPassed: "Passed / Qualified",
@@ -187,9 +191,10 @@
         searchPlaceholder: "🔍 Fast search name/order...",
         roundPrefix: "Round ",
         roundSuffix: "",
+        finalRoundTitle: "🏆 Final Round",
         passedTitle: "Passed / Qualified List",
         noPassed: "No qualified buyers yet in this round",
-        noPendingList: "Round completed! Click 'Advance Qualified to Next Round' on top right.",
+        noPendingList: "Round completed!",
         btnPass: "🏆 Pass",
         btnOut: "❌ Out",
         btnUndoOut: "↩️ Undo Out",
@@ -201,6 +206,7 @@
         adminSubTitle: "Pengurus Eksklusif · Sistem Pertandingan Pelbagai Pusingan",
         btnPrevRound: "🔙 Kembali ke Pusingan Sebelumnya",
         btnNextRound: "⏩ Majukan Calon Layak ke Pusingan Seterusnya",
+        btnFinalRound: "🏆 Pusingan Akhir",
         btnResetAll: "⚠️ Tetap Semula Semua Data",
         statTotal: "Jumlah Calon",
         statPassed: "Lulus / Layak",
@@ -214,9 +220,10 @@
         searchPlaceholder: "🔍 Cari cepat nama/pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
+        finalRoundTitle: "🏆 Pusingan Akhir",
         passedTitle: "Senarai Layak / Lulus",
         noPassed: "Belum ada pembeli layak dalam pusingan ini",
-        noPendingList: "Keputusan pusingan selesai! Klik butang di atas untuk ke pusingan seterusnya.",
+        noPendingList: "Keputusan pusingan selesai!",
         btnPass: "🏆 Layak",
         btnOut: "❌ Singkir",
         btnUndoOut: "↩️ Batal Singkir",
@@ -270,6 +277,9 @@
 
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
+      if (r && r.isFinal) {
+        return i18n[currentLang].finalRoundTitle;
+      }
       if (r && r.roundName) {
         const match = r.roundName.match(/\d+/);
         const num = match ? match[0] : (idx + 1);
@@ -357,6 +367,11 @@
 
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
+      if (currentRound && currentRound.isFinal) {
+        alert("当前已是最终轮，无法继续推进！");
+        return;
+      }
+
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
 
       if (passedCandidates.length === 0) {
@@ -454,6 +469,18 @@
       document.getElementById('passedTitleText').innerText = `${titleName} ${i18n[currentLang].passedTitle}`;
       document.getElementById('passedBadgeCount').innerText = passed + i18n[currentLang].unitPeople;
 
+      // 🌟 处于最终轮时，禁用推进按钮并显示【🏆 已是最终轮】
+      const advanceBtn = document.getElementById('advanceNextRoundBtn');
+      const advanceBtnText = document.getElementById('advanceNextRoundBtnText');
+
+      if (activeRound.isFinal) {
+        if (advanceBtn) advanceBtn.setAttribute('disabled', 'disabled');
+        if (advanceBtnText) advanceBtnText.innerText = i18n[currentLang].btnFinalRound;
+      } else {
+        if (advanceBtn) advanceBtn.removeAttribute('disabled');
+        if (advanceBtnText) advanceBtnText.innerText = i18n[currentLang].btnNextRound;
+      }
+
       const refreshBtn = document.getElementById('refreshSheetsBtn');
       if (refreshBtn) {
         if (currentRoundIndex !== 0) {
@@ -466,7 +493,6 @@
       }
     }
 
-    // 🌟 核心升级：状态变更 + 决战阈值 $N$ 人弹窗提示
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
@@ -474,21 +500,21 @@
 
       target.status = newStatus;
 
-      // 读取顶部设置的阈值 $N$
       const thresholdInput = document.getElementById('finalThresholdInput');
       const thresholdN = thresholdInput ? (parseInt(thresholdInput.value, 10) || 2) : 2;
 
-      // 计算变更状态后剩余角逐中的买家数量
       const remainingPending = activeRound.candidates.filter(c => c.status === 'pending').length;
       const passedCandidates = activeRound.candidates.filter(c => c.status === 'pass');
 
-      // 当点击的是普及，且剩余角逐人数到达设定的阈值 $N$ 时触发弹窗询问
       if (newStatus === 'pass' && remainingPending === thresholdN) {
         setTimeout(() => {
-          const isFinalRound = confirm(`🏆 提示：当前剩余角逐人数为 ${thresholdN} 人！\n\n请确认：这是最后一轮决战吗？\n\n【确定】= 是的，公布最终获胜者（大屏触发冠军海报）\n【取消】= 不是，继续下一轮`);
+          const isFinalRound = confirm(`🏆 提示：当前剩余角逐人数为 ${thresholdN} 人！\n\n请确认：这是最后一轮决战吗？\n\n【确定】= 是的，公布最终获胜者（该轮标记为最终轮）\n【取消】= 不是，继续下一轮`);
           
           if (isFinalRound) {
-            // 点击【是】: 最终选取的名单为获胜者，大屏广播 finalCongrat 事件
+            // 🌟 标记当前轮为最终轮
+            activeRound.isFinal = true;
+            activeRound.roundName = "最终轮";
+
             const winnerNames = passedCandidates.map(c => c.name).join('、');
             state.latestEvent = {
               type: 'finalCongrat',
@@ -497,9 +523,9 @@
               winnerNames: winnerNames
             };
             saveState();
-            alert(`👑 恭喜！最终普及获胜者已选出：${winnerNames}！买家公开大屏已同步展示冠军画面！`);
+            renderRoundTabs();
+            alert(`👑 恭喜！最终普及获胜者已选出：${winnerNames}！系统已设为最终轮！`);
           } else {
-            // 点击【否】: 保持正常流程，不做终极海报宣告，方便继续开启下一轮
             saveState();
           }
         }, 100);
