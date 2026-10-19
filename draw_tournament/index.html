@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 (轮次推进 / 冠军诞生时触发) -->
+  <!-- 🌟 全屏豪华恭喜弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -156,7 +156,11 @@
   <script>
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
-    let lastSeenEventTime = 0;
+    
+    // 🌟 关键修复 1：初始化时间锁，防旧数据触发误报弹窗
+    let lastSeenEventTime = Date.now(); 
+    let userManuallySelectedRound = false; // 用户是否自己手动切了Tab
+    let lastRoundsCount = 1;
     let popupTimer = null;
     let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
 
@@ -253,7 +257,7 @@
     window.onload = function() {
       setLanguage(currentLang);
       loadAndRender();
-      setInterval(loadAndRender, 1500); // 1.5秒高效高频同步
+      setInterval(loadAndRender, 1000); // 1秒实时高频监听
     };
 
     function setLanguage(lang) {
@@ -299,17 +303,24 @@
             state = parsed;
           }
 
-          // 🌟 自动跟随控制台推进轮次 / 事件响应
-          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
+          const totalRoundsCount = state.rounds.length;
+
+          // 🌟 关键修复 2：后台轮次增加（点击了推进），强制自动切 Tab 到最新的轮次
+          if (totalRoundsCount > lastRoundsCount) {
+            lastRoundsCount = totalRoundsCount;
+            userManuallySelectedRound = false; // 解除手动锁
+            currentRoundIndex = totalRoundsCount - 1; // 强制切换到最新轮次
+            showPopup(`${i18n[currentLang].promotedTitle}${getRoundTitle(currentRoundIndex)}!`, i18n[currentLang].promotedSub, 5);
+          } else if (!userManuallySelectedRound) {
+            // 如果用户没有手动切换旧 Tab，默认始终跟随最新的轮次
+            currentRoundIndex = totalRoundsCount - 1;
+          }
+
+          // 🌟 关键修复 3：仅处理【15秒内发出的新事件】，彻底杜绝过期历史事件乱弹窗
+          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime && (Date.now() - state.latestEvent.timestamp < 15000)) {
             lastSeenEventTime = state.latestEvent.timestamp;
             
-            if (state.latestEvent.type === 'advance') {
-              // 自动跟推进度到最新一轮
-              currentRoundIndex = state.latestEvent.targetRoundIndex;
-              showPopup(`${i18n[currentLang].promotedTitle}${getRoundTitle(currentRoundIndex)}!`, i18n[currentLang].promotedSub, 5);
-            } else if (state.latestEvent.type === 'prevRound') {
-              currentRoundIndex = state.latestEvent.targetRoundIndex;
-            } else if (state.latestEvent.type === 'finalCongrat') {
+            if (state.latestEvent.type === 'finalCongrat') {
               showPopup(i18n[currentLang].finalTitle, `${i18n[currentLang].finalSubPrefix}${state.latestEvent.winnerNames || ""}`, 10);
             }
           }
@@ -362,6 +373,7 @@
 
     function switchRound(idx) {
       currentRoundIndex = idx;
+      userManuallySelectedRound = true; // 标记用户主动切了 Tab
       renderRoundTabs();
       renderPublicView();
       updateStats();
@@ -398,7 +410,7 @@
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      // 1. 已普及买家 (带订单编号)
+      // 1. 已普及买家
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
@@ -413,7 +425,7 @@
         ).join('');
       }
 
-      // 2. ⚡ 角逐中买家卡片 (强制一排 5 列 + 带订单编号)
+      // 2. ⚡ 角逐中买家卡片 (强制一排 5 列)
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
@@ -435,7 +447,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3 min-w-[600px]">' + cardsHtml + '</div>';
       }
 
-      // 3. ❌ 已淘汰买家 (右侧独立竖排 + 带订单编号)
+      // 3. ❌ 已淘汰买家
       const outContainer = document.getElementById('outListContainer');
       const outList = list.filter(c => c.status === 'out');
 
