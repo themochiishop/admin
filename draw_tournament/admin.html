@@ -45,7 +45,7 @@
           🔙 返回至上一轮
         </button>
         <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
-          <span id="advanceNextRoundBtnText" data-i18n="btnNextRound">⏩ 锁定本轮并推进【胜出普及者】至下一轮</span>
+          <span id="advanceNextRoundBtnText" data-i18n="btnNextRound">⏩ 锁定本轮并推进下一轮</span>
         </button>
       </div>
     </div>
@@ -70,8 +70,8 @@
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
-              <div class="font-bold text-amber-300">模式 1：冠亚季模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">在终极决战轮（选满最后3名胜出买家）时，触发大屏全屏冠亚季军恭喜海报。</div>
+              <div class="font-bold text-amber-300">模式 1：冠亚季排位模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">3人待定时，选择1人定为季军；下一轮2选1，选中者为冠军，落选者为亚军。</div>
             </div>
           </label>
 
@@ -79,7 +79,7 @@
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
               <div class="font-bold text-emerald-300">模式 2：包含安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">在决战阶段选满【安慰奖+冠亚季】名额时触发定格广播。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">普及选满【安慰奖名额 + 冠亚季】时触发最终定格。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
@@ -130,7 +130,7 @@
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
-          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">本轮胜出普及名单 (晋级区)</h2>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">本轮普及/晋级区</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1"></div>
@@ -315,12 +315,46 @@
       badge.className = "text-amber-400 font-bold";
     }
 
+    // 🌟 核心排位状态变更判断：
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
       if (!target) return;
 
       target.status = newStatus;
+
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+
+      if (isModeEnabled && selectedMode === 'mode1') {
+        const totalCandidates = activeRound.candidates;
+        const pendingList = totalCandidates.filter(c => c.status === 'pending');
+        const passedList = totalCandidates.filter(c => c.status === 'pass');
+
+        // 特殊场景 A：2选1终极冠军争夺战
+        if (totalCandidates.length === 2 && newStatus === 'pass') {
+          const winner = target.name;
+          const runnerUpObj = totalCandidates.find(c => c.id !== target.id);
+          const runnerUpName = runnerUpObj ? runnerUpObj.name : "未知买家";
+
+          state.latestEvent = {
+            type: 'finalCongrat',
+            timestamp: Date.now(),
+            targetRoundIndex: currentRoundIndex,
+            winnerNames: `👑 冠军: ${winner} | 🥈 亚军: ${runnerUpName}`
+          };
+          saveState();
+          alert(`👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：${winner}\n🥈 亚军：${runnerUpName}\n\n公开大屏已同步向全场播放恭喜海报！`);
+          return;
+        }
+
+        // 特殊场景 B：3人待定环节，首位选择普及的人锁定为【季军】
+        if (totalCandidates.length === 3 && passedList.length === 1 && newStatus === 'pass') {
+          target.rankTitle = "🥉 季军";
+          alert(`🥉 恭喜买家【${target.name}】获得 🥉 季军！系统已自动锁定季军位，请点击右上角【⏩ 推进下一轮】开启👑 冠亚军决战！`);
+        }
+      }
+
       saveState();
     }
 
@@ -384,47 +418,67 @@
       }
     }
 
-    // 🌟 核心修复逻辑：推进下一轮时，未普及的人全部强制判定为“淘汰”，只带走普及成功的人！
+    // 🌟 核心推进逻辑：根据模式 1 规则处理 3人 选 1季军，余下 2人 自动开启冠军争夺战
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
+      const totalCandidates = currentRound.candidates || [];
 
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+
+      // 🌟 模式 1 的 3 人转 2 人冠亚军决赛特殊逻辑
+      if (isModeEnabled && selectedMode === 'mode1' && totalCandidates.length === 3) {
+        if (passedCandidates.length !== 1) {
+          alert("⚠️ 当本轮只剩 3 人角逐时，请先点击【🏆 普及】选出 1 名季军，剩下的 2 人将自动开启冠亚军终极决赛！");
+          return;
+        }
+
+        const thirdPlaceWinner = passedCandidates[0];
+        const nextRoundCandidates = totalCandidates.filter(c => c.id !== thirdPlaceWinner.id).map((c, idx) => ({
+          id: Date.now() + idx,
+          name: c.name,
+          orderNo: c.orderNo,
+          status: 'pending'
+        }));
+
+        const stageLabel = `👑 冠亚军终极决战 (2选1)`;
+
+        state.rounds.push({
+          roundName: stageLabel,
+          stageName: stageLabel,
+          candidates: nextRoundCandidates
+        });
+
+        currentRoundIndex = state.rounds.length - 1;
+        saveState();
+        renderRoundTabs();
+        alert(`🎉 已成功锁定【🥉 季军：${thirdPlaceWinner.name}】！正式开启【👑 冠亚军终极决战】！`);
+        return;
+      }
+
+      // 常规推进流程
       if (passedCandidates.length === 0) {
         alert("⚠️ 请先点击【🏆 普及】选出晋级的买家，才能推进开启下一轮！");
         return;
       }
 
-      if (passedCandidates.length === currentRound.candidates.length) {
+      if (passedCandidates.length === totalCandidates.length) {
         alert("⚠️ 全员都是普及，无人被淘汰！请确认是否有落选的买家。");
         return;
       }
 
-      // 1. 将当前轮次未普及的买家统一设置为 out (淘汰)
+      // 将未普及的买家统一设置为 out
       currentRound.candidates.forEach(c => {
         if (c.status !== 'pass') c.status = 'out';
       });
 
-      // 2. 检查是否达到了最终决战人数（例如仅剩3人，直接判定终极胜出）
-      if (passedCandidates.length <= 3) {
-        const winnerNames = passedCandidates.map(c => c.name).join('、');
-        state.latestEvent = {
-          type: 'finalCongrat',
-          timestamp: Date.now(),
-          targetRoundIndex: currentRoundIndex,
-          winnerNames: winnerNames
-        };
-        saveState();
-        alert(`👑 🎉 恭喜最终 ${passedCandidates.length} 名冠军买家：${winnerNames}！全屏恭喜海报已在大屏弹窗展示！`);
-        return;
-      }
-
-      // 3. 正常生成下一轮名单：严格【只继承】上一轮普及成功的买家
       const nextRoundNumber = state.rounds.length + 1;
       const nextRoundCandidates = passedCandidates.map((c, idx) => ({
         id: Date.now() + idx,
         name: c.name,
         orderNo: c.orderNo,
-        status: 'pending' // 进入下一轮后重置为待PK状态
+        status: 'pending'
       }));
 
       const stageLabel = `第 ${nextRoundNumber} 轮 (${passedCandidates.length}人角逐)`;
@@ -436,16 +490,9 @@
       });
 
       currentRoundIndex = state.rounds.length - 1;
-
-      state.latestEvent = {
-        type: 'advance',
-        timestamp: Date.now(),
-        targetRoundIndex: currentRoundIndex
-      };
-
       saveState();
       renderRoundTabs();
-      alert(`🎉 成功开启【${stageLabel}】！本轮仅保留上一轮普及成功的 ${passedCandidates.length} 名买家，未普及者已存入上一轮淘汰区！`);
+      alert(`🎉 成功开启【${stageLabel}】！只保留普及成功的 ${passedCandidates.length} 名买家。`);
     }
 
     function renderRoundTabs() {
@@ -497,13 +544,15 @@
       if (passedList.length === 0) {
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${i18n[currentLang].noPassed}</span>`;
       } else {
-        passedContainer.innerHTML = passedList.map(c => 
-          '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
+        passedContainer.innerHTML = passedList.map(c => {
+          const rankText = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${c.rankTitle}</span>` : '';
+          return '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
+            rankText +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
             '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
             '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 rounded">✕</button>' +
-          '</div>'
-        ).join('');
+          '</div>';
+        }).join('');
       }
 
       const container = document.getElementById('adminViewContainer');
