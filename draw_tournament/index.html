@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mochiishop 每月抽奖 - 实时晋级榜</title>
+  <title>Mochiishop 每月抽奖 - 实时晋级大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
@@ -18,11 +18,9 @@
           <p class="text-xs text-slate-400">直播实时同步 · 买家公开公示大屏</p>
         </div>
       </div>
-      <div class="flex items-center space-x-3">
-        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-          <span>直播实时同步中...</span>
-        </div>
+      <div class="flex items-center space-x-2 text-xs text-slate-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+        <span>直播实时同步中...</span>
       </div>
     </div>
   </header>
@@ -30,56 +28,64 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     
-    <!-- 数据概览卡片 -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本月入围总人数</span>
-        <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
-      </div>
-      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">已成功普及/晋级</span>
-        <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
-      </div>
-      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">待抽奖/角逐中</span>
-        <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
-      </div>
-    </div>
-
-    <!-- 顶栏：已普及名单展示区 (原搜索框位置) + 右侧短搜索框 -->
-    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
-      
-      <!-- 已普及名单 (原本搜索框的位置) -->
-      <div class="flex-1 w-full">
-        <div class="flex items-center space-x-2 mb-2">
-          <span class="text-lg">🏆</span>
-          <h2 class="text-md font-bold text-emerald-400">已普及/晋级名单</h2>
-          <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
-        </div>
-        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1">
-          <!-- 动态渲染晋级买家小卡片/标签 -->
-        </div>
-      </div>
-
-      <!-- 右移短搜索框 -->
-      <div class="w-full md:w-auto flex-shrink-0 self-end md:self-center">
+    <!-- 顶部独立搜索框与数据概览 -->
+    <div class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+      <!-- 搜索框独立上移 -->
+      <div class="md:col-span-1 bg-slate-800 p-3 rounded-xl border border-slate-700 flex items-center">
         <input 
           type="search" 
           id="searchInput" 
           oninput="renderPublicView()" 
-          placeholder="🔍 搜索买家/订单..." 
-          class="w-full md:w-56 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
+          placeholder="🔍 搜索您的名字或订单号..." 
+          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
         >
       </div>
 
+      <!-- 数据概览小卡片 -->
+      <div class="md:col-span-3 grid grid-cols-3 gap-3">
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
+          <span class="text-xs text-slate-400">本轮参选人数</span>
+          <span id="statTotalCandidates" class="text-xl font-black text-blue-400">0</span>
+        </div>
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
+          <span class="text-xs text-slate-400">本轮已普及/晋级</span>
+          <span id="statPassedCount" class="text-xl font-black text-emerald-400">0</span>
+        </div>
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
+          <span class="text-xs text-slate-400">本轮角逐中</span>
+          <span id="statPendingCount" class="text-xl font-black text-amber-400">0</span>
+        </div>
+      </div>
     </div>
 
-    <!-- 底部：⌛ 角逐中买家卡片分类展区 (取消卡片内重复状态标签，一排5个) -->
+    <!-- 轮次切换 Tabs 区域 -->
+    <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
+      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
+        <!-- 动态生成：第 1 轮、第 2 轮、第 3 轮卡片按钮 -->
+      </div>
+      <div class="text-xs text-slate-400">
+        📌 点击查看不同轮次晋级结果
+      </div>
+    </div>
+
+    <!-- 1. 已普及/晋级名单展示区 -->
+    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 shadow-lg shadow-emerald-950/20">
+      <div class="flex items-center space-x-2 mb-3">
+        <span class="text-lg">🏆</span>
+        <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
+        <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
+      </div>
+      <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+        <!-- 动态渲染本轮普及买家 -->
+      </div>
+    </div>
+
+    <!-- 2. 本轮角逐中买家卡片分类展区 (一排 5 个卡片) -->
     <div class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
       <div class="flex items-center justify-between mb-4 border-b border-slate-700/80 pb-3">
         <div class="flex items-center space-x-2">
-          <span class="text-lg">⌛</span>
-          <h2 class="text-md font-bold text-amber-400">角逐中买家名单</h2>
+          <span class="text-lg">⚡</span>
+          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">第 1 轮 角逐中买家名单</h2>
         </div>
         <span id="pendingCountBadge" class="text-xs text-slate-400">共 0 人待角逐</span>
       </div>
@@ -96,11 +102,16 @@
   </footer>
 
   <script>
-    let state = { candidates: [] };
+    let currentRoundIndex = 0; // 当前查看的轮次 (0 表示第 1 轮)
+    let state = {
+      rounds: [
+        { roundName: "第 1 轮", candidates: [] }
+      ]
+    };
 
     window.onload = function() {
       loadAndRender();
-      setInterval(loadAndRender, 3000);
+      setInterval(loadAndRender, 3000); // 3 秒轮询
     };
 
     function loadAndRender() {
@@ -108,37 +119,68 @@
       if (saved) {
         try { 
           state = JSON.parse(saved); 
+          if (!state.rounds || state.rounds.length === 0) {
+            state.rounds = [{ roundName: "第 1 轮", candidates: state.candidates || [] }];
+          }
+          renderRoundTabs();
           renderPublicView();
           updateStats();
         } catch(e){}
       }
     }
 
+    function renderRoundTabs() {
+      const container = document.getElementById('roundTabsContainer');
+      if (!container) return;
+
+      container.innerHTML = state.rounds.map((r, idx) => {
+        const isActive = (idx === currentRoundIndex);
+        const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+        return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
+          ${escapeHtml(r.roundName)} (${(r.candidates || []).filter(c => c.status === 'pass').length} 晋级)
+        </button>`;
+      }).join('');
+    }
+
+    function switchRound(idx) {
+      currentRoundIndex = idx;
+      renderRoundTabs();
+      renderPublicView();
+      updateStats();
+    }
+
     function updateStats() {
-      const total = state.candidates.length;
-      const passed = state.candidates.filter(c => c.status === 'pass').length;
-      const pending = state.candidates.filter(c => c.status === 'pending').length;
+      const activeRound = state.rounds[currentRoundIndex] || { candidates: [] };
+      const candidates = activeRound.candidates || [];
+
+      const total = candidates.length;
+      const passed = candidates.filter(c => c.status === 'pass').length;
+      const pending = candidates.filter(c => c.status === 'pending').length;
 
       document.getElementById('statTotalCandidates').innerText = total;
       document.getElementById('statPassedCount').innerText = passed;
       document.getElementById('statPendingCount').innerText = pending;
+      
+      document.getElementById('passedTitleText').innerText = `${activeRound.roundName} 已普及/晋级名单`;
+      document.getElementById('pendingTitleText').innerText = `${activeRound.roundName} 角逐中买家名单`;
       document.getElementById('passedBadgeCount').innerText = passed + '人';
       document.getElementById('pendingCountBadge').innerText = '共 ' + pending + ' 人待角逐';
     }
 
     function renderPublicView() {
+      const activeRound = state.rounds[currentRoundIndex] || { candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
-      const list = state.candidates.filter(c => 
+      const list = (activeRound.candidates || []).filter(c => 
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      // 1. 渲染顶部【已普及名单】区
+      // 1. 渲染普及名单
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
       if (passedList.length === 0) {
-        passedContainer.innerHTML = '<span class="text-xs text-slate-500 italic">暂无普及买家，直播抽出中...</span>';
+        passedContainer.innerHTML = '<span class="text-xs text-slate-500 italic">本轮暂无普及买家，直播抽出中...</span>';
       } else {
         passedContainer.innerHTML = passedList.map(c => 
           '<div class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
@@ -148,17 +190,17 @@
         ).join('');
       }
 
-      // 2. 渲染底部【⌛ 角逐中】卡片区 (一排5列，卡片内不再显示重复的角逐中标签)
+      // 2. 渲染角逐中名单 (一排5列)
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
-      if (state.candidates.length === 0) {
-        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本月抽奖名单同步中，请关注直播间...</p></div>';
+      if (activeRound.candidates.length === 0) {
+        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本轮抽奖名单同步中，请关注直播间...</p></div>';
         return;
       }
 
       if (pendingList.length === 0) {
-        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>全员角逐完毕或未找到匹配的待定买家</p></div>';
+        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>本轮角逐完毕，下一轮即将开启</p></div>';
         return;
       }
 
