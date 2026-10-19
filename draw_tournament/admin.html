@@ -19,6 +19,22 @@
         </div>
       </div>
       <div class="flex items-center space-x-3">
+        <!-- ⚙️ 决战弹窗阈值设置项 -->
+        <div class="flex items-center space-x-1.5 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-lg text-xs">
+          <span class="text-amber-400 font-bold">⚙️ 决战提示阈值:</span>
+          <span class="text-slate-400">剩</span>
+          <input 
+            type="number" 
+            id="finalThresholdInput" 
+            value="2" 
+            min="1" 
+            max="10" 
+            class="w-10 bg-slate-800 border border-slate-600 rounded text-center text-amber-300 font-bold focus:outline-none focus:border-amber-400"
+            title="设置当剩余角逐买家达到此人数时弹出决战询问框"
+          >
+          <span class="text-slate-400">人弹窗</span>
+        </div>
+
         <!-- 🌐 语言切换按钮 (国旗显示) -->
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
@@ -427,134 +443,4 @@
       const total = candidates.length;
       const passed = candidates.filter(c => c.status === 'pass').length;
       const pending = candidates.filter(c => c.status === 'pending').length;
-      const out = candidates.filter(c => c.status === 'out').length;
-
-      document.getElementById('statTotalCandidates').innerText = total;
-      document.getElementById('statPassedCount').innerText = passed;
-      document.getElementById('statPendingCount').innerText = pending;
-      document.getElementById('statOutCount').innerText = out;
-
-      const titleName = getRoundTitle(currentRoundIndex);
-      document.getElementById('passedTitleText').innerText = `${titleName} ${i18n[currentLang].passedTitle}`;
-      document.getElementById('passedBadgeCount').innerText = passed + i18n[currentLang].unitPeople;
-
-      const refreshBtn = document.getElementById('refreshSheetsBtn');
-      if (refreshBtn) {
-        if (currentRoundIndex !== 0) {
-          refreshBtn.setAttribute('disabled', 'disabled');
-          refreshBtn.title = '第 2 轮及后续轮次禁止刷新表格，防止覆盖晋级数据！';
-        } else {
-          refreshBtn.removeAttribute('disabled');
-          refreshBtn.title = '从表格更新第 1 轮名单';
-        }
-      }
-    }
-
-    function changeStatus(id, newStatus) {
-      const activeRound = state.rounds[currentRoundIndex];
-      const target = activeRound.candidates.find(c => c.id === id);
-      if (target) {
-        target.status = newStatus;
-
-        if (newStatus === 'pass' && activeRound.candidates.length <= 2) {
-          const winnerNames = activeRound.candidates.filter(c => c.status === 'pass').map(c => c.name).join('、');
-          state.latestEvent = {
-            type: 'finalCongrat',
-            timestamp: Date.now(),
-            targetRoundIndex: currentRoundIndex,
-            winnerNames: winnerNames
-          };
-        }
-
-        saveState();
-      }
-    }
-
-    function renderAdminView() {
-      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
-      const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-
-      let list = (activeRound.candidates || []).filter(c => 
-        (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
-      );
-
-      // 1. 普及区
-      const passedContainer = document.getElementById('passedListContainer');
-      const passedList = list.filter(c => c.status === 'pass');
-
-      if (passedList.length === 0) {
-        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${i18n[currentLang].noPassed}</span>`;
-      } else {
-        passedContainer.innerHTML = passedList.map(c => 
-          '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
-            '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
-            '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo) + '</span>' +
-            '<button onclick="changeStatus(' + c.id + ', \'pending\')" title="Undo" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 bg-emerald-900/50 rounded hover:bg-rose-950 transition">✕</button>' +
-          '</div>'
-        ).join('');
-      }
-
-      // 2. 待角逐 / 淘汰卡片区
-      const container = document.getElementById('adminViewContainer');
-      const pendingList = list.filter(c => c.status === 'pending' || c.status === 'out');
-
-      if (pendingList.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${i18n[currentLang].noPendingList}</p></div>`;
-        return;
-      }
-
-      const cardsHtml = pendingList.map((c, index) => {
-        let borderStyle = 'border-slate-700 bg-slate-800';
-        let statusBadge = '';
-        let btnOutHtml = '';
-
-        if (c.status === 'out') {
-          borderStyle = 'border-slate-800 bg-slate-900/60 opacity-60';
-          statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400 font-bold">${i18n[currentLang].badgeOut}</span>`;
-          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'pending')" class="flex-1 py-1.5 text-xs rounded transition bg-amber-600 hover:bg-amber-500 text-white font-bold shadow">${i18n[currentLang].btnUndoOut}</button>`;
-        } else {
-          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded transition bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>`;
-        }
-
-        const btnPassStyle = 'bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold';
-
-        return '<div class="p-4 rounded-xl border ' + borderStyle + ' transition relative flex flex-col justify-between shadow">' +
-          '<div>' +
-            '<div class="flex justify-between items-start mb-2">' +
-              '<span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' +
-              statusBadge +
-            '</div>' +
-            '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
-            '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '-') + '</div>' +
-          '</div>' +
-
-          '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-2">' +
-            (c.status !== 'out' ? `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1.5 text-xs rounded transition ${btnPassStyle}">${i18n[currentLang].btnPass}</button>` : '') +
-            btnOutHtml +
-          '</div>' +
-        '</div>';
-      }).join('');
-
-      container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
-    }
-
-    function resetRounds() {
-      if (confirm("确认重置所有轮次数据？这会清除所有轮次并重新从 Google 表格同步第 1 轮。")) {
-        currentRoundIndex = 0;
-        state = {
-          rounds: [
-            { roundName: "第 1 轮", candidates: [] }
-          ]
-        };
-        localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-        fetchGoogleSheetsData(true);
-      }
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-  </script>
-</body>
-</html>
+      const out = candidates.filter(c => c.status === 'out
