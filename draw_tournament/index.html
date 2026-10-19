@@ -41,6 +41,24 @@
       </div>
       
       <div class="flex items-center space-x-4">
+        <!-- 🌟 当前生效模式徽章 + 鼠标悬停（Hover）规则提示框 -->
+        <div class="relative group cursor-pointer">
+          <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
+            模式: 加载中...
+          </span>
+
+          <!-- 悬停时弹出的详细规则框 (Tooltip) -->
+          <div class="absolute right-0 top-full mt-2 w-64 p-3 bg-slate-950/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
+            <div class="font-bold text-amber-400 mb-1.5 pb-1 border-b border-slate-800 flex items-center space-x-1">
+              <span>📋</span>
+              <span data-i18n="tooltipTitle">当前模式奖励规则详情</span>
+            </div>
+            <div id="modeTooltipContent" class="space-y-1 text-slate-300 text-[11px]">
+              模式规则加载中...
+            </div>
+          </div>
+        </div>
+
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span data-i18n="liveSyncText">直播实时同步中...</span>
@@ -157,18 +175,31 @@
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
     
-    // 🌟 关键修复 1：初始化时间锁，防旧数据触发误报弹窗
     let lastSeenEventTime = Date.now(); 
-    let userManuallySelectedRound = false; // 用户是否自己手动切了Tab
+    let userManuallySelectedRound = false; 
     let lastRoundsCount = 1;
     let popupTimer = null;
-    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+    let state = { 
+      modeConfig: {
+        enabled: true,
+        selectedMode: 'mode1',
+        mode2ConsolationCount: 10,
+        mode3Rules: {
+          enableChampion: true, championCount: 1,
+          enableRunnerUp: true, runnerUpCount: 1,
+          enableThirdPlace: true, thirdPlaceCount: 1,
+          enableConsolation: false, consolationCount: 5
+        }
+      }, 
+      rounds: [{ roundName: "第 1 轮", candidates: [] }] 
+    };
 
     const i18n = {
       zh: {
         publicTitle: "Mochiishop 每月抽奖普及榜",
         publicSubTitle: "直播实时同步 · 买家公开公示大屏",
         liveSyncText: "直播实时同步中...",
+        tooltipTitle: "当前模式奖励规则详情",
         statTotal: "本轮参选人数",
         statPassed: "本轮已普及/晋级",
         statPending: "本轮角逐中人数",
@@ -192,12 +223,23 @@
         finalSubPrefix: "恭喜：",
         autoCloseText: "将在",
         autoCloseSuffix: "秒后自动切回大屏榜单...",
-        unitPeople: "人"
+        unitPeople: "人",
+        modePrefix: "模式: ",
+        mode1: "冠亚季模式",
+        mode2: "安慰奖模式",
+        mode3: "自定义模式",
+        modeDisabled: "自由模式 (未启用规则)",
+        champion: "👑 冠军名额: ",
+        runnerUp: "🥈 亚军名额: ",
+        thirdPlace: "🥉 季军名额: ",
+        consolation: "🎁 安慰奖名额: ",
+        unitPerson: "名"
       },
       en: {
         publicTitle: "Mochiishop Monthly Draw Leaderboard",
         publicSubTitle: "Live Synchronization · Public Display Screen",
         liveSyncText: "Syncing Live...",
+        tooltipTitle: "Current Mode Rules Detail",
         statTotal: "Round Candidates",
         statPassed: "Passed / Advanced",
         statPending: "Currently In Battle",
@@ -221,12 +263,23 @@
         finalSubPrefix: "Congratulations: ",
         autoCloseText: "Auto returning in",
         autoCloseSuffix: "seconds...",
-        unitPeople: ""
+        unitPeople: "",
+        modePrefix: "Mode: ",
+        mode1: "Podium Mode",
+        mode2: "Consolation Mode",
+        mode3: "Custom Mode",
+        modeDisabled: "Disabled Rules",
+        champion: "👑 Champion: ",
+        runnerUp: "🥈 Runner-up: ",
+        thirdPlace: "🥉 3rd Place: ",
+        consolation: "🎁 Consolation: ",
+        unitPerson: " winner(s)"
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
         publicSubTitle: "Masa Nyata Siaran Langsung · Paparan Awam",
         liveSyncText: "Diselaraskan Masa Nyata...",
+        tooltipTitle: "Butiran Peraturan Mod Semasa",
         statTotal: "Jumlah Calon Pusingan",
         statPassed: "Lulus / Layak",
         statPending: "Dalam Bersaing",
@@ -250,14 +303,24 @@
         finalSubPrefix: "Tahniah: ",
         autoCloseText: "Kembali secara automatik dalam",
         autoCloseSuffix: "saat...",
-        unitPeople: " orang"
+        unitPeople: " orang",
+        modePrefix: "Mod: ",
+        mode1: "Mod Tiga Teratas",
+        mode2: "Mod Saguhati",
+        mode3: "Mod Khas",
+        modeDisabled: "Peraturan Nyahaktif",
+        champion: "👑 Juara: ",
+        runnerUp: "🥈 Naib Juara: ",
+        thirdPlace: "🥉 Tempat Ke-3: ",
+        consolation: "🎁 Saguhati: ",
+        unitPerson: " orang"
       }
     };
 
     window.onload = function() {
       setLanguage(currentLang);
       loadAndRender();
-      setInterval(loadAndRender, 1000); // 1秒实时高频监听
+      setInterval(loadAndRender, 1000); 
     };
 
     function setLanguage(lang) {
@@ -288,6 +351,55 @@
       renderRoundTabs();
       renderPublicView();
       updateStats();
+      updatePublicModeUI();
+    }
+
+    // 🌟 更新模式徽章与 Hover 提示框的内容
+    function updatePublicModeUI() {
+      const badge = document.getElementById('publicModeBadge');
+      const tooltip = document.getElementById('modeTooltipContent');
+      if (!badge || !tooltip) return;
+
+      const lang = i18n[currentLang];
+
+      if (!state.modeConfig || state.modeConfig.enabled === false) {
+        badge.innerText = `${lang.modePrefix}${lang.modeDisabled}`;
+        badge.className = "text-xs font-bold text-slate-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-slate-500";
+        tooltip.innerHTML = `<div class="text-slate-400 italic">${lang.modeDisabled}</div>`;
+        return;
+      }
+
+      badge.className = "text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60";
+      const m = state.modeConfig.selectedMode || 'mode1';
+
+      if (m === 'mode1') {
+        badge.innerText = `${lang.modePrefix}${lang.mode1}`;
+        tooltip.innerHTML = `
+          <div class="flex justify-between items-center text-amber-300"><span>${lang.champion}</span><span class="font-bold">1 ${lang.unitPerson}</span></div>
+          <div class="flex justify-between items-center text-slate-300"><span>${lang.runnerUp}</span><span class="font-bold">1 ${lang.unitPerson}</span></div>
+          <div class="flex justify-between items-center text-amber-600"><span>${lang.thirdPlace}</span><span class="font-bold">1 ${lang.unitPerson}</span></div>
+        `;
+      } else if (m === 'mode2') {
+        const consCount = state.modeConfig.mode2ConsolationCount || 10;
+        badge.innerText = `${lang.modePrefix}${lang.mode2}`;
+        tooltip.innerHTML = `
+          <div class="flex justify-between items-center text-amber-300"><span>${lang.champion}</span><span class="font-bold">1 ${lang.unitPerson}</span></div>
+          <div class="flex justify-between items-center text-slate-300"><span>${lang.runnerUp}</span><span class="font-bold">1 ${lang.unitPerson}</span></div>
+          <div class="flex justify-between items-center text-amber-600"><span>${lang.thirdPlace}</span><span class="font-bold">1 ${lang.unitPerson}</span></div>
+          <div class="flex justify-between items-center text-emerald-400 pt-1 border-t border-slate-800/80"><span>${lang.consolation}</span><span class="font-bold">${consCount} ${lang.unitPerson}</span></div>
+        `;
+      } else if (m === 'mode3') {
+        badge.innerText = `${lang.modePrefix}${lang.mode3}`;
+        const r = state.modeConfig.mode3Rules || {};
+        let lines = [];
+        if (r.enableChampion) lines.push(`<div class="flex justify-between items-center text-amber-300"><span>${lang.champion}</span><span class="font-bold">${r.championCount || 1} ${lang.unitPerson}</span></div>`);
+        if (r.enableRunnerUp) lines.push(`<div class="flex justify-between items-center text-slate-300"><span>${lang.runnerUp}</span><span class="font-bold">${r.runnerUpCount || 1} ${lang.unitPerson}</span></div>`);
+        if (r.enableThirdPlace) lines.push(`<div class="flex justify-between items-center text-amber-600"><span>${lang.thirdPlace}</span><span class="font-bold">${r.thirdPlaceCount || 1} ${lang.unitPerson}</span></div>`);
+        if (r.enableConsolation) lines.push(`<div class="flex justify-between items-center text-emerald-400"><span>${lang.consolation}</span><span class="font-bold">${r.consolationCount || 5} ${lang.unitPerson}</span></div>`);
+
+        if (lines.length === 0) tooltip.innerHTML = `<div class="text-slate-400 italic">未开启任何名额限制</div>`;
+        else tooltip.innerHTML = lines.join('');
+      }
     }
 
     function getRoundTitle(idx) {
@@ -305,18 +417,15 @@
 
           const totalRoundsCount = state.rounds.length;
 
-          // 🌟 关键修复 2：后台轮次增加（点击了推进），强制自动切 Tab 到最新的轮次
           if (totalRoundsCount > lastRoundsCount) {
             lastRoundsCount = totalRoundsCount;
-            userManuallySelectedRound = false; // 解除手动锁
-            currentRoundIndex = totalRoundsCount - 1; // 强制切换到最新轮次
+            userManuallySelectedRound = false; 
+            currentRoundIndex = totalRoundsCount - 1; 
             showPopup(`${i18n[currentLang].promotedTitle}${getRoundTitle(currentRoundIndex)}!`, i18n[currentLang].promotedSub, 5);
           } else if (!userManuallySelectedRound) {
-            // 如果用户没有手动切换旧 Tab，默认始终跟随最新的轮次
             currentRoundIndex = totalRoundsCount - 1;
           }
 
-          // 🌟 关键修复 3：仅处理【15秒内发出的新事件】，彻底杜绝过期历史事件乱弹窗
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime && (Date.now() - state.latestEvent.timestamp < 15000)) {
             lastSeenEventTime = state.latestEvent.timestamp;
             
@@ -332,6 +441,7 @@
           renderRoundTabs();
           renderPublicView();
           updateStats();
+          updatePublicModeUI();
         } catch(e){}
       }
     }
@@ -373,7 +483,7 @@
 
     function switchRound(idx) {
       currentRoundIndex = idx;
-      userManuallySelectedRound = true; // 标记用户主动切了 Tab
+      userManuallySelectedRound = true; 
       renderRoundTabs();
       renderPublicView();
       updateStats();
