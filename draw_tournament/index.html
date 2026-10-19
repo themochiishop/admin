@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 全屏豪华恭喜弹窗 (只剩最后2名/决战普及成功时触发 10 秒倒计时) -->
+  <!-- 🌟 全屏豪华恭喜弹窗 (只剩最后2名/决战普及成功时触发 10 秒倒计时) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -24,7 +24,7 @@
 
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow">
         <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-        <span data-i18n="modalCountdown">将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">10</span> 秒后自动切回大屏榜单...</span>
+        <span><span data-i18n="autoCloseText">将在</span> <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">10</span> <span data-i18n="autoCloseSuffix">秒后自动切回大屏榜单...</span></span>
       </div>
     </div>
   </div>
@@ -35,23 +35,28 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🏆</span>
         <div>
-          <h1 class="text-xl font-bold text-amber-400" data-i18n="mainTitle">Mochiishop 每月抽奖普及榜</h1>
-          <p class="text-xs text-slate-400" data-i18n="subTitle">直播实时同步 · 买家公开公示大屏</p>
+          <h1 class="text-xl font-bold text-amber-400" data-i18n="publicTitle">Mochiishop 每月抽奖普及榜</h1>
+          <p class="text-xs text-slate-400" data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</p>
         </div>
       </div>
-      
-      <!-- 右侧：实时同步标识 + 语言切换按钮 -->
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-4">
+        <!-- 实时同步提示 -->
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-          <span data-i18n="liveSync">直播实时同步中...</span>
+          <span data-i18n="liveSyncText">直播实时同步中...</span>
         </div>
-        <!-- 🌐 语言选择菜单 -->
-        <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-400 cursor-pointer">
-          <option value="zh">华语 (ZH)</option>
-          <option value="en">English (EN)</option>
-          <option value="ms">Bahasa Melayu (MS)</option>
-        </select>
+        <!-- 🌐 语言切换选择器 (国旗显示) -->
+        <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
+          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
+            <span>🇨🇳</span> <span class="text-[11px]">ZH</span>
+          </button>
+          <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
+            <span>🇬🇧</span> <span class="text-[11px]">EN</span>
+          </button>
+          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
+            <span>🇲🇾</span> <span class="text-[11px]">MS</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -59,10 +64,10 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     
-    <!-- 1. 最顶层：轮次切换 Tabs 区域 + 移至此位置的短搜索框 -->
+    <!-- 1. 最顶层：轮次切换 Tabs 区域 + 短搜索框 -->
     <div class="mb-6 flex items-center justify-between border-b border-slate-800 pb-3 gap-4">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
-        <!-- 动态生成：第 1 轮、第 2 轮选项卡 -->
+        <!-- 动态生成轮次选项卡 -->
       </div>
       
       <!-- 搜索框 -->
@@ -71,7 +76,6 @@
           type="search" 
           id="searchInput" 
           oninput="renderPublicView()" 
-          data-i18n-placeholder="searchPlaceholder"
           placeholder="🔍 搜索您的名字或订单号..." 
           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner"
         >
@@ -103,7 +107,7 @@
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
-          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">已普及/晋级名单</h2>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
@@ -119,9 +123,9 @@
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
           <span class="text-lg">⚡</span>
-          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400" data-i18n="pendingTitle">角逐中买家名单</h2>
+          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">角逐中买家名单</h2>
           <span class="text-xs text-slate-300 ml-2">
-            <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> <span data-i18n="totalPendingSuffix">人待角逐</span>
+            <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span>
           </span>
         </div>
 
@@ -135,7 +139,7 @@
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
             <span class="text-sm">❌</span>
-            <h3 class="text-xs font-bold text-slate-400" data-i18n="outTitle">已淘汰名单</h3>
+            <h3 class="text-xs font-bold text-slate-400" data-i18n="outListTitle">已淘汰名单</h3>
           </div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
         </div>
@@ -154,118 +158,150 @@
   </footer>
 
   <script>
-    // 🌐 多语言翻译字典
-    const i18nDict = {
+    let currentLang = localStorage.getItem('mochii_lang') || 'zh';
+    let currentRoundIndex = 0;
+    let lastSeenEventTime = 0;
+    let popupTimer = null;
+    let state = { rounds: [{ roundName: "第 1 轮", candidates: [] }] };
+
+    const i18n = {
       zh: {
-        mainTitle: "Mochiishop 每月抽奖普及榜",
-        subTitle: "直播实时同步 · 买家公开公示大屏",
-        liveSync: "直播实时同步中...",
-        searchPlaceholder: "🔍 搜索您的名字或订单号...",
+        publicTitle: "Mochiishop 每月抽奖普及榜",
+        publicSubTitle: "直播实时同步 · 买家公开公示大屏",
+        liveSyncText: "直播实时同步中...",
         statTotal: "本轮参选人数",
         statPassed: "本轮已普及/晋级",
         statPending: "本轮角逐中人数",
         statOut: "本轮已淘汰人数",
-        passedSuffix: "已普及/晋级名单",
-        pendingTitle: "角逐中买家名单",
-        outTitle: "已淘汰名单",
+        passedBadgeSuffix: "人",
         totalPrefix: "共",
-        totalPendingSuffix: "人待角逐",
-        noPassed: "本轮暂无普及买家，直播抽出中...",
-        noPending: "本轮全员判定完毕",
-        noOut: "暂无淘汰人员",
-        syncingText: "本轮抽奖名单同步中，请关注直播间...",
-        unitPeople: "人",
+        pendingSuffix: "人待角逐",
+        outListTitle: "已淘汰名单",
+        searchPlaceholder: "🔍 搜索您的名字或订单号...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
-        promotedText: " 晋级",
-        modalCountdown: "将在 %s 秒后自动切回大屏榜单..."
+        passedTitle: "已普及/晋级名单",
+        pendingTitle: "角逐中买家名单",
+        noPassed: "本轮暂无普及买家，直播抽出中...",
+        noCandidates: "本轮抽奖名单同步中，请关注直播间...",
+        allDone: "本轮全员判定完毕",
+        noOut: "暂无淘汰人员",
+        promotedTitle: "🎉 恭喜进入 ",
+        promotedSub: "上一轮普及人员已继承，开启下一轮角逐！",
+        finalTitle: "👑 恭喜买家成功获得普及荣誉！",
+        finalSubPrefix: "恭喜：",
+        autoCloseText: "将在",
+        autoCloseSuffix: "秒后自动切回大屏榜单...",
+        unitPeople: "人"
       },
       en: {
-        mainTitle: "Mochiishop Monthly Draw Leaderboard",
-        subTitle: "Live Sync · Public Display Board",
-        liveSync: "Live Syncing...",
-        searchPlaceholder: "🔍 Search name or order no...",
-        statTotal: "Total Candidates",
-        statPassed: "Passed / Promoted",
-        statPending: "Competing",
+        publicTitle: "Mochiishop Monthly Draw Leaderboard",
+        publicSubTitle: "Live Synchronization · Public Display Screen",
+        liveSyncText: "Syncing Live...",
+        statTotal: "Round Candidates",
+        statPassed: "Passed / Advanced",
+        statPending: "Currently In Battle",
         statOut: "Eliminated",
-        passedSuffix: "Promoted List",
-        pendingTitle: "Competing List",
-        outTitle: "Eliminated List",
+        passedBadgeSuffix: " ",
         totalPrefix: "Total",
-        totalPendingSuffix: "competing",
-        noPassed: "No candidates promoted yet...",
-        noPending: "Round completed",
-        noOut: "No eliminated candidates",
-        syncingText: "Syncing candidates, stay tuned...",
-        unitPeople: "",
+        pendingSuffix: "In Battle",
+        outListTitle: "Eliminated List",
+        searchPlaceholder: "🔍 Search name or order no...",
         roundPrefix: "Round ",
         roundSuffix: "",
-        promotedText: " Passed",
-        modalCountdown: "Auto returning in %s seconds..."
+        passedTitle: "Passed / Advanced List",
+        pendingTitle: "Active Candidates",
+        noPassed: "No qualified buyers yet, waiting for live draw...",
+        noCandidates: "Syncing candidates list, stay tuned...",
+        allDone: "All candidates processed for this round",
+        noOut: "No eliminated candidates",
+        promotedTitle: "🎉 Promoted to ",
+        promotedSub: "Qualified buyers from previous round loaded. Battle starts!",
+        finalTitle: "👑 Winner Announcement!",
+        finalSubPrefix: "Congratulations: ",
+        autoCloseText: "Auto returning in",
+        autoCloseSuffix: "seconds...",
+        unitPeople: ""
       },
       ms: {
-        mainTitle: "Papan Pendahulu Cabutan Bulanan Mochiishop",
-        subTitle: "Senarai Langsung · Paparan Awam Pembeli",
-        liveSync: "Masa Nyata...",
-        searchPlaceholder: "🔍 Cari nama atau no pesanan...",
-        statTotal: "Jumlah Calon",
-        statPassed: "Layak / Lulus",
-        statPending: "Dalam Saingan",
+        publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
+        publicSubTitle: "Masa Nyata Siaran Langsung · Paparan Awam",
+        liveSyncText: "Diselaraskan Masa Nyata...",
+        statTotal: "Jumlah Calon Pusingan",
+        statPassed: "Lulus / Layak",
+        statPending: "Dalam Bersaing",
         statOut: "Tersingkir",
-        passedSuffix: "Senarai Layak",
-        pendingTitle: "Senarai Dalam Saingan",
-        outTitle: "Senarai Tersingkir",
+        passedBadgeSuffix: " orang",
         totalPrefix: "Jumlah",
-        totalPendingSuffix: "dalam saingan",
-        noPassed: "Tiada pembeli layak lagi...",
-        noPending: "Pusingan selesai",
-        noOut: "Tiada calon tersingkir",
-        syncingText: "Menyegerakkan calon...",
-        unitPeople: "orang",
+        pendingSuffix: "orang bersaing",
+        outListTitle: "Senarai Tersingkir",
+        searchPlaceholder: "🔍 Cari nama atau no pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
-        promotedText: " Layak",
-        modalCountdown: "Kembali secara automatik dalam %s saat..."
+        passedTitle: "Senarai Layak / Lulus",
+        pendingTitle: "Calon Bersaing",
+        noPassed: "Belum ada pembeli layak, tunggu cabutan langsung...",
+        noCandidates: "Menyelaraskan senarai calon, sila tunggu...",
+        allDone: "Semua calon telah diproses untuk pusingan ini",
+        noOut: "Tiada calon tersingkir",
+        promotedTitle: "🎉 Layak ke ",
+        promotedSub: "Pembeli layak dari pusingan sebelumnya dimuatkan!",
+        finalTitle: "👑 Pengumuman Pemenang!",
+        finalSubPrefix: "Tahniah: ",
+        autoCloseText: "Kembali secara automatik dalam",
+        autoCloseSuffix: "saat...",
+        unitPeople: " orang"
       }
     };
 
-    let currentLang = localStorage.getItem('mochii_draw_lang') || 'zh';
-    let currentRoundIndex = 0;
-    let lastSeenEventTime = 0;
-    let popupTimer = null;
-    let state = {
-      rounds: [
-        { roundName: "第 1 轮", candidates: [] }
-      ]
-    };
-
     window.onload = function() {
-      document.getElementById('langSelect').value = currentLang;
-      applyLanguage(currentLang);
+      setLanguage(currentLang);
       loadAndRender();
       setInterval(loadAndRender, 2000);
     };
 
-    function changeLanguage(lang) {
+    function setLanguage(lang) {
       currentLang = lang;
-      localStorage.setItem('mochii_draw_lang', lang);
-      applyLanguage(lang);
+      localStorage.setItem('mochii_lang', lang);
+
+      // 切换按钮高亮
+      ['zh', 'en', 'ms'].forEach(l => {
+        const btn = document.getElementById(`langBtn-${l}`);
+        if (btn) {
+          if (l === lang) {
+            btn.className = "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold";
+          } else {
+            btn.className = "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
+          }
+        }
+      });
+
+      // 静态文本翻译
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang][key] !== undefined) {
+          el.innerText = i18n[lang][key];
+        }
+      });
+
+      // 搜索框 Placeholder
+      const searchInp = document.getElementById('searchInput');
+      if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
+
       renderRoundTabs();
       renderPublicView();
       updateStats();
     }
 
-    function applyLanguage(lang) {
-      const dict = i18nDict[lang] || i18nDict.zh;
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (dict[key]) el.innerText = dict[key];
-      });
-      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-        const key = el.getAttribute('data-i18n-placeholder');
-        if (dict[key]) el.placeholder = dict[key];
-      });
+    function getRoundTitle(idx) {
+      const r = state.rounds[idx];
+      if (r && r.roundName) {
+        // 如果原本存的是中文“第 N 轮”转换显示
+        const match = r.roundName.match(/\d+/);
+        const num = match ? match[0] : (idx + 1);
+        return `${i18n[currentLang].roundPrefix}${num}${i18n[currentLang].roundSuffix}`;
+      }
+      return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
     function loadAndRender() {
@@ -283,16 +319,15 @@
 
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
-            const dict = i18nDict[currentLang] || i18nDict.zh;
             
             if (state.latestEvent.type === 'advance') {
               currentRoundIndex = state.latestEvent.targetRoundIndex;
-              showPopup("🎉 " + getRoundName(currentRoundIndex), dict.syncingText, 5);
+              showPopup(`${i18n[currentLang].promotedTitle}${getRoundTitle(currentRoundIndex)}!`, i18n[currentLang].promotedSub, 5);
             } else if (state.latestEvent.type === 'prevRound') {
               currentRoundIndex = state.latestEvent.targetRoundIndex;
             } else if (state.latestEvent.type === 'finalCongrat') {
               currentRoundIndex = state.latestEvent.targetRoundIndex;
-              showPopup("👑 " + dict.statPassed, (state.latestEvent.winnerNames || ""), 10);
+              showPopup(i18n[currentLang].finalTitle, `${i18n[currentLang].finalSubPrefix}${state.latestEvent.winnerNames || ""}`, 10);
             }
           }
 
@@ -305,11 +340,6 @@
           updateStats();
         } catch(e){}
       }
-    }
-
-    function getRoundName(idx) {
-      const dict = i18nDict[currentLang] || i18nDict.zh;
-      return `${dict.roundPrefix}${idx + 1}${dict.roundSuffix}`;
     }
 
     function showPopup(titleText, winnerSubText, durationSeconds) {
@@ -345,14 +375,13 @@
       const container = document.getElementById('roundTabsContainer');
       if (!container) return;
 
-      const dict = i18nDict[currentLang] || i18nDict.zh;
-
       container.innerHTML = state.rounds.map((r, idx) => {
         const isActive = (idx === currentRoundIndex);
         const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
-        const title = getRoundName(idx);
+        const title = getRoundTitle(idx);
+        const passedCount = (r.candidates || []).filter(c => c.status === 'pass').length;
         return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
-          ${escapeHtml(title)} (${(r.candidates || []).filter(c => c.status === 'pass').length}${dict.promotedText})
+          ${escapeHtml(title)} (${passedCount})
         </button>`;
       }).join('');
     }
@@ -365,8 +394,7 @@
     }
 
     function updateStats() {
-      const dict = i18nDict[currentLang] || i18nDict.zh;
-      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
 
       const total = candidates.length;
@@ -379,32 +407,32 @@
       document.getElementById('statPendingCount').innerText = pendingCount;
       document.getElementById('statOutCount').innerText = outCount;
       
-      const titleName = getRoundName(currentRoundIndex);
-      document.getElementById('passedTitleText').innerText = `${titleName} ${dict.passedSuffix}`;
-      document.getElementById('passedBadgeCount').innerText = `${passed} ${dict.unitPeople}`;
+      const titleName = getRoundTitle(currentRoundIndex);
+      document.getElementById('passedTitleText').innerText = `${titleName} ${i18n[currentLang].passedTitle}`;
+      document.getElementById('pendingTitleText').innerText = i18n[currentLang].pendingTitle;
+      document.getElementById('passedBadgeCount').innerText = passed + i18n[currentLang].passedBadgeSuffix;
       
       const numEl = document.getElementById('pendingNumberYellow');
       if (numEl) numEl.innerText = pendingCount;
 
       const outBadge = document.getElementById('outBadgeCount');
-      if (outBadge) outBadge.innerText = `${outCount} ${dict.unitPeople}`;
+      if (outBadge) outBadge.innerText = outCount + i18n[currentLang].unitPeople;
     }
 
     function renderPublicView() {
-      const dict = i18nDict[currentLang] || i18nDict.zh;
-      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
       const list = (activeRound.candidates || []).filter(c => 
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      // 1. 普及名单渲染
+      // 1. 普及名单
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
       if (passedList.length === 0) {
-        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${dict.noPassed}</span>`;
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${i18n[currentLang].noPassed}</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => 
           '<div class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
@@ -414,14 +442,14 @@
         ).join('');
       }
 
-      // 2. 左侧角逐中买家 (硬性 grid-cols-5)
+      // 2. 左侧：角逐中卡片
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>${dict.syncingText}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>${i18n[currentLang].noCandidates}</p></div>`;
       } else if (pendingList.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${dict.noPending}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${i18n[currentLang].allDone}</p></div>`;
       } else {
         const cardsHtml = pendingList.map((c, index) => 
           '<div class="p-3.5 rounded-xl border border-slate-700 bg-slate-800/80 transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
@@ -436,12 +464,12 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3 min-w-[600px]">' + cardsHtml + '</div>';
       }
 
-      // 3. 右侧：已淘汰名单
+      // 3. 右侧：已淘汰列表
       const outContainer = document.getElementById('outListContainer');
       const outList = list.filter(c => c.status === 'out');
 
       if (outList.length === 0) {
-        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${dict.noOut}</p>`;
+        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${i18n[currentLang].noOut}</p>`;
       } else {
         outContainer.innerHTML = outList.map(c => 
           '<div class="p-2.5 bg-slate-900/60 border border-slate-800 rounded-lg flex flex-col justify-center opacity-60 hover:opacity-100 transition">' +
