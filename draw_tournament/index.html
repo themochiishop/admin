@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 (只剩最后2名/决战普及成功时触发 10 秒倒计时) -->
+  <!-- 全屏豪华恭喜弹窗 (只剩最后2名/决战普及成功时触发 10 秒倒计时) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -24,7 +24,7 @@
 
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow">
         <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-        <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">10</span> 秒后自动切回大屏榜单...</span>
+        <span data-i18n="modalCountdown">将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">10</span> 秒后自动切回大屏榜单...</span>
       </div>
     </div>
   </div>
@@ -35,13 +35,23 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🏆</span>
         <div>
-          <h1 class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖普及榜</h1>
-          <p class="text-xs text-slate-400">直播实时同步 · 买家公开公示大屏</p>
+          <h1 class="text-xl font-bold text-amber-400" data-i18n="mainTitle">Mochiishop 每月抽奖普及榜</h1>
+          <p class="text-xs text-slate-400" data-i18n="subTitle">直播实时同步 · 买家公开公示大屏</p>
         </div>
       </div>
-      <div class="flex items-center space-x-2 text-xs text-slate-400">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-        <span>直播实时同步中...</span>
+      
+      <!-- 右侧：实时同步标识 + 语言切换按钮 -->
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+          <span data-i18n="liveSync">直播实时同步中...</span>
+        </div>
+        <!-- 🌐 语言选择菜单 -->
+        <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-400 cursor-pointer">
+          <option value="zh">华语 (ZH)</option>
+          <option value="en">English (EN)</option>
+          <option value="ms">Bahasa Melayu (MS)</option>
+        </select>
       </div>
     </div>
   </header>
@@ -55,12 +65,13 @@
         <!-- 动态生成：第 1 轮、第 2 轮选项卡 -->
       </div>
       
-      <!-- 搜索框置于轮次选项卡行右侧 -->
+      <!-- 搜索框 -->
       <div class="relative w-full sm:w-64 flex-shrink-0">
         <input 
           type="search" 
           id="searchInput" 
           oninput="renderPublicView()" 
+          data-i18n-placeholder="searchPlaceholder"
           placeholder="🔍 搜索您的名字或订单号..." 
           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner"
         >
@@ -70,19 +81,19 @@
     <!-- 2. 第二层：4 块概览数据统计卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮参选人数</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
         <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮已普及/晋级</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已普及/晋级</span>
         <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮角逐中人数</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPending">本轮角逐中人数</span>
         <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮已淘汰人数</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statOut">本轮已淘汰人数</span>
         <span id="statOutCount" class="text-2xl font-black text-slate-400">0</span>
       </div>
     </div>
@@ -92,7 +103,7 @@
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
-          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">已普及/晋级名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
@@ -104,28 +115,27 @@
     <!-- 4. 第四层：拆分为【左边角逐中买家】与【右边独立一列已淘汰名单】 -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       
-      <!-- 左侧：⚡ 角逐中买家名单 (占 4 列空间，内部卡片强制所有分辨率下一排 5 张) -->
+      <!-- 左侧：⚡ 角逐中买家名单 -->
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
           <span class="text-lg">⚡</span>
-          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">角逐中买家名单</h2>
-          <!-- 紧接着显示 共 N 人待角逐 (N为黄色) -->
+          <h2 id="pendingTitleText" class="text-md font-bold text-amber-400" data-i18n="pendingTitle">角逐中买家名单</h2>
           <span class="text-xs text-slate-300 ml-2">
-            共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> 人待角逐
+            <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> <span data-i18n="totalPendingSuffix">人待角逐</span>
           </span>
         </div>
 
         <div id="pendingGridContainer" class="overflow-x-auto pb-2">
-          <!-- 动态渲染强制 5 列角逐买家卡片 -->
+          <!-- 动态渲染 5 列角逐买家卡片 -->
         </div>
       </div>
 
-      <!-- 右侧：❌ 已淘汰名单 (独立单列显示，占 1 列空间) -->
+      <!-- 右侧：❌ 已淘汰名单 -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
             <span class="text-sm">❌</span>
-            <h3 class="text-xs font-bold text-slate-400">已淘汰名单</h3>
+            <h3 class="text-xs font-bold text-slate-400" data-i18n="outTitle">已淘汰名单</h3>
           </div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
         </div>
@@ -144,6 +154,83 @@
   </footer>
 
   <script>
+    // 🌐 多语言翻译字典
+    const i18nDict = {
+      zh: {
+        mainTitle: "Mochiishop 每月抽奖普及榜",
+        subTitle: "直播实时同步 · 买家公开公示大屏",
+        liveSync: "直播实时同步中...",
+        searchPlaceholder: "🔍 搜索您的名字或订单号...",
+        statTotal: "本轮参选人数",
+        statPassed: "本轮已普及/晋级",
+        statPending: "本轮角逐中人数",
+        statOut: "本轮已淘汰人数",
+        passedSuffix: "已普及/晋级名单",
+        pendingTitle: "角逐中买家名单",
+        outTitle: "已淘汰名单",
+        totalPrefix: "共",
+        totalPendingSuffix: "人待角逐",
+        noPassed: "本轮暂无普及买家，直播抽出中...",
+        noPending: "本轮全员判定完毕",
+        noOut: "暂无淘汰人员",
+        syncingText: "本轮抽奖名单同步中，请关注直播间...",
+        unitPeople: "人",
+        roundPrefix: "第 ",
+        roundSuffix: " 轮",
+        promotedText: " 晋级",
+        modalCountdown: "将在 %s 秒后自动切回大屏榜单..."
+      },
+      en: {
+        mainTitle: "Mochiishop Monthly Draw Leaderboard",
+        subTitle: "Live Sync · Public Display Board",
+        liveSync: "Live Syncing...",
+        searchPlaceholder: "🔍 Search name or order no...",
+        statTotal: "Total Candidates",
+        statPassed: "Passed / Promoted",
+        statPending: "Competing",
+        statOut: "Eliminated",
+        passedSuffix: "Promoted List",
+        pendingTitle: "Competing List",
+        outTitle: "Eliminated List",
+        totalPrefix: "Total",
+        totalPendingSuffix: "competing",
+        noPassed: "No candidates promoted yet...",
+        noPending: "Round completed",
+        noOut: "No eliminated candidates",
+        syncingText: "Syncing candidates, stay tuned...",
+        unitPeople: "",
+        roundPrefix: "Round ",
+        roundSuffix: "",
+        promotedText: " Passed",
+        modalCountdown: "Auto returning in %s seconds..."
+      },
+      ms: {
+        mainTitle: "Papan Pendahulu Cabutan Bulanan Mochiishop",
+        subTitle: "Senarai Langsung · Paparan Awam Pembeli",
+        liveSync: "Masa Nyata...",
+        searchPlaceholder: "🔍 Cari nama atau no pesanan...",
+        statTotal: "Jumlah Calon",
+        statPassed: "Layak / Lulus",
+        statPending: "Dalam Saingan",
+        statOut: "Tersingkir",
+        passedSuffix: "Senarai Layak",
+        pendingTitle: "Senarai Dalam Saingan",
+        outTitle: "Senarai Tersingkir",
+        totalPrefix: "Jumlah",
+        totalPendingSuffix: "dalam saingan",
+        noPassed: "Tiada pembeli layak lagi...",
+        noPending: "Pusingan selesai",
+        noOut: "Tiada calon tersingkir",
+        syncingText: "Menyegerakkan calon...",
+        unitPeople: "orang",
+        roundPrefix: "Pusingan ",
+        roundSuffix: "",
+        promotedText: " Layak",
+        modalCountdown: "Kembali secara automatik dalam %s saat..."
+      }
+    };
+
+    let currentLang = localStorage.getItem('mochii_draw_lang') || 'zh';
     let currentRoundIndex = 0;
     let lastSeenEventTime = 0;
     let popupTimer = null;
@@ -154,9 +241,32 @@
     };
 
     window.onload = function() {
+      document.getElementById('langSelect').value = currentLang;
+      applyLanguage(currentLang);
       loadAndRender();
       setInterval(loadAndRender, 2000);
     };
+
+    function changeLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('mochii_draw_lang', lang);
+      applyLanguage(lang);
+      renderRoundTabs();
+      renderPublicView();
+      updateStats();
+    }
+
+    function applyLanguage(lang) {
+      const dict = i18nDict[lang] || i18nDict.zh;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.innerText = dict[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key]) el.placeholder = dict[key];
+      });
+    }
 
     function loadAndRender() {
       const saved = localStorage.getItem('mochii_tournament_state');
@@ -173,15 +283,16 @@
 
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
+            const dict = i18nDict[currentLang] || i18nDict.zh;
             
             if (state.latestEvent.type === 'advance') {
               currentRoundIndex = state.latestEvent.targetRoundIndex;
-              showPopup("🎉 恭喜进入 " + (state.rounds[currentRoundIndex]?.roundName || "下一轮") + "！", "上一轮普及人员已继承，开启下一轮角逐！", 5);
+              showPopup("🎉 " + getRoundName(currentRoundIndex), dict.syncingText, 5);
             } else if (state.latestEvent.type === 'prevRound') {
               currentRoundIndex = state.latestEvent.targetRoundIndex;
             } else if (state.latestEvent.type === 'finalCongrat') {
               currentRoundIndex = state.latestEvent.targetRoundIndex;
-              showPopup("👑 恭喜买家成功获得普及荣誉！", "恭喜：" + (state.latestEvent.winnerNames || ""), 10);
+              showPopup("👑 " + dict.statPassed, (state.latestEvent.winnerNames || ""), 10);
             }
           }
 
@@ -194,6 +305,11 @@
           updateStats();
         } catch(e){}
       }
+    }
+
+    function getRoundName(idx) {
+      const dict = i18nDict[currentLang] || i18nDict.zh;
+      return `${dict.roundPrefix}${idx + 1}${dict.roundSuffix}`;
     }
 
     function showPopup(titleText, winnerSubText, durationSeconds) {
@@ -229,12 +345,14 @@
       const container = document.getElementById('roundTabsContainer');
       if (!container) return;
 
+      const dict = i18nDict[currentLang] || i18nDict.zh;
+
       container.innerHTML = state.rounds.map((r, idx) => {
         const isActive = (idx === currentRoundIndex);
         const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
-        const title = r.roundName || `第 ${idx + 1} 轮`;
+        const title = getRoundName(idx);
         return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
-          ${escapeHtml(title)} (${(r.candidates || []).filter(c => c.status === 'pass').length} 晋级)
+          ${escapeHtml(title)} (${(r.candidates || []).filter(c => c.status === 'pass').length}${dict.promotedText})
         </button>`;
       }).join('');
     }
@@ -247,6 +365,7 @@
     }
 
     function updateStats() {
+      const dict = i18nDict[currentLang] || i18nDict.zh;
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const candidates = activeRound.candidates || [];
 
@@ -260,20 +379,19 @@
       document.getElementById('statPendingCount').innerText = pendingCount;
       document.getElementById('statOutCount').innerText = outCount;
       
-      const titleName = activeRound.roundName || `第 ${currentRoundIndex + 1} 轮`;
-      document.getElementById('passedTitleText').innerText = `${titleName} 已普及/晋级名单`;
-      document.getElementById('passedBadgeCount').innerText = passed + '人';
+      const titleName = getRoundName(currentRoundIndex);
+      document.getElementById('passedTitleText').innerText = `${titleName} ${dict.passedSuffix}`;
+      document.getElementById('passedBadgeCount').innerText = `${passed} ${dict.unitPeople}`;
       
-      // 共 N 人待角逐，N 为黄色
       const numEl = document.getElementById('pendingNumberYellow');
       if (numEl) numEl.innerText = pendingCount;
 
-      // 已淘汰统计数字
       const outBadge = document.getElementById('outBadgeCount');
-      if (outBadge) outBadge.innerText = outCount + '人';
+      if (outBadge) outBadge.innerText = `${outCount} ${dict.unitPeople}`;
     }
 
     function renderPublicView() {
+      const dict = i18nDict[currentLang] || i18nDict.zh;
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
@@ -286,7 +404,7 @@
       const passedList = list.filter(c => c.status === 'pass');
 
       if (passedList.length === 0) {
-        passedContainer.innerHTML = '<span class="text-xs text-slate-500 italic">本轮暂无普及买家，直播抽出中...</span>';
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${dict.noPassed}</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => 
           '<div class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
@@ -296,40 +414,39 @@
         ).join('');
       }
 
-      // 2. 左侧：⚡ 角逐中买家渲染 (🌟 强制设为硬性 grid-cols-5，不论分辨率均强行每行 5 张)
+      // 2. 左侧角逐中买家 (硬性 grid-cols-5)
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
-        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>本轮抽奖名单同步中，请关注直播间...</p></div>';
+        pendingContainer.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-4xl mb-2">📋</p><p>${dict.syncingText}</p></div>`;
       } else if (pendingList.length === 0) {
-        pendingContainer.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>本轮全员判定完毕</p></div>';
+        pendingContainer.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${dict.noPending}</p></div>`;
       } else {
         const cardsHtml = pendingList.map((c, index) => 
           '<div class="p-3.5 rounded-xl border border-slate-700 bg-slate-800/80 transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
             '<div>' +
               '<div class="text-[11px] font-mono text-slate-400 mb-1">#' + (index + 1) + '</div>' +
               '<div class="font-bold text-slate-100 text-sm truncate">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+              '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '-') + '</div>' +
             '</div>' +
           '</div>'
         ).join('');
 
-        // 🌟 强行 5 列：grid grid-cols-5 gap-3 (不加响应式断点)
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3 min-w-[600px]">' + cardsHtml + '</div>';
       }
 
-      // 3. 右侧：❌ 已淘汰名单单独竖排渲染 (状态为 out 的买家)
+      // 3. 右侧：已淘汰名单
       const outContainer = document.getElementById('outListContainer');
       const outList = list.filter(c => c.status === 'out');
 
       if (outList.length === 0) {
-        outContainer.innerHTML = '<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>';
+        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${dict.noOut}</p>`;
       } else {
         outContainer.innerHTML = outList.map(c => 
           '<div class="p-2.5 bg-slate-900/60 border border-slate-800 rounded-lg flex flex-col justify-center opacity-60 hover:opacity-100 transition">' +
             '<div class="font-bold text-slate-300 text-xs truncate">' + escapeHtml(c.name) + '</div>' +
-            '<div class="text-[10px] text-slate-500 font-mono truncate mt-0.5">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+            '<div class="text-[10px] text-slate-500 font-mono truncate mt-0.5">' + escapeHtml(c.orderNo || '-') + '</div>' +
           '</div>'
         ).join('');
       }
