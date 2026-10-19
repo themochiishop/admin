@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mochiishop 每月抽奖 -抽奖控制台</title>
+  <title>Mochiishop 每月抽奖 - 直播控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
@@ -14,16 +14,23 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🎬</span>
         <div>
-          <h1 class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖 - 直播控制台</h1>
-          <p class="text-xs text-slate-400">管理者专属 · 多轮晋级控盘系统</p>
+          <h1 class="text-xl font-bold text-amber-400" data-i18n="adminMainTitle">Mochiishop 每月抽奖 - 直播控制台</h1>
+          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">管理者专属 · 多轮晋级控盘系统</p>
         </div>
       </div>
-      <div class="flex items-center space-x-2">
-        <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">
+      <div class="flex items-center space-x-3">
+        <!-- 🌐 语言选择下拉框 -->
+        <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-400 cursor-pointer">
+          <option value="zh">华语 (ZH)</option>
+          <option value="en">English (EN)</option>
+          <option value="ms">Bahasa Melayu (MS)</option>
+        </select>
+
+        <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" data-i18n="btnPrevRound">
           🔙 返回至上一轮
         </button>
         <button onclick="createNewRound()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
-          <span>⏩ 推进本轮普及人员至下一轮</span>
+          <span data-i18n="btnNextRound">⏩ 推进本轮普及人员至下一轮</span>
         </button>
       </div>
     </div>
@@ -37,25 +44,25 @@
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto">
         <!-- 动态生成轮次选项卡 -->
       </div>
-      <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold">⚠️ 重置所有轮次数据</button>
+      <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold" data-i18n="btnReset">⚠️ 重置所有轮次数据</button>
     </div>
 
     <!-- 数据概览面板 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮参选人数</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
         <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮已普及/晋级</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已普及/晋级</span>
         <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮角逐中人数</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPending">本轮角逐中人数</span>
         <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block">本轮已淘汰人数</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statOut">本轮已淘汰人数</span>
         <span id="statOutCount" class="text-2xl font-black text-slate-400">0</span>
       </div>
     </div>
@@ -65,22 +72,22 @@
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
-          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">第 1 轮 已普及/晋级名单</h2>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">已普及/晋级名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
-          <span class="text-[11px] text-slate-400 ml-2">💡 点击小标签旁的 ✕ 可撤回改待定</span>
+          <span class="text-[11px] text-slate-400 ml-2" data-i18n="tipRevoke">💡 点击小标签旁的 ✕ 可撤回改待定</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
         </div>
       </div>
     </div>
 
-    <!-- 顶栏 2：同步状态与短搜索框 (第2轮及后续轮次自动禁用同步按钮) -->
+    <!-- 顶栏 2：同步状态与短搜索框 -->
     <div class="mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
       <div class="text-xs text-slate-400 flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-        <span id="syncStatusText">已连接至 Google Sheets 数据源</span>
+        <span id="syncStatusText" data-i18n="syncSuccess">已连接至 Google Sheets 数据源</span>
         <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
-          <span>🔄 从表格更新第 1 轮名单</span>
+          <span data-i18n="btnRefreshSheets">🔄 从表格更新第 1 轮名单</span>
         </button>
       </div>
 
@@ -89,6 +96,7 @@
           type="search" 
           id="searchInput" 
           oninput="renderAdminView()" 
+          data-i18n-placeholder="searchAdminPlaceholder"
           placeholder="🔍 快速查找本轮买家/订单..." 
           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
         >
@@ -106,8 +114,87 @@
   </footer>
 
   <script>
+    const i18nAdminDict = {
+      zh: {
+        adminMainTitle: "Mochiishop 每月抽奖 - 直播控制台",
+        adminSubTitle: "管理者专属 · 多轮晋级控盘系统",
+        btnPrevRound: "🔙 返回至上一轮",
+        btnNextRound: "⏩ 推进本轮普及人员至下一轮",
+        btnReset: "⚠️ 重置所有轮次数据",
+        statTotal: "本轮参选人数",
+        statPassed: "本轮已普及/晋级",
+        statPending: "本轮角逐中人数",
+        statOut: "本轮已淘汰人数",
+        passedSuffix: "已普及/晋级名单",
+        tipRevoke: "💡 点击小标签旁的 ✕ 可撤回改待定",
+        syncSuccess: "已连接至 Google Sheets 数据源",
+        btnRefreshSheets: "🔄 从表格更新第 1 轮名单",
+        searchAdminPlaceholder: "🔍 快速查找本轮买家/订单...",
+        noPassedAdmin: "本轮暂无普及买家，等待您点击普及...",
+        roundDoneText: "本轮普及判定已完成！可点击右上角【⏩ 推进普及名单至下一轮】",
+        unitPeople: "人",
+        roundPrefix: "第 ",
+        roundSuffix: " 轮",
+        btnPass: "🏆 普及",
+        btnOut: "❌ 淘汰",
+        btnRevokeOut: "↩️ 撤回淘汰",
+        statusOutText: "❌ 已淘汰"
+      },
+      en: {
+        adminMainTitle: "Mochiishop Monthly Draw - Admin Panel",
+        adminSubTitle: "Manager Portal · Multi-round System",
+        btnPrevRound: "🔙 Previous Round",
+        btnNextRound: "⏩ Promote Passed Candidates",
+        btnReset: "⚠️ Reset All Rounds",
+        statTotal: "Total Candidates",
+        statPassed: "Passed / Promoted",
+        statPending: "Competing",
+        statOut: "Eliminated",
+        passedSuffix: "Promoted List",
+        tipRevoke: "💡 Click ✕ beside name tag to revoke",
+        syncSuccess: "Connected to Google Sheets",
+        btnRefreshSheets: "🔄 Refresh Round 1 Data",
+        searchAdminPlaceholder: "🔍 Search candidates/orders...",
+        noPassedAdmin: "No candidates promoted in this round...",
+        roundDoneText: "Round completed! Click [⏩ Promote Passed Candidates] to advance.",
+        unitPeople: "",
+        roundPrefix: "Round ",
+        roundSuffix: "",
+        btnPass: "🏆 Pass",
+        btnOut: "❌ Out",
+        btnRevokeOut: "↩️ Undo Out",
+        statusOutText: "❌ Out"
+      },
+      ms: {
+        adminMainTitle: "Cabutan Bulanan Mochiishop - Panel Kawalan",
+        adminSubTitle: "Portal Pengurus · Sistem Pelbagai Pusingan",
+        btnPrevRound: "🔙 Pusingan Sebelumnya",
+        btnNextRound: "⏩ Bawa Pembeli Layak ke Pusingan Seterusnya",
+        btnReset: "⚠️ Semula Semua Pusingan",
+        statTotal: "Jumlah Calon",
+        statPassed: "Layak / Lulus",
+        statPending: "Dalam Saingan",
+        statOut: "Tersingkir",
+        passedSuffix: "Senarai Layak",
+        tipRevoke: "💡 Klik ✕ pada tag untuk membatal",
+        syncSuccess: "Tersambung ke Google Sheets",
+        btnRefreshSheets: "🔄 Muat Semula Data Pusingan 1",
+        searchAdminPlaceholder: "🔍 Cari calon atau pesanan...",
+        noPassedAdmin: "Tiada pembeli layak dalam pusingan ini...",
+        roundDoneText: "Pusingan selesai! Klik [⏩ Bawa Pembeli Layak] untuk teruskan.",
+        unitPeople: "orang",
+        roundPrefix: "Pusingan ",
+        roundSuffix: "",
+        btnPass: "🏆 Layak",
+        btnOut: "❌ Singkir",
+        btnRevokeOut: "↩️ Batal Singkir",
+        statusOutText: "❌ Tersingkir"
+      }
+    };
+
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
+    let currentLang = localStorage.getItem('mochii_draw_lang') || 'zh';
     let currentRoundIndex = 0;
     let state = {
       rounds: [
@@ -116,6 +203,8 @@
     };
 
     window.onload = function() {
+      document.getElementById('langSelect').value = currentLang;
+      applyLanguage(currentLang);
       loadState();
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
@@ -127,9 +216,35 @@
       }
     };
 
+    function changeLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('mochii_draw_lang', lang);
+      applyLanguage(lang);
+      renderRoundTabs();
+      renderAdminView();
+      updateStats();
+    }
+
+    function applyLanguage(lang) {
+      const dict = i18nAdminDict[lang] || i18nAdminDict.zh;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.innerText = dict[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key]) el.placeholder = dict[key];
+      });
+    }
+
+    function getRoundName(idx) {
+      const dict = i18nAdminDict[currentLang] || i18nAdminDict.zh;
+      return `${dict.roundPrefix}${idx + 1}${dict.roundSuffix}`;
+    }
+
     function fetchGoogleSheetsData(isManual) {
       if (currentRoundIndex !== 0) {
-        alert("禁止在第 2 轮及后续轮次刷新表格，以免覆盖晋级数据！请先切换回【第 1 轮】。");
+        alert("禁止在第 2 轮及后续轮次刷新表格，以免覆盖晋级数据！");
         return;
       }
 
@@ -140,7 +255,7 @@
         .then(response => response.text())
         .then(csvText => {
           parseCSVToFirstRound(csvText);
-          if (syncStatus) syncStatus.innerText = "已成功从 Google Sheets 同步！";
+          if (syncStatus) syncStatus.innerText = i18nAdminDict[currentLang].syncSuccess;
           if (isManual) alert("已从表格载入第 1 轮最新名单！");
         })
         .catch(err => console.error("读取失败", err));
@@ -181,16 +296,12 @@
     }
 
     function goToPrevRound() {
-      if (currentRoundIndex === 0) {
-        alert("当前已经是第 1 轮，无法再返回上一轮。");
-        return;
-      }
+      if (currentRoundIndex === 0) return;
 
-      if (confirm(`确认返回至上一轮（第 ${currentRoundIndex} 轮）？`)) {
+      if (confirm(`确认返回至上一轮？`)) {
         if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) {
           state.rounds.pop();
         }
-        
         currentRoundIndex = Math.max(0, currentRoundIndex - 1);
 
         state.latestEvent = {
@@ -209,7 +320,7 @@
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
 
       if (passedCandidates.length === 0) {
-        alert("当前轮次尚未选择任何普及/晋级买家，请先点击【普及】按钮选出晋级选手！");
+        alert("当前轮次尚未选择普及买家，请先点击【普及】！");
         return;
       }
 
@@ -236,7 +347,6 @@
 
       saveState();
       renderRoundTabs();
-      alert(`🎉 已成功开启【第 ${nextRoundNumber} 轮】！公开大屏已自动同步显示。`);
     }
 
     function renderRoundTabs() {
@@ -247,7 +357,7 @@
         const isActive = (idx === currentRoundIndex);
         const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
         return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
-          ${escapeHtml(r.roundName)}
+          ${escapeHtml(getRoundName(idx))}
         </button>`;
       }).join('');
     }
@@ -286,6 +396,7 @@
     }
 
     function updateStats() {
+      const dict = i18nAdminDict[currentLang] || i18nAdminDict.zh;
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const candidates = activeRound.candidates || [];
 
@@ -299,17 +410,15 @@
       document.getElementById('statPendingCount').innerText = pending;
       document.getElementById('statOutCount').innerText = out;
 
-      document.getElementById('passedTitleText').innerText = `${activeRound.roundName || '第 1 轮'} 已普及/晋级名单`;
-      document.getElementById('passedBadgeCount').innerText = passed + '人';
+      document.getElementById('passedTitleText').innerText = `${getRoundName(currentRoundIndex)} ${dict.passedSuffix}`;
+      document.getElementById('passedBadgeCount').innerText = `${passed} ${dict.unitPeople}`;
 
       const refreshBtn = document.getElementById('refreshSheetsBtn');
       if (refreshBtn) {
         if (currentRoundIndex !== 0) {
           refreshBtn.setAttribute('disabled', 'disabled');
-          refreshBtn.title = '第 2 轮及后续轮次禁止刷新表格，防止覆盖晋级数据！';
         } else {
           refreshBtn.removeAttribute('disabled');
-          refreshBtn.title = '从表格更新第 1 轮名单';
         }
       }
     }
@@ -335,6 +444,7 @@
     }
 
     function renderAdminView() {
+      const dict = i18nAdminDict[currentLang] || i18nAdminDict.zh;
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { roundName: "第 1 轮", candidates: [] };
       const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
 
@@ -347,13 +457,13 @@
       const passedList = list.filter(c => c.status === 'pass');
 
       if (passedList.length === 0) {
-        passedContainer.innerHTML = '<span class="text-xs text-slate-500 italic">本轮暂无普及买家，等待您点击普及...</span>';
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${dict.noPassedAdmin}</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => 
           '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
             '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo) + '</span>' +
-            '<button onclick="changeStatus(' + c.id + ', \'pending\')" title="撤回改待定" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 bg-emerald-900/50 rounded hover:bg-rose-950 transition">✕</button>' +
+            '<button onclick="changeStatus(' + c.id + ', \'pending\')" title="撤回" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 bg-emerald-900/50 rounded hover:bg-rose-950 transition">✕</button>' +
           '</div>'
         ).join('');
       }
@@ -363,7 +473,7 @@
       const pendingList = list.filter(c => c.status === 'pending' || c.status === 'out');
 
       if (pendingList.length === 0) {
-        container.innerHTML = '<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>本轮普及判定已完成！可点击右上角【⏩ 推进普及名单至下一轮】</p></div>';
+        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${dict.roundDoneText}</p></div>`;
         return;
       }
 
@@ -374,11 +484,10 @@
 
         if (c.status === 'out') {
           borderStyle = 'border-slate-800 bg-slate-900/60 opacity-60';
-          statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400 font-bold">❌ 已淘汰</span>';
-          // 🌟 淘汰后按钮自动变更为【↩️ 撤回淘汰】
-          btnOutHtml = '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="flex-1 py-1.5 text-xs rounded transition bg-amber-600 hover:bg-amber-500 text-white font-bold shadow">↩️ 撤回淘汰</button>';
+          statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400 font-bold">${dict.statusOutText}</span>`;
+          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'pending')" class="flex-1 py-1.5 text-xs rounded transition bg-amber-600 hover:bg-amber-500 text-white font-bold shadow">${dict.btnRevokeOut}</button>`;
         } else {
-          btnOutHtml = '<button onclick="changeStatus(' + c.id + ', \'out\')" class="px-3 py-1.5 text-xs rounded transition bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">❌ 淘汰</button>';
+          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded transition bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${dict.btnOut}</button>`;
         }
 
         const btnPassStyle = 'bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold';
@@ -390,11 +499,11 @@
               statusBadge +
             '</div>' +
             '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
-            '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+            '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '-') + '</div>' +
           '</div>' +
 
           '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-2">' +
-            (c.status !== 'out' ? '<button onclick="changeStatus(' + c.id + ', \'pass\')" class="flex-1 py-1.5 text-xs rounded transition ' + btnPassStyle + '">🏆 普及</button>' : '') +
+            (c.status !== 'out' ? `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1.5 text-xs rounded transition ${btnPassStyle}">${dict.btnPass}</button>` : '') +
             btnOutHtml +
           '</div>' +
         '</div>';
@@ -404,7 +513,7 @@
     }
 
     function resetRounds() {
-      if (confirm("确认重置所有轮次数据？这会清除所有轮次并重新从 Google 表格同步第 1 轮。")) {
+      if (confirm("确认重置所有轮次数据？")) {
         currentRoundIndex = 0;
         state = {
           rounds: [
