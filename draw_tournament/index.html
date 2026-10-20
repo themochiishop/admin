@@ -360,148 +360,168 @@
     };
 
     window.onload = function() {
-      db.ref('tournament_state').on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (val) {
-          state = val;
-          (state.rounds || []).forEach(r => {
-            (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); });
-          });
-          if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
-          if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
-
-          localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-          
-          if (!userManuallySelectedRound && state.rounds) currentRoundIndex = state.rounds.length - 1;
-          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
-            lastSeenEventTime = state.latestEvent.timestamp;
-            if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 10);
-          }
-
-          updatePublicOverlayState();
-          renderRoundTabs();
-          renderPublicView();
-          updateStats();
-          updatePublicModeUI();
-          updatePublicHeaderTitle();
-          updateWinnerBannerUI();
-          renderFinalSummaryPanel();
-        }
-      });
-    };
-
-    function toggleAdminUnlock() {
-      if (!isAdminUnlocked) {
-        const pin = prompt("🔐 请输入管理员解锁口令密码:", "");
-        if (pin === ADMIN_PASSWORD) {
-          isAdminUnlocked = true;
-          db.ref('tournament_state/publicAdminActive').set(true);   // 🆕 锁定后台
-          alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。");
-        } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
-        else return;
-      } else {
-        isAdminUnlocked = false;
-        db.ref('tournament_state/publicAdminActive').set(false);  // 🆕 解锁后台
-      }
+  // 🆕 恢复登入状态（刷新页面后仍保持）
+  if (localStorage.getItem('mochii_admin_unlocked') === 'true') {
+    isAdminUnlocked = true;
+    // 立刻把 publicAdminActive 同步到 Firebase（防止后台仍锁着）
+    db.ref('tournament_state/publicAdminActive').set(true);
+    setTimeout(() => {
       const txt = document.getElementById('adminUnlockText');
-      if (isAdminUnlocked) {
-        if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
-      } else {
-        if (txt) { txt.innerText = "🔑 管理员"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; }
-      }
+      if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
       renderPublicView();
-    }
+    }, 100);
+  }
 
-    // 🔥 前台开奖：A3 升级玩法
-    // 抽组时 displayNumber 全是 null，点开奖这一刻才随机分配 1..N
-    function revealPKWinnerFromPublic() {
-      if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
-      if (!state.triggerNumber) { alert("⚠️ 请先在后台或选择【触发号 #N】后再点击揭晓开奖！"); return; }
-      if (state.settled) { console.warn("重复开奖已拦截"); return; }
-      // 🔥 防重复分配
-      if ((state.activeGroupMembers || []).every(m => m.displayNumber !== null && m.displayNumber !== undefined)) {
-        alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"); return;
+  db.ref('tournament_state').on('value', (snapshot) => {
+    const val = snapshot.val();
+    if (val) {
+      state = val;
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); });
+      });
+      if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
+      if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
+
+      localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
+      
+      if (!userManuallySelectedRound && state.rounds) currentRoundIndex = state.rounds.length - 1;
+      if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
+        lastSeenEventTime = state.latestEvent.timestamp;
+        if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 10);
       }
 
-      // 锁定本轮所有关键数据（避免动画期间被后台改动）
-      const lockedDrawRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
-      const lockedGroupIds = [...state.activeGroupIds.map(id => String(id))];
-      const lockedPollNumber = state.currentPollNumber || 1;
-      const lockedTriggerNumber = state.triggerNumber;
-      const lockedMemberIds = (state.activeGroupMembers || []).map(m => String(m.id));
+      updatePublicOverlayState();
+      renderRoundTabs();
+      renderPublicView();
+      updateStats();
+      updatePublicModeUI();
+      updatePublicHeaderTitle();
+      updateWinnerBannerUI();
+      renderFinalSummaryPanel();
+    }
+  });
+};
+    function toggleAdminUnlock() {
+  if (!isAdminUnlocked) {
+    const pin = prompt("🔐 请输入管理员解锁口令密码:", "");
+    if (pin === ADMIN_PASSWORD) {
+      isAdminUnlocked = true;
+      localStorage.setItem('mochii_admin_unlocked', 'true');   // 🆕 持久化登入
+      db.ref('tournament_state/publicAdminActive').set(true);
+      alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。\n（刷新页面后仍保持登入，直到你主动点退出）");
+    } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
+    else return;
+  } else {
+    if (!confirm("确认退出管理员控盘模式？")) return;
+    isAdminUnlocked = false;
+    localStorage.removeItem('mochii_admin_unlocked');          // 🆕 清除持久化
+    db.ref('tournament_state/publicAdminActive').set(false);
+  }
+  const txt = document.getElementById('adminUnlockText');
+  if (isAdminUnlocked) {
+    if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
+  } else {
+    if (txt) { txt.innerText = "🔑 管理员"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; }
+  }
+  renderPublicView();
+}
 
-      // 🔥 开奖那一刻才随机分配 #号（保持原始顺序，每张卡显示自己随机得到的号）
-      const total = lockedMemberIds.length;
-      const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+   // 🔥 前台开奖：A3 升级玩法
+// 抽组时 displayNumber 全是 null，点开奖这一刻才随机分配 1..N
+// 点开奖的一瞬间：中奖者立即进晋级区（不必等 3.8s 动画）
+// 翻牌动画只是视觉，数据已结算
+function revealPKWinnerFromPublic() {
+  if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
+  if (!state.triggerNumber) { alert("⚠️ 请先在后台或选择【触发号 #N】后再点击揭晓开奖！"); return; }
+  if (state.settled) { console.warn("重复开奖已拦截"); return; }
+  if ((state.activeGroupMembers || []).every(m => m.displayNumber !== null && m.displayNumber !== undefined)) {
+    alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"); return;
+  }
 
-      const newMembers = lockedMemberIds.map((id, idx) => {
-        const originalMember = (state.activeGroupMembers || []).find(m => String(m.id) === id);
-        return {
-          id: id,
-          displayNumber: nums[idx],   // ✅ 随机分配
-          name: originalMember ? originalMember.name : '',
-          orderNo: originalMember ? originalMember.orderNo : ''
-        };
-      });
+  const lockedDrawRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
+  const lockedGroupIds = [...state.activeGroupIds.map(id => String(id))];
+  const lockedPollNumber = state.currentPollNumber || 1;
+  const lockedTriggerNumber = state.triggerNumber;
+  const lockedMemberIds = (state.activeGroupMembers || []).map(m => String(m.id));
 
-      // 立即把分配好的 #号 推到 state，前端渲染翻牌
-      state.activeGroupMembers = newMembers;
-      state.pkStage = 'revealed';
-      state.settled = true;
-      db.ref('tournament_state').set(state);
+  // 🔥 开奖那一刻才随机分配 #号（保持原始顺序，每张卡显示自己随机得到的号）
+  const total = lockedMemberIds.length;
+  const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
 
-      // 匹配触发号
-      const winnerMember = newMembers.find(m => m.displayNumber === lockedTriggerNumber);
-      const lockedWinnerId = winnerMember ? String(winnerMember.id) : null;
+  const newMembers = lockedMemberIds.map((id, idx) => {
+    const originalMember = (state.activeGroupMembers || []).find(m => String(m.id) === id);
+    return {
+      id: id,
+      displayNumber: nums[idx],
+      name: originalMember ? originalMember.name : '',
+      orderNo: originalMember ? originalMember.orderNo : ''
+    };
+  });
 
-      if (!lockedWinnerId) {
-        alert("⚠️ 无法定位中奖者，请检查后台数据！");
-        state.settled = false;
-        db.ref('tournament_state/settled').set(false);
+  // 匹配触发号
+  const winnerMember = newMembers.find(m => m.displayNumber === lockedTriggerNumber);
+  const lockedWinnerId = winnerMember ? String(winnerMember.id) : null;
+
+  if (!lockedWinnerId) {
+    alert("⚠️ 无法定位中奖者，请检查后台数据！");
+    return;
+  }
+
+  // 🆕🔥 核心改动：立刻把中奖者写入晋级，其他人淘汰（不等动画）
+  // 这样晋级区会立即刷新出来
+  const activeRound = state.rounds[lockedDrawRoundIndex];
+  if (activeRound) {
+    const pollLabel = `POLL #${lockedPollNumber} (#${lockedTriggerNumber})`;
+    lockedGroupIds.forEach(id => {
+      const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
+      if (target) {
+        if (String(id) === String(lockedWinnerId)) {
+          target.status = 'pass';
+          target.pollLabel = pollLabel;
+        } else {
+          target.status = 'out';
+          target.eliminatedRoundIndex = lockedDrawRoundIndex;
+        }
+      }
+    });
+  }
+
+  // 更新 state：分配 #号、标记结算、清空活动组（让 PK 区在翻牌动画期间保持显示靠 activeGroupMembers）
+  state.activeGroupMembers = newMembers;
+  state.pkStage = 'revealed';
+  state.settled = true;
+  db.ref('tournament_state').set(state);
+
+  // 立刻刷新前台（晋级区已显示中奖者）
+  renderRoundTabs();
+  renderPublicView();
+  updateStats();
+  renderFinalSummaryPanel();
+  updateWinnerBannerUI();
+
+  // 3.8 秒后：清空活动组（PK 区隐藏），保留已结算的晋级记录
+  setTimeout(() => {
+    db.ref('tournament_state').once('value', (snap) => {
+      const latest = snap.val();
+      if (!latest) return;
+
+      // 如果后台或别处已清空，跳过
+      if (!latest.activeGroupIds || latest.activeGroupIds.length === 0) {
+        console.log("活动组已清空，前台跳过");
+        state = latest;
+        renderPublicView();
         return;
       }
 
-      // 3.8 秒动画后结算
-      setTimeout(() => {
-        db.ref('tournament_state').once('value', (snap) => {
-          const latest = snap.val();
-          if (!latest) return;
-
-          if (!latest.activeGroupIds || latest.activeGroupIds.length === 0) {
-            console.log("后台已结算，前台跳过");
-            state = latest;
-            renderPublicView();
-            return;
-          }
-
-          const activeRound = (latest.rounds || [])[lockedDrawRoundIndex];
-          if (!activeRound) { console.error("找不到轮次", lockedDrawRoundIndex); return; }
-
-          const pollLabel = `POLL #${lockedPollNumber} (#${lockedTriggerNumber})`;
-
-          lockedGroupIds.forEach(id => {
-            const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-            if (target) {
-              if (String(id) === String(lockedWinnerId)) {
-                target.status = 'pass';
-                target.pollLabel = pollLabel;
-              } else {
-                target.status = 'out';
-                target.eliminatedRoundIndex = lockedDrawRoundIndex;
-              }
-            }
-          });
-
-          latest.activeGroupIds = [];
-          latest.activeGroupMembers = [];
-          latest.pkStage = 'voting';
-          latest.triggerNumber = null;
-          latest.settled = false;
-
-          db.ref('tournament_state').set(latest);
-        });
-      }, 3800);
-    }
+      latest.activeGroupIds = [];
+      latest.activeGroupMembers = [];
+      latest.pkStage = 'voting';
+      latest.triggerNumber = null;
+      latest.settled = false;
+      db.ref('tournament_state').set(latest);
+    });
+  }, 3800);
+}
 
     function updatePublicOverlayState() {
       const mask = document.getElementById('publicOverlayMask');
