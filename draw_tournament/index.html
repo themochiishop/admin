@@ -356,7 +356,11 @@
 
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           
-          if (!userManuallySelectedRound && state.rounds) currentRoundIndex = state.rounds.length - 1;
+          // 🔥 修复：无论手机还是电脑，确保当前轮次索引不会越界
+          if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) {
+            currentRoundIndex = state.rounds.length - 1;
+          }
+
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 10);
@@ -797,7 +801,14 @@
     }
 
     function renderPublicView() {
-      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
+      // 🔥 修复手机端刷新 bug：确保 activeRound 永远有值，不会因为数组越界变成空
+      let activeRound = { candidates: [] };
+      if (state.rounds && state.rounds.length > 0) {
+        if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
+        if (currentRoundIndex < 0) currentRoundIndex = 0;
+        activeRound = state.rounds[currentRoundIndex];
+      }
+
       const searchEl = document.getElementById('searchInput');
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
 
@@ -852,11 +863,9 @@
           const realNum = c.displayNumber;
           const hasNumber = realNum !== null && realNum !== undefined;
           
-          // 🔥 核心：判断是否已开奖且命中
           const isWinner = (state.pkStage === 'revealed') && hasNumber && (realNum === state.triggerNumber);
 
           if (isWinner) {
-            // 🏆 中奖卡牌样式：瞬间全绿、放大、发光！
             return `
               <div class="relative w-full h-36 rounded-xl border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-110 z-10 transition-all duration-700 ease-out">
                 <div class="absolute inset-0 p-3 flex flex-col justify-between items-center text-center">
@@ -870,7 +879,6 @@
               </div>
             `;
           } else {
-            // 普通卡牌 / 未中奖卡牌
             return `
               <div class="relative w-full h-36 rounded-xl border-2 border-amber-500/50 bg-slate-900 overflow-hidden shadow-xl">
                 <div class="absolute inset-0 p-3 flex flex-col justify-between items-center text-center">
@@ -899,7 +907,6 @@
           }
         });
       }
-      // 🔥 新增：按 POLL #N 排序
       passedList.sort((a, b) => {
         const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
         const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
