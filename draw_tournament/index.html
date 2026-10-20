@@ -36,7 +36,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
 
-  <!-- ⏳ 前台公开屏蔽遮罩层 (未勾选公开显示时呈现此遮罩) -->
+  <!-- ⏳ 前台公开屏蔽遮罩层 (未勾选公开显示时呈现此遮罩，保留背景半透明清晰度) -->
   <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
     <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
       <div class="absolute -top-16 -left-16 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
@@ -91,6 +91,13 @@
       </div>
       
       <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
+        
+        <!-- 🔑 大屏管理员控盘模式解锁按钮 -->
+        <button id="adminUnlockToggleBtn" onclick="toggleAdminUnlock()" class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow">
+          <span id="adminUnlockIcon">🔒</span>
+          <span id="adminUnlockText">管理员控制</span>
+        </button>
+
         <!-- 当前生效模式徽章 -->
         <div class="relative group cursor-pointer">
           <span id="publicModeBadge" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
@@ -178,16 +185,42 @@
         </div>
       </div>
 
-      <!-- 🔥 Shopee 直播间盲抽展示区 -->
-      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xl">
-        <div class="flex justify-between items-center mb-3">
+      <!-- 🔥 Shopee 直播间盲抽 PK 大屏展示区 -->
+      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3.5 gap-2 pb-3 border-b border-amber-500/30">
           <div class="flex items-center space-x-2">
-            <span class="text-lg sm:text-xl animate-bounce">🔥</span>
-            <h3 class="text-xs sm:text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
+            <span class="text-lg sm:text-2xl animate-bounce">🔥</span>
+            <div>
+              <h3 class="text-xs sm:text-base font-black text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
+              <p id="publicTriggerSubText" class="text-[11px] text-amber-200/80 mt-0.5">请在直播间针对卡牌编号进行投票...</p>
+            </div>
           </div>
-          <span id="publicPollBadge" class="hidden text-xs bg-amber-500 text-slate-950 px-2 py-0.5 rounded font-black">POLL #1</span>
+
+          <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+            <span id="publicPollBadge" class="text-xs bg-amber-500 text-slate-950 px-2.5 py-1 rounded-lg font-black shadow">POLL #1</span>
+            <span id="publicTriggerBadge" class="hidden text-xs bg-emerald-500 text-slate-950 px-3 py-1 rounded-lg font-black shadow animate-pulse">🎯 本轮触发号：#?</span>
+          </div>
         </div>
-        <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3"></div>
+
+        <!-- 🎰 大屏专属揭晓开奖控盘按钮 (管理员解锁后或已设定触发号时大尺寸高亮呈现) -->
+        <div id="publicRevealButtonBox" class="hidden mb-4 p-3 bg-slate-900/90 rounded-2xl border-2 border-emerald-400/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl backdrop-blur-md">
+          <div class="text-center sm:text-left">
+            <span class="text-xs font-bold text-emerald-300 block">🎯 观众投票触发号已锁定！准备揭晓开奖：</span>
+            <span id="publicRevealSubInfo" class="text-[11px] text-slate-300">点击下方按钮全场翻牌揭晓组内胜出者</span>
+          </div>
+
+          <div class="flex items-center space-x-2 w-full sm:w-auto">
+            <!-- 🔑 授权模式下允许直接在前台修改触发号 -->
+            <div id="publicDirectTriggerSelector" class="hidden items-center space-x-1"></div>
+            
+            <button onclick="revealPKWinnerFromPublic()" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+              <span>🎰</span>
+              <span>点击揭晓开奖</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
       </div>
 
       <!-- 统计卡片区 -->
@@ -303,10 +336,13 @@
     let userManuallySelectedRound = false; 
     let popupTimer = null;
     let isProcessAreaCollapsed = false;
+    let isAdminUnlocked = false; // 大屏管理员控盘解锁标记
 
     let state = { 
       customPublicTitle: '',
       isPublicVisible: true,
+      pkStage: 'voting', // 'voting', 'triggered', 'revealed'
+      triggerNumber: null,
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
       rounds: [{ roundName: "第 1 轮", candidates: [] }] 
     };
@@ -510,6 +546,87 @@
         }
       });
     };
+
+    function toggleAdminUnlock() {
+      if (!isAdminUnlocked) {
+        const pin = prompt("🔐 请输入管理员解锁密码控盘密码:", "1234");
+        if (pin === "1234") {
+          isAdminUnlocked = true;
+          alert("✅ 成功解锁管理员大屏控盘模式！您可以直接在大屏上输入触发号与揭晓开奖！");
+        } else {
+          alert("❌ 密码错误！");
+          return;
+        }
+      } else {
+        isAdminUnlocked = false;
+      }
+
+      const icon = document.getElementById('adminUnlockIcon');
+      const txt = document.getElementById('adminUnlockText');
+      const btn = document.getElementById('adminUnlockToggleBtn');
+
+      if (isAdminUnlocked) {
+        icon.innerText = "🔓";
+        txt.innerText = "控制已解锁";
+        btn.className = "px-2.5 py-1 sm:px-3 sm:py-1.5 bg-amber-500 text-slate-950 font-black rounded-lg text-xs transition flex items-center space-x-1 shadow animate-pulse";
+      } else {
+        icon.innerText = "🔒";
+        txt.innerText = "管理员控制";
+        btn.className = "px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow";
+      }
+
+      renderPublicView();
+    }
+
+    function setTriggerNumberFromPublic(num) {
+      if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
+      state.triggerNumber = num;
+      state.pkStage = 'triggered';
+      db.ref('tournament_state').set(state);
+    }
+
+    function revealPKWinnerFromPublic() {
+      if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
+      if (!state.triggerNumber) {
+        alert("⚠️ 请先设定【触发号 #N】后再开奖！");
+        return;
+      }
+
+      state.pkStage = 'revealed';
+      db.ref('tournament_state').set(state);
+
+      setTimeout(() => {
+        const winnerId = state.activeGroupIds[state.triggerNumber - 1];
+        if (winnerId) {
+          passWinnerAndEliminateOthersPublic(winnerId);
+        }
+      }, 1200);
+    }
+
+    function passWinnerAndEliminateOthersPublic(winnerId) {
+      const activeRound = state.rounds[currentRoundIndex];
+      const winnerIndex = state.activeGroupIds.indexOf(winnerId) + 1;
+      const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerIndex})`;
+
+      state.activeGroupIds.forEach(id => {
+        const target = activeRound.candidates.find(c => c.id === id);
+        if (target) {
+          if (id === winnerId) {
+            target.status = 'pass';
+            target.pollLabel = pollLabel;
+          } else {
+            target.status = 'out';
+            target.eliminatedRoundIndex = currentRoundIndex;
+          }
+        }
+      });
+
+      delete state.activeGroupIds;
+      state.pkStage = 'voting';
+      state.triggerNumber = null;
+
+      db.ref('tournament_state').set(state);
+    }
 
     function updatePublicOverlayState() {
       const mask = document.getElementById('publicOverlayMask');
@@ -850,24 +967,72 @@
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
       const publicGroupGrid = document.getElementById('publicActiveGroupGrid');
       const publicPollBadge = document.getElementById('publicPollBadge');
-      
+      const publicTriggerBadge = document.getElementById('publicTriggerBadge');
+      const publicTriggerSubText = document.getElementById('publicTriggerSubText');
+      const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
+      const publicDirectTriggerSelector = document.getElementById('publicDirectTriggerSelector');
+
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
         publicGroupContainer.classList.remove('hidden');
         if (state.currentPollNumber) {
           publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
-          publicPollBadge.classList.remove('hidden');
+        }
+
+        if (state.triggerNumber) {
+          publicTriggerBadge.innerText = `🎯 本轮触发号：#${state.triggerNumber}`;
+          publicTriggerBadge.classList.remove('hidden');
+          publicTriggerSubText.innerText = `最高得票触发号已定位为 #${state.triggerNumber}，请准备揭晓！`;
         } else {
-          publicPollBadge.classList.add('hidden');
+          publicTriggerBadge.classList.add('hidden');
+          publicTriggerSubText.innerText = `请观众在直播间输入数字针对盲抽买家进行投票...`;
+        }
+
+        // 大屏控制开奖按钮呈现逻辑
+        if (isAdminUnlocked || state.pkStage === 'triggered') {
+          publicRevealButtonBox.classList.remove('hidden');
+        } else {
+          publicRevealButtonBox.classList.add('hidden');
+        }
+
+        if (isAdminUnlocked && publicDirectTriggerSelector) {
+          publicDirectTriggerSelector.classList.remove('hidden');
+          publicDirectTriggerSelector.classList.add('flex');
+          publicDirectTriggerSelector.innerHTML = `<span class="text-xs font-bold text-amber-300 mr-1">选择触发号:</span>` +
+            state.activeGroupIds.map((_, idx) => {
+              const num = idx + 1;
+              const isSel = (state.triggerNumber === num);
+              const btnCls = isSel ? "bg-amber-500 text-slate-950 font-black scale-110" : "bg-slate-800 text-slate-300 border border-slate-600";
+              return `<button onclick="setTriggerNumberFromPublic(${num})" class="w-6 h-6 text-xs rounded transition ${btnCls}">#${num}</button>`;
+            }).join('');
+        } else if (publicDirectTriggerSelector) {
+          publicDirectTriggerSelector.classList.add('hidden');
         }
 
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
-        publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
-          <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-2.5 sm:p-3 shadow text-center">
-            <span class="text-[9px] sm:text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#？</span>
+        publicGroupGrid.innerHTML = activeMembers.map((c, idx) => {
+          const realNum = idx + 1;
+          const isRevealed = (state.pkStage === 'revealed');
+          const isWinner = isRevealed && (realNum === state.triggerNumber);
+
+          let headerBadge = `<span class="text-[10px] sm:text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full inline-block shadow animate-pulse">#？</span>`;
+          let cardBoxStyle = "bg-slate-900/90 border border-amber-500/50";
+
+          if (isRevealed) {
+            if (isWinner) {
+              headerBadge = `<span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full inline-block shadow-lg animate-bounce">🏆 #${realNum} 胜出</span>`;
+              cardBoxStyle = "bg-emerald-950/60 border-2 border-emerald-400 shadow-2xl shadow-emerald-500/30 scale-105";
+            } else {
+              headerBadge = `<span class="text-[10px] sm:text-xs font-black bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full inline-block">#${realNum}</span>`;
+              cardBoxStyle = "bg-slate-900/40 border border-slate-800 opacity-50";
+            }
+          }
+
+          return `<div class="${cardBoxStyle} rounded-xl p-3 sm:p-4 shadow text-center transition-all duration-700">
+            <div class="mb-1.5">${headerBadge}</div>
             <div class="font-bold text-amber-300 text-xs sm:text-sm truncate">${escapeHtml(c.name)}</div>
             <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
-          </div>
-        `).join('');
+          </div>`;
+        }).join('');
       } else {
         publicGroupContainer.classList.add('hidden');
       }
