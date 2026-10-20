@@ -527,9 +527,8 @@
       }).join('');
     }
 
-    // 🌟 核心：撤回名单与排位状态变更
+    // 🌟 撤回买家重返当前名单池
     function undoEliminatedCandidate(id) {
-      // 1. 在历史所有轮次中找到该买家信息
       let foundCandidate = null;
       (state.rounds || []).forEach(r => {
         const target = (r.candidates || []).find(c => c.id === id);
@@ -538,7 +537,7 @@
 
       if (!foundCandidate) return;
 
-      // 2. 将全局该 ID 的状态修正为 pending，并清除淘汰标记
+      // 1. 全局重置状态
       (state.rounds || []).forEach(r => {
         (r.candidates || []).forEach(c => {
           if (c.id === id) {
@@ -549,7 +548,7 @@
         });
       });
 
-      // 3. 核心关键：确保该买家重新出现在“当前最新一轮”的 candidates 数组中
+      // 2. 自动加回当前最新轮次的 candidates 数组
       const currentRound = state.rounds[currentRoundIndex];
       const existsInCurrent = (currentRound.candidates || []).some(c => c.id === id);
       
@@ -563,7 +562,7 @@
       }
 
       saveState();
-      alert(`↩️ 买家【${foundCandidate.name}】已成功撤回并重返当前轮次名单池！`);
+      alert(`↩️ 买家【${foundCandidate.name}】已撤回并重新回到当前轮次名单池！`);
     }
 
     function changeStatus(id, newStatus) {
@@ -712,13 +711,23 @@
       }
     }
 
+    // 🌟 防错拦截逻辑：模式 1 下，普及/晋级区少于 3 人禁止推进下一轮
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
       const totalCandidates = currentRound.candidates || [];
 
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+
       if (passedCandidates.length === 0) {
         alert("⚠️ 请先选出普及/胜出的买家，才能推进开启下一轮！");
+        return;
+      }
+
+      // 🛡️ 防错核心规则：模式 1 开启时，如果晋级区少于 3 人，拦截并提示！
+      if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length < 3) {
+        alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passedCandidates.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
         return;
       }
 
@@ -849,7 +858,6 @@
         }).join('');
       }
 
-      // 名单池主卡片网格 (强制一行 5 个)
       const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
