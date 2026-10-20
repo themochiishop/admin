@@ -32,11 +32,43 @@
       letter-spacing: 0.5px;
       z-index: 10;
     }
+
+    /* 🃏 3D 慢速翻牌悬念动画 */
+    .card-perspective {
+      perspective: 1000px;
+    }
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 1.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-style: preserve-3d;
+    }
+    .card-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-front, .card-back {
+      width: 100%;
+      height: 100%;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      border-radius: 1rem;
+    }
+    .card-front {
+      z-index: 2;
+      transform: rotateY(0deg);
+    }
+    .card-back {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: rotateY(180deg);
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
 
-  <!-- ⏳ 前台公开屏蔽遮罩层 (未勾选公开显示时呈现此遮罩，保留背景半透明清晰度) -->
+  <!-- ⏳ 前台公开屏蔽遮罩层 (未勾选公开显示时呈现此遮罩，保留背景透亮度) -->
   <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
     <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
       <div class="absolute -top-16 -left-16 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
@@ -191,8 +223,8 @@
           <div class="flex items-center space-x-2">
             <span class="text-lg sm:text-2xl animate-bounce">🔥</span>
             <div>
-              <h3 class="text-xs sm:text-base font-black text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
-              <p id="publicTriggerSubText" class="text-[11px] text-amber-200/80 mt-0.5">请在直播间针对卡牌编号进行投票...</p>
+              <h3 class="text-xs sm:text-base font-black text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间盲抽组 PK</h3>
+              <p id="publicTriggerSubText" class="text-[11px] text-amber-200/80 mt-0.5">实时同步开奖状态与候选买家名单...</p>
             </div>
           </div>
 
@@ -202,16 +234,24 @@
           </div>
         </div>
 
-        <!-- 🎰 大屏专属揭晓开奖控盘按钮 (管理员解锁后或已设定触发号时大尺寸高亮呈现) -->
+        <!-- 🔒 普通观众高亮提示条 (无任何可点击按钮) -->
+        <div id="publicSpectatorStatusBanner" class="hidden mb-4 p-3 bg-slate-900/90 rounded-2xl border border-amber-500/40 flex items-center justify-between shadow-lg">
+          <div class="flex items-center space-x-2">
+            <span class="text-base animate-pulse">🎯</span>
+            <span id="spectatorStatusText" class="text-xs font-bold text-amber-300">观众投票触发号已锁定，等待揭晓开奖...</span>
+          </div>
+          <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-mono">LIVE SYNC</span>
+        </div>
+
+        <!-- 🔑 管理员专用控盘按钮区 (仅在管理员点击右上角解锁后呈现) -->
         <div id="publicRevealButtonBox" class="hidden mb-4 p-3 bg-slate-900/90 rounded-2xl border-2 border-emerald-400/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl backdrop-blur-md">
           <div class="text-center sm:text-left">
-            <span class="text-xs font-bold text-emerald-300 block">🎯 观众投票触发号已锁定！准备揭晓开奖：</span>
-            <span id="publicRevealSubInfo" class="text-[11px] text-slate-300">点击下方按钮全场翻牌揭晓组内胜出者</span>
+            <span class="text-xs font-bold text-emerald-300 block">🔑 管理员已解锁控盘：</span>
+            <span class="text-[11px] text-slate-300">选择触发号并点击开奖，全场将播放 3D 悬疑翻牌揭晓动画</span>
           </div>
 
           <div class="flex items-center space-x-2 w-full sm:w-auto">
-            <!-- 🔑 授权模式下允许直接在前台修改触发号 -->
-            <div id="publicDirectTriggerSelector" class="hidden items-center space-x-1"></div>
+            <div id="publicDirectTriggerSelector" class="flex items-center space-x-1"></div>
             
             <button onclick="revealPKWinnerFromPublic()" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
               <span>🎰</span>
@@ -220,6 +260,7 @@
           </div>
         </div>
 
+        <!-- 🃏 3D 翻牌卡牌网格区 -->
         <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
       </div>
 
@@ -295,18 +336,6 @@
 
   </main>
 
-  <!-- 📍 悬浮按钮区 -->
-  <div id="floatingActionButtons" class="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 hidden flex items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
-    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
-      <span>🔗</span>
-      <span data-i18n="btnShare">分享结果</span>
-    </button>
-    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
-      <span>💾</span>
-      <span data-i18n="btnSaveImage">保存为图片</span>
-    </button>
-  </div>
-
   <footer class="bg-slate-950 border-t border-slate-800 py-3 sm:py-4 text-center text-[10px] sm:text-xs text-slate-500">
     © Mochiishop Shopee Monthly Event. All rights reserved.
   </footer>
@@ -336,7 +365,7 @@
     let userManuallySelectedRound = false; 
     let popupTimer = null;
     let isProcessAreaCollapsed = false;
-    let isAdminUnlocked = false; // 大屏管理员控盘解锁标记
+    let isAdminUnlocked = false; // 前台管理员授权控制标记
 
     let state = { 
       customPublicTitle: '',
@@ -379,7 +408,7 @@
         mode1: "冠亚季模式",
         mode2: "3+安慰奖",
         modeDisabled: "未启用规则",
-        shopeeGroupTitle: "Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)",
+        shopeeGroupTitle: "Shopee 直播间盲抽 PK 组",
         banner3LeftText: "🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！",
         bannerThirdPlaceText: "🎉 🥉 季军得主是：",
         bannerFinalText: "🎉 👑 冠军得主是：",
@@ -395,8 +424,6 @@
         finalSummaryTitle: "全场抽奖比赛 - 终极荣誉汇总榜",
         finalSummarySub: "祝贺所有获奖买家！感谢大家的参与与支持！",
         consolationSummaryTitle: "🎁 安慰奖得主全名单",
-        btnShare: "分享结果",
-        btnSaveImage: "保存为图片",
         processSectionLabel: "📋 抽奖比赛全程选拔细节记录",
         expandText: "展开选拔过程 ▼",
         collapseText: "折叠选拔过程 ▲",
@@ -435,7 +462,7 @@
         mode1: "Podium Mode",
         mode2: "3 + Consolation",
         modeDisabled: "Disabled Rules",
-        shopeeGroupTitle: "Shopee Live Group Voting in Progress!",
+        shopeeGroupTitle: "Shopee Live Group PK",
         banner3LeftText: "🔥 Podium Showdown! Only 3 candidates remaining for 🥉 3rd Place!",
         bannerThirdPlaceText: "🎉 🥉 3rd Place Winner is: ",
         bannerFinalText: "🎉 👑 Champion: ",
@@ -451,8 +478,6 @@
         finalSummaryTitle: "Official Tournament Winners Summary",
         finalSummarySub: "Congratulations to all winners! Thank you for participating!",
         consolationSummaryTitle: "🎁 Consolation Winners Full List",
-        btnShare: "Share Result",
-        btnSaveImage: "Save as Image",
         processSectionLabel: "📋 Full Tournament Selection Records",
         expandText: "Expand Details ▼",
         collapseText: "Collapse Details ▲",
@@ -491,7 +516,7 @@
         mode1: "Mod Tiga Teratas",
         mode2: "3 + Saguhati",
         modeDisabled: "Peraturan Nyahaktif",
-        shopeeGroupTitle: "Undian Kumpulan Shopee Live Sedang Berlangsung!",
+        shopeeGroupTitle: "Undian Kumpulan Shopee Live",
         banner3LeftText: "🔥 Perebutan 3 Teratas Bermula! Tinggal 3 calon sahaja lagi!",
         bannerThirdPlaceText: "🎉 🥉 Pemenang Tempat Ke-3: ",
         bannerFinalText: "🎉 👑 Juara: ",
@@ -507,8 +532,6 @@
         finalSummaryTitle: "Ringkasan Pemenang Kejohanan Rasmi",
         finalSummarySub: "Tahniah kepada semua pemenang! Terima kasih atas sokongan anda!",
         consolationSummaryTitle: "🎁 Senarai Penuh Pemenang Saguhati",
-        btnShare: "Kongsi Keputusan",
-        btnSaveImage: "Simpan Gambar",
         processSectionLabel: "📋 Rekod Terperinci Pemilihan Kejohanan",
         expandText: "Buka Butiran ▼",
         collapseText: "Tutup Butiran ▲",
@@ -549,12 +572,14 @@
 
     function toggleAdminUnlock() {
       if (!isAdminUnlocked) {
-        const pin = prompt("🔐 请输入管理员解锁密码控盘密码:", "1234");
+        const pin = prompt("🔐 请输入管理员解锁口令密码:", "1234");
         if (pin === "1234") {
           isAdminUnlocked = true;
-          alert("✅ 成功解锁管理员大屏控盘模式！您可以直接在大屏上输入触发号与揭晓开奖！");
+          alert("✅ 成功解锁管理员大屏控盘模式！您可以直接在大屏上设定触发号与揭晓开奖！");
+        } else if (pin !== null) {
+          alert("❌ 解锁口令错误！");
+          return;
         } else {
-          alert("❌ 密码错误！");
           return;
         }
       } else {
@@ -600,7 +625,7 @@
         if (winnerId) {
           passWinnerAndEliminateOthersPublic(winnerId);
         }
-      }, 1200);
+      }, 1800);
     }
 
     function passWinnerAndEliminateOthersPublic(winnerId) {
@@ -726,7 +751,6 @@
 
       const toggleBar = document.getElementById('processSectionToggleBar');
       const collapsibleSection = document.getElementById('collapsibleProcessSection');
-      const floatingActionBtns = document.getElementById('floatingActionButtons');
       const winnerBanner = document.getElementById('winnerAnnouncementBanner');
 
       let champion = null;
@@ -746,14 +770,12 @@
       if (!champion) {
         summaryPanel.classList.add('hidden');
         toggleBar.classList.add('hidden');
-        if (floatingActionBtns) floatingActionBtns.classList.add('hidden');
         collapsibleSection.classList.remove('hidden');
         return;
       }
 
       summaryPanel.classList.remove('hidden');
       toggleBar.classList.remove('hidden');
-      if (floatingActionBtns) floatingActionBtns.classList.remove('hidden');
       
       if (winnerBanner) winnerBanner.classList.add('hidden');
 
@@ -969,6 +991,8 @@
       const publicPollBadge = document.getElementById('publicPollBadge');
       const publicTriggerBadge = document.getElementById('publicTriggerBadge');
       const publicTriggerSubText = document.getElementById('publicTriggerSubText');
+      const publicSpectatorBanner = document.getElementById('publicSpectatorStatusBanner');
+      const spectatorStatusText = document.getElementById('spectatorStatusText');
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
       const publicDirectTriggerSelector = document.getElementById('publicDirectTriggerSelector');
 
@@ -981,57 +1005,86 @@
         if (state.triggerNumber) {
           publicTriggerBadge.innerText = `🎯 本轮触发号：#${state.triggerNumber}`;
           publicTriggerBadge.classList.remove('hidden');
-          publicTriggerSubText.innerText = `最高得票触发号已定位为 #${state.triggerNumber}，请准备揭晓！`;
+          publicTriggerSubText.innerText = `最高得票触发号已定位为 #${state.triggerNumber}`;
         } else {
           publicTriggerBadge.classList.add('hidden');
-          publicTriggerSubText.innerText = `请观众在直播间输入数字针对盲抽买家进行投票...`;
+          publicTriggerSubText.innerText = `实时同步盲抽开奖状态与候选买家名单...`;
         }
 
-        // 大屏控制开奖按钮呈现逻辑
-        if (isAdminUnlocked || state.pkStage === 'triggered') {
+        // 🔒 智能控盘与提示展示逻辑：
+        if (isAdminUnlocked) {
+          // 解锁模式：显示完整的开奖控制面板与触发号修改按钮
           publicRevealButtonBox.classList.remove('hidden');
-        } else {
-          publicRevealButtonBox.classList.add('hidden');
-        }
+          publicSpectatorBanner.classList.add('hidden');
 
-        if (isAdminUnlocked && publicDirectTriggerSelector) {
-          publicDirectTriggerSelector.classList.remove('hidden');
-          publicDirectTriggerSelector.classList.add('flex');
-          publicDirectTriggerSelector.innerHTML = `<span class="text-xs font-bold text-amber-300 mr-1">选择触发号:</span>` +
-            state.activeGroupIds.map((_, idx) => {
-              const num = idx + 1;
-              const isSel = (state.triggerNumber === num);
-              const btnCls = isSel ? "bg-amber-500 text-slate-950 font-black scale-110" : "bg-slate-800 text-slate-300 border border-slate-600";
-              return `<button onclick="setTriggerNumberFromPublic(${num})" class="w-6 h-6 text-xs rounded transition ${btnCls}">#${num}</button>`;
-            }).join('');
-        } else if (publicDirectTriggerSelector) {
-          publicDirectTriggerSelector.classList.add('hidden');
+          if (publicDirectTriggerSelector) {
+            publicDirectTriggerSelector.innerHTML = `<span class="text-xs font-bold text-amber-300 mr-1">设置触发号:</span>` +
+              state.activeGroupIds.map((_, idx) => {
+                const num = idx + 1;
+                const isSel = (state.triggerNumber === num);
+                const btnCls = isSel ? "bg-amber-500 text-slate-950 font-black scale-110" : "bg-slate-800 text-slate-300 border border-slate-600";
+                return `<button onclick="setTriggerNumberFromPublic(${num})" class="w-6 h-6 text-xs rounded transition ${btnCls}">#${num}</button>`;
+              }).join('');
+          }
+        } else {
+          // 锁定模式（普通观众）：隐藏所有点击按钮！仅提供状态提示条
+          publicRevealButtonBox.classList.add('hidden');
+          
+          if (state.pkStage === 'triggered') {
+            publicSpectatorBanner.classList.remove('hidden');
+            spectatorStatusText.innerText = `🎯 观众投票触发号已锁定为 #${state.triggerNumber}，等待开奖...`;
+          } else if (state.pkStage === 'revealed') {
+            publicSpectatorBanner.classList.remove('hidden');
+            spectatorStatusText.innerText = `🎰 本轮胜出者已揭晓！`;
+          } else {
+            publicSpectatorBanner.classList.add('hidden');
+          }
         }
 
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
+        
+        // 🃏 3D 慢速翻牌卡牌生成
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => {
           const realNum = idx + 1;
           const isRevealed = (state.pkStage === 'revealed');
           const isWinner = isRevealed && (realNum === state.triggerNumber);
 
-          let headerBadge = `<span class="text-[10px] sm:text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full inline-block shadow animate-pulse">#？</span>`;
-          let cardBoxStyle = "bg-slate-900/90 border border-amber-500/50";
+          const flippedClass = isRevealed ? 'is-flipped' : '';
+          let backCardStyle = "bg-slate-900/90 border border-slate-700";
+          let backBadge = `<span class="text-[10px] sm:text-xs font-black bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full inline-block">#${realNum}</span>`;
 
-          if (isRevealed) {
-            if (isWinner) {
-              headerBadge = `<span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full inline-block shadow-lg animate-bounce">🏆 #${realNum} 胜出</span>`;
-              cardBoxStyle = "bg-emerald-950/60 border-2 border-emerald-400 shadow-2xl shadow-emerald-500/30 scale-105";
-            } else {
-              headerBadge = `<span class="text-[10px] sm:text-xs font-black bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full inline-block">#${realNum}</span>`;
-              cardBoxStyle = "bg-slate-900/40 border border-slate-800 opacity-50";
-            }
+          if (isWinner) {
+            backCardStyle = "bg-emerald-950/90 border-2 border-emerald-400 shadow-2xl shadow-emerald-500/40 ring-4 ring-emerald-500/20";
+            backBadge = `<span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full inline-block shadow-lg animate-bounce">🏆 #${realNum} 命中胜出</span>`;
           }
 
-          return `<div class="${cardBoxStyle} rounded-xl p-3 sm:p-4 shadow text-center transition-all duration-700">
-            <div class="mb-1.5">${headerBadge}</div>
-            <div class="font-bold text-amber-300 text-xs sm:text-sm truncate">${escapeHtml(c.name)}</div>
-            <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
-          </div>`;
+          return `
+            <div class="card-perspective h-32 sm:h-36 w-full">
+              <div class="card-inner ${flippedClass}">
+                
+                <!-- 🎴 卡牌正面 (未开奖时显示 #？) -->
+                <div class="card-front bg-slate-900/90 border-2 border-amber-500/50 p-3 flex flex-col justify-between items-center text-center shadow-xl">
+                  <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#？</span>
+                  <div class="my-auto">
+                    <div class="font-bold text-amber-300 text-xs sm:text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
+                    <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                  </div>
+                  <span class="text-[9px] text-amber-400/60 font-mono">???</span>
+                </div>
+
+                <!-- 🃏 卡牌反面 (开奖后慢慢翻转显示真实序号) -->
+                <div class="card-back ${backCardStyle} p-3 flex flex-col justify-between items-center text-center shadow-2xl">
+                  <div>${backBadge}</div>
+                  <div class="my-auto">
+                    <div class="font-bold text-amber-300 text-xs sm:text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
+                    <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                  </div>
+                  <span class="text-[9px] text-slate-500 font-mono">POLL #${state.currentPollNumber || 1}</span>
+                </div>
+
+              </div>
+            </div>
+          `;
         }).join('');
       } else {
         publicGroupContainer.classList.add('hidden');
