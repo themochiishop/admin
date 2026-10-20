@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8"> 
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -304,8 +303,7 @@
 
     const i18n = {
       zh: {
-        adminTitle: "Mochiishop 每月抽奖 - 直播控制台",
-        adminSubTitle: "香水盲抽 · Shopee直播分组PK控盘系统",
+        adminTitle: "Mochiishop 每月抽奖 - 直播控制台", adminSubTitle: "香水盲抽 · Shopee直播分组PK控盘系统",
         btnPrevRound: "🔙 返回上一轮", btnNextRound: "⏩ 锁定本轮晋级者并推进下一轮", btnResetAll: "⚠️ 重置所有轮次数据",
         statTotal: "本轮参选人数", statPassed: "本轮晋级/胜出", statPending: "本轮待PK人数", statOut: "本轮已淘汰人数",
         roundPrefix: "第 ", roundSuffix: " 轮",
@@ -335,8 +333,7 @@
         rankConsolation: "🎁 安慰奖", rankThird: "🥉 季军", rankChampion: "👑 冠军", rankRunnerUp: "🥈 亚军"
       },
       en: {
-        adminTitle: "Mochiishop Monthly Draw - Admin Console",
-        adminSubTitle: "Perfume Blind Draw · Shopee Live Group Voting",
+        adminTitle: "Mochiishop Monthly Draw - Admin Console", adminSubTitle: "Perfume Blind Draw · Shopee Live Group Voting",
         btnPrevRound: "🔙 Previous Round", btnNextRound: "⏩ Advance Qualified Buyers", btnResetAll: "⚠️ Reset All",
         statTotal: "Round Candidates", statPassed: "Passed", statPending: "In Battle", statOut: "Eliminated",
         roundPrefix: "Round ", roundSuffix: "",
@@ -366,8 +363,7 @@
         rankConsolation: "🎁 Consolation", rankThird: "🥉 3rd Place", rankChampion: "👑 Champion", rankRunnerUp: "🥈 Runner-up"
       },
       ms: {
-        adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
-        adminSubTitle: "Cabutan Minyak Wangi · Undian Pembeli Shopee Live",
+        adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan", adminSubTitle: "Cabutan Minyak Wangi · Undian Pembeli Shopee Live",
         btnPrevRound: "🔙 Pusingan Sebelum", btnNextRound: "⏩ Majukan Calon Layak", btnResetAll: "⚠️ Tetap Semula",
         statTotal: "Jumlah Calon", statPassed: "Lulus", statPending: "Dalam Bersaing", statOut: "Tersingkir",
         roundPrefix: "Pusingan ", roundSuffix: "",
@@ -403,12 +399,10 @@
       syncModalUIWithState();
       updateHeaderTitle();
 
-      // 🔥 后台核心：实时监听 Firebase 云端数据，前台开奖后，后台立刻同步更新！
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
           state = val;
-          
           (state.rounds || []).forEach(r => {
             (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); });
           });
@@ -429,7 +423,6 @@
         }
       });
 
-      // 监听前台管理员是否登入，如果登入，后台的开奖按钮变灰
       db.ref('tournament_state/publicAdminActive').on('value', (snap) => {
         publicAdminActive = !!snap.val();
         updateAdminRevealButtonLock();
@@ -642,7 +635,6 @@
       reader.readAsText(file);
     }
 
-    // 🔥 绝对唯一 ID 防冲突解析
     function parseCSVToFirstRound(csvText) {
       const lines = csvText.split('\n');
       const candidates = [];
@@ -652,13 +644,12 @@
         if (parts[0] && parts[0].trim() !== '买家姓名' && parts[0].trim() !== 'Name') {
           const nameStr = parts[0].trim();
           const orderStr = parts[1] ? parts[1].trim() : '';
-          // 使用 名字_单号_行号 作为绝对唯一 ID，即使同一人买多单也不会冲突
           const uniqueId = `${nameStr}_${orderStr}_${idx}`;
           candidates.push({ id: uniqueId, name: nameStr, orderNo: orderStr, status: 'pending' });
         }
       });
       state.rounds[0].candidates = candidates;
-      state.passHistory = []; // 导入时清空历史
+      state.passHistory = []; 
       saveState();
       renderRoundTabs();
     }
@@ -672,7 +663,6 @@
           if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") hasChampion = true;
         });
       });
-      // 如果历史池有冠军也算
       (state.passHistory || []).forEach(c => {
         if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") hasChampion = true;
       });
@@ -1319,7 +1309,6 @@
         });
       }
       
-      // 🔥 新增：按 POLL #N 排序
       passedList.sort((a, b) => {
         const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
         const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
@@ -1426,21 +1415,36 @@
 
     function resetRounds() {
       if (confirm("确认重置所有数据？")) {
-        currentRoundIndex = 0;
-        state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
-        state.pollCount = 0;
-        delete state.currentPollNumber;
-        activeGroup4Ids = [];
-        state.activeGroupIds = [];
-        state.activeGroupMembers = [];
-        state.pkStage = 'voting';
-        state.triggerNumber = null;
-        state.drawRoundIndex = 0;
-        state.settled = false;
-        state.passHistory = []; // 清空历史池
-        delete state.latestEvent;
-        saveState();
-        fetchGoogleSheetsData(true);
+        // 🔥 改用 transaction 强制覆盖云端，解决点两次才能清空的问题
+        db.ref('tournament_state').transaction((currentData) => {
+          return {
+            customAdminTitle: state.customAdminTitle || '',
+            customPublicTitle: state.customPublicTitle || '',
+            isPublicVisible: true,
+            pollCount: 0,
+            currentPollNumber: 0,
+            pkStage: 'voting',
+            triggerNumber: null,
+            drawRoundIndex: 0,
+            activeGroupMembers: [],
+            activeGroupIds: [],
+            passHistory: [],
+            settled: false,
+            pdfConfig: state.pdfConfig || {},
+            modeConfig: state.modeConfig || {},
+            rounds: [{ roundName: "第 1 轮", candidates: [] }],
+            publicAdminActive: false
+          };
+        }, (error) => {
+          if (!error) {
+            currentRoundIndex = 0;
+            activeGroup4Ids = [];
+            alert("✅ 所有数据已重置清空！");
+            fetchGoogleSheetsData(true); // 重新拉取名单
+          } else {
+            alert("❌ 重置失败，请重试");
+          }
+        });
       }
     }
 
