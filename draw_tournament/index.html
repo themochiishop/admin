@@ -36,6 +36,22 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
 
+  <!-- ⏳ 前台公开屏蔽遮罩层 (未勾选公开显示时呈现此遮罩) -->
+  <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
+    <div class="bg-slate-900/90 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-lg border-2">
+      <div class="absolute -top-16 -left-16 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
+      <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
+      
+      <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
+      <h2 class="text-xl sm:text-2xl font-black text-amber-400 mb-2 leading-snug" data-i18n="updatingOverlayMsg">
+        网页正在计算与更新中，敬请期待...
+      </h2>
+      <p class="text-xs sm:text-sm text-slate-400 font-medium" data-i18n="updatingOverlaySub">
+        系统正在实时同步与整理买家数据，请留意直播间提示
+      </p>
+    </div>
+  </div>
+
   <!-- 🌟 全屏豪华恭喜弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
@@ -290,6 +306,7 @@
 
     let state = { 
       customPublicTitle: '',
+      isPublicVisible: true,
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
       rounds: [{ roundName: "第 1 轮", candidates: [] }] 
     };
@@ -347,7 +364,9 @@
         processSectionLabel: "📋 抽奖比赛全程选拔细节记录",
         expandText: "展开选拔过程 ▼",
         collapseText: "折叠选拔过程 ▲",
-        noOrderNoText: "无订单号"
+        noOrderNoText: "无订单号",
+        updatingOverlayMsg: "⏳ 网页正在计算与更新中，敬请期待...",
+        updatingOverlaySub: "系统正在实时同步与整理买家数据，请留意直播间提示"
       },
       en: {
         publicTitle: "Mochiishop Monthly Draw Leaderboard",
@@ -401,7 +420,9 @@
         processSectionLabel: "📋 Full Tournament Selection Records",
         expandText: "Expand Details ▼",
         collapseText: "Collapse Details ▲",
-        noOrderNoText: "No Order No"
+        noOrderNoText: "No Order No",
+        updatingOverlayMsg: "⏳ Calculating & Updating, Please Wait...",
+        updatingOverlaySub: "Data is being synchronized in real time. Please stay tuned."
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
@@ -455,7 +476,9 @@
         processSectionLabel: "📋 Rekod Terperinci Pemilihan Kejohanan",
         expandText: "Buka Butiran ▼",
         collapseText: "Tutup Butiran ▲",
-        noOrderNoText: "Tiada No. Pesanan"
+        noOrderNoText: "Tiada No. Pesanan",
+        updatingOverlayMsg: "⏳ Halaman sedang dikira dan dikemaskini, sila tunggu...",
+        updatingOverlaySub: "Data sedang diselaraskan dalam masa nyata. Sila nantikan."
       }
     };
 
@@ -476,6 +499,7 @@
             }
           }
 
+          updatePublicOverlayState();
           renderRoundTabs();
           renderPublicView();
           updateStats();
@@ -486,6 +510,17 @@
         }
       });
     };
+
+    function updatePublicOverlayState() {
+      const mask = document.getElementById('publicOverlayMask');
+      if (!mask) return;
+
+      if (state.isPublicVisible === false) {
+        mask.classList.remove('hidden');
+      } else {
+        mask.classList.add('hidden');
+      }
+    }
 
     function updatePublicHeaderTitle() {
       const h1 = document.getElementById('publicHeaderTitle');
@@ -516,6 +551,7 @@
       if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
       updatePublicHeaderTitle();
+      updatePublicOverlayState();
       renderRoundTabs();
       renderPublicView();
       updateStats();
