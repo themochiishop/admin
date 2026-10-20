@@ -1021,7 +1021,8 @@
 
     function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[currentRoundIndex];
-      const pollLabel = `POLL #${state.currentPollNumber || 1}`;
+      const winnerIndex = activeGroup4Ids.indexOf(winnerId) + 1;
+      const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerIndex})`;
       
       activeGroup4Ids.forEach(id => {
         const target = activeRound.candidates.find(c => c.id === id);
@@ -1066,7 +1067,7 @@
         return `<div class="bg-slate-900/90 border border-amber-500/40 rounded-xl p-3 flex flex-col justify-between shadow">
           <div>
             <div class="flex justify-between items-center mb-1">
-              <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded">#${idx + 1}</span>
+              <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded">#？</span>
             </div>
             <div class="font-bold text-amber-300 text-sm truncate">${escapeHtml(c.name)}</div>
             <div class="text-[11px] text-slate-400 font-mono truncate">${escapeHtml(c.orderNo || '无订单号')}</div>
