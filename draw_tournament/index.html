@@ -140,16 +140,28 @@
         <div id="publicRevealButtonBox" class="hidden mb-4 p-4 bg-slate-900/95 rounded-2xl border-2 border-amber-500/80 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl backdrop-blur-md">
          
           
-          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-6 py-2 rounded-xl border border-amber-500/60 shadow-inner">
-            <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-0.5">🎯 本轮触发号</span>
-            <span id="centerTriggerNumberBox" class="text-2xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+               <!-- 顶部 PK 组标题，强制一行 -->
+        <div class="flex flex-row justify-between items-center mb-3 pb-3 border-b border-amber-500/30 gap-2">
+          <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
+            <span class="text-base sm:text-2xl animate-bounce">🔥</span>
+            <h3 class="text-xs sm:text-base font-black text-amber-400 truncate" data-i18n="shopeeGroupTitle">Shopee 直播间盲抽 PK 组</h3>
+          </div>
+          <div class="flex-shrink-0">
+            <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
+          </div>
+        </div>
+
+        <!-- 管理员操作面板：去掉多余文字，号码框居中 -->
+        <div id="publicRevealButtonBox" class="hidden mb-4 p-4 bg-slate-900/95 rounded-2xl border-2 border-amber-500/80 flex flex-col items-center justify-center gap-3 shadow-2xl backdrop-blur-md">
+          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-8 py-3 rounded-xl border border-amber-500/60 shadow-inner">
+            <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮触发号</span>
+            <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
           </div>
           
-          <div class="w-full sm:w-auto flex justify-end">
-            <button onclick="revealPKWinnerFromPublic()" class="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-              <span>🎰</span><span>点击揭晓开奖</span>
-            </button>
-          </div>
+         <button onclick="revealPKWinnerFromPublic()" class="w-full max-w-xs px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+            <span>🎰</span><span>点击揭晓开奖</span>
+          </button>
+        </div>
         </div>
 
         <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
