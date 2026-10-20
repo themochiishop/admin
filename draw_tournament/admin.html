@@ -262,15 +262,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    firebase.auth().signInAnonymously().catch((error) => {
-      console.error("匿名登录失败:", error);
-    });
+    firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
 
     const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
-    // 🔥 内存镜像：每次 saveState/render 都以 state.activeGroupIds 为准，顺序即 #1/#2/#3...
     let activeGroup4Ids = [];
 
     let state = {
@@ -281,9 +278,7 @@
       currentPollNumber: 0,
       pkStage: 'voting',
       triggerNumber: null,
-      // 🆕 当前抽奖实际轮次（前台开奖时使用，不再依赖前台当前显示 Tab）
       drawRoundIndex: 0,
-      // 🆕 固定序号成员表
       activeGroupMembers: [],
       activeGroupIds: [],
       settled: false,
@@ -486,10 +481,7 @@
 
       if (importMode === 'fileUpload') {
         const fileInput = document.getElementById('localFileInput');
-        if (fileInput && fileInput.files.length > 0) {
-          readLocalFileAndParse(fileInput.files[0]);
-          return;
-        }
+        if (fileInput && fileInput.files.length > 0) { readLocalFileAndParse(fileInput.files[0]); return; }
       }
       fetchGoogleSheetsData(true);
     }
@@ -581,10 +573,7 @@
         if (isManual) alert("⚠️ 第一轮已开始抽取或已推进后续轮次，已锁定刷新/导入功能，防止误触覆盖数据！如需重新导入，请先点击右上角【重置所有轮次数据】。");
         return;
       }
-      if (currentRoundIndex !== 0) { 
-        if (isManual) alert("仅限在第 1 轮刷新/导入数据！"); 
-        return; 
-      }
+      if (currentRoundIndex !== 0) { if (isManual) alert("仅限在第 1 轮刷新/导入数据！"); return; }
       const cfg = state.modeConfig || {};
       const importMode = cfg.importMode || 'default';
 
@@ -618,7 +607,6 @@
         if (!line.trim()) return;
         const parts = line.replace(/"/g, '').split(',');
         if (parts[0] && parts[0].trim() !== '买家姓名' && parts[0].trim() !== 'Name') {
-          // 🆕 id 统一用字符串，避免前后台类型不一致
           candidates.push({ id: String(Date.now() + idx), name: parts[0].trim(), orderNo: parts[1] ? parts[1].trim() : '', status: 'pending' });
         }
       });
@@ -641,7 +629,6 @@
     }
 
     async function exportResultsToPDF() {
-      // 与原版一致
       let champion = null, runnerUp = null, thirdPlace = null, consolations = [];
       (state.rounds || []).forEach(r => {
         (r.candidates || []).forEach(c => {
@@ -735,7 +722,7 @@
       }
     }
 
-    // 🎲 随机抽组函数
+    // 🎲 随机抽组函数（A3 盲抽玩法：卡片 #号 随机分配）
     function pickRandomGroup() {
       const activeRound = state.rounds[currentRoundIndex];
       const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
@@ -756,7 +743,7 @@
       state.currentPollNumber = state.pollCount;
       state.pkStage = 'selecting';
       state.triggerNumber = null;
-      state.drawRoundIndex = currentRoundIndex;  // 🆕 记录抽奖的轮次
+      state.drawRoundIndex = currentRoundIndex;
       activeGroup4Ids = [];
       state.activeGroupIds = [];
       state.activeGroupMembers = [];
@@ -773,12 +760,17 @@
         const shuffled = [...currentPending].sort(() => 0.5 - Math.random());
         const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
         
-        // 🔥 核心修复：id 统一转 String
         activeGroup4Ids = selected.map(c => String(c.id));
         state.activeGroupIds = activeGroup4Ids;
+
+        // 🔥 A3 玩法核心：给每张卡随机分配 #号（1..N 打乱），但保持固定
+        const totalSelected = selected.length;
+        const shuffledNums = Array.from({ length: totalSelected }, (_, i) => i + 1)
+          .sort(() => 0.5 - Math.random());
+
         state.activeGroupMembers = selected.map((c, idx) => ({
-          id: String(c.id),           // 统一字符串
-          displayNumber: idx + 1,     // 固定序号
+          id: String(c.id),
+          displayNumber: shuffledNums[idx],   // ✅ 随机 #号
           name: c.name,
           orderNo: c.orderNo
         }));
@@ -805,15 +797,13 @@
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
 
       state.pkStage = 'revealed';
-      state.settled = true;  // 🛡️ 锁
+      state.settled = true;
       saveState();
 
       setTimeout(() => {
-        // 🔥 核心修复：严格按 displayNumber 匹配
+        // 严格按 displayNumber 匹配（displayNumber 是抽组时随机的 #号）
         const winnerMember = (state.activeGroupMembers || []).find(m => m.displayNumber === state.triggerNumber);
-        if (winnerMember) {
-          passWinnerAndEliminateOthers(winnerMember.id);
-        }
+        if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
       }, 1200);
     }
 
@@ -832,18 +822,11 @@
 
     function passWinnerAndEliminateOthers(winnerId) {
       if (state.settled && state.pkStage === 'voting' && activeGroup4Ids.length === 0) {
-        // 已结算
-        console.warn("重复结算已拦截");
-        return;
+        console.warn("重复结算已拦截"); return;
       }
 
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
-      if (!activeRound) {
-        console.error("找不到轮次", state.drawRoundIndex);
-        state.settled = false;
-        saveState();
-        return;
-      }
+      if (!activeRound) { console.error("找不到轮次", state.drawRoundIndex); state.settled = false; saveState(); return; }
 
       const winnerMember = (state.activeGroupMembers || []).find(m => String(m.id) === String(winnerId));
       const winnerIndex = winnerMember ? winnerMember.displayNumber : (activeGroup4Ids.indexOf(String(winnerId)) + 1);
@@ -880,15 +863,11 @@
       const triggerStatusTag = document.getElementById('triggerStatusTag');
       const triggerButtonsContainer = document.getElementById('triggerButtonsContainer');
 
-      // 渲染时从 state 同步到内存
       if (state.activeGroupIds && state.activeGroupIds.length > 0 && activeGroup4Ids.length === 0) {
         activeGroup4Ids = [...state.activeGroupIds];
       }
 
-      if (!activeGroup4Ids || activeGroup4Ids.length === 0) {
-        displayContainer.classList.add('hidden');
-        return;
-      }
+      if (!activeGroup4Ids || activeGroup4Ids.length === 0) { displayContainer.classList.add('hidden'); return; }
 
       displayContainer.classList.remove('hidden');
       if (pollBadge && state.currentPollNumber) pollBadge.innerText = `POLL #${state.currentPollNumber}`;
@@ -904,8 +883,9 @@
       }
 
       if (triggerButtonsContainer) {
-        triggerButtonsContainer.innerHTML = activeGroup4Ids.map((_, idx) => {
-          const num = idx + 1;
+        // 触发号按钮：按 1..N 展示（数字按钮），点哪个就是告诉观众"我们要开这个号"
+        const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
+        triggerButtonsContainer.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(num => {
           const isSelected = (state.triggerNumber === num);
           const btnClass = isSelected ? "bg-amber-500 text-slate-950 font-black scale-110 shadow-lg border-2 border-white" : "bg-slate-800 text-amber-300 border border-amber-500/50 hover:bg-amber-500 hover:text-slate-950";
           return `<button onclick="setTriggerNumber(${num})" class="w-7 h-7 rounded-lg text-xs transition transform font-black ${btnClass}">#${num}</button>`;
@@ -914,7 +894,7 @@
 
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       
-      // 🔥 核心修复：严格按 activeGroupMembers 的 displayNumber 排序，id 统一字符串比较
+      // 🔥 严格按 activeGroupMembers 的 displayNumber 排序显示
       let members;
       if (state.activeGroupMembers && state.activeGroupMembers.length > 0) {
         members = state.activeGroupMembers
@@ -926,7 +906,6 @@
           })
           .filter(Boolean);
       } else {
-        // 兜底
         members = activeGroup4Ids.map((id, idx) => {
           const c = (activeRound.candidates || []).find(x => String(x.id) === String(id));
           return c ? { ...c, displayNumber: idx + 1 } : null;
@@ -974,10 +953,7 @@
         (r.candidates || []).forEach(c => {
           if (String(c.id) === String(id)) {
             c.status = 'pending';
-            delete c.eliminatedRoundIndex;
-            delete c.rankTitle;
-            delete c.rankKey;
-            delete c.pollLabel;
+            delete c.eliminatedRoundIndex; delete c.rankTitle; delete c.rankKey; delete c.pollLabel;
           }
         });
       });
@@ -1014,17 +990,13 @@
             target.rankKey = "rankConsolation";
             const consolationsPicked = totalCandidates.filter(c => c.rankKey === "rankConsolation");
             const targetConsolationTotal = state.modeConfig.mode2ConsolationCount || 10;
-
             if (consolationsPicked.length >= targetConsolationTotal) {
               const remainingThree = totalCandidates.filter(c => c.rankKey !== "rankConsolation");
               const stageLabel = "🏆 冠亚季争夺战 (剩3人)";
-              const podiumCandidates = remainingThree.map((c, idx) => ({
-                id: String(Date.now() + idx), name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending'
-              }));
+              const podiumCandidates = remainingThree.map((c, idx) => ({ id: String(Date.now() + idx), name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
               state.rounds.push({ roundName: stageLabel, stageName: stageLabel, candidates: podiumCandidates });
               currentRoundIndex = state.rounds.length - 1;
-              saveState();
-              renderRoundTabs();
+              saveState(); renderRoundTabs();
               alert(i18n[currentLang].alertConsolationDone.replace('{total}', targetConsolationTotal));
               return;
             }
@@ -1035,17 +1007,12 @@
           target.rankTitle = "🥉 季军";
           target.rankKey = "rankThird";
           const remainingTwo = totalCandidates.filter(c => String(c.id) !== String(target.id));
-
           state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: target.name };
-
-          const finalRoundCandidates = remainingTwo.map((c, idx) => ({
-            id: String(Date.now() + idx), name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending'
-          }));
+          const finalRoundCandidates = remainingTwo.map((c, idx) => ({ id: String(Date.now() + idx), name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
           const stageLabel = "👑 冠亚军终极决战 (2选1)";
           state.rounds.push({ roundName: stageLabel, stageName: stageLabel, candidates: finalRoundCandidates });
           currentRoundIndex = state.rounds.length - 1;
-          saveState();
-          renderRoundTabs();
+          saveState(); renderRoundTabs();
           alert(i18n[currentLang].alertThirdSuccess.replace('{name}', target.name));
           return;
         }
@@ -1116,17 +1083,12 @@
 
       if (passedCandidates.length === 0) { alert("⚠️ 请先选出晋级/胜出的买家！"); return; }
       if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length < 3) {
-        alert(`⚠️ 【模式 1 规则限制】\n\n下一轮必须至少 3 人！\n\n当前仅 ${passedCandidates.length} 位。`);
-        return;
+        alert(`⚠️ 【模式 1 规则限制】\n\n下一轮必须至少 3 人！\n\n当前仅 ${passedCandidates.length} 位。`); return;
       }
       if (isModeEnabled && selectedMode === 'mode2' && passedCandidates.length < (N + 3)) {
-        alert(`⚠️ 【模式 2 规则限制】\n\n晋级区至少 ${N + 3} 人！\n\n当前仅 ${passedCandidates.length} 位，缺少 ${(N + 3) - passedCandidates.length} 人。`);
-        return;
+        alert(`⚠️ 【模式 2 规则限制】\n\n晋级区至少 ${N + 3} 人！\n\n当前仅 ${passedCandidates.length} 位，缺少 ${(N + 3) - passedCandidates.length} 人。`); return;
       }
-      if (passedCandidates.length === totalCandidates.length) {
-        alert("⚠️ 全员都是晋级，无人被淘汰！请确认。");
-        return;
-      }
+      if (passedCandidates.length === totalCandidates.length) { alert("⚠️ 全员都是晋级，无人被淘汰！请确认。"); return; }
 
       currentRound.candidates.forEach(c => {
         if (c.status !== 'pass') {
@@ -1136,9 +1098,7 @@
       });
 
       const nextRoundNumber = state.rounds.length + 1;
-      const nextRoundCandidates = passedCandidates.map((c, idx) => ({
-        id: String(Date.now() + idx), name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending'
-      }));
+      const nextRoundCandidates = passedCandidates.map((c, idx) => ({ id: String(Date.now() + idx), name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
 
       let stageLabel = `第 ${nextRoundNumber} 轮 (${passedCandidates.length}人角逐)`;
       let isConsolationStage = false;
@@ -1172,7 +1132,6 @@
 
     function switchRound(idx) { 
       currentRoundIndex = idx; 
-      // 切换轮次时，如果该轮就是当前抽奖轮次，恢复 activeGroupIds；否则清空显示
       if (state.drawRoundIndex === idx && state.activeGroupIds && state.activeGroupIds.length > 0) {
         activeGroup4Ids = [...state.activeGroupIds];
       } else if (state.activeGroupIds && state.activeGroupIds.length > 0 && state.pkStage !== 'voting') {
@@ -1190,15 +1149,12 @@
         const val = snapshot.val();
         if (val) {
           state = val;
-          // 🆕 修复历史数据：id 统一字符串
           (state.rounds || []).forEach(r => {
             (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); });
           });
           if (state.activeGroupIds && state.activeGroupIds.length > 0) {
             state.activeGroupIds = state.activeGroupIds.map(id => String(id));
-            if (state.activeGroupMembers) {
-              state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
-            }
+            if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
             activeGroup4Ids = [...state.activeGroupIds];
           }
           renderRoundTabs();
@@ -1236,9 +1192,7 @@
       if (passedBadge) passedBadge.innerText = passedCount;
 
       let totalOutCount = 0;
-      (state.rounds || []).forEach(r => {
-        totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length;
-      });
+      (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
       document.getElementById('statOutCount').innerText = totalOutCount;
       updateRefreshButtonState();
     }
@@ -1314,16 +1268,9 @@
           let passBtnLabel = i18n[currentLang].btnPass;
           let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
 
-          if (isConsolationStage) {
-            passBtnLabel = i18n[currentLang].btnPassConsolation;
-            passBtnClass = "bg-emerald-600 text-white font-bold hover:bg-emerald-500";
-          } else if (isMode1ThreeLeft) {
-            passBtnLabel = i18n[currentLang].btnPassThird;
-            passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce";
-          } else if (isMode1TwoLeft) {
-            passBtnLabel = i18n[currentLang].btnPassChampion;
-            passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse";
-          }
+          if (isConsolationStage) { passBtnLabel = i18n[currentLang].btnPassConsolation; passBtnClass = "bg-emerald-600 text-white font-bold hover:bg-emerald-500"; }
+          else if (isMode1ThreeLeft) { passBtnLabel = i18n[currentLang].btnPassThird; passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce"; }
+          else if (isMode1TwoLeft) { passBtnLabel = i18n[currentLang].btnPassChampion; passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse"; }
 
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
 
@@ -1361,16 +1308,9 @@
         });
       });
       document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
-      if (allOutCandidates.length === 0) {
-        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`;
-        return;
-      }
+      if (allOutCandidates.length === 0) { outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`; return; }
       const grouped = {};
-      allOutCandidates.forEach(c => {
-        const key = c.roundIndex;
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(c);
-      });
+      allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
       const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
       outContainer.innerHTML = sortedKeys.map(rIdxKey => {
         const rNum = Number(rIdxKey) + 1;
