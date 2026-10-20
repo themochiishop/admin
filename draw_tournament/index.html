@@ -60,7 +60,7 @@
       </div>
       <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
         
-        <!-- 🔥 修复：手机端的提示气泡改为点击原地弹窗，不再因为绝对定位飞出屏幕外 -->
+        <!-- 手机端弹出的模式规则气泡框 -->
         <div class="relative">
           <span id="publicModeBadge" onclick="toggleModeTooltip(event)" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-pointer">模式: 加载中</span>
           <div id="modeTooltipContent" class="hidden absolute right-0 top-full mt-2 w-[85vw] max-w-[320px] p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-50 text-xs">
@@ -180,7 +180,7 @@
               <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2"><span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span></span>
             </div>
             
-            <!-- 🔥 修复：搜索框使用 flex 强行排布，保证不会互相挤压，右侧留白适中 -->
+            <!-- 优化后的搜索框：彻底解决放大镜挤压问题 -->
             <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
               <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
               <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
@@ -337,7 +337,7 @@
       }
     };
 
-    // 🔥 用于修复手机端弹窗问题
+    // 手机端弹出气泡专用
     function toggleModeTooltip(e) {
       if(e) e.stopPropagation();
       document.getElementById('modeTooltipContent').classList.toggle('hidden');
@@ -812,7 +812,7 @@
     }
 
     function renderPublicView() {
-      // 🔥 修复手机端刷新 bug：确保 activeRound 永远有值，不会因为数组越界变成空
+      // 修复手机端刷新 bug：确保 activeRound 永远有值，不会因为数组越界变成空
       let activeRound = { candidates: [] };
       if (state.rounds && state.rounds.length > 0) {
         if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
@@ -980,7 +980,6 @@
       } else if (pendingList.length === 0) {
         pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-xl sm:text-2xl mb-2">🎉</p><p class="text-xs sm:text-sm">${lang.allDone}</p></div>`;
       } else {
-        // 🔥 强制移除网格布局，改为 flex-wrap 自动换行，彻底避免手机端塌陷
         let cardsHtml = '';
         pendingList.forEach((c, index) => {
           let extraStyle = 'border-slate-700 bg-slate-800/80';
