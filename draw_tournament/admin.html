@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 🌟 隐藏滚动条但保留上下滚动功能 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
@@ -21,9 +26,22 @@
       
       <div class="flex items-center space-x-3">
         <!-- ⚙️ 模式显示与齿轮设置按钮 -->
-        <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-inner">
-          <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
-          <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式规则">⚙️</button>
+        <div class="relative group cursor-pointer">
+          <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-inner hover:border-amber-400/60 transition">
+            <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
+            <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式规则">⚙️</button>
+          </div>
+
+          <!-- Hover 放大区域与详细规则说明 -->
+          <div class="absolute right-0 top-full mt-2 w-80 p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
+            <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-sm">
+              <span>📋</span>
+              <span data-i18n="tooltipTitle">当前模式规则与晋级说明</span>
+            </div>
+            <div id="modeTooltipContent" class="space-y-2 text-slate-300 text-[11px] leading-relaxed">
+              模式规则加载中...
+            </div>
+          </div>
         </div>
 
         <!-- 🌐 语言切换按钮 -->
@@ -144,7 +162,7 @@
           <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">本轮普及/晋级区</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
-        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1"></div>
+        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
       </div>
     </div>
 
@@ -168,7 +186,8 @@
             🔄 刷新第 1 轮名单
           </button>
         </div>
-        <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 快速查找买家/订单..." class="w-48 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400">
+        <!-- 🔍 搜索框修短为 w-36 -->
+        <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-36 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
       </div>
     </div>
 
@@ -190,14 +209,14 @@
       <p id="specialRoundBannerSub" class="text-xs text-amber-200/90 mt-1"></p>
     </div>
 
-    <!-- 名单池 (左, 强制一行5个) & 淘汰区 (右) -->
+    <!-- 名单池 (左, 强制一行5个) & 淘汰区 (右, 1列极简模式, 隐藏滚动条) -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <h2 class="text-md font-bold text-amber-400 mb-4 pb-2 border-b border-slate-700">待 PK 买家名单池</h2>
         <div id="adminViewContainer"></div>
       </div>
 
-      <!-- 后台淘汰区 (可撤回) -->
+      <!-- 后台淘汰区 (无滚动条，保留上下滚动) -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
@@ -206,7 +225,7 @@
           </div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
         </div>
-        <div id="adminOutListContainer" class="space-y-4 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
+        <div id="adminOutListContainer" class="space-y-4 flex-1 overflow-y-auto no-scrollbar max-h-[600px] pr-1"></div>
       </div>
     </div>
 
@@ -262,14 +281,17 @@
         consolationLabel: "安慰奖名额:",
         unitPeople: "人",
         btnSaveConfig: "💾 保存设置",
-        searchPlaceholder: "🔍 快速查找买家/订单...",
+        searchPlaceholder: "🔍 名字或订单号...",
         banner3LeftTitle: "🔥 当前本轮仅剩 3 人角逐！请点击下方【🥉 设为季军】按钮选择季军得主",
         banner3LeftSub: "选出季军后，系统将自动向大屏推送 10 秒海报，并自动将余下 2 人推进至【👑 冠亚军决战】！",
         banner2LeftTitle: "👑【冠亚军终极决战 (2选1)】！请点击选出冠军",
         banner2LeftSub: "点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】，并同步推送大屏喜报！",
         alertThirdSuccess: "🥉 恭喜买家【{name}】获得 🥉 季军！\n\n前台已同步播放 10 秒恭喜海报，系统已自动为你推进至【👑 冠亚军终极决战】！",
         alertFinalSuccess: "👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：{winner}\n🥈 亚军：{runnerUp}\n\n前台公开大屏已同步向全场播放恭喜海报！",
-        eliminatedInRound: "第 {r} 轮淘汰"
+        eliminatedInRound: "第 {r} 轮淘汰",
+        tooltipTitle: "当前模式规则与晋级流程说明",
+        mode1FlowDetail: "<b>冠亚季模式流程：</b><br>1. 普通轮次：多选选手【普及/晋级】至下一轮，至少需留 3 人推进。<br>2. <b>季军战 (3选1)</b>：点击【🥉 设为季军】，系统弹出喜报并自动将余下 2 人推进决战。<br>3. <b>冠亚军决战 (2选1)</b>：点击【👑 设为冠军】，未被选者自动锁定为【🥈 亚军】。",
+        mode2FlowDetail: "<b>安慰奖模式流程：</b><br>保留冠亚季军流程的同时，多余名额自动划入安慰奖区。"
       },
       en: {
         adminTitle: "Mochiishop Monthly Draw - Admin Console",
@@ -304,14 +326,17 @@
         consolationLabel: "Consolation Count:",
         unitPeople: " ",
         btnSaveConfig: "💾 Save Config",
-        searchPlaceholder: "🔍 Fast search name/order...",
+        searchPlaceholder: "🔍 Name / Order No...",
         banner3LeftTitle: "🔥 Only 3 candidates left! Click [Set 3rd Place] below.",
         banner3LeftSub: "Picking 3rd place auto-popups announcement and advances to 2-way Final!",
         banner2LeftTitle: "👑 2-Way Final Showdown! Pick the Champion.",
         banner2LeftSub: "Picked candidate becomes Champion, unpicked becomes Runner-up!",
         alertThirdSuccess: "🥉 Congratulations [{name}] for winning 3rd Place!\n\nSystem auto-advanced to 2-way Final!",
         alertFinalSuccess: "👑 🎉 Final Winners!\n\n👑 Champion: {winner}\n🥈 Runner-up: {runnerUp}",
-        eliminatedInRound: "Eliminated in Round {r}"
+        eliminatedInRound: "Eliminated in Round {r}",
+        tooltipTitle: "Current Mode Flow Details",
+        mode1FlowDetail: "<b>Podium Flow:</b><br>1. Normal Rounds: Pass candidates to next round (at least 3 candidates needed).<br>2. <b>3rd Place Battle</b>: Pick [3rd Place] to auto-advance remaining 2.<br>3. <b>Final Showdown</b>: Pick [Champion], remaining becomes [Runner-up].",
+        mode2FlowDetail: "<b>Consolation Flow:</b><br>Includes podium showdown plus N consolation winners."
       },
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
@@ -346,14 +371,17 @@
         consolationLabel: "Jumlah Saguhati:",
         unitPeople: " orang",
         btnSaveConfig: "💾 Simpan Tetapan",
-        searchPlaceholder: "🔍 Cari cepat nama/pesanan...",
+        searchPlaceholder: "🔍 Nama / Pesanan...",
         banner3LeftTitle: "🔥 Tinggal 3 calon sahaja! Sila pilih Tempat Ke-3 di bawah.",
         banner3LeftSub: "Pemilihan Tempat Ke-3 akan melangkah ke Pusingan Akhir secara automatik!",
         banner2LeftTitle: "👑 Pusingan Akhir (2 Calon)! Pilih Juara.",
         banner2LeftSub: "Calon yang dipilih akan menjadi Juara, calon satu lagi menjadi Naib Juara!",
         alertThirdSuccess: "🥉 Tahniah [{name}] memenangi Tempat Ke-3!\n\nSistem mara ke Pusingan Akhir secara automatik!",
         alertFinalSuccess: "👑 🎉 Pemenang Akhir!\n\n👑 Juara: {winner}\n🥈 Naib Juara: {runnerUp}",
-        eliminatedInRound: "Tersingkir Pusingan {r}"
+        eliminatedInRound: "Tersingkir Pusingan {r}",
+        tooltipTitle: "Butiran Aliran Peraturan Mod",
+        mode1FlowDetail: "<b>Aliran 3 Teratas:</b><br>1. Pusingan Biasa: Pilih calon layak (sekurang-kurangnya 3 calon diperlukan).<br>2. <b>Perebutan Tempat Ke-3</b>: Pilih [Tempat Ke-3] untuk mara ke pusingan Akhir.<br>3. <b>Pusingan Akhir</b>: Pilih [Juara], calon satu lagi menjadi [Naib Juara].",
+        mode2FlowDetail: "<b>Aliran Saguhati:</b><br>Termasuk pusingan 3 teratas dan N hadiah saguhati."
       }
     };
 
@@ -421,16 +449,30 @@
 
     function updateModeBadgeUI() {
       const badge = document.getElementById('currentModeBadge');
-      if (!badge) return;
+      const tooltip = document.getElementById('modeTooltipContent');
+      if (!badge || !tooltip) return;
+
+      const lang = i18n[currentLang];
+
       if (!state.modeConfig || !state.modeConfig.enabled) {
         badge.innerText = "模式: 未启用规则";
         badge.className = "text-slate-400 font-bold";
+        tooltip.innerHTML = `<div class="text-slate-400 italic">当前规则未启用</div>`;
         return;
       }
-      const m = state.modeConfig.selectedMode;
-      if (m === 'mode1') badge.innerText = "模式: 冠亚季模式";
-      else if (m === 'mode2') badge.innerText = `模式: 安慰奖模式(${state.modeConfig.mode2ConsolationCount || 10}名安慰奖)`;
-      badge.className = "text-amber-400 font-bold";
+
+      const m = state.modeConfig.selectedMode || 'mode1';
+
+      if (m === 'mode1') {
+        badge.innerText = "模式: 冠亚季模式";
+        badge.className = "text-amber-400 font-bold";
+        tooltip.innerHTML = lang.mode1FlowDetail;
+      } else if (m === 'mode2') {
+        const consCount = state.modeConfig.mode2ConsolationCount || 10;
+        badge.innerText = `模式: 安慰奖模式(${consCount}名)`;
+        badge.className = "text-emerald-400 font-bold";
+        tooltip.innerHTML = lang.mode2FlowDetail;
+      }
     }
 
     function pickRandomGroup() {
@@ -527,7 +569,6 @@
       }).join('');
     }
 
-    // 🌟 撤回买家重返当前名单池
     function undoEliminatedCandidate(id) {
       let foundCandidate = null;
       (state.rounds || []).forEach(r => {
@@ -537,7 +578,6 @@
 
       if (!foundCandidate) return;
 
-      // 1. 全局重置状态
       (state.rounds || []).forEach(r => {
         (r.candidates || []).forEach(c => {
           if (c.id === id) {
@@ -548,7 +588,6 @@
         });
       });
 
-      // 2. 自动加回当前最新轮次的 candidates 数组
       const currentRound = state.rounds[currentRoundIndex];
       const existsInCurrent = (currentRound.candidates || []).some(c => c.id === id);
       
@@ -668,6 +707,7 @@
       renderRoundTabs();
       renderAdminView();
       updateStats();
+      updateModeBadgeUI();
     }
 
     function getRoundTitle(idx) {
@@ -711,7 +751,6 @@
       }
     }
 
-    // 🌟 防错拦截逻辑：模式 1 下，普及/晋级区少于 3 人禁止推进下一轮
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -725,7 +764,6 @@
         return;
       }
 
-      // 🛡️ 防错核心规则：模式 1 开启时，如果晋级区少于 3 人，拦截并提示！
       if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length < 3) {
         alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passedCandidates.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
         return;
