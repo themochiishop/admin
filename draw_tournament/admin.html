@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 📄 引入高兼容性 html2canvas 与 jsPDF 库 -->
+  <!-- 引入高兼容性 html2canvas 与 jsPDF 库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
@@ -75,7 +75,7 @@
     </div>
   </header>
 
-  <!-- ⚙️ 抽奖模式、导入源、自定义标题配置弹窗 -->
+  <!-- ⚙️ 配置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -86,7 +86,7 @@
 
       <div class="space-y-3 text-xs">
         
-        <!-- 🎴 折叠卡片 1：系统标题设置 -->
+        <!-- 卡片 1：系统标题设置 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardTitleSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -107,7 +107,7 @@
           </div>
         </div>
 
-        <!-- 🎴 折叠卡片 2：买家名单导入模式 -->
+        <!-- 卡片 2：买家名单导入模式 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardImportSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -140,7 +140,7 @@
           </div>
         </div>
 
-        <!-- 🎴 折叠卡片 3：抽奖模式与规则选择 -->
+        <!-- 卡片 3：抽奖模式与规则选择 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardDrawModeSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -156,7 +156,6 @@
               <span class="font-bold text-slate-200" data-i18n="enableRulesLabel">启用模式规则 (必须勾选后方能生效)</span>
             </label>
 
-            <!-- 盲抽默认数量 -->
             <div class="bg-slate-800/50 p-2.5 rounded-lg border border-slate-700 space-y-1.5">
               <label class="flex items-center space-x-2 cursor-pointer">
                 <input type="checkbox" id="useDefaultPickCountCheckbox" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
@@ -194,7 +193,7 @@
           </div>
         </div>
 
-        <!-- 🎴 折叠卡片 4：📄 PDF 报告导出内容与模板设置 (包含主标题 1 与 主标题 2) -->
+        <!-- 卡片 4：PDF 报告导出内容与模板设置 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardPdfCustomSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -309,13 +308,13 @@
       <div id="activeGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
     </div>
 
-    <!-- 🌟 特殊轮次提示 Banner -->
+    <!-- 特殊轮次提示 Banner -->
     <div id="specialRoundBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center animate-pulse">
       <h3 id="specialRoundBannerTitle" class="text-base font-black text-amber-300"></h3>
       <p id="specialRoundBannerSub" class="text-xs text-amber-200/90 mt-1"></p>
     </div>
 
-    <!-- 名单池 & 淘汰区 (右) -->
+    <!-- 名单池 & 淘汰区 -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div id="adminViewWrapper" class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[160px]">
         <h2 class="text-md font-bold text-amber-400 mb-4 pb-2 border-b border-slate-700">待 PK 买家名单池</h2>
@@ -406,12 +405,12 @@
         btnSaveConfig: "💾 保存设置",
         searchPlaceholder: "🔍 名字或订单号...",
         banner3LeftTitle: "🔥 当前本轮仅剩 3 人角逐！请点击下方【🥉 设为季军】按钮选择季军得主",
-        banner3LeftSub: "选出季军后，系统将自动向大屏推送 10 秒海报，并自动将余下 2 人推进至【👑 冠亚军决战】！",
+        banner3LeftSub: "选出季军后，系统将自动向大屏推送海报，并自动将余下 2 人推进至【👑 冠亚军决战】！",
         banner2LeftTitle: "👑【冠亚军终极决战 (2选1)】！请点击选出冠军",
         banner2LeftSub: "点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】，并同步推送大屏喜报！",
         bannerConsolationTitle: "🎁【安慰奖遴选阶段】！请在下方挑选 {need} 位安慰奖得主 (已选 {done}/{total} 人)",
         bannerConsolationSub: "选满 {total} 位安慰奖后，系统将自动将余下的 3 人推进至【冠亚季争夺战】！",
-        alertThirdSuccess: "🥉 恭喜买家【{name}】获得 🥉 季军！\n\n前台已同步播放 10 秒恭喜海报，系统已自动为你推进至【👑 冠亚军终极决战】！",
+        alertThirdSuccess: "🥉 恭喜买家【{name}】获得 🥉 季军！\n\n前台已同步播放恭喜海报，系统已自动为你推进至【👑 冠亚军终极决战】！",
         alertFinalSuccess: "👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：{winner}\n🥈 亚军：{runnerUp}\n\n前台公开大屏已同步向全场播放恭喜海报！",
         alertConsolationDone: "🎁 🎉【安慰奖挑选完成】！\n\n已成功选出 {total} 位安慰奖得主！系统已自动将余下的 3 位选手推进至【冠亚季争夺战】！",
         eliminatedInRound: "第 {r} 轮淘汰",
@@ -769,7 +768,7 @@
       else pdfBtn.classList.add('hidden');
     }
 
-    // 📄 100% 不白屏、精准充满 A4 纸的高保真 PDF 导出引擎（已移除主标题最左侧的奖杯图标）
+    // 📄 A4 高保真 PDF 导出引擎
     async function exportResultsToPDF() {
       let champion = null;
       let runnerUp = null;
@@ -793,12 +792,11 @@
 
       const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
 
-      // 创建完美精密的 A4 原生像素渲染容器
       const container = document.createElement('div');
       container.style.position = 'fixed';
       container.style.top = '0';
       container.style.left = '0';
-      container.style.width = '794px'; // 96DPI 标准 A4 宽度
+      container.style.width = '794px';
       container.style.backgroundColor = '#ffffff';
       container.style.zIndex = '999999';
       container.style.padding = '36px';
@@ -808,10 +806,8 @@
       container.innerHTML = `
         <div style="border: 3px double #d97706; border-radius: 12px; padding: 30px; background: #ffffff; box-sizing: border-box; width: 100%;">
           
-          <!-- 顶端彩条装饰 -->
           <div style="height: 6px; background: linear-gradient(90deg, #b45309 0%, #f59e0b 50%, #b45309 100%); margin-bottom: 24px; border-radius: 3px;"></div>
 
-          <!-- 头部 Header (主标题最左侧图标已移除) -->
           <div style="text-align: center; margin-bottom: 26px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 18px;">
             <div style="font-size: 26px; font-weight: 900; color: #92400e; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2;">
               ${escapeHtml(pdfTitle1)}
@@ -829,7 +825,7 @@
             </div>
           </div>
 
-          <!-- 👑 Podium Winners 冠亚季领奖台专区 -->
+          <!-- 👑 Podium Winners 领奖台专区 -->
           <div style="margin-bottom: 26px;">
             <div style="font-size: 14px; font-weight: 800; color: #1e293b; border-left: 5px solid #d97706; padding-left: 10px; margin-bottom: 12px; text-transform: uppercase;">
               👑 Official Podium Winners
@@ -843,19 +839,16 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- 👑 冠军 -->
                 <tr style="background-color: #fffbeb; border-bottom: 1px solid #fef3c7;">
                   <td style="padding: 14px 16px; font-weight: 900; color: #b45309; font-size: 14px;">👑 CHAMPION</td>
                   <td style="padding: 14px 16px; font-weight: 900; color: #78350f; font-size: 15px;">${champion ? escapeHtml(champion.name) : 'N/A'}</td>
                   <td style="padding: 14px 16px; font-family: monospace; font-weight: 700; color: #b45309; letter-spacing: 0.5px;">${champion ? escapeHtml(champion.orderNo) : '-'}</td>
                 </tr>
-                <!-- 🥈 亚军 -->
                 <tr style="border-bottom: 1px solid #f1f5f9; background-color: #ffffff;">
                   <td style="padding: 12px 16px; font-weight: 800; color: #475569; font-size: 13px;">🥈 RUNNER-UP</td>
                   <td style="padding: 12px 16px; font-weight: 800; color: #1e293b; font-size: 14px;">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</td>
                   <td style="padding: 12px 16px; font-family: monospace; color: #64748b; font-weight: 600;">${runnerUp ? escapeHtml(runnerUp.orderNo) : '-'}</td>
                 </tr>
-                <!-- 🥉 季军 -->
                 <tr style="background-color: #ffffff;">
                   <td style="padding: 12px 16px; font-weight: 800; color: #b45309; font-size: 13px;">🥉 3RD PLACE</td>
                   <td style="padding: 12px 16px; font-weight: 800; color: #1e293b; font-size: 14px;">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</td>
@@ -885,7 +878,7 @@
           </div>
           ` : ''}
 
-          <!-- Footer 说明 -->
+          <!-- Footer -->
           <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 20px; font-size: 10px; color: #94a3b8; text-align: center;">
             <p style="margin: 0;">${escapeHtml(pdfFooter)}</p>
           </div>
@@ -896,9 +889,8 @@
       document.body.appendChild(container);
 
       try {
-        // 使用 html2canvas 将当前图层转为 Canvas 图像
         const canvas = await html2canvas(container, {
-          scale: 2, // 2倍清采样，保证清晰度
+          scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false
@@ -908,7 +900,6 @@
 
         const imgData = canvas.toDataURL('image/jpeg', 1.0);
         
-        // 使用 jsPDF 创建标准 A4 页面
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: 'portrait',
@@ -919,7 +910,6 @@
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
 
-        // 精准将图像充满整张 A4 纸
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Mochiishop_Tournament_Results_${todayStr}.pdf`);
 
