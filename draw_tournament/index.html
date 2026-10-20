@@ -8,6 +8,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 📸 网页一键截图库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- 🔥 引入 Firebase 8.x SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -15,7 +20,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 (自适应多端居中与 padding) -->
+  <!-- 🌟 全屏豪华恭喜弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-40 h-40 sm:w-56 sm:h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -36,7 +41,7 @@
     </div>
   </div>
 
-  <!-- 顶部 Header (手机端自动换行缩放，电脑端保持一行) -->
+  <!-- 顶部 Header -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row justify-between items-center gap-2.5 sm:gap-0">
       <div class="flex items-center space-x-2.5 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-start">
@@ -48,7 +53,6 @@
           </div>
         </div>
         
-        <!-- 移动端显示的实时同步圆点 -->
         <div class="flex sm:hidden items-center space-x-1 text-[10px] text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
         </div>
@@ -74,7 +78,7 @@
 
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-          <span data-i18n="liveSyncText">直播实时同步中...</span>
+          <span data-i18n="liveSyncText">云端毫秒级同步中...</span>
         </div>
 
         <!-- 🌐 语言切换选择器 -->
@@ -107,17 +111,14 @@
         <p class="text-[11px] sm:text-xs text-slate-400 mt-1" data-i18n="finalSummarySub">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
 
-      <!-- 👑 冠亚季荣誉卡片（手机端垂直单列居中，平板/电脑端 3 列） -->
       <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end"></div>
 
-      <!-- 🎁 安慰奖总结专区 -->
       <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-xl border border-emerald-500/40">
         <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
           <span class="text-base sm:text-lg">🎁</span>
           <h3 class="text-xs sm:text-sm font-bold text-emerald-400" data-i18n="consolationSummaryTitle">安慰奖得主全名单</h3>
           <span id="consolationTotalBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
-        <!-- 安慰奖网格自适应：手机 2 列 -> 平板 3 列 -> 电脑 5 列 -->
         <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
       </div>
     </div>
@@ -153,11 +154,10 @@
             <h3 class="text-xs sm:text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
           </div>
         </div>
-        <!-- 盲抽网格自适应：手机 2 列 -> 平板 3 列 -> 电脑 5 列 -->
         <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3"></div>
       </div>
 
-      <!-- 统计卡片区自适应：手机 2 列 -> 平板/电脑 4 列 -->
+      <!-- 统计卡片区 -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
         <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700">
           <span class="text-[10px] sm:text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
@@ -190,7 +190,6 @@
           </div>
         </div>
 
-        <!-- 🎁 前台专门显示的【已胜出安慰奖名单】框架面板 -->
         <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/40 shadow-lg">
           <div class="flex items-center space-x-2 mb-2">
             <span class="text-base sm:text-lg">🎁</span>
@@ -201,7 +200,7 @@
         </div>
       </div>
 
-      <!-- 名单池 (左) & 淘汰区极简模式 (右) 自适应栅格: 手机单列上下排，电脑端大屏 4:1 并排 -->
+      <!-- 名单池 & 淘汰区 -->
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
         <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 min-h-[160px]">
           <div class="flex items-center space-x-2 mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
@@ -214,7 +213,6 @@
           <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
         </div>
 
-        <!-- 前台淘汰区 -->
         <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-3.5 sm:p-4 border border-slate-800 min-h-[200px] sm:min-h-[300px] flex flex-col">
           <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-800 pb-2.5 sm:pb-3">
             <div class="flex items-center space-x-1.5">
@@ -231,7 +229,7 @@
 
   </main>
 
-  <!-- 📍 终极荣誉汇总榜框架外的右下角悬浮按钮区 (移动端居中贴底) -->
+  <!-- 📍 悬浮按钮区 -->
   <div id="floatingActionButtons" class="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 hidden flex items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
     <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
       <span>🔗</span>
@@ -248,6 +246,23 @@
   </footer>
 
   <script>
+    // ----------------------------------------------------
+    // 🔥 Firebase 云端初始化设置 (你的真实配置)
+    // ----------------------------------------------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
+      authDomain: "draw-tournament.firebaseapp.com",
+      databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "draw-tournament",
+      storageBucket: "draw-tournament.firebasestorage.app",
+      messagingSenderId: "803720903757",
+      appId: "1:803720903757:web:8b561daabc0d69af9e7004",
+      measurementId: "G-X7PJ23JKDB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
     let lastSeenEventTime = 0; 
@@ -265,7 +280,7 @@
       zh: {
         publicTitle: "Mochiishop 每月抽奖晋级榜",
         publicSubTitle: "直播实时同步 · 买家公开公示大屏",
-        liveSyncText: "直播实时同步中...",
+        liveSyncText: "云端毫秒级同步中...",
         tooltipTitle: "当前模式规则与晋级流程",
         statTotal: "本轮参选人数",
         statPassed: "本轮已晋级",
@@ -423,8 +438,32 @@
     };
 
     window.onload = function() {
-      loadAndRender();
-      setInterval(loadAndRender, 800);
+      // 实时监听 Firebase 云端数据库变动
+      db.ref('tournament_state').on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          state = val;
+          localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
+          
+          if (!userManuallySelectedRound && state.rounds) {
+            currentRoundIndex = state.rounds.length - 1;
+          }
+          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
+            lastSeenEventTime = state.latestEvent.timestamp;
+            if (state.latestEvent.type === 'finalCongrat') {
+              showWinnerPopup(state.latestEvent, 10);
+            }
+          }
+
+          renderRoundTabs();
+          renderPublicView();
+          updateStats();
+          updatePublicModeUI();
+          updatePublicHeaderTitle();
+          updateWinnerBannerUI();
+          renderFinalSummaryPanel();
+        }
+      });
     };
 
     function updatePublicHeaderTitle() {
@@ -507,41 +546,6 @@
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
-    function loadAndRender() {
-      const saved = localStorage.getItem('mochii_tournament_state');
-      if (saved) {
-        try { 
-          const parsed = JSON.parse(saved); 
-          if (parsed && Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
-            state = parsed;
-          }
-
-          if (!userManuallySelectedRound) {
-            currentRoundIndex = state.rounds.length - 1;
-          }
-
-          if (currentRoundIndex >= state.rounds.length) {
-            currentRoundIndex = Math.max(0, state.rounds.length - 1);
-          }
-
-          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
-            lastSeenEventTime = state.latestEvent.timestamp;
-            if (state.latestEvent.type === 'finalCongrat') {
-              showWinnerPopup(state.latestEvent, 10);
-            }
-          }
-
-          renderRoundTabs();
-          renderPublicView();
-          updateStats();
-          updatePublicModeUI();
-          updatePublicHeaderTitle();
-          updateWinnerBannerUI();
-          renderFinalSummaryPanel();
-        } catch(e){}
-      }
-    }
-
     function renderFinalSummaryPanel() {
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
       const podiumGrid = document.getElementById('podiumSummaryGrid');
@@ -590,7 +594,6 @@
       const lang = i18n[currentLang];
 
       podiumGrid.innerHTML = `
-        <!-- 🥈 亚军 -->
         <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
           <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / ${lang.rankRunnerUp}</span>
@@ -598,7 +601,6 @@
           <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
         </div>
 
-        <!-- 👑 冠军 (手机端垂直居顶置顶) -->
         <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
           <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / ${lang.rankChampion}</span>
@@ -606,7 +608,6 @@
           <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
         </div>
 
-        <!-- 🥉 季军 -->
         <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / ${lang.rankThird}</span>
@@ -940,7 +941,6 @@
           '</div>';
         }).join('');
 
-        // 名单卡片自适应: 手机 2 列 -> 平板 3 列 -> 电脑 5 列
         pendingContainer.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3">' + cardsHtml + '</div>';
       }
 
