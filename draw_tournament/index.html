@@ -60,10 +60,10 @@
       </div>
       <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
         
-        <!-- 🔥 修复：手机端去掉了 hover，改用点击展开气泡框，避免偏移 -->
+        <!-- 🔥 修复：手机端的提示气泡改为点击原地弹窗，不再因为绝对定位飞出屏幕外 -->
         <div class="relative">
-          <span id="publicModeBadge" onclick="document.getElementById('modeTooltipContent').classList.toggle('hidden')" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-pointer">模式: 3+安慰奖</span>
-          <div id="modeTooltipContent" class="hidden sm:group-hover:block absolute right-0 top-full mt-2 w-64 sm:w-80 p-3 sm:p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-50 text-xs">
+          <span id="publicModeBadge" onclick="toggleModeTooltip(event)" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-pointer">模式: 加载中</span>
+          <div id="modeTooltipContent" class="hidden absolute right-0 top-full mt-2 w-[85vw] max-w-[320px] p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-50 text-xs">
             <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-xs sm:text-sm"><span>📋</span><span data-i18n="tooltipTitle">当前模式规则与晋级流程</span></div>
             <div id="modeTooltipBody" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
           </div>
@@ -179,11 +179,13 @@
               <h2 id="pendingTitleText" class="text-xs sm:text-md font-bold text-amber-400">待PK买家名单</h2>
               <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2"><span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span></span>
             </div>
-            <div class="relative flex items-center">
-              <!-- 🔥 修复：去掉了原本的 text-center，改用 pl-8 强制左侧留白，放大镜就能完整显示了 -->
-              <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" title="搜索" class="w-28 focus:w-40 transition-all duration-300 bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
-              <span class="absolute left-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
+            
+            <!-- 🔥 修复：搜索框使用 flex 强行排布，保证不会互相挤压，右侧留白适中 -->
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
+              <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
+              <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
             </div>
+
           </div>
           <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
         </div>
@@ -335,6 +337,19 @@
       }
     };
 
+    // 🔥 用于修复手机端弹窗问题
+    function toggleModeTooltip(e) {
+      if(e) e.stopPropagation();
+      document.getElementById('modeTooltipContent').classList.toggle('hidden');
+    }
+    document.addEventListener('click', function(e) {
+      const tooltip = document.getElementById('modeTooltipContent');
+      const badge = document.getElementById('publicModeBadge');
+      if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(e.target) && !badge.contains(e.target)) {
+        tooltip.classList.add('hidden');
+      }
+    });
+
     window.onload = function() {
       if (localStorage.getItem('mochii_admin_unlocked') === 'true') {
         isAdminUnlocked = true;
@@ -359,7 +374,6 @@
 
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           
-          // 🔥 修复：兼容空数据处理
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) {
             currentRoundIndex = state.rounds.length - 1;
           }
@@ -437,21 +451,18 @@
         });
 
         latestState.activeGroupMembers = newMembers;
-        latestState.pkStage = 'revealed'; // 先设为 revealed，让界面准备揭晓
+        latestState.pkStage = 'revealed'; 
         return latestState;
       }, (error, committed, snapshot) => {
         if (error) { alert("⚠️ 开奖数据同步失败，请重试！"); return; }
         if (committed) {
           state = snapshot.val();
           
-          // 🔥 第一步：先不显示中奖，等 1.5 秒，给观众制造悬念
           setTimeout(() => {
-            // 1.5 秒后，重新渲染前台（此时卡牌会瞬间变成绿色高亮！）
             renderRoundTabs();
             renderPublicView();
             updateStats();
 
-            // 🔥 第二步：高亮 2 秒后，再执行最终的晋级结算
             setTimeout(() => {
               db.ref('tournament_state').transaction((finalState) => {
                 if (!finalState) return finalState;
@@ -467,7 +478,6 @@
                     const winnerId = String(winnerMember.id);
                     const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
                     
-                    // 写入晋级池
                     if (!finalState.passHistory) finalState.passHistory = [];
                     const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
                     if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
@@ -480,7 +490,6 @@
                       });
                     }
 
-                    // 更新状态
                     finalState.activeGroupIds.forEach(id => {
                       const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
                       if (target) {
@@ -506,7 +515,6 @@
                   renderFinalSummaryPanel();
                   updateWinnerBannerUI();
 
-                  // 🔥 第三步：晋级区显示后，再等 3 秒清理 PK 组现场
                   setTimeout(() => {
                     db.ref('tournament_state').once('value', (snap) => {
                       const latest = snap.val();
@@ -521,8 +529,8 @@
                   }, 3000);
                 }
               });
-            }, 2000); // 悬念高亮停 2 秒
-          }, 1500); // 点完按钮先等 1.5 秒不变化
+            }, 2000);
+          }, 1500); 
         }
       });
     }
@@ -562,7 +570,7 @@
 
     function updatePublicModeUI() {
       const badge = document.getElementById('publicModeBadge');
-      const tooltip = document.getElementById('modeTooltipContent');
+      const tooltip = document.getElementById('modeTooltipBody');
       if (!badge || !tooltip) return;
       const lang = i18n[currentLang];
       if (!state.modeConfig || state.modeConfig.enabled === false) {
@@ -871,26 +879,30 @@
           if (isWinner) {
             return `
               <div class="relative w-full h-36 rounded-xl border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-110 z-10 transition-all duration-700 ease-out">
-                <div class="absolute inset-0 p-3 flex flex-col justify-between items-center text-center">
-                  <span class="text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>
-                  <div class="my-auto">
-                    <div class="font-black text-white text-xl truncate max-w-[120px] drop-shadow-md">${escapeHtml(c.name)}</div>
-                    <div class="text-[11px] text-emerald-200 font-mono truncate max-w-[120px] mt-1">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                <div class="absolute inset-0 p-3 flex flex-col justify-center items-center text-center">
+                  <div class="w-full flex justify-between items-center mb-2">
+                    <span class="text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>
                   </div>
-                  <span class="text-xs text-emerald-400 font-mono font-bold">POLL #${state.currentPollNumber || 1}</span>
+                  <div class="my-auto w-full">
+                    <div class="font-black text-white text-xl truncate max-w-[120px] mx-auto drop-shadow-md">${escapeHtml(c.name)}</div>
+                    <div class="text-[11px] text-emerald-200 font-mono truncate max-w-[120px] mx-auto mt-1">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                  </div>
+                  <span class="text-[9px] text-emerald-400/80 font-mono mt-2">POLL #${state.currentPollNumber || 1}</span>
                 </div>
               </div>
             `;
           } else {
             return `
               <div class="relative w-full h-36 rounded-xl border-2 border-amber-500/50 bg-slate-900 overflow-hidden shadow-xl">
-                <div class="absolute inset-0 p-3 flex flex-col justify-between items-center text-center">
-                  <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>
-                  <div class="my-auto">
-                    <div class="font-bold text-amber-300 text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
-                    <div class="text-[11px] text-slate-400 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                <div class="absolute inset-0 p-3 flex flex-col justify-center items-center text-center">
+                  <div class="w-full flex justify-between items-center mb-2">
+                    <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>
                   </div>
-                  <span class="text-[9px] text-amber-400/60 font-mono">???</span>
+                  <div class="my-auto w-full">
+                    <div class="font-bold text-amber-300 text-sm truncate max-w-[120px] mx-auto">${escapeHtml(c.name)}</div>
+                    <div class="text-[11px] text-slate-400 font-mono truncate max-w-[120px] mx-auto mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                  </div>
+                  <span class="text-[9px] text-amber-400/60 font-mono mt-2">???</span>
                 </div>
               </div>
             `;
@@ -968,7 +980,9 @@
       } else if (pendingList.length === 0) {
         pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-xl sm:text-2xl mb-2">🎉</p><p class="text-xs sm:text-sm">${lang.allDone}</p></div>`;
       } else {
-        const cardsHtml = pendingList.map((c, index) => {
+        // 🔥 强制移除网格布局，改为 flex-wrap 自动换行，彻底避免手机端塌陷
+        let cardsHtml = '';
+        pendingList.forEach((c, index) => {
           let extraStyle = 'border-slate-700 bg-slate-800/80';
           let pkBadge = '';
           if (state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id))) {
@@ -976,7 +990,8 @@
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-          return `<div class="relative p-2.5 sm:p-3.5 rounded-xl border ${extraStyle} transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow mt-2">` +
+          
+          cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` +
             folderTabHtml +
             '<div>' +
               '<div class="text-[10px] sm:text-[11px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
@@ -984,8 +999,8 @@
               '<div class="text-[10px] sm:text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</div>' +
             '</div>' +
           '</div>';
-        }).join('');
-        pendingContainer.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3">' + cardsHtml + '</div>';
+        });
+        pendingContainer.innerHTML = '<div class="flex flex-wrap gap-2.5 sm:gap-3">' + cardsHtml + '</div>';
       }
 
       const outContainer = document.getElementById('outListContainer');
