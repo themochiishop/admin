@@ -37,8 +37,8 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
 
   <!-- ⏳ 前台公开屏蔽遮罩层 (未勾选公开显示时呈现此遮罩) -->
-  <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
-    <div class="bg-slate-900/90 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-lg border-2">
+  <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
+    <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
       <div class="absolute -top-16 -left-16 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
       <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
       
@@ -863,7 +863,7 @@
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
           <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-2.5 sm:p-3 shadow text-center">
-            <span class="text-[9px] sm:text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#${idx + 1}</span>
+            <span class="text-[9px] sm:text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#？</span>
             <div class="font-bold text-amber-300 text-xs sm:text-sm truncate">${escapeHtml(c.name)}</div>
             <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
           </div>
