@@ -230,7 +230,7 @@
     const db = firebase.database();
     firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
 
-    const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
+    const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfngCgWRlCl4c1z1EgJPSDWhN1PLqq8isbfzw_0nP2nctAS4QZSQj4Vw6MZchvqdNmVYc7BZZwtzlJ/pub?gid=322881163&single=true&output=csv";
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
