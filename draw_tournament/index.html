@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 (10秒自动切回大屏) -->
+  <!-- 🌟 全屏豪华恭喜弹窗 (多语言结合 · 10秒自动切回大屏) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -16,7 +16,7 @@
 
       <div class="text-7xl mb-4 animate-bounce">👑</div>
       <h2 id="congratBadge" class="text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
-      <h3 id="congratModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-2">
+      <h3 id="congratModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-2" data-i18n="modalCongratsHeader">
         热烈祝贺！成功获得荣誉！
       </h3>
       <p id="congratWinnerNames" class="text-xl font-black text-emerald-300 my-5 bg-emerald-950/80 py-4 px-4 rounded-xl border border-emerald-500/40 leading-relaxed shadow-inner">
@@ -82,10 +82,10 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
 
-    <!-- 🌟 动态终极大奖公示/预告横幅 (3人角逐/季军/冠亚军专属提示) -->
+    <!-- 🌟 多语言终极大奖公示/预告横幅 (3人角逐/季军/冠亚军专属提示) -->
     <div id="winnerAnnouncementBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
       <div id="winnerBannerContent" class="text-lg font-black text-amber-300 tracking-wide">
-        <!-- 动态注入横幅信息 -->
+        <!-- 动态注入多语言横幅信息 -->
       </div>
     </div>
     
@@ -101,7 +101,7 @@
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center space-x-2">
           <span class="text-xl animate-bounce">🔥</span>
-          <h3 class="text-sm font-bold text-amber-400">Shopee 直播间正在 4 人盲抽投票中！(快去直播间为您支持的买家投票)</h3>
+          <h3 class="text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在 4 人盲抽投票中！(快去直播间为您支持的买家投票)</h3>
         </div>
       </div>
       <div id="publicActiveGroupGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"></div>
@@ -139,9 +139,9 @@
       </div>
     </div>
 
-    <!-- 角逐中买家 (左) & 已淘汰买家 (右) -->
+    <!-- 角逐中买家 (左) & 淘汰区按轮次分组展示 (右) -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
+      <div class="lg:col-span-3 xl:col-span-3 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
           <span class="text-lg">⚡</span>
           <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">待PK买家名单</h2>
@@ -152,15 +152,16 @@
         <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
       </div>
 
-      <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
+      <!-- 🌟 按轮次分组区分展示的淘汰区 -->
+      <div class="lg:col-span-2 xl:col-span-2 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
             <span class="text-sm">❌</span>
-            <h3 class="text-xs font-bold text-slate-400" data-i18n="outListTitle">已淘汰名单</h3>
+            <h3 class="text-xs font-bold text-slate-400" data-i18n="outListTitle">各轮淘汰名单 (按轮次分组)</h3>
           </div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
         </div>
-        <div id="outListContainer" class="space-y-2 flex-1 overflow-y-auto max-h-[500px] pr-1"></div>
+        <div id="outListContainer" class="space-y-4 flex-1 overflow-y-auto max-h-[550px] pr-1"></div>
       </div>
     </div>
 
@@ -194,7 +195,7 @@
         passedBadgeSuffix: "人",
         totalPrefix: "共",
         pendingSuffix: "人待角逐",
-        outListTitle: "已淘汰名单",
+        outListTitle: "各轮淘汰名单 (按轮次分组)",
         searchPlaceholder: "🔍 搜索您的名字或订单号...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
@@ -204,6 +205,7 @@
         noCandidates: "本轮抽奖名单同步中，请关注直播间...",
         allDone: "本轮全员判定完毕",
         noOut: "暂无淘汰人员",
+        modalCongratsHeader: "🎉 热烈祝贺！成功获得普及荣誉！",
         finalTitle: "👑 恭喜买家成功获得荣誉！",
         autoCloseText: "将在",
         autoCloseSuffix: "秒后自动切回大屏榜单...",
@@ -211,7 +213,14 @@
         modePrefix: "模式: ",
         mode1: "冠亚季模式",
         mode2: "包含安慰奖模式",
-        modeDisabled: "未启用规则"
+        modeDisabled: "未启用规则",
+        shopeeGroupTitle: "Shopee 直播间正在 4 人盲抽投票中！(快去直播间为您支持的买家投票)",
+        banner3LeftText: "🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！",
+        bannerThirdPlaceText: "🎉 🥉 季军得主是：",
+        bannerFinalText: "🎉 👑 冠军得主是：",
+        bannerRunnerUpText: " | 🥈 亚军得主是：",
+        bannerFinalSub: "(🔥 👑 冠亚军决战 2 选 1 开启中！)",
+        eliminatedInRound: "第 {r} 轮淘汰"
       },
       en: {
         publicTitle: "Mochiishop Monthly Draw Leaderboard",
@@ -225,7 +234,7 @@
         passedBadgeSuffix: " ",
         totalPrefix: "Total",
         pendingSuffix: "In Battle",
-        outListTitle: "Eliminated List",
+        outListTitle: "Eliminated List (Grouped by Round)",
         searchPlaceholder: "🔍 Search name or order no...",
         roundPrefix: "Round ",
         roundSuffix: "",
@@ -235,6 +244,7 @@
         noCandidates: "Syncing candidates list...",
         allDone: "All candidates processed",
         noOut: "No eliminated candidates",
+        modalCongratsHeader: "🎉 Congratulations to the Winners!",
         finalTitle: "👑 Winner Announcement!",
         autoCloseText: "Auto returning in",
         autoCloseSuffix: "seconds...",
@@ -242,7 +252,14 @@
         modePrefix: "Mode: ",
         mode1: "Podium Mode",
         mode2: "Consolation Mode",
-        modeDisabled: "Disabled Rules"
+        modeDisabled: "Disabled Rules",
+        shopeeGroupTitle: "Shopee Live 4-Buyer Group Voting in Progress!",
+        banner3LeftText: "🔥 Podium Showdown! Only 3 candidates remaining for 🥉 3rd Place!",
+        bannerThirdPlaceText: "🎉 🥉 3rd Place Winner is: ",
+        bannerFinalText: "🎉 👑 Champion: ",
+        bannerRunnerUpText: " | 🥈 Runner-up: ",
+        bannerFinalSub: "(🔥 👑 2-Way Final Showdown Live!)",
+        eliminatedInRound: "Eliminated in Round {r}"
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
@@ -256,7 +273,7 @@
         passedBadgeSuffix: " orang",
         totalPrefix: "Jumlah",
         pendingSuffix: "orang bersaing",
-        outListTitle: "Senarai Tersingkir",
+        outListTitle: "Senarai Tersingkir (Mengikut Pusingan)",
         searchPlaceholder: "🔍 Cari nama atau no pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
@@ -266,6 +283,7 @@
         noCandidates: "Menyelaraskan senarai calon...",
         allDone: "Semua calon telah diproses",
         noOut: "Tiada calon tersingkir",
+        modalCongratsHeader: "🎉 Setinggi-tinggi Tahniah Kepada Pemenang!",
         finalTitle: "👑 Pengumuman Pemenang!",
         autoCloseText: "Kembali secara automatik dalam",
         autoCloseSuffix: "saat...",
@@ -273,7 +291,14 @@
         modePrefix: "Mod: ",
         mode1: "Mod Tiga Teratas",
         mode2: "Mod Saguhati",
-        modeDisabled: "Peraturan Nyahaktif"
+        modeDisabled: "Peraturan Nyahaktif",
+        shopeeGroupTitle: "Undian Kumpulan 4 Pembeli Shopee Live Sedang Berlangsung!",
+        banner3LeftText: "🔥 Perebutan 3 Teratas Bermula! Tinggal 3 calon sahaja lagi!",
+        bannerThirdPlaceText: "🎉 🥉 Pemenang Tempat Ke-3: ",
+        bannerFinalText: "🎉 👑 Juara: ",
+        bannerRunnerUpText: " | 🥈 Naib Juara: ",
+        bannerFinalSub: "(🔥 👑 Pusingan Akhir 2 Calon!)",
+        eliminatedInRound: "Tersingkir Pusingan {r}"
       }
     };
 
@@ -363,11 +388,17 @@
             currentRoundIndex = Math.max(0, state.rounds.length - 1);
           }
 
-          // 🌟 监听季军/冠亚军事件并触发 10 秒倒计时自动关闭全屏弹窗
+          // 🌟 结合多语言文案弹出全屏海报
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') {
-              showPopup(i18n[currentLang].finalTitle, state.latestEvent.winnerNames || "", 10);
+              let textStr = "";
+              if (state.latestEvent.winnerNamesKey === 'third') {
+                textStr = `${i18n[currentLang].bannerThirdPlaceText}${state.latestEvent.winnerName}`;
+              } else if (state.latestEvent.winnerNamesKey === 'final') {
+                textStr = `${i18n[currentLang].bannerFinalText}${state.latestEvent.championName}  |  ${i18n[currentLang].bannerRunnerUpText}${state.latestEvent.runnerUpName}`;
+              }
+              showPopup(i18n[currentLang].finalTitle, textStr, 10);
             }
           }
 
@@ -375,12 +406,12 @@
           renderPublicView();
           updateStats();
           updatePublicModeUI();
-          updateWinnerBannerUI(); // 🌟 更新顶部的预告与获胜者公示横幅
+          updateWinnerBannerUI();
         } catch(e){}
       }
     }
 
-    // 🌟 动态更新顶部的大奖公示横幅（支持 3 人角逐预告、季军公示、冠亚军公示）
+    // 🌟 动态更新顶部的大奖公示/预告横幅 (多语言全适配)
     function updateWinnerBannerUI() {
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
@@ -402,22 +433,20 @@
         });
       });
 
-      // 1. 冠军与亚军均诞生
+      const lang = i18n[currentLang];
+
       if (championName && runnerUpName) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 👑 <span class="text-amber-400">冠军得主是：</span><span class="text-white bg-amber-500/30 px-2.5 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span>  |  🥈 <span class="text-slate-300">亚军得主是：</span><span class="text-white bg-slate-700 px-2.5 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerFinalText}</span><span class="text-white bg-amber-500/30 px-2.5 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300">${lang.bannerRunnerUpText}</span><span class="text-white bg-slate-700 px-2.5 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
       } 
-      // 2. 季军已诞生，进入冠亚军决战 2 选 1
       else if (thirdPlaceName) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 🥉 <span class="text-amber-400">季军得主是：</span><span class="text-white bg-amber-600/30 px-3 py-1 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal ml-2">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerThirdPlaceText}</span><span class="text-white bg-amber-600/30 px-3 py-1 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal ml-2">${lang.bannerFinalSub}</span>`;
       } 
-      // 3. 模式1下，当前轮次仅剩 3 人角逐，提前预告季军角逐
       else if (isModeEnabled && selectedMode === 'mode1' && activeRound.candidates && activeRound.candidates.length === 3) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🔥 <span class="text-amber-300">冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
+        content.innerHTML = `<span class="text-amber-300 font-bold">${lang.banner3LeftText}</span>`;
       } 
-      // 其他场景隐藏
       else {
         banner.classList.add('hidden');
       }
@@ -557,22 +586,63 @@
           '</div>';
         }).join('');
 
-        pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3 min-w-[600px]">' + cardsHtml + '</div>';
+        pendingContainer.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 3. 已淘汰买家
+      // 🌟 3. 按轮次分组区分展示的淘汰名单
       const outContainer = document.getElementById('outListContainer');
-      const outList = list.filter(c => c.status === 'out');
+      
+      // 收集所有轮次中的淘汰者
+      let allOutCandidates = [];
+      (state.rounds || []).forEach((r, rIdx) => {
+        (r.candidates || []).forEach(c => {
+          if (c.status === 'out') {
+            const matchesSearch = (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search);
+            if (matchesSearch) {
+              const elIndex = (c.eliminatedRoundIndex !== undefined) ? c.eliminatedRoundIndex : rIdx;
+              allOutCandidates.push({ ...c, roundIndex: elIndex });
+            }
+          }
+        });
+      });
 
-      if (outList.length === 0) {
+      if (allOutCandidates.length === 0) {
         outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${i18n[currentLang].noOut}</p>`;
       } else {
-        outContainer.innerHTML = outList.map(c => 
-          '<div class="p-2.5 bg-slate-900/60 border border-slate-800 rounded-lg flex flex-col justify-center opacity-60 hover:opacity-100 transition">' +
-            '<div class="font-bold text-slate-300 text-xs truncate">' + escapeHtml(c.name) + '</div>' +
-            '<div class="text-[10px] text-slate-500 font-mono truncate mt-0.5">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
-          '</div>'
-        ).join('');
+        // 按淘汰轮次聚类分组
+        const grouped = {};
+        allOutCandidates.forEach(c => {
+          const key = c.roundIndex;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(c);
+        });
+
+        const sortedKeys = Object.keys(grouped).sort((a, b) => Number(a) - Number(b));
+
+        outContainer.innerHTML = sortedKeys.map(rIdxKey => {
+          const rNum = Number(rIdxKey) + 1;
+          const groupTitle = i18n[currentLang].eliminatedInRound.replace('{r}', rNum);
+          const candidatesInGroup = grouped[rIdxKey];
+
+          const groupCardsHtml = candidatesInGroup.map(c => `
+            <div class="p-2 bg-slate-900/80 border border-slate-800 rounded-lg flex items-center justify-between opacity-70 hover:opacity-100 transition">
+              <span class="font-bold text-slate-300 text-xs truncate max-w-[120px]">${escapeHtml(c.name)}</span>
+              <span class="text-[10px] text-slate-500 font-mono truncate">${escapeHtml(c.orderNo || '无订单号')}</span>
+            </div>
+          `).join('');
+
+          return `
+            <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/80">
+              <div class="text-[11px] font-bold text-rose-400/90 mb-2 border-b border-slate-800 pb-1 flex justify-between items-center">
+                <span>❌ ${groupTitle}</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}人</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                ${groupCardsHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
       }
     }
 
