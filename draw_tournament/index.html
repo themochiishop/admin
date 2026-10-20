@@ -59,13 +59,16 @@
         </div>
       </div>
       <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
-        <div class="relative group cursor-pointer">
-          <span id="publicModeBadge" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">模式: 3+安慰奖</span>
-          <div class="absolute right-0 top-full mt-2 w-72 sm:w-80 p-3 sm:p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
+        
+        <!-- 🔥 修复：手机端去掉了 hover，改用点击展开气泡框，避免偏移 -->
+        <div class="relative">
+          <span id="publicModeBadge" onclick="document.getElementById('modeTooltipContent').classList.toggle('hidden')" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-pointer">模式: 3+安慰奖</span>
+          <div id="modeTooltipContent" class="hidden sm:group-hover:block absolute right-0 top-full mt-2 w-64 sm:w-80 p-3 sm:p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-50 text-xs">
             <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-xs sm:text-sm"><span>📋</span><span data-i18n="tooltipTitle">当前模式规则与晋级流程</span></div>
-            <div id="modeTooltipContent" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
+            <div id="modeTooltipBody" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
           </div>
         </div>
+
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span data-i18n="liveSyncText">云端毫秒级同步中...</span>
@@ -116,7 +119,6 @@
 
       <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-2xl relative overflow-hidden">
         
-        <!-- 顶部 PK 组标题，强制单行排列 -->
         <div class="flex flex-row justify-between items-center mb-3.5 pb-3 border-b border-amber-500/30 gap-2">
           <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
             <span class="text-base sm:text-2xl animate-bounce">🔥</span>
@@ -127,7 +129,6 @@
           </div>
         </div>
 
-        <!-- 管理员操作面板：号码居中，大按钮 -->
         <div id="publicRevealButtonBox" class="mb-4 p-4 bg-slate-900/95 rounded-2xl border-2 border-amber-500/80 flex flex-col items-center justify-center gap-3 shadow-2xl backdrop-blur-md">
           <div class="flex flex-col items-center justify-center bg-slate-950/80 px-8 py-3 rounded-xl border border-amber-500/60 shadow-inner">
             <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮触发号</span>
@@ -179,7 +180,9 @@
               <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2"><span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span></span>
             </div>
             <div class="relative flex items-center">
-              <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍" title="搜索" class="w-9 focus:w-36 transition-all duration-300 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner text-center focus:text-left">
+              <!-- 🔥 修复：去掉了原本的 text-center，改用 pl-8 强制左侧留白，放大镜就能完整显示了 -->
+              <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" title="搜索" class="w-28 focus:w-40 transition-all duration-300 bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
+              <span class="absolute left-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
             </div>
           </div>
           <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
@@ -356,7 +359,7 @@
 
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           
-          // 🔥 修复：无论手机还是电脑，确保当前轮次索引不会越界
+          // 🔥 修复：兼容空数据处理
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) {
             currentRoundIndex = state.rounds.length - 1;
           }
