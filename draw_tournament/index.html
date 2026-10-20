@@ -12,7 +12,7 @@
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
 
   <!-- 🌟 全屏豪华恭喜弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
@@ -88,9 +88,9 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
 
-    <!-- 🌟 全场终极获奖结果详细公示大面板 (比赛产生冠军后显示全场获奖详情) -->
-    <div id="finalTournamentSummaryPanel" class="mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
-      <div class="text-center mb-5 pb-3 border-b border-amber-500/30">
+    <!-- 🌟 全场终极获奖结果详细公示大面板 -->
+    <div id="finalTournamentSummaryPanel" class="mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-6 pb-8 shadow-2xl relative overflow-hidden">
+      <div class="text-center mb-6 pb-3 border-b border-amber-500/30">
         <h2 class="text-2xl font-black text-amber-400 flex items-center justify-center space-x-2">
           <span>🏆</span>
           <span data-i18n="finalSummaryTitle">全场抽奖比赛 - 终极荣誉汇总榜</span>
@@ -99,29 +99,17 @@
         <p class="text-xs text-slate-400 mt-1" data-i18n="finalSummarySub">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
 
-      <!-- 👑 冠亚季荣誉卡片（位置已互调：冠军在左，亚军在右） -->
-      <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
+      <!-- 👑 冠亚季荣誉卡片（位次调整：亚军在左，冠军居中，季军在右） -->
+      <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end"></div>
 
       <!-- 🎁 安慰奖总结专区 -->
-      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-4 rounded-xl border border-emerald-500/40 mb-4">
+      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-4 pb-6 rounded-xl border border-emerald-500/40">
         <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
           <span class="text-lg">🎁</span>
           <h3 class="text-sm font-bold text-emerald-400" data-i18n="consolationSummaryTitle">安慰奖得主全名单</h3>
           <span id="consolationTotalBadge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
-        <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5"></div>
-      </div>
-
-      <!-- 📸 终极荣誉汇总榜右下角分享与保存图片按钮区 -->
-      <div class="flex justify-end items-center space-x-2 pt-2 border-t border-slate-800/80">
-        <button onclick="shareSummaryImage()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow flex items-center space-x-1">
-          <span>🔗</span>
-          <span data-i18n="btnShare">分享结果</span>
-        </button>
-        <button onclick="saveSummaryAsImage()" class="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-lg transition shadow-lg flex items-center space-x-1">
-          <span>💾</span>
-          <span data-i18n="btnSaveImage">保存为图片</span>
-        </button>
+        <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
       </div>
     </div>
 
@@ -192,7 +180,7 @@
           </div>
         </div>
 
-        <!-- 🎁 前台专门显示的【已胜出安慰奖名单】框架面板 (文字已全量翻译) -->
+        <!-- 🎁 前台专门显示的【已胜出安慰奖名单】框架面板 -->
         <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 rounded-xl border border-emerald-500/40 shadow-lg">
           <div class="flex items-center space-x-2 mb-2">
             <span class="text-lg">🎁</span>
@@ -232,6 +220,18 @@
     </div>
 
   </main>
+
+  <!-- 📍 终极荣誉汇总榜框架外的右下角悬浮按钮区 -->
+  <div id="floatingActionButtons" class="fixed bottom-5 right-5 z-40 hidden flex items-center space-x-2 bg-slate-950/80 p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
+    <button onclick="shareSummaryImage()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1.5">
+      <span>🔗</span>
+      <span data-i18n="btnShare">分享结果</span>
+    </button>
+    <button onclick="saveSummaryAsImage()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1.5">
+      <span>💾</span>
+      <span data-i18n="btnSaveImage">保存为图片</span>
+    </button>
+  </div>
 
   <footer class="bg-slate-950 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
     © Mochiishop Shopee Monthly Event. All rights reserved.
@@ -526,7 +526,7 @@
       }
     }
 
-    // 🏆 终极全场抽奖结束总结大榜单（冠军诞生后显示，位置调换为：冠军在左，亚军在右）
+    // 🏆 终极全场抽奖结束总结大榜单（领奖台位次排布：亚军在左，冠军居中，季军在右）
     function renderFinalSummaryPanel() {
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
       const podiumGrid = document.getElementById('podiumSummaryGrid');
@@ -536,6 +536,8 @@
 
       const toggleBar = document.getElementById('processSectionToggleBar');
       const collapsibleSection = document.getElementById('collapsibleProcessSection');
+      const floatingActionBtns = document.getElementById('floatingActionButtons');
+      const winnerBanner = document.getElementById('winnerAnnouncementBanner');
 
       let champion = null;
       let runnerUp = null;
@@ -554,14 +556,19 @@
       if (!champion) {
         summaryPanel.classList.add('hidden');
         toggleBar.classList.add('hidden');
+        if (floatingActionBtns) floatingActionBtns.classList.add('hidden');
         collapsibleSection.classList.remove('hidden');
         return;
       }
 
       summaryPanel.classList.remove('hidden');
       toggleBar.classList.remove('hidden');
+      if (floatingActionBtns) floatingActionBtns.classList.remove('hidden');
+      
+      // 🙈 出现终极汇总榜时，隐藏下方的得奖过程 Banner
+      if (winnerBanner) winnerBanner.classList.add('hidden');
 
-      // 自动折叠选拔过程面板，提升页面简洁美观度
+      // 自动折叠选拔过程面板
       if (!isProcessAreaCollapsed) {
         collapsibleSection.classList.add('hidden');
         document.getElementById('processToggleBtnText').innerText = i18n[currentLang].expandText;
@@ -569,39 +576,44 @@
 
       const lang = i18n[currentLang];
 
-      // 1. 渲染冠亚季卡片（👑 冠军在左侧第一位，🥈 亚军在第二位，🥉 季军在第三位）
+      // 1. 渲染领奖台卡片（🥈 亚军在左，👑 冠军居中凸显，🥉 季军在右）
       podiumGrid.innerHTML = `
-        <div class="bg-gradient-to-b from-amber-500/20 to-amber-950/40 p-4 rounded-xl border-2 border-amber-400 text-center shadow-lg transform hover:scale-105 transition">
-          <span class="text-3xl block mb-1">👑</span>
-          <span class="text-xs font-black text-amber-400 tracking-wider block mb-1">CHAMPION / ${lang.rankChampion}</span>
-          <div class="text-lg font-black text-amber-300 truncate">${escapeHtml(champion.name)}</div>
-          <div class="text-xs text-amber-200/80 font-mono mt-0.5 truncate">${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
-        </div>
-
-        <div class="bg-gradient-to-b from-slate-700/30 to-slate-900/60 p-4 rounded-xl border border-slate-500 text-center shadow transform hover:scale-105 transition">
+        <!-- 🥈 亚军 (左侧) -->
+        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-5 pb-6 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-3xl block mb-1">🥈</span>
-          <span class="text-xs font-black text-slate-300 tracking-wider block mb-1">RUNNER-UP / ${lang.rankRunnerUp}</span>
-          <div class="text-lg font-bold text-slate-200 truncate">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
-          <div class="text-xs text-slate-400 font-mono mt-0.5 truncate">${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
+          <span class="text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / ${lang.rankRunnerUp}</span>
+          <div class="text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
+          <div class="text-xs text-slate-400 font-mono mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
         </div>
 
-        <div class="bg-gradient-to-b from-amber-900/30 to-amber-950/60 p-4 rounded-xl border border-amber-700/60 text-center shadow transform hover:scale-105 transition">
+        <!-- 👑 冠军 (中间居中凸显) -->
+        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-6 pb-8 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 -mt-2">
+          <span class="text-5xl block mb-2 animate-bounce">👑</span>
+          <span class="text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / ${lang.rankChampion}</span>
+          <div class="text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
+          <div class="text-xs text-amber-200/90 font-mono mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
+        </div>
+
+        <!-- 🥉 季军 (右侧) -->
+        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-5 pb-6 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-3xl block mb-1">🥉</span>
-          <span class="text-xs font-black text-amber-500 tracking-wider block mb-1">3RD PLACE / ${lang.rankThird}</span>
-          <div class="text-lg font-bold text-amber-300 truncate">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
-          <div class="text-xs text-slate-400 font-mono mt-0.5 truncate">${thirdPlace ? escapeHtml(thirdPlace.orderNo || lang.noOrderNoText) : '-'}</div>
+          <span class="text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / ${lang.rankThird}</span>
+          <div class="text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
+          <div class="text-xs text-slate-400 font-mono mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || lang.noOrderNoText) : '-'}</div>
         </div>
       `;
 
-      // 2. 渲染安慰奖全名单（卡片内置多语言安慰奖标签）
+      // 2. 渲染安慰奖全名单（增加内边距与行高以避免文字被挤压 cut）
       if (consolations.length > 0) {
         consolationBox.classList.remove('hidden');
         consolationBadge.innerText = consolations.length;
         consolationGrid.innerHTML = consolations.map((c, i) => `
-          <div class="p-2 bg-emerald-950/60 border border-emerald-500/40 rounded-lg text-center shadow-sm">
-            <span class="text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.2 rounded inline-block mb-0.5">#${i+1} ${lang.consolationLabelTag}</span>
-            <div class="font-bold text-emerald-300 text-xs truncate">${escapeHtml(c.name)}</div>
-            <div class="text-[10px] text-slate-400 font-mono truncate">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+          <div class="p-3 pb-3.5 bg-emerald-950/70 border border-emerald-500/40 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px]">
+            <div>
+              <span class="text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1} ${lang.consolationLabelTag}</span>
+              <div class="font-bold text-emerald-300 text-xs truncate leading-snug">${escapeHtml(c.name)}</div>
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono truncate mt-1 leading-tight">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
           </div>
         `).join('');
       } else {
@@ -624,34 +636,62 @@
       }
     }
 
-    // 📸 1. 保存终极荣誉汇总榜为图片 (高清 PNG 下载)
-    function saveSummaryAsImage() {
+    // 📸 1. 生成高清无裁切的终极汇总榜图片画布
+    function generateSummaryCanvas() {
       const panel = document.getElementById('finalTournamentSummaryPanel');
-      if (!panel) return;
+      if (!panel) return Promise.reject("Panel not found");
 
-      html2canvas(panel, {
-        scale: 2,
+      return html2canvas(panel, {
+        scale: 2.5,
         backgroundColor: '#0f172a',
-        useCORS: true
-      }).then(canvas => {
+        useCORS: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          const clonedPanel = clonedDoc.getElementById('finalTournamentSummaryPanel');
+          if (clonedPanel) {
+            clonedPanel.style.height = 'auto';
+            clonedPanel.style.maxHeight = 'none';
+            clonedPanel.style.paddingBottom = '32px';
+          }
+        }
+      });
+    }
+
+    // 💾 2. 保存图片下载到本地
+    function saveSummaryAsImage() {
+      generateSummaryCanvas().then(canvas => {
         const link = document.createElement('a');
         link.download = `Mochiishop_Tournament_Summary_${Date.now()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+      }).catch(err => {
+        alert("图片生成失败，请重试！");
       });
     }
 
-    // 🔗 2. 分享结果按钮
-    function shareSummaryImage() {
-      if (navigator.share) {
-        navigator.share({
-          title: i18n[currentLang].finalSummaryTitle,
-          text: i18n[currentLang].finalSummarySub,
-          url: window.location.href,
-        }).catch(() => {});
-      } else {
-        navigator.clipboard.writeText(window.location.href);
-        alert("✅ 榜单链接已复制到剪贴板，快去发送分享给买家吧！");
+    // 📱 3. 按【分享结果】直接跳转调出手机/设备原生的社交媒体分享面板
+    async function shareSummaryImage() {
+      try {
+        const canvas = await generateSummaryCanvas();
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+
+          const file = new File([blob], `Mochiishop_Tournament_Summary.png`, { type: 'image/png' });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: i18n[currentLang].finalSummaryTitle,
+              text: i18n[currentLang].finalSummarySub,
+              files: [file]
+            });
+          } else {
+            // 备用兜底逻辑：若浏览器不支持原生的图片直接分享，自动下载图片并复制链接
+            saveSummaryAsImage();
+            alert("✅ 榜单高精图片已为您自动保存！链接已复制到剪贴板，快去发给买家或社交媒体分享吧！");
+          }
+        }, 'image/png');
+      } catch (e) {
+        saveSummaryAsImage();
       }
     }
 
@@ -659,6 +699,13 @@
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
       if (!banner || !content) return;
+
+      // 如果终极汇总榜正开启着，则保持过程 Banner 隐藏
+      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
+      if (summaryPanel && !summaryPanel.classList.contains('hidden')) {
+        banner.classList.add('hidden');
+        return;
+      }
 
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
@@ -831,7 +878,7 @@
         }).join('');
       }
 
-      // 2. 🎁 前台【已胜出安慰奖得主名单】面板（内嵌标签全量支持多语言）
+      // 2. 🎁 前台【已胜出安慰奖得主名单】面板
       const consolationPanel = document.getElementById('publicConsolationWinnerPanel');
       const consolationContainer = document.getElementById('publicConsolationListContainer');
       const consolationBadge = document.getElementById('publicConsolationCountBadge');
@@ -887,7 +934,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 4. 前台极简 1 列淘汰区
+      // 4. 前台 1 列极简淘汰区
       const outContainer = document.getElementById('outListContainer');
       let allOutCandidates = [];
 
