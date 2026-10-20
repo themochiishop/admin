@@ -17,7 +17,7 @@
       <div class="text-7xl mb-4 animate-bounce">👑</div>
       <h2 id="congratBadge" class="text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
       <h3 id="congratModalTitle" class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-2" data-i18n="modalCongratsHeader">
-        热烈祝贺！成功获得普及荣誉！
+        热烈祝贺！成功获得荣誉！
       </h3>
       <p id="congratWinnerNames" class="text-xl font-black text-emerald-300 my-5 bg-emerald-950/80 py-4 px-4 rounded-xl border border-emerald-500/40 leading-relaxed shadow-inner">
       </p>
@@ -101,10 +101,10 @@
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center space-x-2">
           <span class="text-xl animate-bounce">🔥</span>
-          <h3 class="text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在 4 人盲抽投票中！(快去直播间为您支持的买家投票)</h3>
+          <h3 class="text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
         </div>
       </div>
-      <div id="publicActiveGroupGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"></div>
+      <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
     </div>
 
     <!-- 统计卡片区 -->
@@ -139,7 +139,7 @@
       </div>
     </div>
 
-    <!-- 角逐中买家 (左) & 🌟 紧凑单列淘汰区 (新至旧) (右) -->
+    <!-- 🌟 名单池 (左, 强制一行5个) & 淘汰区极简模式 (右, 1列展示仅名字, 新至旧) -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
@@ -152,16 +152,16 @@
         <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
       </div>
 
-      <!-- 🌟 单列小框架淘汰区 (按新至旧排序，仅展示名字) -->
+      <!-- 🌟 前台 1 列极简淘汰区 (仅展示名字, 新至旧) -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
-        <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
             <span class="text-sm">❌</span>
             <h3 class="text-xs font-bold text-slate-400" data-i18n="outListTitle">淘汰区 (新至旧)</h3>
           </div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
         </div>
-        <div id="outListContainer" class="space-y-3 flex-1 overflow-y-auto max-h-[550px] pr-1"></div>
+        <div id="outListContainer" class="space-y-4 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
       </div>
     </div>
 
@@ -214,7 +214,7 @@
         mode1: "冠亚季模式",
         mode2: "包含安慰奖模式",
         modeDisabled: "未启用规则",
-        shopeeGroupTitle: "Shopee 直播间正在 4 人盲抽投票中！(快去直播间为您支持的买家投票)",
+        shopeeGroupTitle: "Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)",
         banner3LeftText: "🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！",
         bannerThirdPlaceText: "🎉 🥉 季军得主是：",
         bannerFinalText: "🎉 👑 冠军得主是：",
@@ -234,7 +234,7 @@
         passedBadgeSuffix: " ",
         totalPrefix: "Total",
         pendingSuffix: "In Battle",
-        outListTitle: "Out Zone (Newest First)",
+        outListTitle: "Eliminated Area (New to Old)",
         searchPlaceholder: "🔍 Search name or order no...",
         roundPrefix: "Round ",
         roundSuffix: "",
@@ -253,13 +253,13 @@
         mode1: "Podium Mode",
         mode2: "Consolation Mode",
         modeDisabled: "Disabled Rules",
-        shopeeGroupTitle: "Shopee Live 4-Buyer Group Voting in Progress!",
+        shopeeGroupTitle: "Shopee Live Group Voting in Progress!",
         banner3LeftText: "🔥 Podium Showdown! Only 3 candidates remaining for 🥉 3rd Place!",
         bannerThirdPlaceText: "🎉 🥉 3rd Place Winner is: ",
         bannerFinalText: "🎉 👑 Champion: ",
         bannerRunnerUpText: " | 🥈 Runner-up: ",
         bannerFinalSub: "(🔥 👑 2-Way Final Showdown Live!)",
-        eliminatedInRound: "Round {r} Eliminated"
+        eliminatedInRound: "Eliminated in Round {r}"
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
@@ -273,7 +273,7 @@
         passedBadgeSuffix: " orang",
         totalPrefix: "Jumlah",
         pendingSuffix: "orang bersaing",
-        outListTitle: "Zon Tersingkir (Terkini Dahulu)",
+        outListTitle: "Zon Tersingkir (Baharu ke Lama)",
         searchPlaceholder: "🔍 Cari nama atau no pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
@@ -292,7 +292,7 @@
         mode1: "Mod Tiga Teratas",
         mode2: "Mod Saguhati",
         modeDisabled: "Peraturan Nyahaktif",
-        shopeeGroupTitle: "Undian Kumpulan 4 Pembeli Shopee Live Sedang Berlangsung!",
+        shopeeGroupTitle: "Undian Kumpulan Shopee Live Sedang Berlangsung!",
         banner3LeftText: "🔥 Perebutan 3 Teratas Bermula! Tinggal 3 calon sahaja lagi!",
         bannerThirdPlaceText: "🎉 🥉 Pemenang Tempat Ke-3: ",
         bannerFinalText: "🎉 👑 Juara: ",
@@ -501,15 +501,15 @@
       const passed = candidates.filter(c => c.status === 'pass').length;
       const pendingCount = candidates.filter(c => c.status === 'pending').length;
       
-      let totalOut = 0;
+      let totalOutCount = 0;
       (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => { if (c.status === 'out') totalOut++; });
+        totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length;
       });
 
       document.getElementById('statTotalCandidates').innerText = total;
       document.getElementById('statPassedCount').innerText = passed;
       document.getElementById('statPendingCount').innerText = pendingCount;
-      document.getElementById('statOutCount').innerText = totalOut;
+      document.getElementById('statOutCount').innerText = totalOutCount;
       
       const titleName = getRoundTitle(currentRoundIndex);
       document.getElementById('passedTitleText').innerText = `${titleName} ${i18n[currentLang].passedTitle}`;
@@ -517,7 +517,7 @@
       document.getElementById('passedBadgeCount').innerText = passed + i18n[currentLang].passedBadgeSuffix;
       
       document.getElementById('pendingNumberYellow').innerText = pendingCount;
-      document.getElementById('outBadgeCount').innerText = totalOut + i18n[currentLang].unitPeople;
+      document.getElementById('outBadgeCount').innerText = totalOutCount + i18n[currentLang].unitPeople;
     }
 
     function renderPublicView() {
@@ -528,7 +528,7 @@
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
       );
 
-      // 0. 公开展示当前直播间 4 人 PK 组
+      // 0. 公开展示当前盲抽组
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
       const publicGroupGrid = document.getElementById('publicActiveGroupGrid');
       
@@ -537,7 +537,7 @@
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
           <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-3 shadow text-center">
-            <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">香水 #${idx + 1}</span>
+            <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#${idx + 1}</span>
             <div class="font-bold text-amber-300 text-sm truncate">${escapeHtml(c.name)}</div>
             <div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || '无订单号')}</div>
           </div>
@@ -563,7 +563,7 @@
         }).join('');
       }
 
-      // 2. 待PK买家卡片
+      // 🌟 2. 待PK买家卡片 (强制一行 5 个)
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
@@ -588,13 +588,13 @@
           '</div>';
         }).join('');
 
-        pendingContainer.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">' + cardsHtml + '</div>';
+        pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 🌟 3. 单列极简淘汰区（按轮次由新至旧倒序，仅展示名字）
+      // 🌟 3. 前台极简 1 列淘汰区 (仅显示名字，倒序新至旧)
       const outContainer = document.getElementById('outListContainer');
-      
       let allOutCandidates = [];
+
       (state.rounds || []).forEach((r, rIdx) => {
         (r.candidates || []).forEach(c => {
           if (c.status === 'out') {
@@ -617,7 +617,7 @@
           grouped[key].push(c);
         });
 
-        // 🌟 由新至旧倒序排列
+        // 🌟 倒序排列：最新轮次淘汰优先排在最上面 (b - a)
         const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 
         outContainer.innerHTML = sortedKeys.map(rIdxKey => {
@@ -626,17 +626,18 @@
           const candidatesInGroup = grouped[rIdxKey];
 
           const groupCardsHtml = candidatesInGroup.map(c => `
-            <div class="p-1.5 bg-slate-900/80 border border-slate-800/80 rounded flex items-center justify-between opacity-70 hover:opacity-100 transition">
-              <span class="font-bold text-slate-300 text-xs truncate max-w-[120px]" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>
+            <div class="p-1.5 bg-slate-900/80 border border-slate-800 rounded-md opacity-70 hover:opacity-100 transition shadow-sm text-center">
+              <span class="font-bold text-slate-300 text-xs truncate block">${escapeHtml(c.name)}</span>
             </div>
           `).join('');
 
           return `
-            <div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800/80">
-              <div class="text-[11px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
+            <div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800">
+              <div class="text-[10px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
                 <span>❌ ${groupTitle}</span>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}人</span>
+                <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}人</span>
               </div>
+              <!-- 🌟 强制 1 列模式，框架极简 -->
               <div class="grid grid-cols-1 gap-1">
                 ${groupCardsHtml}
               </div>
