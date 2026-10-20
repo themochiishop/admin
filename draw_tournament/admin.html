@@ -32,8 +32,8 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🎬</span>
         <div>
-          <h1 id="adminHeaderTitle" class="text-xl font-bold text-amber-400" data-i18n="adminTitle">Mochiishop 每月抽奖 - 直播控制台</h1>
-          <p class="text-xs text-slate-400" data-i18n="adminSubTitle">香水盲抽 · Shopee直播分组PK控盘系统</p>
+          <h1 id="adminHeaderTitle" class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖 - 直播控制台</h1>
+          <p class="text-xs text-slate-400">香水盲抽 · Shopee直播分组PK控盘系统</p>
         </div>
       </div>
       
@@ -51,9 +51,13 @@
           <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[11px]">MS</span></button>
         </div>
 
-        <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" data-i18n="btnPrevRound">🔙 返回上一轮</button>
+        <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
+          <span>📄</span><span>Export PDF Report</span>
+        </button>
+
+        <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">🔙 返回上一轮</button>
         <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
-          <span id="advanceNextRoundBtnText" data-i18n="btnNextRound">⏩ 锁定本轮晋级者并推进下一轮</span>
+          <span>⏩ 锁定本轮晋级者并推进下一轮</span>
         </button>
       </div>
     </div>
@@ -130,6 +134,20 @@
                 </div>
               </label>
             </div>
+          </div>
+        </div>
+        
+        <!-- 补全缺失的 PDF 配置 UI -->
+        <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
+          <button onclick="toggleCardAccordion('cardPdfCustomSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
+            <span class="flex items-center space-x-2"><span>📄</span><span>PDF 报告导出内容与模板设置</span></span>
+            <span id="arrow-cardPdfCustomSetting" class="text-slate-400 transition-transform">▼</span>
+          </button>
+          <div id="cardPdfCustomSetting" class="hidden p-3 pt-0 border-t border-slate-800 space-y-2.5">
+            <div class="mt-2"><label class="block text-slate-400 mb-1">Main Title 1 (主标题 1):</label><input type="text" id="pdfTitleInput" placeholder="MOCHIISHOP OFFICIAL DRAW" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-300 focus:outline-none"></div>
+            <div><label class="block text-slate-400 mb-1">Main Title 2 (主标题 2):</label><input type="text" id="pdfTitle2Input" placeholder="OCTOBER FINAL WINNER REPORT" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-300 focus:outline-none"></div>
+            <div><label class="block text-slate-400 mb-1">Sub Title (副标题):</label><input type="text" id="pdfSubTitleInput" placeholder="Shopee Live Monthly Event Official Certificate" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-slate-300 focus:outline-none"></div>
+            <div><label class="block text-slate-400 mb-1">Footer Text (页脚说明):</label><input type="text" id="pdfFooterInput" placeholder="© Mochiishop Official Live Tournament System. Verified Result." class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-slate-400 focus:outline-none"></div>
           </div>
         </div>
       </div>
@@ -266,6 +284,8 @@
           renderAdminView();
           updateStats();
           syncModalUIWithState();
+          updateHeaderTitle();
+          updateModeBadgeUI();
         }
       });
 
@@ -328,6 +348,12 @@
       document.getElementById('adminTitleInput').value = state.customAdminTitle || '';
       document.getElementById('publicTitleInput').value = state.customPublicTitle || '';
 
+      if (!state.pdfConfig) state.pdfConfig = { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' };
+      document.getElementById('pdfTitleInput').value = state.pdfConfig.title || '';
+      document.getElementById('pdfTitle2Input').value = state.pdfConfig.title2 || '';
+      document.getElementById('pdfSubTitleInput').value = state.pdfConfig.subTitle || '';
+      document.getElementById('pdfFooterInput').value = state.pdfConfig.footer || '';
+
       if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '' };
       document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
       document.getElementById('useDefaultPickCountCheckbox').checked = state.modeConfig.useDefaultPickCount !== false;
@@ -337,12 +363,26 @@
       const radios = document.getElementsByName('drawMode');
       for (let r of radios) { if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true; }
       document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
+      
+      const importRadios = document.getElementsByName('importMode');
+      for (let r of importRadios) { if (r.value === (state.modeConfig.importMode || 'default')) r.checked = true; }
+      document.getElementById('customSheetUrlInput').value = state.modeConfig.customSheetUrl || '';
+      toggleImportModeUI();
+      
+      updateModeBadgeUI();
     }
 
+    // 🔥 修复了卡死问题的保存函数
     function saveConfigModal() {
       state.isPublicVisible = document.getElementById('publicVisibleCheckbox').checked;
       state.customAdminTitle = document.getElementById('adminTitleInput').value.trim();
       state.customPublicTitle = document.getElementById('publicTitleInput').value.trim();
+
+      if (!state.pdfConfig) state.pdfConfig = {};
+      state.pdfConfig.title = document.getElementById('pdfTitleInput').value.trim() || 'MOCHIISHOP OFFICIAL DRAW';
+      state.pdfConfig.title2 = document.getElementById('pdfTitle2Input').value.trim() || 'OCTOBER FINAL WINNER REPORT';
+      state.pdfConfig.subTitle = document.getElementById('pdfSubTitleInput').value.trim() || 'Shopee Live Monthly Event Official Certificate';
+      state.pdfConfig.footer = document.getElementById('pdfFooterInput').value.trim() || '© Mochiishop Official Live Tournament System. Verified Result.';
 
       const isEnabled = document.getElementById('enableModeCheckbox').checked;
       const radios = document.getElementsByName('drawMode');
@@ -353,15 +393,36 @@
       const useDefaultPickCount = document.getElementById('useDefaultPickCountCheckbox').checked;
       const defaultPickCount = parseInt(document.getElementById('defaultPickCountInput').value, 10) || 4;
 
+      const importMode = document.querySelector('input[name="importMode"]:checked')?.value || 'default';
+      const customSheetUrl = document.getElementById('customSheetUrlInput').value.trim();
+
       if (!state.modeConfig) state.modeConfig = {};
       state.modeConfig.enabled = isEnabled;
       state.modeConfig.selectedMode = selectedMode;
       state.modeConfig.mode2ConsolationCount = mode2Cons;
       state.modeConfig.useDefaultPickCount = useDefaultPickCount;
       state.modeConfig.defaultPickCount = defaultPickCount;
+      state.modeConfig.importMode = importMode;
+      state.modeConfig.customSheetUrl = customSheetUrl;
 
       saveState();
+      updateHeaderTitle();
+      updateModeBadgeUI();
       closeConfigModal();
+
+      // 🔥 核心修复：如果是本地文件，直接读取，绝对不去碰网络
+      if (importMode === 'fileUpload') {
+        const fileInput = document.getElementById('localFileInput');
+        if (fileInput && fileInput.files.length > 0) {
+          readLocalFileAndParse(fileInput.files[0]);
+        } else {
+          alert("✅ 设置已保存！\n但您还未选择文件，请点击【🔄 刷新 / 导入名单】旁边的按钮上传本地文件。");
+        }
+        return;
+      }
+
+      // 如果是网络链接，再去抓取
+      fetchGoogleSheetsData(true);
     }
 
     function fetchGoogleSheetsData(isManual) {
@@ -839,6 +900,24 @@
             alert("✅ 所有数据已重置清空！"); fetchGoogleSheetsData(true);
           } else alert("❌ 重置失败，请重试");
         });
+      }
+    }
+
+    function updateRefreshButtonState() {
+      const btn = document.getElementById('refreshSheetsBtn');
+      if (!btn) return;
+      const isFirstRoundDrawStarted = (state.rounds && state.rounds.length > 1) || ((state.rounds[0].candidates || []).some(c => c.status !== 'pending'));
+      
+      if (isFirstRoundDrawStarted) {
+        btn.disabled = true;
+        btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
+        btn.classList.add('bg-slate-700', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
+        btn.title = "第一轮已开始抽取，已锁定导入功能！";
+      } else {
+        btn.disabled = false;
+        btn.classList.remove('bg-slate-700', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
+        btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
+        btn.title = "";
       }
     }
 
