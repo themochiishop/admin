@@ -768,135 +768,141 @@
       else pdfBtn.classList.add('hidden');
     }
 
-    // 📄 全面重构的高保真、精美 PDF 报告排版设计
-    function exportResultsToPDF() {
-      let champion = null;
-      let runnerUp = null;
-      let thirdPlace = null;
-      let consolations = [];
+   // 📄 全面重构的高保真、高级证书风 PDF 报告生成函数
+function exportResultsToPDF() {
+  let champion = null;
+  let runnerUp = null;
+  let thirdPlace = null;
+  let consolations = [];
 
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
-          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
-          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
-          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
-        });
-      });
+  (state.rounds || []).forEach(r => {
+    (r.candidates || []).forEach(c => {
+      if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
+      if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
+      if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
+      if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
+    });
+  });
 
-      const pdfCfg = state.pdfConfig || {};
-      const pdfTitle1 = pdfCfg.title || 'MOCHIISHOP OFFICIAL DRAW';
-      const pdfTitle2 = pdfCfg.title2 || 'OCTOBER FINAL WINNER REPORT';
-      const pdfSubTitle = pdfCfg.subTitle || 'Shopee Live Monthly Event Official Certificate';
-      const pdfFooter = pdfCfg.footer || '© Mochiishop Official Live Tournament System. Verified Result.';
+  const pdfCfg = state.pdfConfig || {};
+  const pdfTitle1 = pdfCfg.title || 'MOCHIISHOP OFFICIAL DRAW';
+  const pdfTitle2 = pdfCfg.title2 || 'OCTOBER FINAL WINNER REPORT';
+  const pdfSubTitle = pdfCfg.subTitle || 'Shopee Live Monthly Event Official Certificate';
+  const pdfFooter = pdfCfg.footer || '© Mochiishop Official Live Tournament System. Verified Result.';
 
-      const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+  const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
 
-      let pdfContainer = document.createElement('div');
-      pdfContainer.style.width = "780px";
-      pdfContainer.style.fontFamily = "Arial, Helvetica, sans-serif";
-      pdfContainer.style.backgroundColor = "#ffffff";
-      pdfContainer.style.color = "#0f172a";
-      pdfContainer.style.padding = "36px";
-      pdfContainer.style.boxSizing = "border-box";
-      pdfContainer.style.border = "10px solid #d97706";
-      pdfContainer.style.borderRadius = "20px";
+  // 创建 1:1 适配 A4 的渲染容器
+  let pdfContainer = document.createElement('div');
+  pdfContainer.style.width = "800px";
+  pdfContainer.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  pdfContainer.style.backgroundColor = "#ffffff";
+  pdfContainer.style.color = "#0f172a";
+  pdfContainer.style.padding = "40px 48px";
+  pdfContainer.style.boxSizing = "border-box";
+  pdfContainer.style.position = "relative";
+  pdfContainer.style.border = "4px double #d97706"; // 双线精致金边框
+  pdfContainer.style.borderRadius = "8px";
 
-      pdfContainer.innerHTML = `
-        <!-- 头部 Header -->
-        <div style="text-align: center; border-bottom: 2px solid #f59e0b; padding-bottom: 18px; margin-bottom: 24px;">
-          <div style="font-size: 26px; font-weight: 900; color: #b45309; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2;">
-            🏆 ${escapeHtml(pdfTitle1)}
+  pdfContainer.innerHTML = `
+    <!-- 顶端装饰金条 -->
+    <div style="height: 6px; background: linear-gradient(90deg, #b45309 0%, #f59e0b 50%, #b45309 100%); margin-bottom: 24px; border-radius: 3px;"></div>
+
+    <!--  Header 头部 -->
+    <div style="text-align: center; margin-bottom: 28px; border-bottom: 1px solid #f1f5f9; padding-bottom: 20px;">
+      <div style="font-size: 28px; font-weight: 900; color: #92400e; text-transform: uppercase; letter-spacing: 1.5px; line-height: 1.2;">
+        🏆 ${escapeHtml(pdfTitle1)}
+      </div>
+      ${pdfTitle2 ? `
+      <div style="font-size: 18px; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; line-height: 1.2;">
+        \${escapeHtml(pdfTitle2)}
+      </div>
+      ` : ''}
+      <div style="font-size: 12px; color: #64748b; margin-top: 10px; font-weight: 500; letter-spacing: 0.5px;">
+        ${escapeHtml(pdfSubTitle)}
+      </div>
+      <div style="display: inline-block; background-color: #fef3c7; color: #92400e; font-size: 11px; font-weight: 700; padding: 3px 12px; rounded-full; border-radius: 12px; margin-top: 10px; font-family: monospace;">
+        ISSUED DATE: ${todayStr}
+      </div>
+    </div>
+
+    <!-- 👑 Podium Winners 荣誉三甲专区 -->
+    <div style="margin-bottom: 28px;">
+      <div style="font-size: 14px; font-weight: 800; color: #1e293b; border-left: 4px solid #d97706; padding-left: 10px; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+        👑 Official Podium Winners
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <thead>
+          <tr style="background-color: #fef3c7; color: #78350f; font-weight: 800; font-size: 12px; text-transform: uppercase;">
+            <th style="padding: 12px 16px; border-bottom: 2px solid #fde68a; width: 30%;">Rank / Title</th>
+            <th style="padding: 12px 16px; border-bottom: 2px solid #fde68a; width: 38%;">Winner Name</th>
+            <th style="padding: 12px 16px; border-bottom: 2px solid #fde68a; width: 32%;">Order Number</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 👑 冠军 -->
+          <tr style="background-color: #fffbeb; border-bottom: 1px solid #fef3c7;">
+            <td style="padding: 14px 16px; font-weight: 900; color: #b45309; font-size: 13px;">👑 CHAMPION</td>
+            <td style="padding: 14px 16px; font-weight: 900; color: #78350f; font-size: 15px;">${champion ? escapeHtml(champion.name) : 'N/A'}</td>
+            <td style="padding: 14px 16px; font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #b45309; letter-spacing: 0.5px;">${champion ? escapeHtml(champion.orderNo) : '-'}</td>
+          </tr>
+          <!-- 🥈 亚军 -->
+          <tr style="border-bottom: 1px solid #f1f5f9; background-color: #ffffff;">
+            <td style="padding: 12px 16px; font-weight: 800; color: #475569; font-size: 13px;">🥈 RUNNER-UP</td>
+            <td style="padding: 12px 16px; font-weight: 800; color: #1e293b; font-size: 14px;">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</td>
+            <td style="padding: 12px 16px; font-family: 'Courier New', Courier, monospace; color: #64748b; font-weight: 600;">${runnerUp ? escapeHtml(runnerUp.orderNo) : '-'}</td>
+          </tr>
+          <!-- 🥉 季军 -->
+          <tr style="background-color: #ffffff;">
+            <td style="padding: 12px 16px; font-weight: 800; color: #b45309; font-size: 13px;">🥉 3RD PLACE</td>
+            <td style="padding: 12px 16px; font-weight: 800; color: #1e293b; font-size: 14px;">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</td>
+            <td style="padding: 12px 16px; font-family: 'Courier New', Courier, monospace; color: #64748b; font-weight: 600;">${thirdPlace ? escapeHtml(thirdPlace.orderNo) : '-'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 🎁 Consolation Prize Winners 安慰奖专区 -->
+    ${consolations.length > 0 ? `
+    <div style="margin-bottom: 32px;">
+      <div style="font-size: 14px; font-weight: 800; color: #1e293b; border-left: 4px solid #10b981; padding-left: 10px; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+        🎁 Consolation Prize Winners (\${consolations.length} Winners)
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 12px;">
+        \${consolations.map((c, i) => `
+          <div style="padding: 10px 14px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; items-center space-x-2;">
+              <span style="font-weight: 800; color: #166534; font-size: 11px; margin-right: 6px; background-color: #dcfce7; padding: 2px 6px; border-radius: 4px;">#${i+1}</span>
+              <span style="font-weight: 700; color: #065f46; font-size: 13px;">${escapeHtml(c.name)}</span>
+            </div>
+            <span style="color: #64748b; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 600;">${escapeHtml(c.orderNo || '-')}</span>
           </div>
-          ${pdfTitle2 ? `
-          <div style="font-size: 18px; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; line-height: 1.2;">
-            ${escapeHtml(pdfTitle2)}
-          </div>
-          ` : ''}
-          <div style="font-size: 13px; color: #64748b; margin-top: 8px; font-weight: 500;">
-            ${escapeHtml(pdfSubTitle)}
-          </div>
-          <div style="font-size: 11px; color: #94a3b8; margin-top: 4px; font-weight: bold; font-family: monospace;">
-            Issued Date: ${todayStr}
-          </div>
-        </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
 
-        <!-- 冠亚季领奖台专区 -->
-        <div style="margin-bottom: 28px;">
-          <h2 style="font-size: 15px; font-weight: 800; color: #1e293b; border-left: 5px solid #d97706; padding-left: 10px; margin-bottom: 14px; text-transform: uppercase;">
-            👑 Official Podium Winners
-          </h2>
-          <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; text-align: left; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-            <thead>
-              <tr style="background-color: #fef3c7; color: #92400e; font-weight: bold;">
-                <th style="padding: 12px 16px; border-bottom: 2px solid #fde68a;">Rank / Title</th>
-                <th style="padding: 12px 16px; border-bottom: 2px solid #fde68a;">Winner Name</th>
-                <th style="padding: 12px 16px; border-bottom: 2px solid #fde68a;">Order Number</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- 👑 冠军 -->
-              <tr style="background-color: #fffbeb; border-bottom: 1px solid #fef3c7;">
-                <td style="padding: 12px 16px; font-weight: 900; color: #b45309; font-size: 14px;">👑 CHAMPION</td>
-                <td style="padding: 12px 16px; font-weight: 900; color: #78350f; font-size: 15px;">${champion ? escapeHtml(champion.name) : 'N/A'}</td>
-                <td style="padding: 12px 16px; font-family: monospace; font-weight: bold; color: #b45309;">${champion ? escapeHtml(champion.orderNo) : '-'}</td>
-              </tr>
-              <!-- 🥈 亚军 -->
-              <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 12px 16px; font-weight: 800; color: #475569;">🥈 RUNNER-UP</td>
-                <td style="padding: 12px 16px; font-weight: 800; color: #1e293b; font-size: 14px;">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</td>
-                <td style="padding: 12px 16px; font-family: monospace; color: #64748b;">${runnerUp ? escapeHtml(runnerUp.orderNo) : '-'}</td>
-              </tr>
-              <!-- 🥉 季军 -->
-              <tr>
-                <td style="padding: 12px 16px; font-weight: 800; color: #b45309;">🥉 3RD PLACE</td>
-                <td style="padding: 12px 16px; font-weight: 800; color: #1e293b; font-size: 14px;">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</td>
-                <td style="padding: 12px 16px; font-family: monospace; color: #64748b;">${thirdPlace ? escapeHtml(thirdPlace.orderNo) : '-'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- 底端装饰与 Footer 说明 -->
+    <div style="border-top: 1px solid #e2e8f0; padding-top: 18px; margin-top: 20px; font-size: 10px; color: #94a3b8; text-align: center;">
+      <p style="margin: 0; letter-spacing: 0.5px;">${escapeHtml(pdfFooter)}</p>
+    </div>
+  `;
 
-        <!-- 🎁 安慰奖专区 -->
-        ${consolations.length > 0 ? `
-        <div style="margin-bottom: 28px;">
-          <h2 style="font-size: 15px; font-weight: 800; color: #1e293b; border-left: 5px solid #10b981; padding-left: 10px; margin-bottom: 14px; text-transform: uppercase;">
-            🎁 Consolation Prize Winners (${consolations.length} Winners)
-          </h2>
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 12px;">
-            ${consolations.map((c, i) => `
-              <div style="padding: 8px 12px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <span style="font-weight: 800; color: #166534; font-size: 11px; margin-right: 6px;">#${i+1}</span>
-                  <span style="font-weight: 700; color: #065f46;">${escapeHtml(c.name)}</span>
-                </div>
-                <span style="color: #64748b; font-family: monospace; font-size: 11px;">${escapeHtml(c.orderNo || '-')}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        ` : ''}
+  document.body.appendChild(pdfContainer);
 
-        <!-- 页脚 Footnote -->
-        <div style="border-top: 1px dashed #cbd5e1; padding-top: 16px; margin-top: 24px; font-size: 11px; color: #94a3b8; text-align: center;">
-          <p style="margin: 0;">${escapeHtml(pdfFooter)}</p>
-        </div>
-      `;
+  // 📄 导出配置：优化 Scale 与 A4 尺寸契合度
+  const opt = {
+    margin:       [0.2, 0.2, 0.2, 0.2], // 上右下左窄边距
+    filename:     `Mochiishop_Tournament_Results_${todayStr}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
 
-      document.body.appendChild(pdfContainer);
-
-      const opt = {
-        margin:       0.3,
-        filename:     `Mochiishop_Tournament_Results_${todayStr}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-
-      html2pdf().set(opt).from(pdfContainer).save().then(() => {
-        document.body.removeChild(pdfContainer);
-      });
-    }
+  html2pdf().set(opt).from(pdfContainer).save().then(() => {
+    document.body.removeChild(pdfContainer);
+  });
+}
 
     function pickRandomGroup() {
       const activeRound = state.rounds[currentRoundIndex];
