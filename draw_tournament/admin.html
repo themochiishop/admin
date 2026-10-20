@@ -354,6 +354,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    firebase.auth().signInAnonymously().catch((error) => {
+  console.error("匿名登录失败:", error);
+});
+
     const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
