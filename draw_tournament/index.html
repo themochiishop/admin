@@ -893,7 +893,13 @@ function revealPKWinnerFromPublic() {
       }
 
       const passedContainer = document.getElementById('passedListContainer');
-      const passedList = list.filter(c => c.status === 'pass');
+      // 🆕 优先读取累积历史池，如果没有再用 status === 'pass' 兜底
+let passedList = (state.passHistory || []).filter(c => 
+  (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
+);
+if (passedList.length === 0) {
+  passedList = list.filter(c => c.status === 'pass');
+}
 
       if (passedList.length === 0) {
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${lang.noPassed}</span>`;
