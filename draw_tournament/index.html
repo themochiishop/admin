@@ -8,7 +8,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 (多语言结合 · 10秒自动切回大屏) -->
+  <!-- 🌟 全屏豪华恭喜弹窗 (10秒自动切回大屏) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -82,10 +82,9 @@
   <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
 
-    <!-- 🌟 多语言终极大奖公示/预告横幅 (3人角逐/季军/冠亚军专属提示) -->
+    <!-- 多语言终极大奖公示/预告横幅 -->
     <div id="winnerAnnouncementBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
       <div id="winnerBannerContent" class="text-lg font-black text-amber-300 tracking-wide">
-        <!-- 动态注入多语言横幅信息 -->
       </div>
     </div>
     
@@ -96,7 +95,7 @@
       </div>
     </div>
 
-    <!-- 🔥 Shopee 直播间当前正在 4 人投票组公开展示 -->
+    <!-- 🔥 Shopee 直播间盲抽展示区 -->
     <div id="publicActiveGroupDisplay" class="mb-6 hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 shadow-xl">
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center space-x-2">
@@ -139,7 +138,7 @@
       </div>
     </div>
 
-    <!-- 🌟 名单池 (左, 强制一行5个) & 淘汰区极简模式 (右, 1列展示仅名字, 新至旧) -->
+    <!-- 名单池 (左, 强制一行5个) & 淘汰区极简模式 (右, 1列展示仅名字, 新至旧) -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
@@ -152,7 +151,7 @@
         <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
       </div>
 
-      <!-- 🌟 前台 1 列极简淘汰区 (仅展示名字, 新至旧) -->
+      <!-- 前台 1 列极简淘汰区 (仅展示名字, 新至旧) -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
@@ -563,7 +562,7 @@
         }).join('');
       }
 
-      // 🌟 2. 待PK买家卡片 (强制一行 5 个)
+      // 2. 待PK买家卡片 (强制一行 5 个)
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
@@ -591,7 +590,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 🌟 3. 前台极简 1 列淘汰区 (仅显示名字，倒序新至旧)
+      // 3. 前台极简 1 列淘汰区 (仅显示名字，倒序新至旧)
       const outContainer = document.getElementById('outListContainer');
       let allOutCandidates = [];
 
@@ -617,7 +616,6 @@
           grouped[key].push(c);
         });
 
-        // 🌟 倒序排列：最新轮次淘汰优先排在最上面 (b - a)
         const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 
         outContainer.innerHTML = sortedKeys.map(rIdxKey => {
@@ -637,7 +635,6 @@
                 <span>❌ ${groupTitle}</span>
                 <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}人</span>
               </div>
-              <!-- 🌟 强制 1 列模式，框架极简 -->
               <div class="grid grid-cols-1 gap-1">
                 ${groupCardsHtml}
               </div>
