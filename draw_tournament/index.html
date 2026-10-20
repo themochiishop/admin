@@ -39,13 +39,13 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🏆</span>
         <div>
-          <h1 class="text-xl font-bold text-amber-400" data-i18n="publicTitle">Mochiishop 每月抽奖晋级榜</h1>
+          <h1 id="publicHeaderTitle" class="text-xl font-bold text-amber-400" data-i18n="publicTitle">Mochiishop 每月抽奖晋级榜</h1>
           <p class="text-xs text-slate-400" data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</p>
         </div>
       </div>
       
       <div class="flex items-center space-x-4">
-        <!-- 当前生效模式徽章 (前台显示：模式: 3+安慰奖) -->
+        <!-- 当前生效模式徽章 -->
         <div class="relative group cursor-pointer">
           <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
             模式: 3+安慰奖
@@ -181,6 +181,7 @@
     let userManuallySelectedRound = false; 
     let popupTimer = null;
     let state = { 
+      customPublicTitle: '',
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
       rounds: [{ roundName: "第 1 轮", candidates: [] }] 
     };
@@ -319,6 +320,13 @@
       setInterval(loadAndRender, 800);
     };
 
+    function updatePublicHeaderTitle() {
+      const h1 = document.getElementById('publicHeaderTitle');
+      if (h1) {
+        h1.innerText = state.customPublicTitle || i18n[currentLang].publicTitle;
+      }
+    }
+
     function setLanguage(lang) {
       currentLang = lang;
       localStorage.setItem('mochii_lang', lang);
@@ -340,6 +348,7 @@
       renderPublicView();
       updateStats();
       updatePublicModeUI();
+      updatePublicHeaderTitle();
     }
 
     function updatePublicModeUI() {
@@ -410,6 +419,7 @@
           renderPublicView();
           updateStats();
           updatePublicModeUI();
+          updatePublicHeaderTitle();
           updateWinnerBannerUI();
         } catch(e){}
       }
@@ -617,7 +627,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 3. 前台极简 1 列淘汰区 (去“人”字，仅显示数值)
+      // 3. 前台极简 1 列淘汰区
       const outContainer = document.getElementById('outListContainer');
       let allOutCandidates = [];
 
