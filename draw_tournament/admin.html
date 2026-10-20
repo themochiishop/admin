@@ -756,49 +756,65 @@
     }
 
     // 🎲 抽组函数：抽组时 displayNumber 全部为 null
-    function pickRandomGroup() {
-      const activeRound = state.rounds[currentRoundIndex];
-      const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
+   function pickRandomGroup() {
+  // 🔥 使用 Firebase 事务，确保取到的是最新的云端数据，防止前后台状态冲突
+  db.ref('tournament_state').transaction((latestState) => {
+    if (!latestState) return latestState;
+    
+    const activeRound = latestState.rounds[currentRoundIndex];
+    if (!activeRound) return latestState;
 
-      if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
-
-      let targetCount = 4;
-      const cfg = state.modeConfig || {};
-      if (cfg.useDefaultPickCount) targetCount = cfg.defaultPickCount || 4;
-      else {
-        const inputStr = prompt("请输入本次要随机盲抽的人数:", "4");
-        if (inputStr === null) return;
-        targetCount = parseInt(inputStr, 10);
-        if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效的数字！"); return; }
-      }
-
-      state.pollCount = (state.pollCount || 0) + 1;
-      state.currentPollNumber = state.pollCount;
-      state.pkStage = 'voting';
-      state.triggerNumber = null;
-      state.drawRoundIndex = currentRoundIndex;
-      activeGroup4Ids = [];
-      state.activeGroupIds = [];
-      state.activeGroupMembers = [];
-      state.settled = false;
-
-      const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
-      
-      activeGroup4Ids = selected.map(c => String(c.id));
-      state.activeGroupIds = activeGroup4Ids;
-
-      state.activeGroupMembers = selected.map((c) => ({
-        id: String(c.id),
-        displayNumber: null,
-        name: c.name,
-        orderNo: c.orderNo
-      }));
-
-      saveState();
-      renderActiveGroupUI();
-      renderAdminView();
+    const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
+    if (pendingList.length === 0) {
+      setTimeout(() => alert("⚠️ 当前没有待 PK 的买家！"), 10);
+      return latestState;
     }
+
+    let targetCount = 4;
+    const cfg = latestState.modeConfig || {};
+    if (cfg.useDefaultPickCount) targetCount = cfg.defaultPickCount || 4;
+    else {
+      const inputStr = prompt("请输入本次要随机盲抽的人数:", "4");
+      if (inputStr === null) return latestState; // 取消操作
+      targetCount = parseInt(inputStr, 10);
+      if (isNaN(targetCount) || targetCount <= 0) {
+        setTimeout(() => alert("请输入有效的数字！"), 10);
+        return latestState;
+      }
+    }
+
+    latestState.pollCount = (latestState.pollCount || 0) + 1;
+    latestState.currentPollNumber = latestState.pollCount;
+    latestState.pkStage = 'voting';
+    latestState.triggerNumber = null;
+    latestState.drawRoundIndex = currentRoundIndex;
+    latestState.activeGroupIds = [];
+    latestState.activeGroupMembers = [];
+    latestState.settled = false;
+
+    const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
+    
+    latestState.activeGroupIds = selected.map(c => String(c.id));
+    
+    latestState.activeGroupMembers = selected.map((c) => ({
+      id: String(c.id),
+      displayNumber: null,
+      name: c.name,
+      orderNo: c.orderNo
+    }));
+
+    return latestState; // 返回新状态，Firebase 会自动推送到前台和后台
+  }, (error, committed, snapshot) => {
+    if (error) console.error("抽组失败:", error);
+    else if (committed) {
+      state = snapshot.val();
+      activeGroup4Ids = [...state.activeGroupIds];
+      renderAdminView();
+      updateStats();
+    }
+  });
+}
 
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
