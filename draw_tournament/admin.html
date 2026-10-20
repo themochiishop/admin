@@ -397,7 +397,7 @@
       isPublicVisible: true,
       pollCount: 0,
       currentPollNumber: 0,
-      pkStage: 'voting', // 'voting', 'triggered', 'revealed'
+      pkStage: 'voting', // 'voting', 'triggered', 'revealed', 'selecting'
       triggerNumber: null,
       pdfConfig: {
         title: 'MOCHIISHOP OFFICIAL DRAW',
@@ -986,6 +986,7 @@
       }
     }
 
+    // 🎲 随机抽组函数（包含 5 秒遴选过渡效果）
     function pickRandomGroup() {
       const activeRound = state.rounds[currentRoundIndex];
       const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
@@ -1010,19 +1011,34 @@
         }
       }
 
+      // 1. 增加组别计数，发送 5 秒遴选中过渡状态给前台
       state.pollCount = (state.pollCount || 0) + 1;
       state.currentPollNumber = state.pollCount;
-      state.pkStage = 'voting';
+      state.pkStage = 'selecting'; // 设置前台过渡显示状态
       state.triggerNumber = null;
+      activeGroup4Ids = [];
+      delete state.activeGroupIds;
 
-      const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
-      activeGroup4Ids = selected.map(c => c.id);
-
-      state.activeGroupIds = activeGroup4Ids;
       saveState();
       renderActiveGroupUI();
       renderAdminView();
+
+      // 2. 5秒后再进行实际的随机盲抽选择，并推送到前台
+      setTimeout(() => {
+        const currentPending = (state.rounds[currentRoundIndex].candidates || []).filter(c => c.status === 'pending');
+        if (currentPending.length === 0) return;
+
+        const shuffled = [...currentPending].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
+        activeGroup4Ids = selected.map(c => c.id);
+
+        state.activeGroupIds = activeGroup4Ids;
+        state.pkStage = 'voting'; // 完成遴选，切换至投票阶段
+
+        saveState();
+        renderActiveGroupUI();
+        renderAdminView();
+      }, 5000); // 5000 毫秒 (5秒) 过渡效果
     }
 
     function setTriggerNumber(num) {
