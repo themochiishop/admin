@@ -69,10 +69,6 @@
           </div>
         </div>
 
-        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-          <span data-i18n="liveSyncText">云端毫秒级同步中...</span>
-        </div>
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px] sm:text-[11px]">ZH</span></button>
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px] sm:text-[11px]">EN</span></button>
@@ -217,8 +213,7 @@
       projectId: "draw-tournament",
       storageBucket: "draw-tournament.firebasestorage.app",
       messagingSenderId: "803720903757",
-      appId: "1:803720903757:web:8b561daabc0d69af9e7004",
-      measurementId: "G-X7PJ23JKDB"
+      appId: "1:803720903757:web:8b561daabc0d69af9e7004"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -229,115 +224,15 @@
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
-    let lastSeenEventTime = 0; 
     let userManuallySelectedRound = false; 
-    let popupTimer = null;
-    let isProcessAreaCollapsed = false;
     let isAdminUnlocked = false; 
 
     let state = { 
-      customPublicTitle: '',
-      isPublicVisible: true,
-      pkStage: 'voting', 
-      triggerNumber: null,
-      drawRoundIndex: 0,
-      activeGroupIds: [],
-      activeGroupMembers: [],
-      passHistory: [],
-      settled: false,
-      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
-      rounds: [{ roundName: "第 1 轮", candidates: [] }] 
+      customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
+      drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false,
+      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, rounds: [{ roundName: "第 1 轮", candidates: [] }] 
     };
 
-    const i18n = {
-      zh: {
-        publicTitle: "Mochiishop 每月抽奖晋级榜", publicSubTitle: "直播实时同步 · 买家公开公示大屏",
-        liveSyncText: "云端毫秒级同步中...", tooltipTitle: "当前模式规则与晋级流程",
-        statTotal: "本轮参选人数", statPassed: "本轮已晋级", statPending: "本轮待PK人数", statOut: "本轮已淘汰人数",
-        totalPrefix: "共", pendingSuffix: "人待角逐", outListTitle: "淘汰区 (新至旧)",
-        roundPrefix: "第 ", roundSuffix: " 轮",
-        passedTitle: "已晋级名单", pendingTitle: "待PK买家名单",
-        publicConsolationTitle: "已胜出安慰奖名单", consolationLabelTag: "安慰奖",
-        noPassed: "本轮暂无晋级买家，直播抽出中...", noCandidates: "本轮抽奖名单同步中，请关注直播间...",
-        allDone: "本轮全员判定完毕", noOut: "暂无淘汰人员",
-        modalCongratsHeader: "🎉 热烈祝贺！成功获得荣誉！", finalTitle: "👑 恭喜买家成功获得荣誉！",
-        autoCloseText: "将在", autoCloseSuffix: "秒后自动切回大屏榜单...",
-        modePrefix: "模式: ", mode1: "冠亚季模式", mode2: "3+安慰奖", modeDisabled: "未启用规则",
-        shopeeGroupTitle: "Shopee 直播间盲抽 PK 组",
-        banner3LeftText: "🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！",
-        bannerThirdPlaceText: "🎉 🥉 季军得主是：", bannerFinalText: "🎉 👑 冠军得主是：", bannerRunnerUpText: " | 🥈 亚军得主是：",
-        bannerFinalSub: "(🔥 👑 冠亚军决战 2 选 1 开启中！)",
-        eliminatedInRound: "第 {r} 轮淘汰",
-        mode1FlowPublic: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 当前模式：冠军 1 人，亚军 1 人，季军 1 人</div><b>晋级流程说明：</b><br>1. <b>多轮选拔</b>：每轮分组盲抽 PK。<br>2. <b>季军争夺战</b>：剩 3 人争夺季军。<br>3. <b>冠亚军决战</b>：最终 2 人争夺冠亚军！",
-        mode2FlowPublic: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 当前模式：冠军 1 人，亚军 1 人，季军 1 人，安慰奖 {n} 人</div><b>晋级流程说明：</b><br>1. <b>淘汰筛选</b>：每轮筛选胜出买家。<br>2. <b>安慰奖环节</b>：选出 {n} 位安慰奖得主。<br>3. <b>冠亚季环节</b>：余下 3 人进入终战！",
-        rankConsolation: "🎁 安慰奖", rankThird: "🥉 季军", rankChampion: "👑 冠军", rankRunnerUp: "🥈 亚军",
-        finalSummaryTitle: "全场抽奖比赛 - 终极荣誉汇总榜", finalSummarySub: "祝贺所有获奖买家！",
-        consolationSummaryTitle: "🎁 安慰奖得主全名单",
-        processSectionLabel: "📋 抽奖比赛全程选拔细节记录",
-        expandText: "展开选拔过程 ▼", collapseText: "折叠选拔过程 ▲",
-        noOrderNoText: "无订单号",
-        updatingOverlayMsg: "⏳ 网页正在计算与更新中，敬请期待...",
-        updatingOverlaySub: "系统正在实时同步与整理买家数据，请留意直播间提示"
-      },
-      en: {
-        publicTitle: "Mochiishop Monthly Draw Leaderboard", publicSubTitle: "Live Synchronization · Public Display Screen",
-        liveSyncText: "Syncing Live...", tooltipTitle: "Current Mode Rules & Flow",
-        statTotal: "Round Candidates", statPassed: "Passed / Advanced", statPending: "Currently In Battle", statOut: "Eliminated",
-        totalPrefix: "Total", pendingSuffix: "In Battle", outListTitle: "Eliminated Area (New to Old)",
-        roundPrefix: "Round ", roundSuffix: "", passedTitle: "Passed / Advanced List", pendingTitle: "Active Candidates",
-        publicConsolationTitle: "Consolation Winners List", consolationLabelTag: "Consolation",
-        noPassed: "No qualified buyers yet...", noCandidates: "Syncing candidates list...",
-        allDone: "All candidates processed", noOut: "No eliminated candidates",
-        modalCongratsHeader: "🎉 Congratulations to the Winners!", finalTitle: "👑 Winner Announcement!",
-        autoCloseText: "Auto returning in", autoCloseSuffix: "seconds...",
-        modePrefix: "Mode: ", mode1: "Podium Mode", mode2: "3 + Consolation", modeDisabled: "Disabled Rules",
-        shopeeGroupTitle: "Shopee Live Group PK",
-        banner3LeftText: "🔥 Podium Showdown! Only 3 candidates remaining!",
-        bannerThirdPlaceText: "🎉 🥉 3rd Place Winner is: ", bannerFinalText: "🎉 👑 Champion: ", bannerRunnerUpText: " | 🥈 Runner-up: ",
-        bannerFinalSub: "(🔥 👑 2-Way Final Showdown Live!)",
-        eliminatedInRound: "Eliminated in Round {r}",
-        mode1FlowPublic: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place</div><b>Tournament Flow:</b><br>1. Group PK.<br>2. 3rd Place Match.<br>3. Final Showdown!",
-        mode2FlowPublic: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place, {n} Consolation</div><b>Tournament Flow:</b><br>1. Elimination.<br>2. Consolation Phase.<br>3. Podium Phase!",
-        rankConsolation: "🎁 Consolation", rankThird: "🥉 3rd Place", rankChampion: "👑 Champion", rankRunnerUp: "🥈 Runner-up",
-        finalSummaryTitle: "Official Tournament Winners Summary", finalSummarySub: "Congratulations to all winners!",
-        consolationSummaryTitle: "🎁 Consolation Winners Full List",
-        processSectionLabel: "📋 Full Tournament Selection Records",
-        expandText: "Expand Details ▼", collapseText: "Collapse Details ▲",
-        noOrderNoText: "No Order No",
-        updatingOverlayMsg: "⏳ Calculating & Updating, Please Wait...",
-        updatingOverlaySub: "Data is being synchronized in real time. Please stay tuned."
-      },
-      ms: {
-        publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan", publicSubTitle: "Masa Nyata Siaran Langsung · Paparan Awam",
-        liveSyncText: "Diselaraskan Masa Nyata...", tooltipTitle: "Peraturan Mod & Aliran Kejohanan",
-        statTotal: "Jumlah Calon Pusingan", statPassed: "Lulus / Layak", statPending: "Dalam Bersaing", statOut: "Tersingkir",
-        totalPrefix: "Jumlah", pendingSuffix: "orang bersaing", outListTitle: "Zon Tersingkir (Baharu ke Lama)",
-        roundPrefix: "Pusingan ", roundSuffix: "", passedTitle: "Senarai Layak / Lulus", pendingTitle: "Calon Bersaing",
-        publicConsolationTitle: "Senarai Pemenang Saguhati", consolationLabelTag: "Saguhati",
-        noPassed: "Belum ada pembeli layak...", noCandidates: "Menyelaraskan senarai calon...",
-        allDone: "Semua calon telah diproses", noOut: "Tiada calon tersingkir",
-        modalCongratsHeader: "🎉 Tahniah kepada Pemenang!", finalTitle: "👑 Pengumuman Pemenang!",
-        autoCloseText: "Kembali secara automatik dalam", autoCloseSuffix: "saat...",
-        modePrefix: "Mod: ", mode1: "Mod Tiga Teratas", mode2: "3 + Saguhati", modeDisabled: "Peraturan Nyahaktif",
-        shopeeGroupTitle: "Undian Kumpulan Shopee Live",
-        banner3LeftText: "🔥 Perebutan 3 Teratas Bermula! Tinggal 3 calon sahaja lagi!",
-        bannerThirdPlaceText: "🎉 🥉 Pemenang Tempat Ke-3: ", bannerFinalText: "🎉 👑 Juara: ", bannerRunnerUpText: " | 🥈 Naib Juara: ",
-        bannerFinalSub: "(🔥 👑 Pusingan Akhir 2 Calon!)",
-        eliminatedInRound: "Tersingkir Pusingan {r}",
-        mode1FlowPublic: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3</div><b>Aliran:</b><br>1. Undian kumpulan.<br>2. Perebutan Tempat Ke-3.<br>3. Pusingan Akhir!",
-        mode2FlowPublic: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3, {n} Saguhati</div><b>Aliran:</b><br>1. Kelayakan.<br>2. Fasa Saguhati.<br>3. Fasa 3 Teratas!",
-        rankConsolation: "🎁 Saguhati", rankThird: "🥉 Tempat Ke-3", rankChampion: "👑 Juara", rankRunnerUp: "🥈 Naib Juara",
-        finalSummaryTitle: "Ringkasan Pemenang Kejohanan Rasmi", finalSummarySub: "Tahniah kepada semua pemenang!",
-        consolationSummaryTitle: "🎁 Senarai Penuh Pemenang Saguhati",
-        processSectionLabel: "📋 Rekod Terperinci Pemilihan Kejohanan",
-        expandText: "Buka Butiran ▼", collapseText: "Tutup Butiran ▲",
-        noOrderNoText: "Tiada No. Pesanan",
-        updatingOverlayMsg: "⏳ Halaman sedang dikira dan dikemaskini, sila tunggu...",
-        updatingOverlaySub: "Data sedang diselaraskan dalam masa nyata. Sila nantikan."
-      }
-    };
-
-    // 手机端弹出气泡专用
     function toggleModeTooltip(e) {
       if(e) e.stopPropagation();
       document.getElementById('modeTooltipContent').classList.toggle('hidden');
@@ -345,9 +240,7 @@
     document.addEventListener('click', function(e) {
       const tooltip = document.getElementById('modeTooltipContent');
       const badge = document.getElementById('publicModeBadge');
-      if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(e.target) && !badge.contains(e.target)) {
-        tooltip.classList.add('hidden');
-      }
+      if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(e.target) && !badge.contains(e.target)) tooltip.classList.add('hidden');
     });
 
     window.onload = function() {
@@ -365,32 +258,19 @@
         const val = snapshot.val();
         if (val) {
           state = val;
-          (state.rounds || []).forEach(r => {
-            (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); });
-          });
+          (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
           if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
           if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
           if (!state.passHistory) state.passHistory = [];
 
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           
-          if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) {
-            currentRoundIndex = state.rounds.length - 1;
-          }
-
-          if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
-            lastSeenEventTime = state.latestEvent.timestamp;
-            if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 10);
-          }
+          if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
 
           updatePublicOverlayState();
           renderRoundTabs();
           renderPublicView();
           updateStats();
-          updatePublicModeUI();
-          updatePublicHeaderTitle();
-          updateWinnerBannerUI();
-          renderFinalSummaryPanel();
         }
       });
     };
@@ -402,7 +282,7 @@
           isAdminUnlocked = true;
           localStorage.setItem('mochii_admin_unlocked', 'true');
           db.ref('tournament_state/publicAdminActive').set(true);
-          alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。\n（刷新页面后仍保持登入，直到你主动点退出）");
+          alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。");
         } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
         else return;
       } else {
@@ -425,8 +305,15 @@
 
       db.ref('tournament_state').transaction((latestState) => {
         if (!latestState) return latestState;
-        if (!latestState.activeGroupIds || latestState.activeGroupIds.length === 0) return latestState;
-        if (!latestState.triggerNumber) return latestState;
+        // 修复拦截：检查是否存在组
+        if (!latestState.activeGroupIds || latestState.activeGroupIds.length === 0) {
+          setTimeout(() => alert("⚠️ 当前没有进行中的盲抽组！"), 10);
+          return latestState;
+        }
+        if (!latestState.triggerNumber) {
+          setTimeout(() => alert("⚠️ 请先在后台设定触发号！"), 10);
+          return latestState;
+        }
         if (latestState.settled) return latestState;
         
         if ((latestState.activeGroupMembers || []).every(m => m.displayNumber !== null && m.displayNumber !== undefined)) return latestState;
@@ -442,12 +329,7 @@
 
         const newMembers = lockedMemberIds.map((id, idx) => {
           const originalMember = (latestState.activeGroupMembers || []).find(m => String(m.id) === id);
-          return {
-            id: id,
-            displayNumber: nums[idx],
-            name: originalMember ? originalMember.name : '',
-            orderNo: originalMember ? originalMember.orderNo : ''
-          };
+          return { id: id, displayNumber: nums[idx], name: originalMember ? originalMember.name : '', orderNo: originalMember ? originalMember.orderNo : '' };
         });
 
         latestState.activeGroupMembers = newMembers;
@@ -466,7 +348,6 @@
             setTimeout(() => {
               db.ref('tournament_state').transaction((finalState) => {
                 if (!finalState) return finalState;
-                
                 const roundIdx = finalState.drawRoundIndex ?? currentRoundIndex;
                 const activeRound = finalState.rounds[roundIdx];
                 
@@ -481,25 +362,14 @@
                     if (!finalState.passHistory) finalState.passHistory = [];
                     const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
                     if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
-                      finalState.passHistory.push({
-                        id: winnerCandidate.id,
-                        name: winnerCandidate.name,
-                        orderNo: winnerCandidate.orderNo,
-                        pollLabel: pollLabel,
-                        roundIndex: roundIdx
-                      });
+                      finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx });
                     }
 
                     finalState.activeGroupIds.forEach(id => {
                       const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
                       if (target) {
-                        if (String(id) === winnerId) {
-                          target.status = 'pass';
-                          target.pollLabel = pollLabel;
-                        } else {
-                          target.status = 'out';
-                          target.eliminatedRoundIndex = roundIdx;
-                        }
+                        if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
+                        else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx; }
                       }
                     });
                   }
@@ -512,8 +382,6 @@
                   renderRoundTabs();
                   renderPublicView();
                   updateStats();
-                  renderFinalSummaryPanel();
-                  updateWinnerBannerUI();
 
                   setTimeout(() => {
                     db.ref('tournament_state').once('value', (snap) => {
@@ -542,225 +410,13 @@
       else mask.classList.add('hidden');
     }
 
-    function updatePublicHeaderTitle() {
-      const h1 = document.getElementById('publicHeaderTitle');
-      if (h1) h1.innerText = (state.customPublicTitle && state.customPublicTitle.trim()) || i18n[currentLang].publicTitle;
-    }
-
-    function setLanguage(lang) {
-      currentLang = lang;
-      localStorage.setItem('mochii_lang', lang);
-      ['zh', 'en', 'ms'].forEach(l => {
-        const btn = document.getElementById(`langBtn-${l}`);
-        if (btn) btn.className = (l === lang) ? "px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
-      });
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (i18n[lang][key] !== undefined) el.innerText = i18n[lang][key];
-      });
-      updatePublicHeaderTitle();
-      updatePublicOverlayState();
-      renderRoundTabs();
-      renderPublicView();
-      updateStats();
-      updatePublicModeUI();
-      updateWinnerBannerUI();
-      renderFinalSummaryPanel();
-    }
-
-    function updatePublicModeUI() {
-      const badge = document.getElementById('publicModeBadge');
-      const tooltip = document.getElementById('modeTooltipBody');
-      if (!badge || !tooltip) return;
-      const lang = i18n[currentLang];
-      if (!state.modeConfig || state.modeConfig.enabled === false) {
-        badge.innerText = `${lang.modePrefix}${lang.modeDisabled}`;
-        tooltip.innerHTML = `<div class="text-slate-400 italic">${lang.modeDisabled}</div>`;
-        return;
-      }
-      const m = state.modeConfig.selectedMode || 'mode1';
-      if (m === 'mode1') { badge.innerText = `${lang.modePrefix}${lang.mode1}`; tooltip.innerHTML = lang.mode1FlowPublic; }
-      else if (m === 'mode2') {
-        const consCount = state.modeConfig.mode2ConsolationCount || 10;
-        badge.innerText = `${lang.modePrefix}${lang.mode2}`;
-        tooltip.innerHTML = lang.mode2FlowPublic.replace(/{n}/g, consCount);
-      }
-    }
-
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
-      if (!r) return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
+      if (!r) return `第 ${idx + 1} 轮`;
       if (r.isConsolationStage) return `🎁 Consolation (${r.candidates ? r.candidates.length : 0})`;
       else if (r.stageName && r.stageName.includes("冠亚军")) return `👑 Final (2)`;
       else if (r.stageName && r.stageName.includes("冠亚季")) return `🏆 Podium (3)`;
-      return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
-    }
-
-    function renderFinalSummaryPanel() {
-      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
-      const podiumGrid = document.getElementById('podiumSummaryGrid');
-      const consolationBox = document.getElementById('consolationSummaryBox');
-      const consolationGrid = document.getElementById('consolationSummaryGrid');
-      const consolationBadge = document.getElementById('consolationTotalBadge');
-      const toggleBar = document.getElementById('processSectionToggleBar');
-      const collapsibleSection = document.getElementById('collapsibleProcessSection');
-      const winnerBanner = document.getElementById('winnerAnnouncementBanner');
-
-      let champion = null, runnerUp = null, thirdPlace = null, consolations = [];
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
-          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
-          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
-          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
-        });
-      });
-      (state.passHistory || []).forEach(c => {
-        if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
-        if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
-        if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
-        if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
-      });
-
-      if (!champion) {
-        summaryPanel.classList.add('hidden');
-        toggleBar.classList.add('hidden');
-        collapsibleSection.classList.remove('hidden');
-        return;
-      }
-
-      summaryPanel.classList.remove('hidden');
-      toggleBar.classList.remove('hidden');
-      if (winnerBanner) winnerBanner.classList.add('hidden');
-
-      if (!isProcessAreaCollapsed) {
-        collapsibleSection.classList.add('hidden');
-        document.getElementById('processToggleBtnText').innerText = i18n[currentLang].expandText;
-      }
-
-      const lang = i18n[currentLang];
-      podiumGrid.innerHTML = `
-        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
-          <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
-          <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / ${lang.rankRunnerUp}</span>
-          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
-        </div>
-        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
-          <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
-          <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / ${lang.rankChampion}</span>
-          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
-          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
-        </div>
-        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
-          <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
-          <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / ${lang.rankThird}</span>
-          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || lang.noOrderNoText) : '-'}</div>
-        </div>
-      `;
-
-      if (consolations.length > 0) {
-        consolationBox.classList.remove('hidden');
-        consolationBadge.innerText = consolations.length;
-        consolationGrid.innerHTML = consolations.map((c, i) => `
-          <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
-            <div>
-              <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}${lang.consolationLabelTag}</span>
-              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
-            </div>
-            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
-          </div>
-        `).join('');
-      } else {
-        consolationBox.classList.add('hidden');
-      }
-    }
-
-    function toggleProcessArea() {
-      const collapsibleSection = document.getElementById('collapsibleProcessSection');
-      const toggleBtnText = document.getElementById('processToggleBtnText');
-      if (collapsibleSection.classList.contains('hidden')) {
-        collapsibleSection.classList.remove('hidden');
-        toggleBtnText.innerText = i18n[currentLang].collapseText;
-        isProcessAreaCollapsed = true;
-      } else {
-        collapsibleSection.classList.add('hidden');
-        toggleBtnText.innerText = i18n[currentLang].expandText;
-        isProcessAreaCollapsed = false;
-      }
-    }
-
-    function updateWinnerBannerUI() {
-      const banner = document.getElementById('winnerAnnouncementBanner');
-      const content = document.getElementById('winnerBannerContent');
-      if (!banner || !content) return;
-      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
-      if (summaryPanel && !summaryPanel.classList.contains('hidden')) { banner.classList.add('hidden'); return; }
-
-      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
-      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
-      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
-
-      let championName = "", runnerUpName = "", thirdPlaceName = "";
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") championName = c.name;
-          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUpName = c.name;
-          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlaceName = c.name;
-        });
-      });
-      (state.passHistory || []).forEach(c => {
-        if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") championName = c.name;
-        if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUpName = c.name;
-        if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlaceName = c.name;
-      });
-
-      const lang = i18n[currentLang];
-
-      if (championName && runnerUpName) {
-        banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerFinalText}</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300">${lang.bannerRunnerUpText}</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
-      } else if (thirdPlaceName) {
-        banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerThirdPlaceText}</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">${lang.bannerFinalSub}</span>`;
-      } else if (isModeEnabled && selectedMode === 'mode1' && activeRound.candidates && activeRound.candidates.length === 3) {
-        banner.classList.remove('hidden');
-        content.innerHTML = `<span class="text-amber-300 font-bold">${lang.banner3LeftText}</span>`;
-      } else {
-        banner.classList.add('hidden');
-      }
-    }
-
-    function showWinnerPopup(eventData, durationSeconds) {
-      const modal = document.getElementById('congratModal');
-      const bodyContainer = document.getElementById('congratModalBody');
-      if (eventData.winnerNamesKey === 'third') {
-        bodyContainer.innerHTML = `
-          <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
-            <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
-          </div>`;
-      } else if (eventData.winnerNamesKey === 'final') {
-        bodyContainer.innerHTML = `
-          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
-            <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
-          </div>
-          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
-            <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
-            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
-          </div>`;
-      }
-      modal.classList.remove('hidden');
-      let timeLeft = durationSeconds;
-      document.getElementById('congratCountdown').innerText = timeLeft;
-      if (popupTimer) clearInterval(popupTimer);
-      popupTimer = setInterval(() => {
-        timeLeft--;
-        document.getElementById('congratCountdown').innerText = timeLeft;
-        if (timeLeft <= 0) { clearInterval(popupTimer); modal.classList.add('hidden'); }
-      }, 1000);
+      return `第 ${idx + 1} 轮`;
     }
 
     function renderRoundTabs() {
@@ -769,50 +425,34 @@
       container.innerHTML = state.rounds.map((r, idx) => {
         const isActive = (idx === currentRoundIndex);
         const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
-        const title = getRoundTitle(idx);
         const passedCount = (r.candidates || []).filter(c => c.status === 'pass').length;
-        return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">${escapeHtml(title)} (${passedCount})</button>`;
+        return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">${escapeHtml(getRoundTitle(idx))} (${passedCount})</button>`;
       }).join('');
     }
 
     function switchRound(idx) {
       currentRoundIndex = idx;
       userManuallySelectedRound = true; 
-      renderRoundTabs();
-      renderPublicView();
-      updateStats();
+      renderRoundTabs(); renderPublicView(); updateStats();
     }
 
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
-      const total = candidates.length;
       
       let passedCount = candidates.filter(c => c.status === 'pass').length;
-      if (state.passHistory) {
-        const currentRoundPassed = state.passHistory.filter(h => h.roundIndex === currentRoundIndex).length;
-        passedCount = Math.max(passedCount, currentRoundPassed);
-      }
+      if (state.passHistory) passedCount = Math.max(passedCount, state.passHistory.filter(h => h.roundIndex === currentRoundIndex).length);
       
-      const pendingCount = candidates.filter(c => c.status === 'pending').length;
       let totalOutCount = 0;
       (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
 
-      document.getElementById('statTotalCandidates').innerText = total;
+      document.getElementById('statTotalCandidates').innerText = candidates.length;
       document.getElementById('statPassedCount').innerText = passedCount;
-      document.getElementById('statPendingCount').innerText = pendingCount;
+      document.getElementById('statPendingCount').innerText = candidates.filter(c => c.status === 'pending').length;
       document.getElementById('statOutCount').innerText = totalOutCount;
-      
-      const titleName = getRoundTitle(currentRoundIndex);
-      document.getElementById('passedTitleText').innerText = `${titleName}${i18n[currentLang].passedTitle}`;
-      document.getElementById('pendingTitleText').innerText = i18n[currentLang].pendingTitle;
-      document.getElementById('passedBadgeCount').innerText = passedCount;
-      document.getElementById('pendingNumberYellow').innerText = pendingCount;
-      document.getElementById('outBadgeCount').innerText = totalOutCount;
     }
 
     function renderPublicView() {
-      // 修复手机端刷新 bug：确保 activeRound 永远有值，不会因为数组越界变成空
       let activeRound = { candidates: [] };
       if (state.rounds && state.rounds.length > 0) {
         if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
@@ -822,17 +462,11 @@
 
       const searchEl = document.getElementById('searchInput');
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
-
-      const list = (activeRound.candidates || []).filter(c => 
-        (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
-      );
-
-      const lang = i18n[currentLang];
+      const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
       const publicGroupGrid = document.getElementById('publicActiveGroupGrid');
       const publicPollBadge = document.getElementById('publicPollBadge');
-      const publicTriggerSubText = document.getElementById('publicTriggerSubText');
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
       const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
 
@@ -841,86 +475,61 @@
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
 
-        if (state.triggerNumber) publicTriggerSubText.innerText = `最高得票触发号已定位为 #${state.triggerNumber}`;
-        else publicTriggerSubText.innerText = `实时同步盲抽开奖状态与候选买家名单...`;
-
-        if (isAdminUnlocked) {
-          publicRevealButtonBox.classList.remove('hidden');
-        } else {
-          publicRevealButtonBox.classList.add('hidden');
-        }
+        if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
+        else publicRevealButtonBox.classList.add('hidden');
 
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
         
         let activeMembers;
         if (state.activeGroupMembers && state.activeGroupMembers.length > 0) {
-          activeMembers = state.activeGroupMembers
-            .map(m => {
-              const c = (drawRound.candidates || []).find(x => String(x.id) === String(m.id));
-              return c ? { ...c, displayNumber: m.displayNumber } : null;
-            })
-            .filter(Boolean);
+          activeMembers = state.activeGroupMembers.map(m => {
+            const c = (drawRound.candidates || []).find(x => String(x.id) === String(m.id));
+            return c ? { ...c, displayNumber: m.displayNumber } : null;
+          }).filter(Boolean);
         } else {
-          activeMembers = state.activeGroupIds
-            .map((id) => {
-              const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
-              return c ? { ...c, displayNumber: null } : null;
-            })
-            .filter(Boolean);
+          activeMembers = state.activeGroupIds.map((id) => {
+            const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
+            return c ? { ...c, displayNumber: null } : null;
+          }).filter(Boolean);
         }
 
         publicGroupGrid.innerHTML = activeMembers.map((c) => {
           const realNum = c.displayNumber;
           const hasNumber = realNum !== null && realNum !== undefined;
-          
           const isWinner = (state.pkStage === 'revealed') && hasNumber && (realNum === state.triggerNumber);
 
           if (isWinner) {
             return `
               <div class="relative w-full h-36 rounded-xl border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-110 z-10 transition-all duration-700 ease-out">
                 <div class="absolute inset-0 p-3 flex flex-col justify-center items-center text-center">
-                  <div class="w-full flex justify-between items-center mb-2">
-                    <span class="text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>
-                  </div>
+                  <span class="text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>
                   <div class="my-auto w-full">
                     <div class="font-black text-white text-xl truncate max-w-[120px] mx-auto drop-shadow-md">${escapeHtml(c.name)}</div>
-                    <div class="text-[11px] text-emerald-200 font-mono truncate max-w-[120px] mx-auto mt-1">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                    <div class="text-[11px] text-emerald-200 font-mono truncate max-w-[120px] mx-auto mt-1">${escapeHtml(c.orderNo)}</div>
                   </div>
-                  <span class="text-[9px] text-emerald-400/80 font-mono mt-2">POLL #${state.currentPollNumber || 1}</span>
                 </div>
-              </div>
-            `;
+              </div>`;
           } else {
             return `
               <div class="relative w-full h-36 rounded-xl border-2 border-amber-500/50 bg-slate-900 overflow-hidden shadow-xl">
                 <div class="absolute inset-0 p-3 flex flex-col justify-center items-center text-center">
-                  <div class="w-full flex justify-between items-center mb-2">
-                    <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>
-                  </div>
+                  <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>
                   <div class="my-auto w-full">
                     <div class="font-bold text-amber-300 text-sm truncate max-w-[120px] mx-auto">${escapeHtml(c.name)}</div>
-                    <div class="text-[11px] text-slate-400 font-mono truncate max-w-[120px] mx-auto mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                    <div class="text-[11px] text-slate-400 font-mono truncate max-w-[120px] mx-auto mt-0.5">${escapeHtml(c.orderNo)}</div>
                   </div>
-                  <span class="text-[9px] text-amber-400/60 font-mono mt-2">???</span>
                 </div>
-              </div>
-            `;
+              </div>`;
           }
         }).join('');
       } else {
         publicGroupContainer.classList.add('hidden');
       }
 
-      const passedContainer = document.getElementById('passedListContainer');
-      
       let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) {
-        state.passHistory.forEach(hist => {
-          if (!passedList.some(c => String(c.id) === String(hist.id))) {
-            passedList.push(hist);
-          }
-        });
+        state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       }
       passedList.sort((a, b) => {
         const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
@@ -928,57 +537,26 @@
         return numA - numB;
       });
 
+      const passedContainer = document.getElementById('passedListContainer');
       if (passedList.length === 0) {
-        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${lang.noPassed}</span>`;
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => {
-          const displayRank = c.rankKey ? lang[c.rankKey] : c.rankTitle;
-          const rankTag = displayRank ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] ml-1">${displayRank}</span>` : '';
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5">` +
-            folderTabHtml +
+          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5">` + folderTabHtml +
             '<span class="font-bold text-emerald-300 mt-1">' + escapeHtml(c.name) + '</span>' +
-            '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px] mt-1">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</span>' +
-            rankTag +
+            '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px] mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
           '</div>';
         }).join('');
-      }
-
-      const consolationPanel = document.getElementById('publicConsolationWinnerPanel');
-      const consolationContainer = document.getElementById('publicConsolationListContainer');
-      const consolationBadge = document.getElementById('publicConsolationCountBadge');
-
-      let allConsolations = [];
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") allConsolations.push(c);
-        });
-      });
-      (state.passHistory || []).forEach(c => {
-        if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") allConsolations.push(c);
-      });
-
-      if (allConsolations.length > 0) {
-        consolationPanel.classList.remove('hidden');
-        consolationBadge.innerText = allConsolations.length;
-        consolationContainer.innerHTML = allConsolations.map((c, i) => `
-          <div class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/80 border border-emerald-500/50 rounded-lg flex items-center space-x-1.5 sm:space-x-2 text-xs shadow-sm">
-            <span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}${lang.consolationLabelTag}</span>
-            <span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span>
-            <span class="text-slate-400 font-mono text-[10px] sm:text-[11px]">${escapeHtml(c.orderNo || lang.noOrderNoText)}</span>
-          </div>
-        `).join('');
-      } else {
-        consolationPanel.classList.add('hidden');
       }
 
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-3xl sm:text-4xl mb-2">📋</p><p class="text-xs sm:text-sm">${lang.noCandidates}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-3xl mb-2">📋</p><p class="text-xs">本轮抽奖名单同步中，请关注直播间...</p></div>`;
       } else if (pendingList.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-xl sm:text-2xl mb-2">🎉</p><p class="text-xs sm:text-sm">${lang.allDone}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-2xl mb-2">🎉</p><p class="text-xs">本轮全员判定完毕</p></div>`;
       } else {
         let cardsHtml = '';
         pendingList.forEach((c, index) => {
@@ -989,13 +567,12 @@
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-          
           cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` +
             folderTabHtml +
             '<div>' +
-              '<div class="text-[10px] sm:text-[11px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
+              '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
               '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-[10px] sm:text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</div>' +
+              '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
             '</div>' +
           '</div>';
         });
@@ -1017,14 +594,13 @@
       });
 
       if (allOutCandidates.length === 0) {
-        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${lang.noOut}</p>`;
+        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`;
       } else {
         const grouped = {};
         allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
         const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
         outContainer.innerHTML = sortedKeys.map(rIdxKey => {
           const rNum = Number(rIdxKey) + 1;
-          const groupTitle = lang.eliminatedInRound.replace('{r}', rNum);
           const candidatesInGroup = grouped[rIdxKey];
           const groupCardsHtml = candidatesInGroup.map(c => `
             <div class="p-1.5 bg-slate-900/80 border border-slate-800 rounded-md opacity-70 hover:opacity-100 transition shadow-sm text-center">
@@ -1034,7 +610,7 @@
           return `
             <div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800">
               <div class="text-[10px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
-                <span>❌ ${groupTitle}</span>
+                <span>❌ 第 ${rNum} 轮淘汰</span>
                 <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
               </div>
               <div class="grid grid-cols-1 gap-1">${groupCardsHtml}</div>
@@ -1044,10 +620,7 @@
       }
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
+    function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>
 </html>
