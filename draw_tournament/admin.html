@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 引入高兼容性 html2canvas 与 jsPDF 库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
- <!-- 🔥 引入 Firebase 8.x SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <!-- 🔥 引入 Firebase 8.x SDK (包含 App, Database, Auth) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -33,7 +32,6 @@
       </div>
       
       <div class="flex items-center space-x-3">
-        <!-- ⚙️ 模式显示与齿轮设置按钮 -->
         <div class="relative group cursor-pointer">
           <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-inner hover:border-amber-400/60 transition">
             <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
@@ -51,7 +49,6 @@
           </div>
         </div>
 
-        <!-- 🌐 语言切换按钮 -->
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
             <span>🇨🇳</span> <span class="text-[11px]">ZH</span>
@@ -64,7 +61,6 @@
           </button>
         </div>
 
-        <!-- 📄 导出 PDF 结果按钮 -->
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
           <span>📄</span>
           <span>Export PDF Report</span>
@@ -302,6 +298,7 @@
         <div class="flex items-center space-x-2">
           <span class="text-xl">🔥</span>
           <h3 class="text-sm font-bold text-amber-400">当前正在直播盲抽 PK 组</h3>
+          <span id="adminPollBadge" class="text-xs bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded shadow">POLL #1</span>
         </div>
         <span class="text-xs text-slate-400">选出 1 位晋级后点击【⚡ 组内胜出】，同组其余人员将自动划入淘汰区</span>
       </div>
@@ -338,9 +335,6 @@
   </footer>
 
   <script>
-    // ----------------------------------------------------
-    // 🔥 Firebase 云端初始化设置 (你的真实配置)
-    // ----------------------------------------------------
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -356,8 +350,8 @@
     const db = firebase.database();
 
     firebase.auth().signInAnonymously().catch((error) => {
-  console.error("匿名登录失败:", error);
-});
+      console.error("匿名登录失败:", error);
+    });
 
     const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
@@ -368,6 +362,8 @@
     let state = {
       customAdminTitle: '',
       customPublicTitle: '',
+      pollCount: 0,
+      currentPollNumber: 0,
       pdfConfig: {
         title: 'MOCHIISHOP OFFICIAL DRAW',
         title2: 'OCTOBER FINAL WINNER REPORT',
@@ -700,7 +696,36 @@
       }
     }
 
+    function isFirstRoundDrawStarted() {
+      if (state.rounds && state.rounds.length > 1) return true;
+      const round1 = state.rounds ? state.rounds[0] : null;
+      if (!round1 || !round1.candidates) return false;
+      return round1.candidates.some(c => c.status !== 'pending');
+    }
+
+    function updateRefreshButtonState() {
+      const btn = document.getElementById('refreshSheetsBtn');
+      if (!btn) return;
+
+      if (isFirstRoundDrawStarted()) {
+        btn.disabled = true;
+        btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
+        btn.classList.add('bg-slate-700', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
+        btn.title = "第一轮已开始抽取，已锁定导入功能！";
+      } else {
+        btn.disabled = false;
+        btn.classList.remove('bg-slate-700', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
+        btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
+        btn.title = "";
+      }
+    }
+
     function fetchGoogleSheetsData(isManual) {
+      if (isFirstRoundDrawStarted()) {
+        if (isManual) alert("⚠️ 第一轮已开始抽取或已推进后续轮次，已锁定刷新/导入功能，防止误触覆盖数据！如需重新导入，请先点击右上角【重置所有轮次数据】。");
+        return;
+      }
+
       if (currentRoundIndex !== 0) { 
         if (isManual) alert("仅限在第 1 轮刷新/导入数据！"); 
         return; 
@@ -948,6 +973,9 @@
         }
       }
 
+      state.pollCount = (state.pollCount || 0) + 1;
+      state.currentPollNumber = state.pollCount;
+
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
       activeGroup4Ids = selected.map(c => c.id);
@@ -961,6 +989,7 @@
     function clearCurrentActiveGroup() {
       activeGroup4Ids = [];
       delete state.activeGroupIds;
+      delete state.currentPollNumber;
       saveState();
       document.getElementById('activeGroupDisplay').classList.add('hidden');
       renderAdminView();
@@ -968,12 +997,14 @@
 
     function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[currentRoundIndex];
+      const pollLabel = `POLL #${state.currentPollNumber || 1}`;
       
       activeGroup4Ids.forEach(id => {
         const target = activeRound.candidates.find(c => c.id === id);
         if (target) {
           if (id === winnerId) {
             target.status = 'pass';
+            target.pollLabel = pollLabel;
           } else {
             target.status = 'out';
             target.eliminatedRoundIndex = currentRoundIndex;
@@ -992,6 +1023,7 @@
     function renderActiveGroupUI() {
       const displayContainer = document.getElementById('activeGroupDisplay');
       const grid = document.getElementById('activeGroupGrid');
+      const pollBadge = document.getElementById('adminPollBadge');
       
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) {
         displayContainer.classList.add('hidden');
@@ -999,6 +1031,10 @@
       }
 
       displayContainer.classList.remove('hidden');
+      if (pollBadge && state.currentPollNumber) {
+        pollBadge.innerText = `POLL #${state.currentPollNumber}`;
+      }
+
       const activeRound = state.rounds[currentRoundIndex];
       const groupMembers = (activeRound.candidates || []).filter(c => activeGroup4Ids.includes(c.id));
 
@@ -1034,6 +1070,7 @@
             delete c.eliminatedRoundIndex;
             delete c.rankTitle;
             delete c.rankKey;
+            delete c.pollLabel;
           }
         });
       });
@@ -1304,7 +1341,6 @@
     function switchRound(idx) { currentRoundIndex = idx; renderRoundTabs(); renderAdminView(); updateStats(); }
 
     function loadState() {
-      // 实时同步加载云端最新状态
       db.ref('tournament_state').once('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -1324,14 +1360,13 @@
     }
 
     function saveState() {
-      // 1. 保留 LocalStorage 备份
       localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-      // 2. 毫秒级同步推送至 Firebase 云端数据库
       db.ref('tournament_state').set(state);
 
       updateStats();
       renderAdminView();
       checkAndTogglePdfExportBtn();
+      updateRefreshButtonState();
     }
 
     function updateStats() {
@@ -1354,6 +1389,8 @@
         totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length;
       });
       document.getElementById('statOutCount').innerText = totalOutCount;
+
+      updateRefreshButtonState();
     }
 
     function renderAdminView() {
@@ -1401,7 +1438,9 @@
         passedContainer.innerHTML = passedList.map(c => {
           const displayRank = c.rankKey ? i18n[currentLang][c.rankKey] : c.rankTitle;
           const rankText = displayRank ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${displayRank}</span>` : '';
+          const pollBadge = c.pollLabel ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] shadow-sm">${escapeHtml(c.pollLabel)}</span>` : '';
           return '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
+            pollBadge +
             rankText +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
             '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
@@ -1524,6 +1563,8 @@
       if (confirm("确认重置所有数据？")) {
         currentRoundIndex = 0;
         state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
+        state.pollCount = 0;
+        delete state.currentPollNumber;
         activeGroup4Ids = [];
         delete state.activeGroupIds;
         delete state.latestEvent;
