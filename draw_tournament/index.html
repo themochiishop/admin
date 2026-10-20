@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head> 
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 每月抽奖 - 实时晋级大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <!-- 🔥 引入 Firebase 8.x SDK (包含 App, Database, Auth) -->
+  <!-- 🔥 引入 Firebase 8.x SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -15,6 +15,23 @@
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* 📁 文件夹标签页样式 */
+    .folder-tab {
+      position: absolute;
+      top: -10px;
+      left: 12px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #0f172a;
+      font-weight: 900;
+      font-size: 9px;
+      padding: 1px 8px;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
+      letter-spacing: 0.5px;
+      z-index: 10;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
@@ -186,7 +203,7 @@
               <h2 id="passedTitleText" class="text-xs sm:text-md font-bold text-emerald-400">已晋级名单</h2>
               <span id="passedBadgeCount" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
             </div>
-            <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
+            <div id="passedListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
           </div>
         </div>
 
@@ -196,7 +213,7 @@
             <h2 class="text-xs sm:text-md font-bold text-emerald-300" data-i18n="publicConsolationTitle">已胜出安慰奖名单</h2>
             <span id="publicConsolationCountBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
           </div>
-          <div id="publicConsolationListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
+          <div id="publicConsolationListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
         </div>
       </div>
 
@@ -486,7 +503,7 @@
       localStorage.setItem('mochii_lang', lang);
 
       ['zh', 'en', 'ms'].forEach(l => {
-        const btn = document.getElementById(`langBtn-${l}`);
+        const btn = document.getElementById(`langBtn-\${l}`);
         if (btn) btn.className = (l === lang) ? "px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
       });
 
@@ -516,7 +533,7 @@
 
       if (!state.modeConfig || state.modeConfig.enabled === false) {
         badge.innerText = `${lang.modePrefix}${lang.modeDisabled}`;
-        tooltip.innerHTML = `<div class="text-slate-400 italic">${lang.modeDisabled}</div>`;
+        tooltip.innerHTML = `<div class="text-slate-400 italic">\${lang.modeDisabled}</div>`;
         return;
       }
 
@@ -534,17 +551,17 @@
 
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
-      if (!r) return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
+      if (!r) return `\${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
       
       if (r.isConsolationStage) {
-        return `🎁 Consolation (${r.candidates ? r.candidates.length : 0})`;
+        return `🎁 Consolation (\${r.candidates ? r.candidates.length : 0})`;
       } else if (r.stageName && r.stageName.includes("冠亚军")) {
         return `👑 Final (2)`;
       } else if (r.stageName && r.stageName.includes("冠亚季")) {
         return `🏆 Podium (3)`;
       }
 
-      return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
+      return `\${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
     function renderFinalSummaryPanel() {
@@ -597,23 +614,23 @@
       podiumGrid.innerHTML = `
         <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
-          <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / ${lang.rankRunnerUp}</span>
-          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
+          <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / \${lang.rankRunnerUp}</span>
+          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">\${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">\${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
         </div>
 
         <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
-          <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / ${lang.rankChampion}</span>
-          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
-          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
+          <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / \${lang.rankChampion}</span>
+          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">\${escapeHtml(champion.name)}</div>
+          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">\${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
         </div>
 
         <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
-          <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / ${lang.rankThird}</span>
-          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || lang.noOrderNoText) : '-'}</div>
+          <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / \${lang.rankThird}</span>
+          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">\${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">\${thirdPlace ? escapeHtml(thirdPlace.orderNo || lang.noOrderNoText) : '-'}</div>
         </div>
       `;
 
@@ -623,10 +640,10 @@
         consolationGrid.innerHTML = consolations.map((c, i) => `
           <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
             <div>
-              <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1} ${lang.consolationLabelTag}</span>
-              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
+              <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}${lang.consolationLabelTag}</span>
+              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">\${escapeHtml(c.name)}</div>
             </div>
-            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">\${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
           </div>
         `).join('');
       } else {
@@ -679,15 +696,15 @@
 
       if (championName && runnerUpName) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerFinalText}</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300">${lang.bannerRunnerUpText}</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">\${lang.bannerFinalText}</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">\${escapeHtml(championName)}</span><span class="text-slate-300">\${lang.bannerRunnerUpText}</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">\${escapeHtml(runnerUpName)}</span>`;
       } 
       else if (thirdPlaceName) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerThirdPlaceText}</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">${lang.bannerFinalSub}</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">\${lang.bannerThirdPlaceText}</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">\${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">\${lang.bannerFinalSub}</span>`;
       } 
       else if (isModeEnabled && selectedMode === 'mode1' && activeRound.candidates && activeRound.candidates.length === 3) {
         banner.classList.remove('hidden');
-        content.innerHTML = `<span class="text-amber-300 font-bold">${lang.banner3LeftText}</span>`;
+        content.innerHTML = `<span class="text-amber-300 font-bold">\${lang.banner3LeftText}</span>`;
       } 
       else {
         banner.classList.add('hidden');
@@ -702,18 +719,18 @@
         bodyContainer.innerHTML = `
           <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
             <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">\${escapeHtml(eventData.winnerName)}</span>
           </div>
         `;
       } else if (eventData.winnerNamesKey === 'final') {
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
             <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">\${escapeHtml(eventData.championName)}</span>
           </div>
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
-            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
+            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">\${escapeHtml(eventData.runnerUpName)}</span>
           </div>
         `;
       }
@@ -743,7 +760,7 @@
         const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
         const title = getRoundTitle(idx);
         const passedCount = (r.candidates || []).filter(c => c.status === 'pass').length;
-        return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">
+        return `<button onclick="switchRound(\${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 \${activeClass}">
           ${escapeHtml(title)} (${passedCount})
         </button>`;
       }).join('');
@@ -776,7 +793,7 @@
       document.getElementById('statOutCount').innerText = totalOutCount;
       
       const titleName = getRoundTitle(currentRoundIndex);
-      document.getElementById('passedTitleText').innerText = `${titleName} ${i18n[currentLang].passedTitle}`;
+      document.getElementById('passedTitleText').innerText = `${titleName}${i18n[currentLang].passedTitle}`;
       document.getElementById('pendingTitleText').innerText = i18n[currentLang].pendingTitle;
       document.getElementById('passedBadgeCount').innerText = passed;
       
@@ -801,7 +818,7 @@
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
         publicGroupContainer.classList.remove('hidden');
         if (state.currentPollNumber) {
-          publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
+          publicPollBadge.innerText = `POLL #\${state.currentPollNumber}`;
           publicPollBadge.classList.remove('hidden');
         } else {
           publicPollBadge.classList.add('hidden');
@@ -810,9 +827,9 @@
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
           <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-2.5 sm:p-3 shadow text-center">
-            <span class="text-[9px] sm:text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#${idx + 1}</span>
-            <div class="font-bold text-amber-300 text-xs sm:text-sm truncate">${escapeHtml(c.name)}</div>
-            <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+            <span class="text-[9px] sm:text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#\${idx + 1}</span>
+            <div class="font-bold text-amber-300 text-xs sm:text-sm truncate">\${escapeHtml(c.name)}</div>
+            <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate mt-0.5">\${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
           </div>
         `).join('');
       } else {
@@ -823,17 +840,17 @@
       const passedList = list.filter(c => c.status === 'pass');
 
       if (passedList.length === 0) {
-        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${lang.noPassed}</span>`;
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">\${lang.noPassed}</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => {
           const displayRank = c.rankKey ? lang[c.rankKey] : c.rankTitle;
-          const rankTag = displayRank ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${displayRank}</span>` : '';
-          const pollBadge = c.pollLabel ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] shadow-sm">${escapeHtml(c.pollLabel)}</span>` : '';
-          return '<div class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-1.5 sm:space-x-2 text-xs shadow-sm">' +
-            pollBadge +
+          const rankTag = displayRank ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] ml-1">\${displayRank}</span>` : '';
+          const folderTabHtml = c.pollLabel ? `<div class="folder-tab">\${escapeHtml(c.pollLabel)}</div>` : '';
+          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5">` +
+            folderTabHtml +
+            '<span class="font-bold text-emerald-300 mt-1">' + escapeHtml(c.name) + '</span>' +
+            '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px] mt-1">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</span>' +
             rankTag +
-            '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
-            '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px]">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</span>' +
           '</div>';
         }).join('');
       }
@@ -856,9 +873,9 @@
         consolationBadge.innerText = allConsolations.length;
         consolationContainer.innerHTML = allConsolations.map((c, i) => `
           <div class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/80 border border-emerald-500/50 rounded-lg flex items-center space-x-1.5 sm:space-x-2 text-xs shadow-sm">
-            <span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1} ${lang.consolationLabelTag}</span>
-            <span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span>
-            <span class="text-slate-400 font-mono text-[10px] sm:text-[11px]">${escapeHtml(c.orderNo || lang.noOrderNoText)}</span>
+            <span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}${lang.consolationLabelTag}</span>
+            <span class="font-bold text-emerald-300">\${escapeHtml(c.name)}</span>
+            <span class="text-slate-400 font-mono text-[10px] sm:text-[11px]">\${escapeHtml(c.orderNo || lang.noOrderNoText)}</span>
           </div>
         `).join('');
       } else {
@@ -869,9 +886,9 @@
       const pendingList = list.filter(c => c.status === 'pending');
 
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-3xl sm:text-4xl mb-2">📋</p><p class="text-xs sm:text-sm">${lang.noCandidates}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-3xl sm:text-4xl mb-2">📋</p><p class="text-xs sm:text-sm">\${lang.noCandidates}</p></div>`;
       } else if (pendingList.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-xl sm:text-2xl mb-2">🎉</p><p class="text-xs sm:text-sm">${lang.allDone}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-xl sm:text-2xl mb-2">🎉</p><p class="text-xs sm:text-sm">\${lang.allDone}</p></div>`;
       } else {
         const cardsHtml = pendingList.map((c, index) => {
           let extraStyle = 'border-slate-700 bg-slate-800/80';
@@ -880,10 +897,12 @@
             extraStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
-          return '<div class="p-2.5 sm:p-3.5 rounded-xl border ' + extraStyle + ' transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
+          const folderTabHtml = c.pollLabel ? `<div class="folder-tab">\${escapeHtml(c.pollLabel)}</div>` : '';
+          return `<div class="relative p-2.5 sm:p-3.5 rounded-xl border \${extraStyle} transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow mt-2">` +
+            folderTabHtml +
             '<div>' +
-              '<div class="text-[10px] sm:text-[11px] font-mono text-slate-400 mb-0.5 sm:mb-1">#' + (index + 1) + pkBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-[10px] sm:text-[11px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
+              '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + escapeHtml(c.name) + '</div>' +
               '<div class="text-[10px] sm:text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</div>' +
             '</div>' +
           '</div>';
@@ -908,7 +927,7 @@
       });
 
       if (allOutCandidates.length === 0) {
-        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${lang.noOut}</p>`;
+        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">\${lang.noOut}</p>`;
       } else {
         const grouped = {};
         allOutCandidates.forEach(c => {
@@ -926,18 +945,18 @@
 
           const groupCardsHtml = candidatesInGroup.map(c => `
             <div class="p-1.5 bg-slate-900/80 border border-slate-800 rounded-md opacity-70 hover:opacity-100 transition shadow-sm text-center">
-              <span class="font-bold text-slate-300 text-[11px] sm:text-xs truncate block">${escapeHtml(c.name)}</span>
+              <span class="font-bold text-slate-300 text-[11px] sm:text-xs truncate block">\${escapeHtml(c.name)}</span>
             </div>
           `).join('');
 
           return `
             <div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800">
               <div class="text-[10px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
-                <span>❌ ${groupTitle}</span>
-                <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
+                <span>❌ \${groupTitle}</span>
+                <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">\${candidatesInGroup.length}</span>
               </div>
               <div class="grid grid-cols-1 gap-1">
-                ${groupCardsHtml}
+                \${groupCardsHtml}
               </div>
             </div>
           `;
