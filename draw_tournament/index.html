@@ -954,25 +954,22 @@
             .filter(Boolean);
         }
 
-                publicGroupGrid.innerHTML = activeMembers.map((c) => {
+                      publicGroupGrid.innerHTML = activeMembers.map((c) => {
           const realNum = c.displayNumber;
           const hasNumber = realNum !== null && realNum !== undefined;
           
-          // 🔥 核心判断：只有当前卡片分配到了号码，且匹配触发号，才让它翻牌
+          // 判断是否为命中胜出者
           const isWinner = (state.pkStage === 'revealed') && hasNumber && (realNum === state.triggerNumber);
           
-          // 只有中奖的卡加 is-flipped，其他的不加
+          // 只有胜出者的卡片加 is-flipped
           const flippedClass = isWinner ? 'is-flipped' : '';
 
-          let backCardStyle = "bg-emerald-950/90 border-2 border-emerald-400 shadow-2xl shadow-emerald-500/40 ring-4 ring-emerald-500/20";
-          let backBadge = `<span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full inline-block shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
-
           return `
-            <div class="card-perspective h-32 sm:h-36 w-full">
+            <div class="card-perspective">
               <div class="card-inner ${flippedClass}">
                 
-                <!-- 正面：始终保持 #？ -->
-                <div class="card-front bg-slate-900/90 border-2 border-amber-500/50 p-3 flex flex-col justify-between items-center text-center shadow-xl">
+                <!-- 正面：始终显示 #？ -->
+                <div class="card-front bg-slate-900 border-2 border-amber-500/50 shadow-xl">
                   <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#？</span>
                   <div class="my-auto">
                     <div class="font-bold text-amber-300 text-xs sm:text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
@@ -981,9 +978,9 @@
                   <span class="text-[9px] text-amber-400/60 font-mono">???</span>
                 </div>
 
-                <!-- 反面：只有中奖卡翻过去才能看到 -->
-                <div class="card-back ${backCardStyle} p-3 flex flex-col justify-between items-center text-center shadow-2xl">
-                  <div>${backBadge}</div>
+                <!-- 反面：只对中奖卡显示真实号码 -->
+                <div class="card-back">
+                  <span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>
                   <div class="my-auto">
                     <div class="font-bold text-emerald-300 text-xs sm:text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
                     <div class="text-[10px] sm:text-[11px] text-emerald-400/80 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
