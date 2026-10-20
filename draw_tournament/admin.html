@@ -8,7 +8,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- 🔥 引入 Firebase 8.x SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -17,7 +16,6 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* 📁 文件夹标签页样式 */
     .folder-tab {
       position: absolute;
       top: -10px;
@@ -37,7 +35,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <!-- 顶部 Header -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center space-x-3">
@@ -93,7 +90,6 @@
     </div>
   </header>
 
-  <!-- ⚙️ 配置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -115,7 +111,7 @@
           <div id="cardTitleSetting" class="hidden p-3 pt-0 border-t border-slate-800 space-y-3">
             <label class="flex items-center space-x-2 bg-slate-800/80 p-2.5 rounded-lg border border-amber-500/30 cursor-pointer mt-2">
               <input type="checkbox" id="publicVisibleCheckbox" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
-              <span class="font-bold text-slate-200">🌐 开启前台网页对外公开显示 (取消勾选显示“计算与更新中”)</span>
+              <span class="font-bold text-slate-200">🌐 开启前台网页对外公开显示 (取消勾选显示"计算与更新中")</span>
             </label>
             <div>
               <label class="block text-slate-400 mb-1">后台控制台标题:</label>
@@ -251,14 +247,12 @@
     </div>
   </div>
 
-  <!-- 主体区域 -->
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto"></div>
       <button onclick="resetRounds()" class="text-xs text-rose-400 hover:underline font-bold" data-i18n="btnResetAll">⚠️ 重置所有轮次数据</button>
     </div>
 
-    <!-- 数据概览 -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
         <span class="text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
@@ -278,7 +272,6 @@
       </div>
     </div>
 
-    <!-- 已晋级区 -->
     <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg">
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
@@ -290,7 +283,6 @@
       </div>
     </div>
 
-    <!-- ⚡ PK 控制操作栏 -->
     <div class="mb-6 bg-slate-800 p-3.5 rounded-xl border border-slate-700 flex flex-col md:flex-row justify-between items-center gap-3">
       <div class="flex items-center space-x-2 w-full md:w-auto">
         <button onclick="pickRandomGroup()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95">
@@ -314,7 +306,6 @@
       </div>
     </div>
 
-    <!-- 🔥 盲抽 PK 控制面板 -->
     <div id="activeGroupDisplay" class="mb-6 hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 shadow-xl">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
         <div class="flex items-center space-x-2">
@@ -324,7 +315,6 @@
           <span id="triggerStatusTag" class="text-xs bg-slate-900 border border-amber-400 text-amber-300 px-2 py-0.5 rounded font-bold">🎯 等待设定触发号...</span>
         </div>
 
-        <!-- 🎯 触发号选择与开奖控制栏 -->
         <div class="flex items-center space-x-2 w-full md:w-auto justify-end flex-wrap gap-1">
           <span class="text-xs text-slate-300 font-bold">根据观众投票输入触发号:</span>
           <div id="triggerButtonsContainer" class="flex items-center space-x-1"></div>
@@ -389,6 +379,7 @@
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
+    // 🔥 内存中维护 activeGroup4Ids（每次渲染/开奖都以此为准，顺序即 #1/#2/#3...）
     let activeGroup4Ids = [];
 
     let state = {
@@ -397,8 +388,10 @@
       isPublicVisible: true,
       pollCount: 0,
       currentPollNumber: 0,
-      pkStage: 'voting', // 'voting', 'triggered', 'revealed', 'selecting'
+      pkStage: 'voting', // 'voting', 'selecting', 'triggered', 'revealed', 'selecting'
       triggerNumber: null,
+      // 🆕 固定序号成员表，杜绝顺序混乱
+      activeGroupMembers: [],
       pdfConfig: {
         title: 'MOCHIISHOP OFFICIAL DRAW',
         title2: 'OCTOBER FINAL WINNER REPORT',
@@ -1014,10 +1007,11 @@
       // 1. 增加组别计数，发送 5 秒遴选中过渡状态给前台
       state.pollCount = (state.pollCount || 0) + 1;
       state.currentPollNumber = state.pollCount;
-      state.pkStage = 'selecting'; // 设置前台过渡显示状态
+      state.pkStage = 'selecting';
       state.triggerNumber = null;
       activeGroup4Ids = [];
-      delete state.activeGroupIds;
+      state.activeGroupIds = [];
+      state.activeGroupMembers = [];
 
       saveState();
       renderActiveGroupUI();
@@ -1030,15 +1024,23 @@
 
         const shuffled = [...currentPending].sort(() => 0.5 - Math.random());
         const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
+        
+        // 🔥 核心修复：保存固定序号，渲染和开奖都基于这个序号
         activeGroup4Ids = selected.map(c => c.id);
-
         state.activeGroupIds = activeGroup4Ids;
-        state.pkStage = 'voting'; // 完成遴选，切换至投票阶段
+        state.activeGroupMembers = selected.map((c, idx) => ({
+          id: c.id,
+          displayNumber: idx + 1,
+          name: c.name,
+          orderNo: c.orderNo
+        }));
+        
+        state.pkStage = 'voting';
 
         saveState();
         renderActiveGroupUI();
         renderAdminView();
-      }, 5000); // 5000 毫秒 (5秒) 过渡效果
+      }, 5000);
     }
 
     function setTriggerNumber(num) {
@@ -1065,16 +1067,18 @@
       saveState();
 
       setTimeout(() => {
-        const targetWinnerId = activeGroup4Ids[state.triggerNumber - 1];
-        if (targetWinnerId) {
-          passWinnerAndEliminateOthers(targetWinnerId);
+        // 🔥 核心修复：严格按 displayNumber 匹配
+        const winnerMember = (state.activeGroupMembers || []).find(m => m.displayNumber === state.triggerNumber);
+        if (winnerMember) {
+          passWinnerAndEliminateOthers(winnerMember.id);
         }
       }, 1200);
     }
 
     function clearCurrentActiveGroup() {
       activeGroup4Ids = [];
-      delete state.activeGroupIds;
+      state.activeGroupIds = [];
+      state.activeGroupMembers = [];
       delete state.currentPollNumber;
       state.pkStage = 'voting';
       state.triggerNumber = null;
@@ -1084,8 +1088,16 @@
     }
 
     function passWinnerAndEliminateOthers(winnerId) {
+      // 🛡️ 防重复结算
+      if (state.settled) {
+        console.warn("重复结算已拦截");
+        return;
+      }
+      state.settled = true;
+
       const activeRound = state.rounds[currentRoundIndex];
-      const winnerIndex = activeGroup4Ids.indexOf(winnerId) + 1;
+      const winnerMember = (state.activeGroupMembers || []).find(m => m.id === winnerId);
+      const winnerIndex = winnerMember ? winnerMember.displayNumber : (activeGroup4Ids.indexOf(winnerId) + 1);
       const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerIndex})`;
       
       activeGroup4Ids.forEach(id => {
@@ -1102,11 +1114,12 @@
       });
 
       activeGroup4Ids = [];
-      delete state.activeGroupIds;
+      state.activeGroupIds = [];
+      state.activeGroupMembers = [];
       state.pkStage = 'voting';
       state.triggerNumber = null;
+      state.settled = false;
       
-      changeStatus(winnerId, 'pass');
       saveState();
       renderActiveGroupUI();
     }
@@ -1148,14 +1161,24 @@
       }
 
       const activeRound = state.rounds[currentRoundIndex];
-      const groupMembers = (activeRound.candidates || []).filter(c => activeGroup4Ids.includes(c.id));
+      
+      // 🔥 核心修复：严格按 state.activeGroupMembers 的序号顺序渲染
+      const members = (state.activeGroupMembers && state.activeGroupMembers.length > 0)
+        ? state.activeGroupMembers.map(m => {
+            const c = (activeRound.candidates || []).find(x => x.id === m.id);
+            return c ? { ...c, displayNumber: m.displayNumber } : null;
+          }).filter(Boolean)
+        : activeGroup4Ids.map((id, idx) => {
+            const c = (activeRound.candidates || []).find(x => x.id === id);
+            return c ? { ...c, displayNumber: idx + 1 } : null;
+          }).filter(Boolean);
 
-      grid.innerHTML = groupMembers.map((c, idx) => {
-        const realNum = idx + 1;
+      grid.innerHTML = members.map((c) => {
+        const realNum = c.displayNumber;
         const isRevealed = (state.pkStage === 'revealed');
         const isWinner = isRevealed && (realNum === state.triggerNumber);
 
-        let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
+        let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#${realNum}</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
 
         if (isRevealed) {
@@ -1454,7 +1477,8 @@
 
       currentRoundIndex = state.rounds.length - 1;
       activeGroup4Ids = [];
-      delete state.activeGroupIds;
+      state.activeGroupIds = [];
+      state.activeGroupMembers = [];
       state.pkStage = 'voting';
       state.triggerNumber = null;
 
@@ -1472,7 +1496,18 @@
       }).join('');
     }
 
-    function switchRound(idx) { currentRoundIndex = idx; renderRoundTabs(); renderAdminView(); updateStats(); }
+    function switchRound(idx) { 
+      currentRoundIndex = idx; 
+      // 🔥 切换轮次时，从 state 恢复本轮的 activeGroupIds 显示（如果还在投票中）
+      if (state.activeGroupIds && state.activeGroupIds.length > 0) {
+        activeGroup4Ids = state.activeGroupIds;
+      } else {
+        activeGroup4Ids = [];
+      }
+      renderRoundTabs(); 
+      renderAdminView(); 
+      updateStats(); 
+    }
 
     function loadState() {
       db.ref('tournament_state').once('value', (snapshot) => {
@@ -1704,10 +1739,12 @@
         state.pollCount = 0;
         delete state.currentPollNumber;
         activeGroup4Ids = [];
-        delete state.activeGroupIds;
+        state.activeGroupIds = [];
+        state.activeGroupMembers = [];
         state.pkStage = 'voting';
         state.triggerNumber = null;
         delete state.latestEvent;
+        delete state.settled;
         saveState();
         fetchGoogleSheetsData(true);
       }
