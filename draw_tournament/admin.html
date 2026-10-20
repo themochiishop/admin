@@ -100,8 +100,8 @@
               <input type="text" id="adminTitleInput" placeholder="Mochiishop 每月抽奖 - 直播控制台" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-amber-300 focus:outline-none">
             </div>
             <div>
-              <label class="block text-slate-400 mb-1">前台公示大屏标题:</label>
-              <input type="text" id="publicTitleInput" placeholder="Mochiishop 每月抽奖晋级榜" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-amber-300 focus:outline-none">
+              <label class="block text-slate-400 mb-1">前台公示大屏标题 (留空跟随语言切换):</label>
+              <input type="text" id="publicTitleInput" placeholder="默认跟随语言自动切换" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-amber-300 focus:outline-none">
             </div>
           </div>
         </div>
@@ -257,27 +257,15 @@
       </div>
     </div>
 
-    <!-- 已晋级区与安慰奖得主列表 -->
-    <div class="mb-6 space-y-4">
-      <div class="bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg">
-        <div class="flex-1 w-full">
-          <div class="flex items-center space-x-2 mb-2">
-            <span class="text-lg">🏆</span>
-            <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">本轮晋级区</h2>
-            <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
-          </div>
-          <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
-        </div>
-      </div>
-
-      <!-- 🎁 已胜出安慰奖得主公示面板 (在挑选完安慰奖后自动出现在晋级区下方) -->
-      <div id="consolationWinnerPanel" class="hidden bg-slate-800/90 p-4 rounded-xl border border-emerald-500/40 shadow-lg">
+    <!-- 已晋级区 -->
+    <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg">
+      <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
-          <span class="text-lg">🎁</span>
-          <h2 class="text-md font-bold text-emerald-300">已胜出安慰奖名单</h2>
-          <span id="consolationCountBadge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+          <span class="text-lg">🏆</span>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">本轮晋级区</h2>
+          <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
-        <div id="consolationListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
+        <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
       </div>
     </div>
 
@@ -759,7 +747,7 @@
       renderRoundTabs();
     }
 
-    // 📄 优化 PDF 标题字号排版 & 输出英文报告
+    // 📄 PDF 导出生成（保留原本的黄色边框与外观框架）
     function checkAndTogglePdfExportBtn() {
       const pdfBtn = document.getElementById('exportPdfBtn');
       if (!pdfBtn) return;
@@ -1348,35 +1336,7 @@
         }).join('');
       }
 
-      // 2. 🎁 已胜出安慰奖得主公示面板 (在所有轮次中全域搜寻)
-      const consolationPanel = document.getElementById('consolationWinnerPanel');
-      const consolationContainer = document.getElementById('consolationListContainer');
-      const consolationBadge = document.getElementById('consolationCountBadge');
-
-      let allConsolations = [];
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") {
-            allConsolations.push(c);
-          }
-        });
-      });
-
-      if (allConsolations.length > 0) {
-        consolationPanel.classList.remove('hidden');
-        consolationBadge.innerText = allConsolations.length;
-        consolationContainer.innerHTML = allConsolations.map((c, i) => `
-          <div class="px-3 py-1.5 bg-emerald-950/80 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">
-            <span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1} 安慰奖</span>
-            <span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span>
-            <span class="text-slate-400 font-mono text-[11px]">${escapeHtml(c.orderNo || '无订单号')}</span>
-          </div>
-        `).join('');
-      } else {
-        consolationPanel.classList.add('hidden');
-      }
-
-      // 3. 待PK买家列表 (根据人数自适应高度)
+      // 2. 待PK买家列表 (根据人数自适应高度)
       const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
