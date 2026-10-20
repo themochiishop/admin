@@ -276,6 +276,11 @@
       rounds: [{ roundName: "第 1 轮", candidates: [] }] 
     };
 
+firebase.auth().signInAnonymously().catch((error) => {
+  console.error("匿名登录失败:", error);
+});
+    
+
     const i18n = {
       zh: {
         publicTitle: "Mochiishop 每月抽奖晋级榜",
