@@ -311,7 +311,7 @@
       <p id="specialRoundBannerSub" class="text-xs text-amber-200/90 mt-1"></p>
     </div>
 
-    <!-- 名单池 (左, 自适应自高度，解决空旷感) & 淘汰区 (右) -->
+    <!-- 名单池 & 淘汰区 (右) -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div id="adminViewWrapper" class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[160px]">
         <h2 class="text-md font-bold text-amber-400 mb-4 pb-2 border-b border-slate-700">待 PK 买家名单池</h2>
@@ -1336,7 +1336,7 @@
         }).join('');
       }
 
-      // 2. 待PK买家列表 (根据人数自适应高度)
+      // 2. 待PK买家列表
       const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
