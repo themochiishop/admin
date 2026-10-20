@@ -55,33 +55,33 @@
       <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
       <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center space-x-2">
         <span>⚙️</span>
-        <span>抽奖模式与规则配置</span>
+        <span data-i18n="configModalTitle">抽奖模式与规则配置</span>
       </h3>
 
       <div class="space-y-4 text-xs">
         <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
           <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
-          <span class="font-bold text-slate-200">启用模式规则 (必须勾选后方能生效)</span>
+          <span class="font-bold text-slate-200" data-i18n="enableRulesLabel">启用模式规则 (必须勾选后方能生效)</span>
         </label>
 
         <div id="modeRadioGroup" class="space-y-3 opacity-50 pointer-events-none transition-all">
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
             <input type="radio" name="drawMode" value="mode1" class="mt-0.5">
             <div>
-              <div class="font-bold text-amber-300">模式 1：冠亚季排位模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">剩3人时点击设为【季军】，系统自动弹窗并推进冠亚军决战；余下2人选1为【冠军】，未被选取的自动定位【亚军】。</div>
+              <div class="font-bold text-amber-300" data-i18n="mode1Title">模式 1：冠亚季排位模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5" data-i18n="mode1Desc">剩3人时点击设为【季军】，系统自动弹窗并推进冠亚军决战；余下2人选1为【冠军】，未被选取的自动定位【亚军】。</div>
             </div>
           </label>
 
           <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer">
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
-              <div class="font-bold text-emerald-300">模式 2：冠亚季 + 安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5">除了冠亚季外，保留 N 名安慰奖名额。</div>
+              <div class="font-bold text-emerald-300" data-i18n="mode2Title">模式 2：冠亚季 + 安慰奖模式</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5" data-i18n="mode2Desc">除了冠亚季外，保留 N 名安慰奖名额。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
-                <span class="text-slate-300">安慰奖名额:</span>
+                <span class="text-slate-300" data-i18n="consolationLabel">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none focus:border-emerald-400">
-                <span class="text-slate-400">人</span>
+                <span class="text-slate-400" data-i18n="unitPeople">人</span>
               </div>
             </div>
           </label>
@@ -89,7 +89,7 @@
       </div>
 
       <div class="mt-6 flex justify-end space-x-2 border-t border-slate-700/60 pt-4">
-        <button onclick="saveConfigModal()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow">
+        <button onclick="saveConfigModal()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition shadow" data-i18n="btnSaveConfig">
           💾 保存设置
         </button>
       </div>
@@ -140,9 +140,9 @@
       <div class="flex items-center space-x-2 w-full md:w-auto">
         <button onclick="pickRandomGroup4()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95">
           <span>🎲</span>
-          <span>随机盲抽 4 人组 (对应4支香水)</span>
+          <span data-i18n="btnPick4">随机盲抽 4 人组 (对应4支香水)</span>
         </button>
-        <button onclick="clearCurrentActiveGroup()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition font-bold">
+        <button onclick="clearCurrentActiveGroup()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition font-bold" data-i18n="btnClear4">
           清空当前4人组
         </button>
       </div>
@@ -150,8 +150,8 @@
       <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
         <div class="text-xs text-slate-400 flex items-center space-x-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-          <span id="syncStatusText">Google Sheets 数据同步已就绪</span>
-          <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow">
+          <span id="syncStatusText" data-i18n="syncReady">Google Sheets 数据同步已就绪</span>
+          <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow" data-i18n="btnRefreshRound1">
             🔄 刷新第 1 轮名单
           </button>
         </div>
@@ -164,15 +164,15 @@
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center space-x-2">
           <span class="text-xl">🔥</span>
-          <h3 class="text-sm font-bold text-amber-400">当前正在 Shopee 直播间 4 人投票组 (盲抽香水编号 1-4)</h3>
+          <h3 class="text-sm font-bold text-amber-400" data-i18n="activeGroupTitle">当前正在 Shopee 直播间 4 人投票组 (盲抽香水编号 1-4)</h3>
         </div>
-        <span class="text-xs text-slate-400">投出1位后点击【⚡ 组内胜出】，系统将自动普及该选手并淘汰同组另外3人</span>
+        <span class="text-xs text-slate-400" data-i18n="activeGroupSub">投出1位后点击【⚡ 组内胜出】，系统将自动普及该选手并淘汰同组另外3人</span>
       </div>
       <div id="activeGroupGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"></div>
     </div>
 
     <!-- 🌟 特殊轮次高亮提示 Banner -->
-    <div id="specialRoundBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center animate-pulse">
+    <div id="specialRoundBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center animate-pulse">
       <h3 id="specialRoundBannerTitle" class="text-base font-black text-amber-300"></h3>
       <p id="specialRoundBannerSub" class="text-xs text-amber-200/90 mt-1"></p>
     </div>
@@ -218,15 +218,40 @@
         btnPassChampion: "👑 设为冠军",
         btnOut: "❌ 淘汰",
         btnUndoOut: "↩️ 撤回淘汰",
-        badgeOut: "❌ 已淘汰"
+        badgeOut: "❌ 已淘汰",
+        btnPick4: "🎲 随机盲抽 4 人组 (对应4支香水)",
+        btnClear4: "清空当前4人组",
+        syncReady: "Google Sheets 数据同步已就绪",
+        btnRefreshRound1: "🔄 刷新第 1 轮名单",
+        activeGroupTitle: "当前正在 Shopee 直播间 4 人投票组 (盲抽香水编号 1-4)",
+        activeGroupSub: "投出1位后点击【⚡ 组内胜出】，系统将自动普及该选手并淘汰同组另外3人",
+        configModalTitle: "抽奖模式与规则配置",
+        enableRulesLabel: "启用模式规则 (必须勾选后方能生效)",
+        mode1Title: "模式 1：冠亚季排位模式",
+        mode1Desc: "剩3人时点击设为【季军】，系统自动弹窗并推进冠亚军决战；余下2人选1为【冠军】，未被选取的自动定位【亚军】。",
+        mode2Title: "模式 2：冠亚季 + 安慰奖模式",
+        mode2Desc: "除了冠亚季外，保留 N 名安慰奖名额。",
+        consolationLabel: "安慰奖名额:",
+        unitPeople: "人",
+        btnSaveConfig: "💾 保存设置",
+        searchPlaceholder: "🔍 快速查找买家/订单...",
+        banner3LeftTitle: "🔥 当前本轮仅剩 3 人角逐！请点击下方【🥉 设为季军】按钮选择季军得主",
+        banner3LeftSub: "选出季军后，系统将自动向大屏推送 10 秒海报，并自动将余下 2 人推进至【👑 冠亚军决战】！",
+        banner2LeftTitle: "👑【冠亚军终极决战 (2选1)】！请点击选出冠军",
+        banner2LeftSub: "点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】，并同步推送大屏喜报！",
+        msgThirdWinner: "🥉 季军得主是：",
+        msgChampion: "👑 冠军得主是：",
+        msgRunnerUp: "🥈 亚军得主是：",
+        alertThirdSuccess: "🥉 恭喜买家【{name}】获得 🥉 季军！\n\n前台已同步播放 10 秒恭喜海报，系统已自动为你推进至【👑 冠亚军终极决战】！",
+        alertFinalSuccess: "👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：{winner}\n🥈 亚军：{runnerUp}\n\n前台公开大屏已同步向全场播放恭喜海报（10秒后自动关闭切回大屏）！"
       },
       en: {
-        adminTitle: "Mochiishop Monthly Draw - Admin Control",
+        adminTitle: "Mochiishop Monthly Draw - Admin Console",
         adminSubTitle: "Perfume Blind Draw · Shopee Live 4-Buyer Voting",
         btnPrevRound: "🔙 Previous Round",
         btnNextRound: "⏩ Advance Qualified Buyers",
         btnResetAll: "⚠️ Reset All",
-        statTotal: "Total Candidates",
+        statTotal: "Round Candidates",
         statPassed: "Passed",
         statPending: "In Battle",
         statOut: "Eliminated",
@@ -238,8 +263,33 @@
         btnPassThird: "🥉 Set 3rd Place",
         btnPassChampion: "👑 Set Champion",
         btnOut: "❌ Out",
-        btnUndoOut: "↩️ Undo",
-        badgeOut: "❌ Out"
+        btnUndoOut: "↩️ Undo Out",
+        badgeOut: "❌ Out",
+        btnPick4: "🎲 Pick 4 Buyers Group",
+        btnClear4: "Clear Active Group",
+        syncReady: "Google Sheets Sync Ready",
+        btnRefreshRound1: "🔄 Refresh Round 1",
+        activeGroupTitle: "Current Live 4-Buyer Group (Perfumes 1-4)",
+        activeGroupSub: "Click 'Pass Group Winner' to pass winner and eliminate other 3.",
+        configModalTitle: "Draw Mode Rules Config",
+        enableRulesLabel: "Enable Mode Rules",
+        mode1Title: "Mode 1: Podium Ranked Mode",
+        mode1Desc: "When 3 left, pick 3rd place to trigger auto-advance to 2-way final.",
+        mode2Title: "Mode 2: Podium + Consolation",
+        mode2Desc: "Includes Podium + N Consolation winners.",
+        consolationLabel: "Consolation Count:",
+        unitPeople: " ",
+        btnSaveConfig: "💾 Save Config",
+        searchPlaceholder: "🔍 Fast search name/order...",
+        banner3LeftTitle: "🔥 Only 3 candidates left! Click [Set 3rd Place] below.",
+        banner3LeftSub: "Picking 3rd place auto-popups announcement and advances to 2-way Final!",
+        banner2LeftTitle: "👑 2-Way Final Showdown! Pick the Champion.",
+        banner2LeftSub: "Picked candidate becomes Champion, unpicked becomes Runner-up!",
+        msgThirdWinner: "🥉 3rd Place Winner: ",
+        msgChampion: "👑 Champion: ",
+        msgRunnerUp: "🥈 Runner-up: ",
+        alertThirdSuccess: "🥉 Congratulations [{name}] for winning 3rd Place!\n\nSystem auto-advanced to 2-way Final!",
+        alertFinalSuccess: "👑 🎉 Final Winners!\n\n👑 Champion: {winner}\n🥈 Runner-up: {runnerUp}"
       },
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
@@ -260,7 +310,32 @@
         btnPassChampion: "👑 Juara",
         btnOut: "❌ Singkir",
         btnUndoOut: "↩️ Batal Singkir",
-        badgeOut: "❌ Tersingkir"
+        badgeOut: "❌ Tersingkir",
+        btnPick4: "🎲 Cabut Kumpulan 4 Pembeli",
+        btnClear4: "Kosongkan Kumpulan",
+        syncReady: "Siri Google Sheets Sedia",
+        btnRefreshRound1: "🔄 Kemas Kini Pusingan 1",
+        activeGroupTitle: "Kumpulan 4 Pembeli Siaran Langsung (Minyak Wangi 1-4)",
+        activeGroupSub: "Pilih pemenang kumpulan untuk menyingkirkan 3 calon lain secara automatik.",
+        configModalTitle: "Tetapan Peraturan Mod",
+        enableRulesLabel: "Aktifkan Peraturan Mod",
+        mode1Title: "Mod 1: Mod Kedudukan 3 Teratas",
+        mode1Desc: "Apabila tinggal 3 calon, pilih Tempat Ke-3 untuk mara ke pusingan Akhir.",
+        mode2Title: "Mod 2: 3 Teratas + Saguhati",
+        mode2Desc: "Termasuk 3 Teratas + N hadiah saguhati.",
+        consolationLabel: "Jumlah Saguhati:",
+        unitPeople: " orang",
+        btnSaveConfig: "💾 Simpan Tetapan",
+        searchPlaceholder: "🔍 Cari cepat nama/pesanan...",
+        banner3LeftTitle: "🔥 Tinggal 3 calon sahaja! Sila pilih Tempat Ke-3 di bawah.",
+        banner3LeftSub: "Pemilihan Tempat Ke-3 akan melangkah ke Pusingan Akhir secara automatik!",
+        banner2LeftTitle: "👑 Pusingan Akhir (2 Calon)! Pilih Juara.",
+        banner2LeftSub: "Calon yang dipilih akan menjadi Juara, calon satu lagi menjadi Naib Juara!",
+        msgThirdWinner: "🥉 Tempat Ke-3: ",
+        msgChampion: "👑 Juara: ",
+        msgRunnerUp: "🥈 Naib Juara: ",
+        alertThirdSuccess: "🥉 Tahniah [{name}] memenangi Tempat Ke-3!\n\nSistem mara ke Pusingan Akhir secara automatik!",
+        alertFinalSuccess: "👑 🎉 Pemenang Akhir!\n\n👑 Juara: {winner}\n🥈 Naib Juara: {runnerUp}"
       }
     };
 
@@ -371,6 +446,7 @@
             target.status = 'pass';
           } else {
             target.status = 'out';
+            target.eliminatedRoundIndex = currentRoundIndex; // 记录被淘汰的轮次
           }
         }
       });
@@ -413,36 +489,36 @@
       }).join('');
     }
 
-    // 🌟 核心排位状态变更与模式 1 自动化流程处理
+    // 🌟 排位状态变更与模式 1 自动化推进
     function changeStatus(id, newStatus) {
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => c.id === id);
       if (!target) return;
 
       target.status = newStatus;
+      if (newStatus === 'out') {
+        target.eliminatedRoundIndex = currentRoundIndex; // 记录被淘汰轮次
+      }
 
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
       if (isModeEnabled && selectedMode === 'mode1') {
         const totalCandidates = activeRound.candidates;
-        const pendingCandidates = totalCandidates.filter(c => c.status === 'pending');
 
-        // 🌟 逻辑 1：名单池仅剩 3 人时，点击的人锁定为【季军】，推送前台弹窗并【自动推进冠亚军决战】
+        // 名单池剩 3 人，点击的定为 🥉 季军，推送海报并【自动推进冠亚军决战】
         if (totalCandidates.length === 3 && newStatus === 'pass') {
           target.rankTitle = "🥉 季军";
 
-          // 余下 2 位未被选取的买家
           const remainingTwo = totalCandidates.filter(c => c.id !== target.id);
 
-          // 向前台推送 🥉 季军弹窗通知 (10秒自动关闭)
           state.latestEvent = {
             type: 'finalCongrat',
             timestamp: Date.now(),
-            winnerNames: `🥉 季军得主: ${target.name}`
+            winnerNamesKey: 'third',
+            winnerName: target.name
           };
 
-          // 自动推进至最后一轮：👑 冠亚军决战轮 (2人)
           const finalRoundCandidates = remainingTwo.map((c, idx) => ({
             id: Date.now() + idx,
             name: c.name,
@@ -460,11 +536,12 @@
           currentRoundIndex = state.rounds.length - 1;
           saveState();
           renderRoundTabs();
-          alert(`🥉 恭喜买家【${target.name}】获得 🥉 季军！\n\n前台已同步播放 10 秒恭喜海报，系统已自动为你推进至【👑 冠亚军终极决战】！`);
+          const alertStr = i18n[currentLang].alertThirdSuccess.replace('{name}', target.name);
+          alert(alertStr);
           return;
         }
 
-        // 🌟 逻辑 2：冠亚军决战轮（仅剩 2 人），点击选中的为【冠军】，未被点击的自动定为【亚军】
+        // 冠亚军决战轮（2人），选中的为 👑 冠军，未选中的自动定为 🥈 亚军
         if (totalCandidates.length === 2 && newStatus === 'pass') {
           target.rankTitle = "👑 冠军";
           
@@ -476,15 +553,17 @@
             runnerUpName = runnerUpObj.name;
           }
 
-          // 向前台推送冠亚军弹窗通知 (10秒自动关闭)
           state.latestEvent = {
             type: 'finalCongrat',
             timestamp: Date.now(),
-            winnerNames: `👑 冠军: ${target.name}  |  🥈 亚军: ${runnerUpName}`
+            winnerNamesKey: 'final',
+            championName: target.name,
+            runnerUpName: runnerUpName
           };
 
           saveState();
-          alert(`👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：${target.name}\n🥈 亚军：${runnerUpName}\n\n前台公开大屏已同步向全场播放恭喜海报（10秒后自动关闭切回大屏）！`);
+          const alertStr = i18n[currentLang].alertFinalSuccess.replace('{winner}', target.name).replace('{runnerUp}', runnerUpName);
+          alert(alertStr);
           return;
         }
       }
@@ -505,6 +584,9 @@
         const key = el.getAttribute('data-i18n');
         if (i18n[lang][key] !== undefined) el.innerText = i18n[lang][key];
       });
+
+      const searchInp = document.getElementById('searchInput');
+      if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
       renderRoundTabs();
       renderAdminView();
@@ -552,6 +634,7 @@
       }
     }
 
+    // 🌟 自动划入淘汰区：未普及者标记为 out 并带上淘汰轮次索引
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -567,8 +650,12 @@
         return;
       }
 
+      // 未选择普及的买家统一设置为 out，并记录淘汰发生的轮次
       currentRound.candidates.forEach(c => {
-        if (c.status !== 'pass') c.status = 'out';
+        if (c.status !== 'pass') {
+          c.status = 'out';
+          if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex;
+        }
       });
 
       const nextRoundNumber = state.rounds.length + 1;
@@ -593,7 +680,7 @@
 
       saveState();
       renderRoundTabs();
-      alert(`🎉 成功开启【${stageLabel}】！只保留普及成功的 ${passedCandidates.length} 名买家进入下一轮 PK。`);
+      alert(`🎉 成功开启【${stageLabel}】！未晋级买家已自动划入淘汰区。`);
     }
 
     function renderRoundTabs() {
@@ -643,25 +730,23 @@
 
       let list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
-      // 判断模式1特殊人数场景
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
       const isMode1ThreeLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 3;
       const isMode1TwoLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 2;
 
-      // 特殊 Banner 提示
       const banner = document.getElementById('specialRoundBanner');
       const bannerTitle = document.getElementById('specialRoundBannerTitle');
       const bannerSub = document.getElementById('specialRoundBannerSub');
 
       if (isMode1ThreeLeft) {
         banner.classList.remove('hidden');
-        bannerTitle.innerText = "🔥 当前本轮仅剩 3 人角逐！请点击下方【🥉 设为季军】按钮选择季军得主";
-        bannerSub.innerText = "选出季军后，系统将自动向大屏推送 10 秒海报，并自动将余下 2 人推进至【👑 冠亚军决战】！";
+        bannerTitle.innerText = i18n[currentLang].banner3LeftTitle;
+        bannerSub.innerText = i18n[currentLang].banner3LeftSub;
       } else if (isMode1TwoLeft) {
         banner.classList.remove('hidden');
-        bannerTitle.innerText = "👑【冠亚军终极决战 (2选1)】！请点击选出冠军";
-        bannerSub.innerText = "点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】，并同步推送大屏喜报！";
+        bannerTitle.innerText = i18n[currentLang].banner2LeftTitle;
+        bannerSub.innerText = i18n[currentLang].banner2LeftSub;
       } else {
         banner.classList.add('hidden');
       }
@@ -709,7 +794,6 @@
           btnOutHtml = `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>`;
         }
 
-        // 🌟 动态计算普及按钮文本与样式
         let passBtnLabel = i18n[currentLang].btnPass;
         let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
 
