@@ -227,7 +227,7 @@
     <div class="max-w-[1600px] mx-auto px-4 flex justify-between items-center">
       <span>© Mochiishop Shopee Monthly Event. All rights reserved.</span>
       <button id="adminUnlockToggleBtn" onclick="toggleAdminUnlock()" class="text-slate-600 hover:text-amber-400 transition text-[11px] underline focus:outline-none">
-        <span id="adminUnlockText">🔑 管理员控制</span>
+        <span id="adminUnlockText">🔑 管理员</span>
       </button>
     </div>
   </footer>
@@ -247,6 +247,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
+
+    const ADMIN_PASSWORD = "023457";  // 🆕 新密码
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
@@ -390,52 +392,76 @@
 
     function toggleAdminUnlock() {
       if (!isAdminUnlocked) {
-        const pin = prompt("🔐 请输入管理员解锁口令密码:", "1234");
-        if (pin === "1234") {
+        const pin = prompt("🔐 请输入管理员解锁口令密码:", "");
+        if (pin === ADMIN_PASSWORD) {
           isAdminUnlocked = true;
-          db.ref('tournament_state/publicAdminActive').set(true);
-          alert("✅ 成功解锁管理员大屏控盘模式！");
-        } else if (pin !== null) { alert("❌ 解锁口令错误！"); return; }
+          db.ref('tournament_state/publicAdminActive').set(true);   // 🆕 锁定后台
+          alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。");
+        } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
         else return;
       } else {
         isAdminUnlocked = false;
-        db.ref('tournament_state/publicAdminActive').set(false);
+        db.ref('tournament_state/publicAdminActive').set(false);  // 🆕 解锁后台
       }
       const txt = document.getElementById('adminUnlockText');
       if (isAdminUnlocked) {
-        if (txt) { txt.innerText = "🔓 管理员已解锁 (点击退出锁盘)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
+        if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
       } else {
-        if (txt) { txt.innerText = "🔑 管理员控制"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; }
+        if (txt) { txt.innerText = "🔑 管理员"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; }
       }
       renderPublicView();
     }
 
-    // 🔥 前台开奖：A3 玩法核心
+    // 🔥 前台开奖：A3 升级玩法
+    // 抽组时 displayNumber 全是 null，点开奖这一刻才随机分配 1..N
     function revealPKWinnerFromPublic() {
       if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先在后台或选择【触发号 #N】后再点击揭晓开奖！"); return; }
       if (state.settled) { console.warn("重复开奖已拦截"); return; }
-
-      const lockedDrawRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
-      const lockedGroupIds = [...state.activeGroupIds.map(id => String(id))];
-      const lockedMembers = (state.activeGroupMembers || []).map(m => ({ ...m, id: String(m.id) }));
-      const lockedPollNumber = state.currentPollNumber || 1;
-      const lockedTriggerNumber = state.triggerNumber;
-
-      // 🔥 找中奖者：displayNumber === triggerNumber 的那个人
-      // 因为 displayNumber 是抽组时随机分配的 #号，这个"查找"本身就等价于"随机选中一个人"
-      const winnerMember = lockedMembers.find(m => m.displayNumber === lockedTriggerNumber);
-      const lockedWinnerId = winnerMember ? String(winnerMember.id) : (lockedGroupIds[lockedTriggerNumber - 1] ? String(lockedGroupIds[lockedTriggerNumber - 1]) : null);
-
-      if (!lockedWinnerId) {
-        alert("⚠️ 无法定位中奖者，请检查后台数据！");
-        return;
+      // 🔥 防重复分配
+      if ((state.activeGroupMembers || []).every(m => m.displayNumber !== null && m.displayNumber !== undefined)) {
+        alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"); return;
       }
 
+      // 锁定本轮所有关键数据（避免动画期间被后台改动）
+      const lockedDrawRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
+      const lockedGroupIds = [...state.activeGroupIds.map(id => String(id))];
+      const lockedPollNumber = state.currentPollNumber || 1;
+      const lockedTriggerNumber = state.triggerNumber;
+      const lockedMemberIds = (state.activeGroupMembers || []).map(m => String(m.id));
+
+      // 🔥 开奖那一刻才随机分配 #号（保持原始顺序，每张卡显示自己随机得到的号）
+      const total = lockedMemberIds.length;
+      const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+
+      const newMembers = lockedMemberIds.map((id, idx) => {
+        const originalMember = (state.activeGroupMembers || []).find(m => String(m.id) === id);
+        return {
+          id: id,
+          displayNumber: nums[idx],   // ✅ 随机分配
+          name: originalMember ? originalMember.name : '',
+          orderNo: originalMember ? originalMember.orderNo : ''
+        };
+      });
+
+      // 立即把分配好的 #号 推到 state，前端渲染翻牌
+      state.activeGroupMembers = newMembers;
       state.pkStage = 'revealed';
       state.settled = true;
       db.ref('tournament_state').set(state);
 
+      // 匹配触发号
+      const winnerMember = newMembers.find(m => m.displayNumber === lockedTriggerNumber);
+      const lockedWinnerId = winnerMember ? String(winnerMember.id) : null;
+
+      if (!lockedWinnerId) {
+        alert("⚠️ 无法定位中奖者，请检查后台数据！");
+        state.settled = false;
+        db.ref('tournament_state/settled').set(false);
+        return;
+      }
+
+      // 3.8 秒动画后结算
       setTimeout(() => {
         db.ref('tournament_state').once('value', (snap) => {
           const latest = snap.val();
@@ -451,9 +477,7 @@
           const activeRound = (latest.rounds || [])[lockedDrawRoundIndex];
           if (!activeRound) { console.error("找不到轮次", lockedDrawRoundIndex); return; }
 
-          const winnerIdx = (lockedMembers.find(m => String(m.id) === lockedWinnerId) || {}).displayNumber 
-            || (lockedGroupIds.indexOf(lockedWinnerId) + 1);
-          const pollLabel = `POLL #${lockedPollNumber} (#${winnerIdx})`;
+          const pollLabel = `POLL #${lockedPollNumber} (#${lockedTriggerNumber})`;
 
           lockedGroupIds.forEach(id => {
             const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
@@ -781,15 +805,16 @@
           }
         }
 
-        // 🔥 严格按 activeGroupMembers 的 displayNumber 排序显示
+        // 卡片显示逻辑：
+        // - 未开奖：card-front 显示 #？ + 名字
+        // - 已开奖：卡片翻转，card-back 显示随机分配的真实 #号 + 名字
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
         
         let activeMembers;
         if (state.activeGroupMembers && state.activeGroupMembers.length > 0) {
+          // 🔥 不排序！保持原始顺序（方案 Y）
           activeMembers = state.activeGroupMembers
-            .slice()
-            .sort((a, b) => a.displayNumber - b.displayNumber)
             .map(m => {
               const c = (drawRound.candidates || []).find(x => String(x.id) === String(m.id));
               return c ? { ...c, displayNumber: m.displayNumber } : null;
@@ -797,35 +822,40 @@
             .filter(Boolean);
         } else {
           activeMembers = state.activeGroupIds
-            .map((id, idx) => {
+            .map((id) => {
               const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
-              return c ? { ...c, displayNumber: idx + 1 } : null;
+              return c ? { ...c, displayNumber: null } : null;
             })
             .filter(Boolean);
         }
 
         publicGroupGrid.innerHTML = activeMembers.map((c) => {
           const realNum = c.displayNumber;
-          const isRevealed = (state.pkStage === 'revealed');
+          const hasNumber = realNum !== null && realNum !== undefined;
+          const isRevealed = (state.pkStage === 'revealed') && hasNumber;
           const isWinner = isRevealed && (realNum === state.triggerNumber);
           const flippedClass = isRevealed ? 'is-flipped' : '';
+
           let backCardStyle = "bg-slate-900/90 border border-slate-700";
-          let backBadge = `<span class="text-[10px] sm:text-xs font-black bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full inline-block">#${realNum}</span>`;
+          let backBadge = `<span class="text-[10px] sm:text-xs font-black bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full inline-block">#${realNum ?? '?'}</span>`;
           if (isWinner) {
             backCardStyle = "bg-emerald-950/90 border-2 border-emerald-400 shadow-2xl shadow-emerald-500/40 ring-4 ring-emerald-500/20";
             backBadge = `<span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full inline-block shadow-lg animate-bounce">🏆 #${realNum} 命中胜出</span>`;
           }
+
           return `
             <div class="card-perspective h-32 sm:h-36 w-full">
               <div class="card-inner ${flippedClass}">
+                <!-- 正面：未开奖显示 #？ -->
                 <div class="card-front bg-slate-900/90 border-2 border-amber-500/50 p-3 flex flex-col justify-between items-center text-center shadow-xl">
-                  <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#${realNum}</span>
+                  <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#？</span>
                   <div class="my-auto">
                     <div class="font-bold text-amber-300 text-xs sm:text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
                     <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
                   </div>
                   <span class="text-[9px] text-amber-400/60 font-mono">???</span>
                 </div>
+                <!-- 反面：开奖后显示真实 #号 -->
                 <div class="card-back ${backCardStyle} p-3 flex flex-col justify-between items-center text-center shadow-2xl">
                   <div>${backBadge}</div>
                   <div class="my-auto">
