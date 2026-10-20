@@ -33,7 +33,7 @@
       z-index: 10;
     }
 
-    /* 🃏 3D 慢速悬疑翻牌动画 (增加2秒缓冲延迟) */
+    /* 🃏 3D 慢速悬疑翻牌动画 */
     .card-perspective {
       perspective: 1000px;
     }
@@ -220,11 +220,10 @@
 
           <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
             <span id="publicPollBadge" class="text-xs bg-amber-500 text-slate-950 px-2.5 py-1 rounded-lg font-black shadow">POLL #1</span>
-            <span id="publicTriggerBadge" class="hidden text-xs bg-emerald-500 text-slate-950 px-3 py-1 rounded-lg font-black shadow animate-pulse">🎯 本轮触发号：#?</span>
           </div>
         </div>
 
-        <!-- 🔒 普通观众高亮提示条 (无按钮) -->
+        <!-- 🔒 普通观众提示条 (未解锁管理员) -->
         <div id="publicSpectatorStatusBanner" class="hidden mb-4 p-3 bg-slate-900/90 rounded-2xl border border-amber-500/40 flex items-center justify-between shadow-lg">
           <div class="flex items-center space-x-2">
             <span class="text-base animate-pulse">🎯</span>
@@ -233,21 +232,29 @@
           <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-mono">LIVE SYNC</span>
         </div>
 
-        <!-- 🔑 管理员专用控盘面板 -->
-        <div id="publicRevealButtonBox" class="hidden mb-4 p-3 bg-slate-900/90 rounded-2xl border-2 border-emerald-400/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl backdrop-blur-md">
-          <div class="text-center sm:text-left">
-            <span class="text-xs font-bold text-emerald-300 block">🔑 管理员已解锁控盘：</span>
-            <span class="text-[11px] text-slate-300">设定触发号并点击开奖，全场将播放 3.8 秒慢翻牌特效</span>
+        <!-- 🔑 管理员专用控盘面板 (点击解锁后出现) -->
+        <div id="publicRevealButtonBox" class="hidden mb-4 p-4 bg-slate-900/95 rounded-2xl border-2 border-amber-500/80 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl backdrop-blur-md">
+          
+          <div class="flex items-center space-x-2">
+            <span class="text-lg">🔑</span>
+            <span class="text-xs font-black text-amber-400">管理员已解锁控盘</span>
+            <button onclick="toggleAdminUnlock()" class="text-[10px] bg-slate-800 hover:bg-rose-900/80 text-slate-300 hover:text-rose-200 px-2 py-0.5 rounded border border-slate-700 transition ml-2">退出控盘</button>
           </div>
 
-          <div class="flex items-center space-x-2 w-full sm:w-auto">
-            <div id="publicDirectTriggerSelector" class="flex items-center space-x-1"></div>
-            
-            <button onclick="revealPKWinnerFromPublic()" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+          <!-- 🎯 本轮触发号：#N 居中高亮大框展示 -->
+          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-6 py-2 rounded-xl border border-amber-500/60 shadow-inner">
+            <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-0.5">🎯 本轮触发号</span>
+            <span id="centerTriggerNumberBox" class="text-2xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+          </div>
+
+          <!-- 🎰 唯一开奖按钮 -->
+          <div class="w-full sm:w-auto flex justify-end">
+            <button onclick="revealPKWinnerFromPublic()" class="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
               <span>🎰</span>
               <span>点击揭晓开奖</span>
             </button>
           </div>
+
         </div>
 
         <!-- 🃏 3D 翻牌卡牌网格区 -->
@@ -309,7 +316,7 @@
               </span>
             </div>
 
-            <!-- 🔍 精简版移动至名单池右上角的极简 Icon 搜索栏 -->
+            <!-- 🔍 精简版买家搜索栏 -->
             <div class="relative flex items-center">
               <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍" title="搜索买家姓名或订单号" class="w-9 focus:w-36 transition-all duration-300 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner text-center focus:text-left">
             </div>
@@ -334,7 +341,7 @@
 
   </main>
 
-  <!-- 🔻 页脚区 (嵌入右下角极简纯文本管理员控制) -->
+  <!-- 🔻 页脚区 (最下方纯文本控制口令按钮) -->
   <footer class="bg-slate-950 border-t border-slate-800/80 py-3 text-center text-[10px] sm:text-xs text-slate-500">
     <div class="max-w-[1600px] mx-auto px-4 flex justify-between items-center">
       <span>© Mochiishop Shopee Monthly Event. All rights reserved.</span>
@@ -576,7 +583,10 @@
         const pin = prompt("🔐 请输入管理员解锁口令密码:", "1234");
         if (pin === "1234") {
           isAdminUnlocked = true;
-          alert("✅ 成功解锁管理员大屏控盘模式！您可以直接在大屏上设定触发号与揭晓开奖！");
+          // 锁死后台开奖按钮标记
+          state.publicAdminActive = true;
+          db.ref('tournament_state/publicAdminActive').set(true);
+          alert("✅ 成功解锁管理员大屏控盘模式！后台开奖已被锁定。");
         } else if (pin !== null) {
           alert("❌ 解锁口令错误！");
           return;
@@ -585,13 +595,15 @@
         }
       } else {
         isAdminUnlocked = false;
+        state.publicAdminActive = false;
+        db.ref('tournament_state/publicAdminActive').set(false);
       }
 
       const txt = document.getElementById('adminUnlockText');
 
       if (isAdminUnlocked) {
         if (txt) {
-          txt.innerText = "🔓 管理员已解锁 (点击锁定)";
+          txt.innerText = "🔓 管理员已解锁 (点击退出锁盘)";
           txt.className = "text-amber-400 font-bold underline cursor-pointer";
         }
       } else {
@@ -604,24 +616,17 @@
       renderPublicView();
     }
 
-    function setTriggerNumberFromPublic(num) {
-      if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
-      state.triggerNumber = num;
-      state.pkStage = 'triggered';
-      db.ref('tournament_state').set(state);
-    }
-
     function revealPKWinnerFromPublic() {
       if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
       if (!state.triggerNumber) {
-        alert("⚠️ 请先设定【触发号 #N】后再开奖！");
+        alert("⚠️ 请先在后台或选择【触发号 #N】后再点击揭晓开奖！");
         return;
       }
 
       state.pkStage = 'revealed';
       db.ref('tournament_state').set(state);
 
-      // 翻牌动画延长 2 秒 (延迟 3800 毫秒后结算胜出)
+      // 翻牌开奖动画延迟 3.8 秒后同步数据结算
       setTimeout(() => {
         const winnerId = state.activeGroupIds[state.triggerNumber - 1];
         if (winnerId) {
@@ -989,12 +994,11 @@
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
       const publicGroupGrid = document.getElementById('publicActiveGroupGrid');
       const publicPollBadge = document.getElementById('publicPollBadge');
-      const publicTriggerBadge = document.getElementById('publicTriggerBadge');
       const publicTriggerSubText = document.getElementById('publicTriggerSubText');
       const publicSpectatorBanner = document.getElementById('publicSpectatorStatusBanner');
       const spectatorStatusText = document.getElementById('spectatorStatusText');
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-      const publicDirectTriggerSelector = document.getElementById('publicDirectTriggerSelector');
+      const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
 
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
         publicGroupContainer.classList.remove('hidden');
@@ -1002,29 +1006,21 @@
           publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         }
 
+        // 更新居中展示的触发号
+        if (centerTriggerNumberBox) {
+          centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
+        }
+
         if (state.triggerNumber) {
-          publicTriggerBadge.innerText = `🎯 本轮触发号：#${state.triggerNumber}`;
-          publicTriggerBadge.classList.remove('hidden');
           publicTriggerSubText.innerText = `最高得票触发号已定位为 #${state.triggerNumber}`;
         } else {
-          publicTriggerBadge.classList.add('hidden');
           publicTriggerSubText.innerText = `实时同步盲抽开奖状态与候选买家名单...`;
         }
 
-        // 🔒 控盘面板控制逻辑
+        // 🔒 控盘面板与观众提示条呈现逻辑
         if (isAdminUnlocked) {
           publicRevealButtonBox.classList.remove('hidden');
           publicSpectatorBanner.classList.add('hidden');
-
-          if (publicDirectTriggerSelector) {
-            publicDirectTriggerSelector.innerHTML = `<span class="text-xs font-bold text-amber-300 mr-1">设置触发号:</span>` +
-              state.activeGroupIds.map((_, idx) => {
-                const num = idx + 1;
-                const isSel = (state.triggerNumber === num);
-                const btnCls = isSel ? "bg-amber-500 text-slate-950 font-black scale-110" : "bg-slate-800 text-slate-300 border border-slate-600";
-                return `<button onclick="setTriggerNumberFromPublic(${num})" class="w-6 h-6 text-xs rounded transition ${btnCls}">#${num}</button>`;
-              }).join('');
-          }
         } else {
           publicRevealButtonBox.classList.add('hidden');
           
@@ -1041,7 +1037,7 @@
 
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
         
-        // 🃏 3D 悬疑慢翻牌卡牌生成
+        // 🃏 3D 慢速翻牌卡牌生成
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => {
           const realNum = idx + 1;
           const isRevealed = (state.pkStage === 'revealed');
@@ -1070,7 +1066,7 @@
                   <span class="text-[9px] text-amber-400/60 font-mono">???</span>
                 </div>
 
-                <!-- 🃏 反面 (3.8 秒慢速翻转后呈现序号) -->
+                <!-- 🃏 反面 (慢速翻转后呈现序号) -->
                 <div class="card-back ${backCardStyle} p-3 flex flex-col justify-between items-center text-center shadow-2xl">
                   <div>${backBadge}</div>
                   <div class="my-auto">
