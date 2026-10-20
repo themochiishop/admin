@@ -954,21 +954,16 @@
             .filter(Boolean);
         }
 
-                      publicGroupGrid.innerHTML = activeMembers.map((c) => {
+                          publicGroupGrid.innerHTML = activeMembers.map((c) => {
           const realNum = c.displayNumber;
           const hasNumber = realNum !== null && realNum !== undefined;
-          
-          // 判断是否为命中胜出者
           const isWinner = (state.pkStage === 'revealed') && hasNumber && (realNum === state.triggerNumber);
           
-          // 只有胜出者的卡片加 is-flipped
-          const flippedClass = isWinner ? 'is-flipped' : '';
-
           return `
-            <div class="card-perspective">
-              <div class="card-inner ${flippedClass}">
+            <div class="card-perspective" id="card-box-${c.id}">
+              <div class="card-inner" id="card-inner-${c.id}">
                 
-                <!-- 正面：始终显示 #？ -->
+                <!-- 正面 -->
                 <div class="card-front bg-slate-900 border-2 border-amber-500/50 shadow-xl">
                   <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#？</span>
                   <div class="my-auto">
@@ -978,7 +973,7 @@
                   <span class="text-[9px] text-amber-400/60 font-mono">???</span>
                 </div>
 
-                <!-- 反面：只对中奖卡显示真实号码 -->
+                <!-- 反面 -->
                 <div class="card-back">
                   <span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>
                   <div class="my-auto">
@@ -992,6 +987,19 @@
             </div>
           `;
         }).join('');
+
+        // 🔥 强制用 JS 延迟添加翻转类，强制浏览器渲染动画
+        setTimeout(() => {
+          activeMembers.forEach(c => {
+            const isWinner = (state.pkStage === 'revealed') && (c.displayNumber === state.triggerNumber);
+            if (isWinner) {
+              const cardInner = document.getElementById(`card-inner-${c.id}`);
+              if (cardInner) {
+                cardInner.classList.add('is-flipped');
+              }
+            }
+          });
+        }, 100); // 100毫秒后执行，给浏览器留出加载时间
       } else {
         publicGroupContainer.classList.add('hidden');
       }
