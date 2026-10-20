@@ -837,41 +837,54 @@
       renderAdminView();
     }
 
-    function passWinnerAndEliminateOthers(winnerId) {
-      if (state.settled && state.pkStage === 'voting' && activeGroup4Ids.length === 0) {
-        console.warn("重复结算已拦截"); return;
+   function passWinnerAndEliminateOthers(winnerId) {
+  if (state.settled && state.pkStage === 'voting' && activeGroup4Ids.length === 0) {
+    console.warn("重复结算已拦截"); return;
+  }
+
+  const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
+  if (!activeRound) { console.error("找不到轮次", state.drawRoundIndex); state.settled = false; saveState(); return; }
+
+  const winnerMember = (state.activeGroupMembers || []).find(m => String(m.id) === String(winnerId));
+  const winnerIndex = winnerMember ? winnerMember.displayNumber : null;
+  const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerIndex})`;
+  
+  // 🆕 将中奖者追加到独立的历史晋级池（永久保留）
+  if (!state.passHistory) state.passHistory = [];
+  const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(winnerId));
+  if (winnerCandidate) {
+    state.passHistory.push({
+      id: winnerCandidate.id,
+      name: winnerCandidate.name,
+      orderNo: winnerCandidate.orderNo,
+      pollLabel: pollLabel,
+      roundIndex: state.drawRoundIndex ?? currentRoundIndex
+    });
+  }
+
+  activeGroup4Ids.forEach(id => {
+    const target = activeRound.candidates.find(c => String(c.id) === String(id));
+    if (target) {
+      if (String(id) === String(winnerId)) {
+        target.status = 'pass';
+        target.pollLabel = pollLabel;
+      } else {
+        target.status = 'out';
+        target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
       }
-
-      const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
-      if (!activeRound) { console.error("找不到轮次", state.drawRoundIndex); state.settled = false; saveState(); return; }
-
-      const winnerMember = (state.activeGroupMembers || []).find(m => String(m.id) === String(winnerId));
-      const winnerIndex = winnerMember ? winnerMember.displayNumber : null;
-      const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerIndex})`;
-      
-      activeGroup4Ids.forEach(id => {
-        const target = activeRound.candidates.find(c => String(c.id) === String(id));
-        if (target) {
-          if (String(id) === String(winnerId)) {
-            target.status = 'pass';
-            target.pollLabel = pollLabel;
-          } else {
-            target.status = 'out';
-            target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
-          }
-        }
-      });
-
-      activeGroup4Ids = [];
-      state.activeGroupIds = [];
-      state.activeGroupMembers = [];
-      state.pkStage = 'voting';
-      state.triggerNumber = null;
-      state.settled = false;
-      
-      saveState();
-      renderActiveGroupUI();
     }
+  });
+
+  activeGroup4Ids = [];
+  state.activeGroupIds = [];
+  state.activeGroupMembers = [];
+  state.pkStage = 'voting';
+  state.triggerNumber = null;
+  state.settled = false;
+  
+  saveState();
+  renderActiveGroupUI();
+}
 
     function renderActiveGroupUI() {
       const displayContainer = document.getElementById('activeGroupDisplay');
