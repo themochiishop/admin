@@ -1038,13 +1038,37 @@
       renderActiveGroupUI();
     }
 
-    function revealPKWinner() {
-      if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
-      if (!state.triggerNumber) {
-        alert("⚠️ 请先根据直播间观众投票设定【触发号 #N】后再点击揭晓开奖！");
-        return;
-      }
+function revealPKWinner() {
+  if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
+  
+  // 🔒 安全拦截：如果前台大屏已被管理员控制，后台阻止开奖
+  if (state.publicAdminActive) {
+    alert("🔒 前台大屏已开启管理员控制，后台开奖已被锁定！");
+    return;
+  }
 
+  if (!state.triggerNumber) {
+    alert("⚠️ 请先根据直播间观众投票设定【触发号 #N】后再点击揭晓开奖！");
+    return;
+  }
+
+  // 执行开奖逻辑...
+}
+function updateAdminRevealBtnState() {
+  const revealBtn = document.getElementById('adminRevealBtn');
+  if (!revealBtn) return;
+
+  if (state.publicAdminActive) {
+    revealBtn.disabled = true;
+    revealBtn.className = "px-3.5 py-1.5 bg-slate-700 text-slate-500 font-bold text-xs rounded-lg cursor-not-allowed opacity-60";
+    revealBtn.title = "🔒 前台大屏已开启管理员控制，后台开奖已锁定！";
+  } else {
+    revealBtn.disabled = false;
+    revealBtn.className = "px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-xs rounded-lg transition shadow-lg animate-pulse";
+    revealBtn.title = "点击揭晓开奖";
+  }
+}
+    
       state.pkStage = 'revealed';
       saveState();
 
