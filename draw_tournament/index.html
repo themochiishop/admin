@@ -33,7 +33,7 @@
       z-index: 10;
     }
 
-    /* 🃏 3D 慢速翻牌悬念动画 */
+    /* 🃏 3D 慢速悬疑翻牌动画 (增加2秒缓冲延迟) */
     .card-perspective {
       perspective: 1000px;
     }
@@ -41,7 +41,7 @@
       position: relative;
       width: 100%;
       height: 100%;
-      transition: transform 1.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: transform 2.2s cubic-bezier(0.34, 1.3, 0.64, 1);
       transform-style: preserve-3d;
     }
     .card-inner.is-flipped {
@@ -66,9 +66,9 @@
     }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
 
-  <!-- ⏳ 前台公开屏蔽遮罩层 (未勾选公开显示时呈现此遮罩，保留背景透亮度) -->
+  <!-- ⏳ 前台公开屏蔽遮罩层 -->
   <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
     <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
       <div class="absolute -top-16 -left-16 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
@@ -123,13 +123,6 @@
       </div>
       
       <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
-        
-        <!-- 🔑 大屏管理员控盘模式解锁按钮 -->
-        <button id="adminUnlockToggleBtn" onclick="toggleAdminUnlock()" class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow">
-          <span id="adminUnlockIcon">🔒</span>
-          <span id="adminUnlockText">管理员控制</span>
-        </button>
-
         <!-- 当前生效模式徽章 -->
         <div class="relative group cursor-pointer">
           <span id="publicModeBadge" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
@@ -210,11 +203,8 @@
     <!-- 🔽 可折叠的过程区域包裹层 -->
     <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300">
       
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-b border-slate-800 pb-3 gap-2.5 sm:gap-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
-        <div class="relative flex-shrink-0 w-full sm:w-auto">
-          <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍 名字或订单号..." class="w-full sm:w-40 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
-        </div>
       </div>
 
       <!-- 🔥 Shopee 直播间盲抽 PK 大屏展示区 -->
@@ -223,7 +213,7 @@
           <div class="flex items-center space-x-2">
             <span class="text-lg sm:text-2xl animate-bounce">🔥</span>
             <div>
-              <h3 class="text-xs sm:text-base font-black text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间盲抽组 PK</h3>
+              <h3 class="text-xs sm:text-base font-black text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间盲抽 PK 组</h3>
               <p id="publicTriggerSubText" class="text-[11px] text-amber-200/80 mt-0.5">实时同步开奖状态与候选买家名单...</p>
             </div>
           </div>
@@ -234,7 +224,7 @@
           </div>
         </div>
 
-        <!-- 🔒 普通观众高亮提示条 (无任何可点击按钮) -->
+        <!-- 🔒 普通观众高亮提示条 (无按钮) -->
         <div id="publicSpectatorStatusBanner" class="hidden mb-4 p-3 bg-slate-900/90 rounded-2xl border border-amber-500/40 flex items-center justify-between shadow-lg">
           <div class="flex items-center space-x-2">
             <span class="text-base animate-pulse">🎯</span>
@@ -243,11 +233,11 @@
           <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-mono">LIVE SYNC</span>
         </div>
 
-        <!-- 🔑 管理员专用控盘按钮区 (仅在管理员点击右上角解锁后呈现) -->
+        <!-- 🔑 管理员专用控盘面板 -->
         <div id="publicRevealButtonBox" class="hidden mb-4 p-3 bg-slate-900/90 rounded-2xl border-2 border-emerald-400/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl backdrop-blur-md">
           <div class="text-center sm:text-left">
             <span class="text-xs font-bold text-emerald-300 block">🔑 管理员已解锁控盘：</span>
-            <span class="text-[11px] text-slate-300">选择触发号并点击开奖，全场将播放 3D 悬疑翻牌揭晓动画</span>
+            <span class="text-[11px] text-slate-300">设定触发号并点击开奖，全场将播放 3.8 秒慢翻牌特效</span>
           </div>
 
           <div class="flex items-center space-x-2 w-full sm:w-auto">
@@ -310,13 +300,21 @@
       <!-- 名单池 & 淘汰区 -->
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
         <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 min-h-[160px]">
-          <div class="flex items-center space-x-2 mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
-            <span class="text-base sm:text-lg">⚡</span>
-            <h2 id="pendingTitleText" class="text-xs sm:text-md font-bold text-amber-400">待PK买家名单</h2>
-            <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">
-              <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span>
-            </span>
+          <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-base sm:text-lg">⚡</span>
+              <h2 id="pendingTitleText" class="text-xs sm:text-md font-bold text-amber-400">待PK买家名单</h2>
+              <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">
+                <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span>
+              </span>
+            </div>
+
+            <!-- 🔍 精简版移动至名单池右上角的极简 Icon 搜索栏 -->
+            <div class="relative flex items-center">
+              <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍" title="搜索买家姓名或订单号" class="w-9 focus:w-36 transition-all duration-300 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner text-center focus:text-left">
+            </div>
           </div>
+
           <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
         </div>
 
@@ -336,8 +334,14 @@
 
   </main>
 
-  <footer class="bg-slate-950 border-t border-slate-800 py-3 sm:py-4 text-center text-[10px] sm:text-xs text-slate-500">
-    © Mochiishop Shopee Monthly Event. All rights reserved.
+  <!-- 🔻 页脚区 (嵌入右下角极简纯文本管理员控制) -->
+  <footer class="bg-slate-950 border-t border-slate-800/80 py-3 text-center text-[10px] sm:text-xs text-slate-500">
+    <div class="max-w-[1600px] mx-auto px-4 flex justify-between items-center">
+      <span>© Mochiishop Shopee Monthly Event. All rights reserved.</span>
+      <button id="adminUnlockToggleBtn" onclick="toggleAdminUnlock()" class="text-slate-600 hover:text-amber-400 transition text-[11px] underline focus:outline-none">
+        <span id="adminUnlockText">🔑 管理员控制</span>
+      </button>
+    </div>
   </footer>
 
   <script>
@@ -365,12 +369,12 @@
     let userManuallySelectedRound = false; 
     let popupTimer = null;
     let isProcessAreaCollapsed = false;
-    let isAdminUnlocked = false; // 前台管理员授权控制标记
+    let isAdminUnlocked = false; 
 
     let state = { 
       customPublicTitle: '',
       isPublicVisible: true,
-      pkStage: 'voting', // 'voting', 'triggered', 'revealed'
+      pkStage: 'voting', 
       triggerNumber: null,
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
       rounds: [{ roundName: "第 1 轮", candidates: [] }] 
@@ -389,7 +393,6 @@
         totalPrefix: "共",
         pendingSuffix: "人待角逐",
         outListTitle: "淘汰区 (新至旧)",
-        searchPlaceholder: "🔍 名字或订单号...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
         passedTitle: "已晋级名单",
@@ -443,7 +446,6 @@
         totalPrefix: "Total",
         pendingSuffix: "In Battle",
         outListTitle: "Eliminated Area (New to Old)",
-        searchPlaceholder: "🔍 Name / Order No...",
         roundPrefix: "Round ",
         roundSuffix: "",
         passedTitle: "Passed / Advanced List",
@@ -497,7 +499,6 @@
         totalPrefix: "Jumlah",
         pendingSuffix: "orang bersaing",
         outListTitle: "Zon Tersingkir (Baharu ke Lama)",
-        searchPlaceholder: "🔍 Nama / Pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
         passedTitle: "Senarai Layak / Lulus",
@@ -586,18 +587,18 @@
         isAdminUnlocked = false;
       }
 
-      const icon = document.getElementById('adminUnlockIcon');
       const txt = document.getElementById('adminUnlockText');
-      const btn = document.getElementById('adminUnlockToggleBtn');
 
       if (isAdminUnlocked) {
-        icon.innerText = "🔓";
-        txt.innerText = "控制已解锁";
-        btn.className = "px-2.5 py-1 sm:px-3 sm:py-1.5 bg-amber-500 text-slate-950 font-black rounded-lg text-xs transition flex items-center space-x-1 shadow animate-pulse";
+        if (txt) {
+          txt.innerText = "🔓 管理员已解锁 (点击锁定)";
+          txt.className = "text-amber-400 font-bold underline cursor-pointer";
+        }
       } else {
-        icon.innerText = "🔒";
-        txt.innerText = "管理员控制";
-        btn.className = "px-2.5 py-1 sm:px-3 sm:py-1.5 bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow";
+        if (txt) {
+          txt.innerText = "🔑 管理员控制";
+          txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer";
+        }
       }
 
       renderPublicView();
@@ -620,12 +621,13 @@
       state.pkStage = 'revealed';
       db.ref('tournament_state').set(state);
 
+      // 翻牌动画延长 2 秒 (延迟 3800 毫秒后结算胜出)
       setTimeout(() => {
         const winnerId = state.activeGroupIds[state.triggerNumber - 1];
         if (winnerId) {
           passWinnerAndEliminateOthersPublic(winnerId);
         }
-      }, 1800);
+      }, 3800);
     }
 
     function passWinnerAndEliminateOthersPublic(winnerId) {
@@ -688,9 +690,6 @@
         const key = el.getAttribute('data-i18n');
         if (i18n[lang][key] !== undefined) el.innerText = i18n[lang][key];
       });
-
-      const searchInp = document.getElementById('searchInput');
-      if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
       updatePublicHeaderTitle();
       updatePublicOverlayState();
@@ -978,7 +977,8 @@
 
     function renderPublicView() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
-      const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      const searchEl = document.getElementById('searchInput');
+      const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
 
       const list = (activeRound.candidates || []).filter(c => 
         (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search)
@@ -1011,9 +1011,8 @@
           publicTriggerSubText.innerText = `实时同步盲抽开奖状态与候选买家名单...`;
         }
 
-        // 🔒 智能控盘与提示展示逻辑：
+        // 🔒 控盘面板控制逻辑
         if (isAdminUnlocked) {
-          // 解锁模式：显示完整的开奖控制面板与触发号修改按钮
           publicRevealButtonBox.classList.remove('hidden');
           publicSpectatorBanner.classList.add('hidden');
 
@@ -1027,7 +1026,6 @@
               }).join('');
           }
         } else {
-          // 锁定模式（普通观众）：隐藏所有点击按钮！仅提供状态提示条
           publicRevealButtonBox.classList.add('hidden');
           
           if (state.pkStage === 'triggered') {
@@ -1043,7 +1041,7 @@
 
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
         
-        // 🃏 3D 慢速翻牌卡牌生成
+        // 🃏 3D 悬疑慢翻牌卡牌生成
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => {
           const realNum = idx + 1;
           const isRevealed = (state.pkStage === 'revealed');
@@ -1062,7 +1060,7 @@
             <div class="card-perspective h-32 sm:h-36 w-full">
               <div class="card-inner ${flippedClass}">
                 
-                <!-- 🎴 卡牌正面 (未开奖时显示 #？) -->
+                <!-- 🎴 正面 (显示 #？) -->
                 <div class="card-front bg-slate-900/90 border-2 border-amber-500/50 p-3 flex flex-col justify-between items-center text-center shadow-xl">
                   <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#？</span>
                   <div class="my-auto">
@@ -1072,7 +1070,7 @@
                   <span class="text-[9px] text-amber-400/60 font-mono">???</span>
                 </div>
 
-                <!-- 🃏 卡牌反面 (开奖后慢慢翻转显示真实序号) -->
+                <!-- 🃏 反面 (3.8 秒慢速翻转后呈现序号) -->
                 <div class="card-back ${backCardStyle} p-3 flex flex-col justify-between items-center text-center shadow-2xl">
                   <div>${backBadge}</div>
                   <div class="my-auto">
