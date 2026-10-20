@@ -35,7 +35,7 @@
           <div class="absolute right-0 top-full mt-2 w-80 p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
             <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-sm">
               <span>📋</span>
-              <span data-i18n="tooltipTitle">当前模式规则与晋级说明</span>
+              <span data-i18n="tooltipTitle">当前模式规则与后台操作指南</span>
             </div>
             <div id="modeTooltipContent" class="space-y-2 text-slate-300 text-[11px] leading-relaxed">
               模式规则加载中...
@@ -107,7 +107,7 @@
             <input type="radio" name="drawMode" value="mode2" class="mt-0.5">
             <div class="flex-1">
               <div class="font-bold text-emerald-300" data-i18n="mode2Title">模式 2：冠亚季 + 安慰奖模式</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5" data-i18n="mode2Desc">除了冠亚季外，保留 N 名安慰奖名额。</div>
+              <div class="text-[11px] text-slate-400 mt-0.5 mb-1.5" data-i18n="mode2Desc">晋级区需至少包含 (N + 3) 人才能开启安慰奖与冠亚季决战。先挑选 N 位安慰奖，余下 3 人进入冠亚季争夺战。</div>
               <div class="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <span class="text-slate-300" data-i18n="consolationLabel">安慰奖名额:</span>
                 <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 font-bold text-emerald-400 focus:outline-none">
@@ -263,6 +263,7 @@
         btnPass: "🏆 晋级",
         btnPassThird: "🥉 设为季军",
         btnPassChampion: "👑 设为冠军",
+        btnPassConsolation: "🎁 设为安慰奖",
         btnOut: "❌ 淘汰",
         btnUndoOut: "↩️ 撤回",
         badgeOut: "❌ 已淘汰",
@@ -275,7 +276,7 @@
         mode1Title: "模式 1：冠亚季排位模式",
         mode1Desc: "剩3人时点击设为【季军】，系统自动弹窗并推进冠亚军决战；余下2人选1为【冠军】，未被选取的自动定位【亚军】。",
         mode2Title: "模式 2：冠亚季 + 安慰奖模式",
-        mode2Desc: "除了冠亚季外，保留 N 名安慰奖名额。",
+        mode2Desc: "晋级区需至少包含 (N + 3) 人才能开启安慰奖与冠亚季决战。先挑选 N 位安慰奖，余下 3 人进入冠亚季争夺战。",
         consolationLabel: "安慰奖名额:",
         unitPeople: "人",
         btnSaveConfig: "💾 保存设置",
@@ -284,12 +285,15 @@
         banner3LeftSub: "选出季军后，系统将自动向大屏推送 10 秒海报，并自动将余下 2 人推进至【👑 冠亚军决战】！",
         banner2LeftTitle: "👑【冠亚军终极决战 (2选1)】！请点击选出冠军",
         banner2LeftSub: "点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】，并同步推送大屏喜报！",
+        bannerConsolationTitle: "🎁【安慰奖遴选阶段】！请在下方挑选 {need} 位安慰奖得主 (已选 {done}/{total} 人)",
+        bannerConsolationSub: "选满 {total} 位安慰奖后，系统将自动将余下的 3 人推进至【冠亚季争夺战】！",
         alertThirdSuccess: "🥉 恭喜买家【{name}】获得 🥉 季军！\n\n前台已同步播放 10 秒恭喜海报，系统已自动为你推进至【👑 冠亚军终极决战】！",
         alertFinalSuccess: "👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：{winner}\n🥈 亚军：{runnerUp}\n\n前台公开大屏已同步向全场播放恭喜海报！",
+        alertConsolationDone: "🎁 🎉【安慰奖挑选完成】！\n\n已成功选出 {total} 位安慰奖得主！系统已自动将余下的 3 位选手推进至【冠亚季争夺战】！",
         eliminatedInRound: "第 {r} 轮淘汰",
         tooltipTitle: "当前模式规则与后台操作指南",
         mode1FlowAdmin: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 规则：冠军 1 人，亚军 1 人，季军 1 人</div><b>后台推进操作流程：</b><br>1. <b>普通轮次</b>：勾选多位买家【晋级】至下一轮，晋级区需留至少 3 人才能继续推进。<br>2. <b>季军争夺战 (3选1)</b>：点击【🥉 设为季军】，系统自动弹出恭喜海报并将剩下 2 人推进至决战。<br>3. <b>冠亚军终极决战 (2选1)</b>：点击【👑 设为冠军】，另一位买家将自动定为【🥈 亚军】。",
-        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 规则：冠军 1 人，亚军 1 人，季军 1 人，安慰奖 {n} 人</div><b>后台推进操作流程：</b><br>在保留冠亚季排位机制的同时，其余晋级选手将自动划入安慰奖区。"
+        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 规则：冠军 1 人，亚军 1 人，季军 1 人，安慰奖 {n} 人</div><b>后台推进操作流程：</b><br>1. <b>防错校验</b>：晋级区至少需要选满 ({n} + 3) 人才能开启后续环节。<br>2. <b>安慰奖环节</b>：在选拔池中点击【🎁 设为安慰奖】选满 {n} 人，系统自动推进至冠亚季环节。<br>3. <b>冠亚季环节</b>：余下 3 人自动进行季军与冠亚军决战。"
       },
       en: {
         adminTitle: "Mochiishop Monthly Draw - Admin Console",
@@ -308,6 +312,7 @@
         btnPass: "🏆 Pass",
         btnPassThird: "🥉 Set 3rd Place",
         btnPassChampion: "👑 Set Champion",
+        btnPassConsolation: "🎁 Set Consolation",
         btnOut: "❌ Out",
         btnUndoOut: "↩️ Undo",
         badgeOut: "❌ Out",
@@ -320,7 +325,7 @@
         mode1Title: "Mode 1: Podium Ranked Mode",
         mode1Desc: "When 3 left, pick 3rd place to trigger auto-advance to 2-way final.",
         mode2Title: "Mode 2: Podium + Consolation",
-        mode2Desc: "Includes Podium + N Consolation winners.",
+        mode2Desc: "Requires (N + 3) candidates in passed area. Pick N consolation winners first, remaining 3 advance to podium battle.",
         consolationLabel: "Consolation Count:",
         unitPeople: " ",
         btnSaveConfig: "💾 Save Config",
@@ -329,12 +334,15 @@
         banner3LeftSub: "Picking 3rd place auto-popups announcement and advances to 2-way Final!",
         banner2LeftTitle: "👑 2-Way Final Showdown! Pick the Champion.",
         banner2LeftSub: "Picked candidate becomes Champion, unpicked becomes Runner-up!",
+        bannerConsolationTitle: "🎁 Consolation Phase! Pick {need} more consolation winners ({done}/{total})",
+        bannerConsolationSub: "Picking {total} consolation winners auto-advances remaining 3 candidates to Podium Showdown!",
         alertThirdSuccess: "🥉 Congratulations [{name}] for winning 3rd Place!\n\nSystem auto-advanced to 2-way Final!",
         alertFinalSuccess: "👑 🎉 Final Winners!\n\n👑 Champion: {winner}\n🥈 Runner-up: {runnerUp}",
+        alertConsolationDone: "🎁 🎉 Consolation Winners Complete!\n\nSelected {total} consolation winners! Auto advancing remaining 3 to Podium Battle!",
         eliminatedInRound: "Eliminated in Round {r}",
         tooltipTitle: "Mode Rules & Admin Instructions",
         mode1FlowAdmin: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place</div><b>Admin Process:</b><br>1. <b>Normal Rounds</b>: Pick qualified buyers to advance (min 3 buyers required).<br>2. <b>3rd Place Battle (3 to 1)</b>: Click [Set 3rd Place] to auto-advance remaining 2.<br>3. <b>Final Showdown (2 to 1)</b>: Click [Set Champion], unpicked becomes Runner-up.",
-        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place, {n} Consolation Winners</div><b>Admin Process:</b><br>Includes Podium ranked showdown plus {n} consolation winners."
+        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place, {n} Consolation Winners</div><b>Admin Process:</b><br>1. <b>Validation</b>: Minimum ({n} + 3) candidates required in passed area.<br>2. <b>Consolation Phase</b>: Pick {n} consolation winners to auto-advance remaining 3.<br>3. <b>Podium Phase</b>: Remaining 3 battle for 3rd place and Champion."
       },
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
@@ -353,6 +361,7 @@
         btnPass: "🏆 Layak",
         btnPassThird: "🥉 Tempat Ke-3",
         btnPassChampion: "👑 Juara",
+        btnPassConsolation: "🎁 Saguhati",
         btnOut: "❌ Singkir",
         btnUndoOut: "↩️ Batal",
         badgeOut: "❌ Tersingkir",
@@ -365,7 +374,7 @@
         mode1Title: "Mod 1: Mod Kedudukan 3 Teratas",
         mode1Desc: "Apabila tinggal 3 calon, pilih Tempat Ke-3 untuk mara ke pusingan Akhir.",
         mode2Title: "Mod 2: 3 Teratas + Saguhati",
-        mode2Desc: "Termasuk 3 Teratas + N hadiah saguhati.",
+        mode2Desc: "Perlu sekurang-kurangnya (N + 3) calon. Pilih N saguhati dahulu, baki 3 mara ke pusingan 3 teratas.",
         consolationLabel: "Jumlah Saguhati:",
         unitPeople: " orang",
         btnSaveConfig: "💾 Simpan Tetapan",
@@ -374,12 +383,15 @@
         banner3LeftSub: "Pemilihan Tempat Ke-3 akan melangkah ke Pusingan Akhir secara automatik!",
         banner2LeftTitle: "👑 Pusingan Akhir (2 Calon)! Pilih Juara.",
         banner2LeftSub: "Calon yang dipilih akan menjadi Juara, calon satu lagi menjadi Naib Juara!",
+        bannerConsolationTitle: "🎁 Fasa Saguhati! Pilih {need} lagi pemenang saguhati ({done}/{total})",
+        bannerConsolationSub: "Pemilihan {total} saguhati selesai akan memajukan baki 3 calon ke Pusingan 3 Teratas secara automatik!",
         alertThirdSuccess: "🥉 Tahniah [{name}] memenangi Tempat Ke-3!\n\nSistem mara ke Pusingan Akhir secara automatik!",
         alertFinalSuccess: "👑 🎉 Pemenang Akhir!\n\n👑 Juara: {winner}\n🥈 Naib Juara: {runnerUp}",
+        alertConsolationDone: "🎁 🎉 Pemenang Saguhati Selesai!\n\n{total} pemenang saguhati dipilih! Baki 3 calon dimajukan ke Pusingan 3 Teratas!",
         eliminatedInRound: "Tersingkir Pusingan {r}",
         tooltipTitle: "Peraturan Mod & Panduan Pentadbir",
         mode1FlowAdmin: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3</div><b>Aliran Pentadbir:</b><br>1. <b>Pusingan Biasa</b>: Pilih calon layak (sekurang-kurangnya 3 calon diperlukan).<br>2. <b>Perebutan Tempat Ke-3 (3 ke 1)</b>: Pilih [Tempat Ke-3] untuk mara ke Pusingan Akhir.<br>3. <b>Pusingan Akhir (2 ke 1)</b>: Pilih [Juara], calon satu lagi menjadi Naib Juara.",
-        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3, {n} Saguhati</div><b>Aliran Pentadbir:</b><br>Termasuk pusingan 3 teratas dan {n} hadiah saguhati."
+        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3, {n} Saguhati</div><b>Aliran Pentadbir:</b><br>1. <b>Pengesahan</b>: Sekurang-kurangnya ({n} + 3) calon di kawasan layak.<br>2. <b>Fasa Saguhati</b>: Pilih {n} saguhati untuk mara secara automatik.<br>3. <b>Fasa 3 Teratas</b>: Baki 3 calon merebut Tempat Ke-3 dan Juara."
       }
     };
 
@@ -467,7 +479,7 @@
         tooltip.innerHTML = lang.mode1FlowAdmin;
       } else if (m === 'mode2') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
-        badge.innerText = `模式: 安慰奖模式(${consCount}名)`;
+        badge.innerText = `模式: 3+安慰奖模式(${consCount}名)`;
         badge.className = "text-emerald-400 font-bold";
         tooltip.innerHTML = lang.mode2FlowAdmin.replace(/{n}/g, consCount);
       }
@@ -620,10 +632,45 @@
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
-      if (isModeEnabled && selectedMode === 'mode1' && activeRound) {
+      if (isModeEnabled && activeRound) {
         const totalCandidates = activeRound.candidates || [];
 
-        if (totalCandidates.length === 3 && newStatus === 'pass') {
+        // 🌟 模式 2 特殊流程：安慰奖阶段选定
+        if (selectedMode === 'mode2' && activeRound.isConsolationStage) {
+          if (newStatus === 'pass') {
+            target.rankTitle = "🎁 安慰奖";
+            const consolationsPicked = totalCandidates.filter(c => c.rankTitle === "🎁 安慰奖");
+            const targetConsolationTotal = state.modeConfig.mode2ConsolationCount || 10;
+
+            if (consolationsPicked.length >= targetConsolationTotal) {
+              const remainingThree = totalCandidates.filter(c => c.rankTitle !== "🎁 安慰奖");
+
+              const stageLabel = "🏆 冠亚季争夺战 (剩3人)";
+              const podiumCandidates = remainingThree.map((c, idx) => ({
+                id: Date.now() + idx,
+                name: c.name,
+                orderNo: c.orderNo,
+                status: 'pending'
+              }));
+
+              state.rounds.push({
+                roundName: stageLabel,
+                stageName: stageLabel,
+                candidates: podiumCandidates
+              });
+
+              currentRoundIndex = state.rounds.length - 1;
+              saveState();
+              renderRoundTabs();
+              const alertMsg = i18n[currentLang].alertConsolationDone.replace('{total}', targetConsolationTotal);
+              alert(alertMsg);
+              return;
+            }
+          }
+        }
+
+        // 🌟 模式 1 / 模式 2 衔接的季军战 (剩 3 人)
+        if (totalCandidates.length === 3 && newStatus === 'pass' && !activeRound.isConsolationStage) {
           target.rankTitle = "🥉 季军";
           const remainingTwo = totalCandidates.filter(c => c.id !== target.id);
 
@@ -656,7 +703,8 @@
           return;
         }
 
-        if (totalCandidates.length === 2 && newStatus === 'pass') {
+        // 🌟 冠亚军决战 (剩 2 人)
+        if (totalCandidates.length === 2 && newStatus === 'pass' && !activeRound.isConsolationStage) {
           target.rankTitle = "👑 冠军";
           
           const runnerUpObj = totalCandidates.find(c => c.id !== target.id);
@@ -749,6 +797,7 @@
       }
     }
 
+    // 🌟 核心防错升级：模式1（少于3人报错），模式2（少于 N+3 人报错）
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -756,14 +805,22 @@
 
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+      const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
 
       if (passedCandidates.length === 0) {
         alert("⚠️ 请先选出晋级/胜出的买家，才能推进开启下一轮！");
         return;
       }
 
+      // 🛡️ 模式 1 防错拦截：少于 3 人报错
       if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length < 3) {
         alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passedCandidates.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
+        return;
+      }
+
+      // 🛡️ 模式 2 防错拦截：少于 (N + 3) 人报错
+      if (isModeEnabled && selectedMode === 'mode2' && passedCandidates.length < (N + 3)) {
+        alert(`⚠️ 【模式 2 (3+安慰奖) 规则限制】\n\n在包含 ${N} 名安慰奖模式下，晋级区人数必须至少包含 N + 3 人（即至少 ${N + 3} 人）才能开启后续安慰奖与冠亚季环节！\n\n当前仅选择了 ${passedCandidates.length} 位晋级买家，缺少 ${ (N + 3) - passedCandidates.length } 人，请继续挑选晋级买家后再点击推进。`);
         return;
       }
 
@@ -787,11 +844,19 @@
         status: 'pending'
       }));
 
-      const stageLabel = `第 ${nextRoundNumber} 轮 (${passedCandidates.length}人角逐)`;
+      let stageLabel = `第 ${nextRoundNumber} 轮 (${passedCandidates.length}人角逐)`;
+      let isConsolationStage = false;
+
+      // 如果模式 2 刚好达到了 N + 3 人，直接进入安慰奖遴选阶段
+      if (isModeEnabled && selectedMode === 'mode2' && passedCandidates.length === (N + 3)) {
+        stageLabel = `🎁 安慰奖遴选阶段 (${passedCandidates.length}人角逐${N}名安慰奖)`;
+        isConsolationStage = true;
+      }
 
       state.rounds.push({
         roundName: stageLabel,
         stageName: stageLabel,
+        isConsolationStage: isConsolationStage,
         candidates: nextRoundCandidates
       });
 
@@ -861,11 +926,19 @@
       const isMode1ThreeLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 3;
       const isMode1TwoLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 2;
 
+      const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
+
       const banner = document.getElementById('specialRoundBanner');
       const bannerTitle = document.getElementById('specialRoundBannerTitle');
       const bannerSub = document.getElementById('specialRoundBannerSub');
 
-      if (isMode1ThreeLeft) {
+      if (isConsolationStage) {
+        const consolationsPicked = activeRound.candidates.filter(c => c.rankTitle === "🎁 安慰奖").length;
+        const totalTarget = state.modeConfig.mode2ConsolationCount || 10;
+        banner.classList.remove('hidden');
+        bannerTitle.innerText = i18n[currentLang].bannerConsolationTitle.replace('{need}', totalTarget - consolationsPicked).replace('{done}', consolationsPicked).replace('{total}', totalTarget);
+        bannerSub.innerText = i18n[currentLang].bannerConsolationSub.replace('{total}', totalTarget);
+      } else if (isMode1ThreeLeft) {
         banner.classList.remove('hidden');
         bannerTitle.innerText = i18n[currentLang].banner3LeftTitle;
         bannerSub.innerText = i18n[currentLang].banner3LeftSub;
@@ -912,7 +985,10 @@
           let passBtnLabel = i18n[currentLang].btnPass;
           let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
 
-          if (isMode1ThreeLeft) {
+          if (isConsolationStage) {
+            passBtnLabel = i18n[currentLang].btnPassConsolation;
+            passBtnClass = "bg-emerald-600 text-white font-bold hover:bg-emerald-500";
+          } else if (isMode1ThreeLeft) {
             passBtnLabel = i18n[currentLang].btnPassThird;
             passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce";
           } else if (isMode1TwoLeft) {
