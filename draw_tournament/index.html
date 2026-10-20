@@ -151,12 +151,16 @@
           </div>
         </div>
 
-        <div id="publicRevealButtonBox" class="mb-4 p-4 bg-slate-900/95 rounded-2xl border-2 border-amber-500/80 flex flex-col items-center justify-center gap-3 shadow-2xl backdrop-blur-md">
-          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-8 py-3 rounded-xl border border-amber-500/60 shadow-inner">
+        <!-- 修改：把触发号框单独拿出来，所有人可见 -->
+        <div class="mb-4 flex flex-col items-center justify-center">
+          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-8 py-3 rounded-xl border-2 border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
             <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮触发号</span>
             <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
           </div>
-          
+        </div>
+
+        <!-- 开奖按钮：只有管理员解锁后才显示 -->
+        <div id="publicRevealButtonBox" class="hidden mb-4 flex justify-center">
           <button onclick="revealPKWinnerFromPublic()" class="w-full max-w-xs px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
             <span>🎰</span><span>点击揭晓开奖</span>
           </button>
@@ -202,6 +206,7 @@
               <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2"><span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span></span>
             </div>
             
+            <!-- 搜索框 -->
             <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
               <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
               <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
@@ -341,51 +346,37 @@
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
 
-      // 锁定当前界面的卡片 ID
       const activeCards = document.querySelectorAll('#publicActiveGroupGrid > div');
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
 
-      // 随机生成各个卡片对应的号码
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
 
-      // 绑定到临时数据上
       const tempMembers = [];
       activeCards.forEach((cardEl, idx) => {
         tempMembers.push({ id: state.activeGroupMembers[idx].id, displayNumber: nums[idx] });
       });
 
-      // 找到真中奖卡片的索引
       let winnerIndex = -1;
       tempMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
 
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
 
-      // 开始跑马灯
       let currentIndex = 0;
-      let speed = 80; // 初始速度(毫秒)
+      let speed = 80;
       let iterations = 0;
-      const maxFastIterations = 15; // 快速转动15次
+      const maxFastIterations = 15;
       
       function runMarquee() {
-        // 清除所有光圈
         activeCards.forEach(el => el.classList.remove('marquee-flash'));
-        
-        // 给当前卡片加光圈
         activeCards[currentIndex].classList.add('marquee-flash');
 
-        // 检查是否该减速了
-        if (iterations >= maxFastIterations) {
-          speed += 30; // 每次减慢一点
-        }
+        if (iterations >= maxFastIterations) speed += 30;
 
-        // 终点判断
         if (speed > 300 && currentIndex === winnerIndex) {
-          // 停在中奖卡片上
           activeCards.forEach(el => el.classList.remove('marquee-flash'));
-          activeCards[currentIndex].classList.add('winner-glow'); // 爆发光环
+          activeCards[currentIndex].classList.add('winner-glow');
           
-          // 动画结束后，执行真正的云端结算
           setTimeout(() => {
             db.ref('tournament_state').transaction((latestState) => {
               if (!latestState) return latestState;
@@ -430,7 +421,6 @@
                     if (com2) {
                       state = snap2.val();
                       renderRoundTabs(); renderPublicView(); updateStats();
-                      // 清理现场
                       setTimeout(() => {
                         db.ref('tournament_state').once('value', (snap) => {
                           const latest = snap.val();
@@ -441,20 +431,18 @@
                       }, 3000);
                     }
                   });
-                }, 1000); // 停留1秒让观众看清
+                }, 1000);
               }
             });
-          }, 1500); // 光圈爆发停 1.5秒
+          }, 1500);
           return;
         }
 
-        // 计算下一个索引
         currentIndex = (currentIndex + 1) % total;
         iterations++;
         setTimeout(runMarquee, speed);
       }
 
-      // 启动跑马灯
       runMarquee();
     }
 
@@ -530,6 +518,7 @@
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
 
+        // 🔥 开奖按钮的显示控制
         if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
@@ -554,7 +543,6 @@
           const hasNumber = realNum !== null && realNum !== undefined;
           const isWinner = (state.pkStage === 'revealed') && hasNumber && (realNum === state.triggerNumber);
 
-          // 渲染初始未开奖状态（跑马灯靠 JS 追加类名来实现）
           return `
             <div id="pk-card-${idx}" class="relative w-full h-36 rounded-xl border-2 border-amber-500/50 bg-slate-900 overflow-hidden shadow-xl transition-all duration-300">
               <div class="absolute inset-0 p-3 flex flex-col justify-center items-center text-center">
