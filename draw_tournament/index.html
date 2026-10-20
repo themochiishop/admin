@@ -41,7 +41,6 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🏆</span>
         <div>
-          <!-- 💡 去掉固定 data-i18n 属性，由 JS 完美控制后台自定义标题与多语言防覆盖逻辑 -->
           <h1 id="publicHeaderTitle" class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖晋级榜</h1>
           <p class="text-xs text-slate-400" data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</p>
         </div>
@@ -100,7 +99,7 @@
         <p class="text-xs text-slate-400 mt-1" data-i18n="finalSummarySub">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
 
-      <!-- 👑 冠亚季荣誉卡片（亚军在左，冠军居中，季军在右） -->
+      <!-- 👑 冠亚季荣誉卡片（位次：亚军在左，冠军居中，季军在右） -->
       <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end"></div>
 
       <!-- 🎁 安慰奖总结专区 -->
@@ -418,7 +417,7 @@
       setInterval(loadAndRender, 800);
     };
 
-    // 🌐 完美修补：优先使用后台自定义标题；无自定义输入时跟随多语言按钮自动切换
+    // 🌐 多语言与自定义标题逻辑修补：如果不手动切语言且设置了自定义标题，则展示自定义标题；若用户主动点击了语言切换按钮，则切回该语言的默认标题
     function updatePublicHeaderTitle() {
       const h1 = document.getElementById('publicHeaderTitle');
       if (h1) {
@@ -447,11 +446,16 @@
       const searchInp = document.getElementById('searchInput');
       if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
+      // 切换语言时，默认更新标题
+      const h1 = document.getElementById('publicHeaderTitle');
+      if (h1) {
+        h1.innerText = i18n[currentLang].publicTitle;
+      }
+
       renderRoundTabs();
       renderPublicView();
       updateStats();
       updatePublicModeUI();
-      updatePublicHeaderTitle();
       renderFinalSummaryPanel();
     }
 
@@ -607,7 +611,7 @@
         </div>
       `;
 
-      // 2. 渲染安慰奖全名单（高度提升为 min-h-[72px]，彻底解决文字被挤压 cut 问题）
+      // 2. 渲染安慰奖全名单
       if (consolations.length > 0) {
         consolationBox.classList.remove('hidden');
         consolationBadge.innerText = consolations.length;
@@ -625,7 +629,6 @@
       }
     }
 
-    // 📂 点击展开/折叠选拔过程面板
     function toggleProcessArea() {
       const collapsibleSection = document.getElementById('collapsibleProcessSection');
       const toggleBtnText = document.getElementById('processToggleBtnText');
@@ -640,7 +643,6 @@
       }
     }
 
-    // 📸 生成高精完整渲染 Canvas（彻底修补文字下半部分裁切/打折问题）
     function generateSummaryCanvas() {
       const panel = document.getElementById('finalTournamentSummaryPanel');
       if (!panel) return Promise.reject("Panel not found");
@@ -659,7 +661,6 @@
             clonedPanel.style.paddingBottom = '50px';
             clonedPanel.style.overflow = 'visible';
 
-            // 强制修复被克隆容器内部所有文本节点的 line-height 与补白
             const textNodes = clonedPanel.querySelectorAll('div, span, p');
             textNodes.forEach(node => {
               node.style.overflow = 'visible';
@@ -670,7 +671,6 @@
       });
     }
 
-    // 💾 保存图片下载到本地
     function saveSummaryAsImage() {
       generateSummaryCanvas().then(canvas => {
         const link = document.createElement('a');
@@ -682,7 +682,6 @@
       });
     }
 
-    // 📱 按【分享结果】调出原生图文分享面板
     async function shareSummaryImage() {
       try {
         const canvas = await generateSummaryCanvas();
@@ -889,7 +888,7 @@
         }).join('');
       }
 
-      // 2. 🎁 前台【已胜出安慰奖得主名单】面板
+      // 2. 🎁 前台【已胜出安慰奖名单】面板
       const consolationPanel = document.getElementById('publicConsolationWinnerPanel');
       const consolationContainer = document.getElementById('publicConsolationListContainer');
       const consolationBadge = document.getElementById('publicConsolationCountBadge');
