@@ -177,8 +177,22 @@
       <p id="specialRoundBannerSub" class="text-xs text-amber-200/90 mt-1"></p>
     </div>
 
-    <!-- 主卡片网格 -->
-    <div id="adminViewContainer" class="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]"></div>
+    <!-- 主卡片网格 (左) 与 紧凑单列淘汰区 (右) -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div id="adminViewContainer" class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]"></div>
+
+      <!-- 🌟 后台紧凑单列淘汰区 (按轮次新至旧排列 + 撤回按键) -->
+      <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-1.5">
+            <span class="text-sm">❌</span>
+            <h3 class="text-xs font-bold text-slate-400" data-i18n="outListTitle">淘汰区 (新至旧)</h3>
+          </div>
+          <span id="adminOutBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
+        </div>
+        <div id="adminOutListContainer" class="space-y-3 flex-1 overflow-y-auto max-h-[550px] pr-1"></div>
+      </div>
+    </div>
 
   </main>
 
@@ -217,7 +231,7 @@
         btnPassThird: "🥉 设为季军",
         btnPassChampion: "👑 设为冠军",
         btnOut: "❌ 淘汰",
-        btnUndoOut: "↩️ 撤回淘汰",
+        btnUndoOut: "↩️ 撤回",
         badgeOut: "❌ 已淘汰",
         btnPick4: "🎲 随机盲抽 4 人组 (对应4支香水)",
         btnClear4: "清空当前4人组",
@@ -239,11 +253,11 @@
         banner3LeftSub: "选出季军后，系统将自动向大屏推送 10 秒海报，并自动将余下 2 人推进至【👑 冠亚军决战】！",
         banner2LeftTitle: "👑【冠亚军终极决战 (2选1)】！请点击选出冠军",
         banner2LeftSub: "点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】，并同步推送大屏喜报！",
-        msgThirdWinner: "🥉 季军得主是：",
-        msgChampion: "👑 冠军得主是：",
-        msgRunnerUp: "🥈 亚军得主是：",
         alertThirdSuccess: "🥉 恭喜买家【{name}】获得 🥉 季军！\n\n前台已同步播放 10 秒恭喜海报，系统已自动为你推进至【👑 冠亚军终极决战】！",
-        alertFinalSuccess: "👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：{winner}\n🥈 亚军：{runnerUp}\n\n前台公开大屏已同步向全场播放恭喜海报（10秒后自动关闭切回大屏）！"
+        alertFinalSuccess: "👑 🎉【终极冠亚军诞生】！\n\n👑 冠军：{winner}\n🥈 亚军：{runnerUp}\n\n前台公开大屏已同步向全场播放恭喜海报（10秒后自动关闭切回大屏）！",
+        outListTitle: "淘汰区 (新至旧)",
+        eliminatedInRound: "第 {r} 轮淘汰",
+        noOut: "暂无淘汰人员"
       },
       en: {
         adminTitle: "Mochiishop Monthly Draw - Admin Console",
@@ -263,7 +277,7 @@
         btnPassThird: "🥉 Set 3rd Place",
         btnPassChampion: "👑 Set Champion",
         btnOut: "❌ Out",
-        btnUndoOut: "↩️ Undo Out",
+        btnUndoOut: "↩️ Undo",
         badgeOut: "❌ Out",
         btnPick4: "🎲 Pick 4 Buyers Group",
         btnClear4: "Clear Active Group",
@@ -285,11 +299,11 @@
         banner3LeftSub: "Picking 3rd place auto-popups announcement and advances to 2-way Final!",
         banner2LeftTitle: "👑 2-Way Final Showdown! Pick the Champion.",
         banner2LeftSub: "Picked candidate becomes Champion, unpicked becomes Runner-up!",
-        msgThirdWinner: "🥉 3rd Place Winner: ",
-        msgChampion: "👑 Champion: ",
-        msgRunnerUp: "🥈 Runner-up: ",
         alertThirdSuccess: "🥉 Congratulations [{name}] for winning 3rd Place!\n\nSystem auto-advanced to 2-way Final!",
-        alertFinalSuccess: "👑 🎉 Final Winners!\n\n👑 Champion: {winner}\n🥈 Runner-up: {runnerUp}"
+        alertFinalSuccess: "👑 🎉 Final Winners!\n\n👑 Champion: {winner}\n🥈 Runner-up: {runnerUp}",
+        outListTitle: "Out Zone (Newest First)",
+        eliminatedInRound: "Round {r} Eliminated",
+        noOut: "No eliminated buyers"
       },
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
@@ -309,7 +323,7 @@
         btnPassThird: "🥉 Tempat Ke-3",
         btnPassChampion: "👑 Juara",
         btnOut: "❌ Singkir",
-        btnUndoOut: "↩️ Batal Singkir",
+        btnUndoOut: "↩️ Batal",
         badgeOut: "❌ Tersingkir",
         btnPick4: "🎲 Cabut Kumpulan 4 Pembeli",
         btnClear4: "Kosongkan Kumpulan",
@@ -331,11 +345,11 @@
         banner3LeftSub: "Pemilihan Tempat Ke-3 akan melangkah ke Pusingan Akhir secara automatik!",
         banner2LeftTitle: "👑 Pusingan Akhir (2 Calon)! Pilih Juara.",
         banner2LeftSub: "Calon yang dipilih akan menjadi Juara, calon satu lagi menjadi Naib Juara!",
-        msgThirdWinner: "🥉 Tempat Ke-3: ",
-        msgChampion: "👑 Juara: ",
-        msgRunnerUp: "🥈 Naib Juara: ",
         alertThirdSuccess: "🥉 Tahniah [{name}] memenangi Tempat Ke-3!\n\nSistem mara ke Pusingan Akhir secara automatik!",
-        alertFinalSuccess: "👑 🎉 Pemenang Akhir!\n\n👑 Juara: {winner}\n🥈 Naib Juara: {runnerUp}"
+        alertFinalSuccess: "👑 🎉 Pemenang Akhir!\n\n👑 Juara: {winner}\n🥈 Naib Juara: {runnerUp}",
+        outListTitle: "Zon Tersingkir (Terkini Dahulu)",
+        eliminatedInRound: "Pusingan {r} Tersingkir",
+        noOut: "Tiada pembeli tersingkir"
       }
     };
 
@@ -446,7 +460,7 @@
             target.status = 'pass';
           } else {
             target.status = 'out';
-            target.eliminatedRoundIndex = currentRoundIndex; // 记录被淘汰的轮次
+            target.eliminatedRoundIndex = currentRoundIndex;
           }
         }
       });
@@ -489,24 +503,29 @@
       }).join('');
     }
 
-    // 🌟 排位状态变更与模式 1 自动化推进
     function changeStatus(id, newStatus) {
-      const activeRound = state.rounds[currentRoundIndex];
-      const target = activeRound.candidates.find(c => c.id === id);
+      let target = null;
+      let targetRound = state.rounds[currentRoundIndex];
+
+      // 全域检索 target 买家
+      for (let r of state.rounds) {
+        let found = (r.candidates || []).find(c => c.id === id);
+        if (found) { target = found; targetRound = r; break; }
+      }
+
       if (!target) return;
 
       target.status = newStatus;
       if (newStatus === 'out') {
-        target.eliminatedRoundIndex = currentRoundIndex; // 记录被淘汰轮次
+        target.eliminatedRoundIndex = currentRoundIndex;
       }
 
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
 
       if (isModeEnabled && selectedMode === 'mode1') {
-        const totalCandidates = activeRound.candidates;
+        const totalCandidates = targetRound.candidates;
 
-        // 名单池剩 3 人，点击的定为 🥉 季军，推送海报并【自动推进冠亚军决战】
         if (totalCandidates.length === 3 && newStatus === 'pass') {
           target.rankTitle = "🥉 季军";
 
@@ -541,7 +560,6 @@
           return;
         }
 
-        // 冠亚军决战轮（2人），选中的为 👑 冠军，未选中的自动定为 🥈 亚军
         if (totalCandidates.length === 2 && newStatus === 'pass') {
           target.rankTitle = "👑 冠军";
           
@@ -634,7 +652,6 @@
       }
     }
 
-    // 🌟 自动划入淘汰区：未普及者标记为 out 并带上淘汰轮次索引
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -650,7 +667,6 @@
         return;
       }
 
-      // 未选择普及的买家统一设置为 out，并记录淘汰发生的轮次
       currentRound.candidates.forEach(c => {
         if (c.status !== 'pass') {
           c.status = 'out';
@@ -720,7 +736,15 @@
       document.getElementById('statTotalCandidates').innerText = candidates.length;
       document.getElementById('statPassedCount').innerText = candidates.filter(c => c.status === 'pass').length;
       document.getElementById('statPendingCount').innerText = candidates.filter(c => c.status === 'pending').length;
-      document.getElementById('statOutCount').innerText = candidates.filter(c => c.status === 'out').length;
+      
+      // 收集至今所有淘汰买家总数
+      let totalOut = 0;
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => { if (c.status === 'out') totalOut++; });
+      });
+
+      document.getElementById('statOutCount').innerText = totalOut;
+      document.getElementById('adminOutBadgeCount').innerText = totalOut + i18n[currentLang].unitPeople;
     }
 
     function renderAdminView() {
@@ -769,56 +793,109 @@
       }
 
       const container = document.getElementById('adminViewContainer');
-      const pendingList = list.filter(c => c.status === 'pending' || c.status === 'out');
+      const pendingList = list.filter(c => c.status === 'pending');
 
       if (pendingList.length === 0) {
         container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${i18n[currentLang].noPendingList}</p></div>`;
+      } else {
+        const cardsHtml = pendingList.map((c, index) => {
+          let borderStyle = 'border-slate-700 bg-slate-800';
+          let statusBadge = '';
+
+          if (activeGroup4Ids.includes(c.id)) {
+            borderStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
+            statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500 text-slate-950 font-black">🔥 在PK组</span>`;
+          }
+
+          let passBtnLabel = i18n[currentLang].btnPass;
+          let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
+
+          if (isMode1ThreeLeft) {
+            passBtnLabel = i18n[currentLang].btnPassThird;
+            passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce";
+          } else if (isMode1TwoLeft) {
+            passBtnLabel = i18n[currentLang].btnPassChampion;
+            passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse";
+          }
+
+          return '<div class="p-4 rounded-xl border ' + borderStyle + ' flex flex-col justify-between shadow transition">' +
+            '<div>' +
+              '<div class="flex justify-between items-start mb-2"><span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
+              '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+            '</div>' +
+            '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-2">' +
+              `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1.5 text-xs rounded font-bold transition ${passBtnClass}">${passBtnLabel}</button>` +
+              `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>` +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">' + cardsHtml + '</div>';
+      }
+
+      // 🌟 渲染后台紧凑单列淘汰区（新至旧排列 + 撤回按钮）
+      renderAdminOutList(search);
+    }
+
+    function renderAdminOutList(search) {
+      const outContainer = document.getElementById('adminOutListContainer');
+      if (!outContainer) return;
+
+      let allOutCandidates = [];
+      (state.rounds || []).forEach((r, rIdx) => {
+        (r.candidates || []).forEach(c => {
+          if (c.status === 'out') {
+            const matchesSearch = (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search);
+            if (matchesSearch) {
+              const elIndex = (c.eliminatedRoundIndex !== undefined) ? c.eliminatedRoundIndex : rIdx;
+              allOutCandidates.push({ ...c, roundIndex: elIndex });
+            }
+          }
+        });
+      });
+
+      if (allOutCandidates.length === 0) {
+        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${i18n[currentLang].noOut}</p>`;
         return;
       }
 
-      const cardsHtml = pendingList.map((c, index) => {
-        let borderStyle = 'border-slate-700 bg-slate-800';
-        let statusBadge = '';
-        let btnOutHtml = '';
+      const grouped = {};
+      allOutCandidates.forEach(c => {
+        const key = c.roundIndex;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(c);
+      });
 
-        if (activeGroup4Ids.includes(c.id)) {
-          borderStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
-          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500 text-slate-950 font-black">🔥 在PK组</span>`;
-        }
+      // 🌟 核心倒序排列：新轮次在最上方 (High index -> Low index)
+      const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 
-        if (c.status === 'out') {
-          borderStyle = 'border-slate-800 bg-slate-900/60 opacity-60';
-          statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400 font-bold">${i18n[currentLang].badgeOut}</span>`;
-          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'pending')" class="flex-1 py-1.5 text-xs rounded bg-amber-600 hover:bg-amber-500 text-white font-bold">${i18n[currentLang].btnUndoOut}</button>`;
-        } else {
-          btnOutHtml = `<button onclick="changeStatus(${c.id}, 'out')" class="px-3 py-1.5 text-xs rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>`;
-        }
+      outContainer.innerHTML = sortedKeys.map(rIdxKey => {
+        const rNum = Number(rIdxKey) + 1;
+        const groupTitle = i18n[currentLang].eliminatedInRound.replace('{r}', rNum);
+        const candidatesInGroup = grouped[rIdxKey];
 
-        let passBtnLabel = i18n[currentLang].btnPass;
-        let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
+        const groupCardsHtml = candidatesInGroup.map(c => `
+          <div class="p-2 bg-slate-900/80 border border-slate-800 rounded-lg flex items-center justify-between text-xs transition hover:border-slate-700">
+            <span class="font-bold text-slate-300 truncate max-w-[100px]" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>
+            <button onclick="changeStatus(${c.id}, 'pending')" class="text-[11px] text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+              ${i18n[currentLang].btnUndoOut}
+            </button>
+          </div>
+        `).join('');
 
-        if (isMode1ThreeLeft) {
-          passBtnLabel = i18n[currentLang].btnPassThird;
-          passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce";
-        } else if (isMode1TwoLeft) {
-          passBtnLabel = i18n[currentLang].btnPassChampion;
-          passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse";
-        }
-
-        return '<div class="p-4 rounded-xl border ' + borderStyle + ' flex flex-col justify-between shadow transition">' +
-          '<div>' +
-            '<div class="flex justify-between items-start mb-2"><span class="text-xs font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
-            '<div class="font-bold text-slate-100 text-base truncate">' + escapeHtml(c.name) + '</div>' +
-            '<div class="text-xs text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
-          '</div>' +
-          '<div class="mt-4 pt-3 border-t border-slate-700/60 flex space-x-2">' +
-            (c.status !== 'out' ? `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1.5 text-xs rounded font-bold transition ${passBtnClass}">${passBtnLabel}</button>` : '') +
-            btnOutHtml +
-          '</div>' +
-        '</div>';
+        return `
+          <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/80">
+            <div class="text-[11px] font-bold text-rose-400/90 mb-2 border-b border-slate-800 pb-1 flex justify-between items-center">
+              <span>❌ ${groupTitle}</span>
+              <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}人</span>
+            </div>
+            <div class="grid grid-cols-1 gap-1.5">
+              ${groupCardsHtml}
+            </div>
+          </div>
+        `;
       }).join('');
-
-      container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">' + cardsHtml + '</div>';
     }
 
     function resetRounds() {
