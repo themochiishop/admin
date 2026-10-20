@@ -417,7 +417,6 @@
       setInterval(loadAndRender, 800);
     };
 
-    // 🌐 多语言与自定义标题逻辑修补：如果不手动切语言且设置了自定义标题，则展示自定义标题；若用户主动点击了语言切换按钮，则切回该语言的默认标题
     function updatePublicHeaderTitle() {
       const h1 = document.getElementById('publicHeaderTitle');
       if (h1) {
@@ -446,7 +445,6 @@
       const searchInp = document.getElementById('searchInput');
       if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
-      // 切换语言时，默认更新标题
       const h1 = document.getElementById('publicHeaderTitle');
       if (h1) {
         h1.innerText = i18n[currentLang].publicTitle;
@@ -534,7 +532,6 @@
       }
     }
 
-    // 🏆 终极全场抽奖结束总结大榜单
     function renderFinalSummaryPanel() {
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
       const podiumGrid = document.getElementById('podiumSummaryGrid');
@@ -573,10 +570,8 @@
       toggleBar.classList.remove('hidden');
       if (floatingActionBtns) floatingActionBtns.classList.remove('hidden');
       
-      // 🙈 出现终极汇总榜时，隐藏下方的得奖过程 Banner
       if (winnerBanner) winnerBanner.classList.add('hidden');
 
-      // 自动折叠选拔过程面板
       if (!isProcessAreaCollapsed) {
         collapsibleSection.classList.add('hidden');
         document.getElementById('processToggleBtnText').innerText = i18n[currentLang].expandText;
@@ -584,7 +579,6 @@
 
       const lang = i18n[currentLang];
 
-      // 1. 领奖台卡片（🥈 亚军在左，👑 冠军居中凸显，🥉 季军在右）
       podiumGrid.innerHTML = `
         <!-- 🥈 亚军 (左侧) -->
         <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-5 pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
@@ -611,7 +605,6 @@
         </div>
       `;
 
-      // 2. 渲染安慰奖全名单
       if (consolations.length > 0) {
         consolationBox.classList.remove('hidden');
         consolationBadge.innerText = consolations.length;
@@ -852,7 +845,6 @@
 
       const lang = i18n[currentLang];
 
-      // 0. 公开展示当前盲抽组
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
       const publicGroupGrid = document.getElementById('publicActiveGroupGrid');
       
@@ -870,7 +862,6 @@
         publicGroupContainer.classList.add('hidden');
       }
 
-      // 1. 已晋级买家
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
@@ -888,7 +879,6 @@
         }).join('');
       }
 
-      // 2. 🎁 前台【已胜出安慰奖名单】面板
       const consolationPanel = document.getElementById('publicConsolationWinnerPanel');
       const consolationContainer = document.getElementById('publicConsolationListContainer');
       const consolationBadge = document.getElementById('publicConsolationCountBadge');
@@ -916,7 +906,6 @@
         consolationPanel.classList.add('hidden');
       }
 
-      // 3. 待PK买家卡片
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
 
@@ -944,7 +933,6 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 4. 前台 1 列极简淘汰区
       const outContainer = document.getElementById('outListContainer');
       let allOutCandidates = [];
 
