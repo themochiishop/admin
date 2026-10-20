@@ -394,16 +394,42 @@
         tooltipTitle: "Peraturan Mod & Panduan Pentadbir",
         mode1FlowAdmin: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3</div><b>Aliran Pentadbir:</b><br>1. Pilih calon layak.<br>2. Pilih [Tempat Ke-3].<br>3. Pilih [Juara].",
         mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3, {n} Saguhati</div><b>Aliran Pentadbir:</b><br>1. Sahkan ({n} + 3).<br>2. Pilih {n} saguhati.<br>3. Baki 3 calon merebut 3 Teratas.",
-        rankConsolation: "🎁 Saguhati", rankThird: "🥉 Tempat Ke-3", rankChampion: "👑 Juara", rankNaibJuara: "🥈 Naib Juara"
+        rankConsolation: "🎁 Saguhati", rankThird: "🥉 Tempat Ke-3", rankChampion: "👑 Juara", rankRunnerUp: "🥈 Naib Juara"
       }
     };
 
     window.onload = function() {
-      loadState();
       setLanguage(currentLang);
       syncModalUIWithState();
       updateHeaderTitle();
 
+      // 🔥 后台核心：实时监听 Firebase 云端数据，前台开奖后，后台立刻同步更新！
+      db.ref('tournament_state').on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          state = val;
+          
+          (state.rounds || []).forEach(r => {
+            (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); });
+          });
+          if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
+          if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
+          if (!state.passHistory) state.passHistory = [];
+          
+          if (state.activeGroupIds && state.activeGroupIds.length > 0) {
+            activeGroup4Ids = [...state.activeGroupIds];
+          } else {
+            activeGroup4Ids = [];
+          }
+
+          renderRoundTabs();
+          renderAdminView();
+          updateStats();
+          checkAndTogglePdfExportBtn();
+        }
+      });
+
+      // 监听前台管理员是否登入，如果登入，后台的开奖按钮变灰
       db.ref('tournament_state/publicAdminActive').on('value', (snap) => {
         publicAdminActive = !!snap.val();
         updateAdminRevealButtonLock();
@@ -755,66 +781,49 @@
       }
     }
 
-    // 🎲 抽组函数：抽组时 displayNumber 全部为 null
-   function pickRandomGroup() {
-  // 🔥 使用 Firebase 事务，确保取到的是最新的云端数据，防止前后台状态冲突
-  db.ref('tournament_state').transaction((latestState) => {
-    if (!latestState) return latestState;
-    
-    const activeRound = latestState.rounds[currentRoundIndex];
-    if (!activeRound) return latestState;
+    function pickRandomGroup() {
+      const activeRound = state.rounds[currentRoundIndex];
+      const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
 
-    const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
-    if (pendingList.length === 0) {
-      setTimeout(() => alert("⚠️ 当前没有待 PK 的买家！"), 10);
-      return latestState;
-    }
+      if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
 
-    let targetCount = 4;
-    const cfg = latestState.modeConfig || {};
-    if (cfg.useDefaultPickCount) targetCount = cfg.defaultPickCount || 4;
-    else {
-      const inputStr = prompt("请输入本次要随机盲抽的人数:", "4");
-      if (inputStr === null) return latestState; // 取消操作
-      targetCount = parseInt(inputStr, 10);
-      if (isNaN(targetCount) || targetCount <= 0) {
-        setTimeout(() => alert("请输入有效的数字！"), 10);
-        return latestState;
+      let targetCount = 4;
+      const cfg = state.modeConfig || {};
+      if (cfg.useDefaultPickCount) targetCount = cfg.defaultPickCount || 4;
+      else {
+        const inputStr = prompt("请输入本次要随机盲抽的人数:", "4");
+        if (inputStr === null) return;
+        targetCount = parseInt(inputStr, 10);
+        if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效的数字！"); return; }
       }
-    }
 
-    latestState.pollCount = (latestState.pollCount || 0) + 1;
-    latestState.currentPollNumber = latestState.pollCount;
-    latestState.pkStage = 'voting';
-    latestState.triggerNumber = null;
-    latestState.drawRoundIndex = currentRoundIndex;
-    latestState.activeGroupIds = [];
-    latestState.activeGroupMembers = [];
-    latestState.settled = false;
+      state.pollCount = (state.pollCount || 0) + 1;
+      state.currentPollNumber = state.pollCount;
+      state.pkStage = 'voting';
+      state.triggerNumber = null;
+      state.drawRoundIndex = currentRoundIndex;
+      activeGroup4Ids = [];
+      state.activeGroupIds = [];
+      state.activeGroupMembers = [];
+      state.settled = false;
 
-    const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
-    
-    latestState.activeGroupIds = selected.map(c => String(c.id));
-    
-    latestState.activeGroupMembers = selected.map((c) => ({
-      id: String(c.id),
-      displayNumber: null,
-      name: c.name,
-      orderNo: c.orderNo
-    }));
+      const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
+      
+      activeGroup4Ids = selected.map(c => String(c.id));
+      state.activeGroupIds = activeGroup4Ids;
 
-    return latestState; // 返回新状态，Firebase 会自动推送到前台和后台
-  }, (error, committed, snapshot) => {
-    if (error) console.error("抽组失败:", error);
-    else if (committed) {
-      state = snapshot.val();
-      activeGroup4Ids = [...state.activeGroupIds];
+      state.activeGroupMembers = selected.map((c) => ({
+        id: String(c.id),
+        displayNumber: null,
+        name: c.name,
+        orderNo: c.orderNo
+      }));
+
+      saveState();
+      renderActiveGroupUI();
       renderAdminView();
-      updateStats();
     }
-  });
-}
 
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
@@ -865,7 +874,6 @@
       renderAdminView();
     }
 
-    // 🔥 结算池逻辑
     function passWinnerAndEliminateOthers(winnerId) {
       if (state.settled && state.pkStage === 'voting' && activeGroup4Ids.length === 0) return;
 
@@ -876,7 +884,6 @@
       const winnerIndex = winnerMember ? winnerMember.displayNumber : null;
       const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerIndex})`;
       
-      // 写入永久历史池
       if (!state.passHistory) state.passHistory = [];
       const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(winnerId));
       if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerId))) {
@@ -1171,8 +1178,6 @@
       state.rounds.push({ roundName: stageLabel, stageName: stageLabel, isConsolationStage: isConsolationStage, candidates: nextRoundCandidates });
       currentRoundIndex = state.rounds.length - 1;
       
-      // 注意：这里不清空 passHistory，保留全场历史
-      
       activeGroup4Ids = [];
       state.activeGroupIds = [];
       state.activeGroupMembers = [];
@@ -1249,9 +1254,7 @@
       const candidates = activeRound.candidates || [];
       const totalCount = candidates.length;
       
-      // 合并计算 pass 数量
       let passedCount = candidates.filter(c => c.status === 'pass').length;
-      // 算上整个池子中当前轮的
       if (state.passHistory) {
          const currentRoundPassed = state.passHistory.filter(h => h.roundIndex === currentRoundIndex).length;
          passedCount = Math.max(passedCount, currentRoundPassed);
@@ -1307,21 +1310,21 @@
 
       const passedContainer = document.getElementById('passedListContainer');
       
-      // 🔥 合并历史池显示
-     let passedList = list.filter(c => c.status === 'pass');
-if (state.passHistory) {
-  state.passHistory.forEach(hist => {
-    if (!passedList.some(c => String(c.id) === String(hist.id))) {
-      passedList.push(hist);
-    }
-  });
-}
-// 🔥 新增：按 POLL #N 排序
-passedList.sort((a, b) => {
-  const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-  const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-  return numA - numB;
-});
+      let passedList = list.filter(c => c.status === 'pass');
+      if (state.passHistory) {
+        state.passHistory.forEach(hist => {
+          if (!passedList.some(c => String(c.id) === String(hist.id))) {
+            passedList.push(hist);
+          }
+        });
+      }
+      
+      // 🔥 新增：按 POLL #N 排序
+      passedList.sort((a, b) => {
+        const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
+        const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
+        return numA - numB;
+      });
 
       if (passedList.length === 0) {
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${i18n[currentLang].noPassed}</span>`;
