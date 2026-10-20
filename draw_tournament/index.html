@@ -22,6 +22,9 @@
       box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
       letter-spacing: 0.5px; z-index: 10;
     }
+    .card-content {
+      transition: opacity 1s ease-in-out, transform 1s ease-in-out;
+    }
            .card-perspective { 
       perspective: 1000px; 
       position: relative; 
@@ -41,32 +44,25 @@
     .card-inner.is-flipped { 
       transform: rotateY(180deg); 
     }
-    .card-front, .card-back {
-      position: absolute; /* 强制重叠 */
-      top: 0; 
-      left: 0;
-      width: 100%; 
-      height: 100%;
-      -webkit-backface-visibility: hidden; 
-      backface-visibility: hidden;
-      border-radius: 1rem;
+    /* 开奖前：显示正面，隐藏反面 */
+    .card-front { opacity: 1; display: flex; }
+    .card-back { opacity: 0; display: none; }
+    .is-revealed .card-front {
+      opacity: 0;
+      display: none; /* 彻底隐藏正面 */
+    }
+    .is-revealed .card-back {
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      text-align: center;
+      opacity: 1;
+      animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
-    .card-front { 
-      z-index: 2; 
-      transform: rotateY(0deg); 
+
+    /* 弹出放大动画 */
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
-    .card-back { 
-      transform: rotateY(180deg); 
-      background-color: #022c22; /* 深绿色底 */
-      border: 2px solid #34d399;
-      box-shadow: 0 0 25px rgba(52, 211, 153, 0.4);
-    }
+    
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
