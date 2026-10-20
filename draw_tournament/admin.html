@@ -1368,6 +1368,7 @@
         currentRoundIndex = 0;
         state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
         state.pollCount = 0;
+        delete state.passHistory;
         delete state.currentPollNumber;
         activeGroup4Ids = [];
         state.activeGroupIds = [];
