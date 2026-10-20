@@ -362,7 +362,6 @@
         const val = snapshot.val();
         if (val) {
           state = val;
-          // 🆕 修复历史数据：id 统一字符串
           (state.rounds || []).forEach(r => {
             (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); });
           });
@@ -371,9 +370,7 @@
 
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           
-          if (!userManuallySelectedRound && state.rounds) {
-            currentRoundIndex = state.rounds.length - 1;
-          }
+          if (!userManuallySelectedRound && state.rounds) currentRoundIndex = state.rounds.length - 1;
           if (state.latestEvent && state.latestEvent.timestamp > lastSeenEventTime) {
             lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 10);
@@ -413,20 +410,20 @@
       renderPublicView();
     }
 
-    // 🔥🔥🔥 核心修复：前台开奖函数
+    // 🔥 前台开奖：A3 玩法核心
     function revealPKWinnerFromPublic() {
       if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先在后台或选择【触发号 #N】后再点击揭晓开奖！"); return; }
       if (state.settled) { console.warn("重复开奖已拦截"); return; }
 
-      // 🔥 锁定所有关键状态（避免 3.8s 动画期间被后台改动）
-      const lockedDrawRoundIndex = state.drawRoundIndex ?? currentRoundIndex;  // ✅ 用后台记录的实际抽奖轮次
+      const lockedDrawRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
       const lockedGroupIds = [...state.activeGroupIds.map(id => String(id))];
       const lockedMembers = (state.activeGroupMembers || []).map(m => ({ ...m, id: String(m.id) }));
       const lockedPollNumber = state.currentPollNumber || 1;
       const lockedTriggerNumber = state.triggerNumber;
 
-      // 找中奖者
+      // 🔥 找中奖者：displayNumber === triggerNumber 的那个人
+      // 因为 displayNumber 是抽组时随机分配的 #号，这个"查找"本身就等价于"随机选中一个人"
       const winnerMember = lockedMembers.find(m => m.displayNumber === lockedTriggerNumber);
       const lockedWinnerId = winnerMember ? String(winnerMember.id) : (lockedGroupIds[lockedTriggerNumber - 1] ? String(lockedGroupIds[lockedTriggerNumber - 1]) : null);
 
@@ -435,33 +432,24 @@
         return;
       }
 
-      // 标记为已揭示 + 锁定
       state.pkStage = 'revealed';
       state.settled = true;
       db.ref('tournament_state').set(state);
 
-      // 3.8 秒动画后结算
       setTimeout(() => {
-        // 🛡️ 结算前再检查一次：如果后台已结算完毕，直接跳过
         db.ref('tournament_state').once('value', (snap) => {
           const latest = snap.val();
           if (!latest) return;
 
-          // 如果后台已经清理了 activeGroupIds（说明后台先结算了），前台不再重复
           if (!latest.activeGroupIds || latest.activeGroupIds.length === 0) {
             console.log("后台已结算，前台跳过");
-            isAdminUnlocked && (isAdminUnlocked = false);
             state = latest;
             renderPublicView();
             return;
           }
 
-          // 使用最新 state 但保留锁定的轮次索引
           const activeRound = (latest.rounds || [])[lockedDrawRoundIndex];
-          if (!activeRound) {
-            console.error("找不到轮次", lockedDrawRoundIndex);
-            return;
-          }
+          if (!activeRound) { console.error("找不到轮次", lockedDrawRoundIndex); return; }
 
           const winnerIdx = (lockedMembers.find(m => String(m.id) === lockedWinnerId) || {}).displayNumber 
             || (lockedGroupIds.indexOf(lockedWinnerId) + 1);
@@ -793,7 +781,7 @@
           }
         }
 
-        // 🔥 核心修复：卡牌严格按 activeGroupMembers 的 displayNumber 排序，id 统一字符串
+        // 🔥 严格按 activeGroupMembers 的 displayNumber 排序显示
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
         
@@ -944,11 +932,7 @@
         outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${lang.noOut}</p>`;
       } else {
         const grouped = {};
-        allOutCandidates.forEach(c => {
-          const key = c.roundIndex;
-          if (!grouped[key]) grouped[key] = [];
-          grouped[key].push(c);
-        });
+        allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
         const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
         outContainer.innerHTML = sortedKeys.map(rIdxKey => {
           const rNum = Number(rIdxKey) + 1;
