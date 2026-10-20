@@ -950,36 +950,39 @@
             .filter(Boolean);
         }
 
-                          publicGroupGrid.innerHTML = activeMembers.map((c) => {
+                                  publicGroupGrid.innerHTML = activeMembers.map((c) => {
           const realNum = c.displayNumber;
           const hasNumber = realNum !== null && realNum !== undefined;
+          
+          // 判断是否是中奖者
           const isWinner = (state.pkStage === 'revealed') && hasNumber && (realNum === state.triggerNumber);
           
+          // 如果是中奖者，给外层容器加上 is-revealed 类
+          const revealClass = isWinner ? 'is-revealed' : '';
+
           return `
-            <div class="card-perspective" id="card-box-${c.id}">
-              <div class="card-inner" id="card-inner-${c.id}">
-                
-                <!-- 正面 -->
-                <div class="card-front bg-slate-900 border-2 border-amber-500/50 shadow-xl">
-                  <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#？</span>
-                  <div class="my-auto">
-                    <div class="font-bold text-amber-300 text-xs sm:text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
-                    <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
-                  </div>
-                  <span class="text-[9px] text-amber-400/60 font-mono">???</span>
+            <div class="relative w-full h-36 rounded-xl border-2 ${isWinner ? 'border-emerald-400 bg-emerald-950 shadow-[0_0_20px_rgba(52,211,153,0.6)]' : 'border-amber-500/50 bg-slate-900'} overflow-hidden">
+              
+              <!-- 正面：未开奖状态 -->
+              <div class="card-content card-front absolute inset-0 p-3 flex-col justify-between items-center text-center">
+                <span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow animate-pulse">#？</span>
+                <div class="my-auto">
+                  <div class="font-bold text-amber-300 text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
+                  <div class="text-[11px] text-slate-400 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
                 </div>
-
-                <!-- 反面 -->
-                <div class="card-back">
-                  <span class="text-[10px] sm:text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>
-                  <div class="my-auto">
-                    <div class="font-bold text-emerald-300 text-xs sm:text-sm truncate max-w-[120px]">${escapeHtml(c.name)}</div>
-                    <div class="text-[10px] sm:text-[11px] text-emerald-400/80 font-mono truncate max-w-[120px] mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
-                  </div>
-                  <span class="text-[9px] text-emerald-500 font-mono">POLL #${state.currentPollNumber || 1}</span>
-                </div>
-
+                <span class="text-[9px] text-amber-400/60 font-mono">???</span>
               </div>
+
+              <!-- 反面：开奖中奖状态 -->
+              <div class="card-content card-back absolute inset-0 p-3 flex-col justify-between items-center text-center bg-emerald-950">
+                <span class="text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg">🏆 #${realNum} 命中</span>
+                <div class="my-auto">
+                  <div class="font-bold text-emerald-300 text-lg truncate max-w-[120px]">${escapeHtml(c.name)}</div>
+                  <div class="text-[11px] text-emerald-400/80 font-mono truncate max-w-[120px] mt-1">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+                </div>
+                <span class="text-[9px] text-emerald-500 font-mono">POLL #${state.currentPollNumber || 1}</span>
+              </div>
+
             </div>
           `;
         }).join('');
