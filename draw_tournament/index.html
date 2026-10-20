@@ -139,9 +139,9 @@
       </div>
     </div>
 
-    <!-- 角逐中买家 (左) & 淘汰区按轮次倒序单列展示 (右) -->
+    <!-- 角逐中买家 (左) & 🌟 紧凑单列淘汰区 (新至旧) (右) -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      <div class="lg:col-span-3 xl:col-span-3 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
+      <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[400px]">
         <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
           <span class="text-lg">⚡</span>
           <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">待PK买家名单</h2>
@@ -152,16 +152,16 @@
         <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
       </div>
 
-      <!-- 🌟 淘汰区：1列模式 + 新至旧倒序排列 + 只显示名字 -->
-      <div class="lg:col-span-2 xl:col-span-2 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
-        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+      <!-- 🌟 单列小框架淘汰区 (按新至旧排序，仅展示名字) -->
+      <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-1.5">
             <span class="text-sm">❌</span>
             <h3 class="text-xs font-bold text-slate-400" data-i18n="outListTitle">淘汰区 (新至旧)</h3>
           </div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
         </div>
-        <div id="outListContainer" class="space-y-4 flex-1 overflow-y-auto max-h-[550px] pr-1"></div>
+        <div id="outListContainer" class="space-y-3 flex-1 overflow-y-auto max-h-[550px] pr-1"></div>
       </div>
     </div>
 
@@ -234,7 +234,7 @@
         passedBadgeSuffix: " ",
         totalPrefix: "Total",
         pendingSuffix: "In Battle",
-        outListTitle: "Eliminated Zone (New to Old)",
+        outListTitle: "Out Zone (Newest First)",
         searchPlaceholder: "🔍 Search name or order no...",
         roundPrefix: "Round ",
         roundSuffix: "",
@@ -259,7 +259,7 @@
         bannerFinalText: "🎉 👑 Champion: ",
         bannerRunnerUpText: " | 🥈 Runner-up: ",
         bannerFinalSub: "(🔥 👑 2-Way Final Showdown Live!)",
-        eliminatedInRound: "Eliminated in Round {r}"
+        eliminatedInRound: "Round {r} Eliminated"
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
@@ -273,7 +273,7 @@
         passedBadgeSuffix: " orang",
         totalPrefix: "Jumlah",
         pendingSuffix: "orang bersaing",
-        outListTitle: "Zon Tersingkir (Baru ke Lama)",
+        outListTitle: "Zon Tersingkir (Terkini Dahulu)",
         searchPlaceholder: "🔍 Cari nama atau no pesanan...",
         roundPrefix: "Pusingan ",
         roundSuffix: "",
@@ -500,12 +500,16 @@
       const total = candidates.length;
       const passed = candidates.filter(c => c.status === 'pass').length;
       const pendingCount = candidates.filter(c => c.status === 'pending').length;
-      const outCount = candidates.filter(c => c.status === 'out').length;
+      
+      let totalOut = 0;
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => { if (c.status === 'out') totalOut++; });
+      });
 
       document.getElementById('statTotalCandidates').innerText = total;
       document.getElementById('statPassedCount').innerText = passed;
       document.getElementById('statPendingCount').innerText = pendingCount;
-      document.getElementById('statOutCount').innerText = outCount;
+      document.getElementById('statOutCount').innerText = totalOut;
       
       const titleName = getRoundTitle(currentRoundIndex);
       document.getElementById('passedTitleText').innerText = `${titleName} ${i18n[currentLang].passedTitle}`;
@@ -513,7 +517,7 @@
       document.getElementById('passedBadgeCount').innerText = passed + i18n[currentLang].passedBadgeSuffix;
       
       document.getElementById('pendingNumberYellow').innerText = pendingCount;
-      document.getElementById('outBadgeCount').innerText = outCount + i18n[currentLang].unitPeople;
+      document.getElementById('outBadgeCount').innerText = totalOut + i18n[currentLang].unitPeople;
     }
 
     function renderPublicView() {
@@ -587,7 +591,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 🌟 3. 淘汰区：1 列模式 + 新至旧倒序 + 只显示买家名字
+      // 🌟 3. 单列极简淘汰区（按轮次由新至旧倒序，仅展示名字）
       const outContainer = document.getElementById('outListContainer');
       
       let allOutCandidates = [];
@@ -613,7 +617,7 @@
           grouped[key].push(c);
         });
 
-        // 🌟 关键：按照轮次【从新到旧】倒序排序（如：第 2 轮排在 第 1 轮 上方）
+        // 🌟 由新至旧倒序排列
         const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 
         outContainer.innerHTML = sortedKeys.map(rIdxKey => {
@@ -621,21 +625,19 @@
           const groupTitle = i18n[currentLang].eliminatedInRound.replace('{r}', rNum);
           const candidatesInGroup = grouped[rIdxKey];
 
-          // 🌟 1 列卡片模式：只展示名字
           const groupCardsHtml = candidatesInGroup.map(c => `
-            <div class="p-2.5 bg-slate-900/80 border border-slate-800/80 rounded-lg flex items-center justify-between shadow-sm hover:border-rose-500/30 transition">
-              <span class="font-bold text-slate-200 text-xs truncate">${escapeHtml(c.name)}</span>
-              <span class="text-[10px] text-slate-500 font-bold bg-slate-800 px-1.5 py-0.5 rounded">OUT</span>
+            <div class="p-1.5 bg-slate-900/80 border border-slate-800/80 rounded flex items-center justify-between opacity-70 hover:opacity-100 transition">
+              <span class="font-bold text-slate-300 text-xs truncate max-w-[120px]" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>
             </div>
           `).join('');
 
           return `
-            <div class="bg-slate-900/40 p-3 rounded-xl border border-slate-800/80">
-              <div class="text-[11px] font-bold text-rose-400 mb-2 border-b border-slate-800/80 pb-1.5 flex justify-between items-center">
+            <div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800/80">
+              <div class="text-[11px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
                 <span>❌ ${groupTitle}</span>
-                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-bold">${candidatesInGroup.length}人</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}人</span>
               </div>
-              <div class="grid grid-cols-1 gap-2">
+              <div class="grid grid-cols-1 gap-1">
                 ${groupCardsHtml}
               </div>
             </div>
