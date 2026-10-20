@@ -769,7 +769,7 @@
       else pdfBtn.classList.add('hidden');
     }
 
-    // 📄 100% 不白屏、精准充满 A4 纸的高保真 PDF 导出引擎
+    // 📄 100% 不白屏、精准充满 A4 纸的高保真 PDF 导出引擎（已移除主标题最左侧的奖杯图标）
     async function exportResultsToPDF() {
       let champion = null;
       let runnerUp = null;
@@ -811,10 +811,10 @@
           <!-- 顶端彩条装饰 -->
           <div style="height: 6px; background: linear-gradient(90deg, #b45309 0%, #f59e0b 50%, #b45309 100%); margin-bottom: 24px; border-radius: 3px;"></div>
 
-          <!-- 头部 Header -->
+          <!-- 头部 Header (主标题最左侧图标已移除) -->
           <div style="text-align: center; margin-bottom: 26px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 18px;">
             <div style="font-size: 26px; font-weight: 900; color: #92400e; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2;">
-              🏆 ${escapeHtml(pdfTitle1)}
+              ${escapeHtml(pdfTitle1)}
             </div>
             ${pdfTitle2 ? `
             <div style="font-size: 18px; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 6px; line-height: 1.2;">
@@ -919,7 +919,7 @@
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
 
-        // 精准将图像充满整张 A4 纸（保持完美的比例）
+        // 精准将图像充满整张 A4 纸
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Mochiishop_Tournament_Results_${todayStr}.pdf`);
 
@@ -928,7 +928,7 @@
         if (document.body.contains(container)) {
           document.body.removeChild(container);
         }
-        alert("❌ 生成 PDF 失败，请直接截图保存或重新导出！");
+        alert("❌ 生成 PDF 失败，请重新点击导出！");
       }
     }
 
