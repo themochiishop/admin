@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 📄 引入 PDF 导出引擎库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -28,10 +30,10 @@
         <div class="relative group cursor-pointer">
           <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-inner hover:border-amber-400/60 transition">
             <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
-            <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式规则">⚙️</button>
+            <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式与导入规则">⚙️</button>
           </div>
 
-          <!-- Hover 放大区域与详细规则说明 -->
+          <!-- Hover 详细规则说明 -->
           <div class="absolute right-0 top-full mt-2 w-80 p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
             <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-sm">
               <span>📋</span>
@@ -56,6 +58,12 @@
           </button>
         </div>
 
+        <!-- 📄 导出 PDF 结果按钮 (冠军产生后点亮) -->
+        <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
+          <span>📄</span>
+          <span>导出 PDF 结算报告</span>
+        </button>
+
         <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" data-i18n="btnPrevRound">
           🔙 返回上一轮
         </button>
@@ -66,7 +74,7 @@
     </div>
   </header>
 
-  <!-- ⚙️ 抽奖模式与规则配置弹窗 -->
+  <!-- ⚙️ 抽奖模式、导入源与规则配置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -76,6 +84,40 @@
       </h3>
 
       <div class="space-y-4 text-xs">
+        
+        <!-- 📂 1. 数据导入源设置 -->
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 space-y-3">
+          <div class="font-bold text-amber-300 text-xs flex items-center space-x-1.5">
+            <span>📥</span>
+            <span>买家名单导入模式配置</span>
+          </div>
+
+          <div class="space-y-2">
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="radio" name="importMode" value="default" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0">
+              <span class="text-slate-200 font-bold">默认链接导入 (Google Sheets 预设链接)</span>
+            </label>
+
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="radio" name="importMode" value="customUrl" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0">
+              <span class="text-slate-200 font-bold">自定义修改表格链接 (CSV 格式 URL)</span>
+            </label>
+            <div id="customUrlInputArea" class="pl-6 hidden">
+              <input type="url" id="customSheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../gviz/tq?tqx=out:csv" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-xs text-amber-300 focus:outline-none">
+            </div>
+
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="radio" name="importMode" value="fileUpload" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0">
+              <span class="text-slate-200 font-bold">从本地文件导入名单 (.csv / .txt)</span>
+            </label>
+            <div id="fileUploadArea" class="pl-6 hidden space-y-2">
+              <input type="file" id="localFileInput" accept=".csv, .txt" class="text-xs text-slate-300 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400">
+              <p class="text-[10px] text-slate-400">格式示例：每行一位买家，例如: <code class="text-amber-400">张三, ORDER123456</code></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🎮 2. 抽奖规则模式配置 -->
         <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
           <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
           <span class="font-bold text-slate-200" data-i18n="enableRulesLabel">启用模式规则 (必须勾选后方能生效)</span>
@@ -180,9 +222,9 @@
       <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
         <div class="text-xs text-slate-400 flex items-center space-x-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-          <span id="syncStatusText" data-i18n="syncReady">Google Sheets 数据同步已就绪</span>
+          <span id="syncStatusText" data-i18n="syncReady">买家数据导入就绪</span>
           <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-xs shadow" data-i18n="btnRefreshRound1">
-            🔄 刷新第 1 轮名单
+            🔄 刷新 / 导入名单
           </button>
         </div>
         <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-36 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
@@ -214,7 +256,7 @@
         <div id="adminViewContainer"></div>
       </div>
 
-      <!-- 后台淘汰区 (无“人”字，仅显示数值) -->
+      <!-- 后台淘汰区 (无“人”字) -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
@@ -234,14 +276,22 @@
   </footer>
 
   <script>
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
+    const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
     let activeGroup4Ids = [];
 
     let state = {
-      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4 },
+      modeConfig: { 
+        enabled: true, 
+        selectedMode: 'mode1', 
+        mode2ConsolationCount: 10, 
+        useDefaultPickCount: true, 
+        defaultPickCount: 4,
+        importMode: 'default', // 'default', 'customUrl', 'fileUpload'
+        customSheetUrl: ''
+      },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
@@ -269,8 +319,8 @@
         badgeOut: "❌ 已淘汰",
         btnPickRandom: "🎲 随机盲抽组",
         btnClearGroup: "清空盲抽组",
-        syncReady: "Google Sheets 数据同步已就绪",
-        btnRefreshRound1: "🔄 刷新第 1 轮名单",
+        syncReady: "买家数据导入就绪",
+        btnRefreshRound1: "🔄 刷新 / 导入名单",
         configModalTitle: "抽奖模式与规则配置",
         enableRulesLabel: "启用模式规则 (必须勾选后方能生效)",
         mode1Title: "模式 1：冠亚季排位模式",
@@ -322,8 +372,8 @@
         badgeOut: "❌ Out",
         btnPickRandom: "🎲 Random Pick Group",
         btnClearGroup: "Clear Group",
-        syncReady: "Google Sheets Sync Ready",
-        btnRefreshRound1: "🔄 Refresh Round 1",
+        syncReady: "Import Ready",
+        btnRefreshRound1: "🔄 Refresh / Import",
         configModalTitle: "Draw Mode Rules Config",
         enableRulesLabel: "Enable Mode Rules",
         mode1Title: "Mode 1: Podium Ranked Mode",
@@ -375,8 +425,8 @@
         badgeOut: "❌ Tersingkir",
         btnPickRandom: "🎲 Cabut Kumpulan",
         btnClearGroup: "Kosongkan Kumpulan",
-        syncReady: "Siri Google Sheets Sedia",
-        btnRefreshRound1: "🔄 Kemas Kini Pusingan 1",
+        syncReady: "Sedia Import",
+        btnRefreshRound1: "🔄 Kemas Kini / Import",
         configModalTitle: "Tetapan Peraturan Mod",
         enableRulesLabel: "Aktifkan Peraturan Mod",
         mode1Title: "Mod 1: Mod Kedudukan 3 Teratas",
@@ -418,11 +468,24 @@
         renderRoundTabs();
         renderAdminView();
         updateStats();
+        checkAndTogglePdfExportBtn();
       }
     };
 
     function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
     function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+
+    function toggleImportModeUI() {
+      const selected = document.querySelector('input[name="importMode"]:checked')?.value || 'default';
+      const customArea = document.getElementById('customUrlInputArea');
+      const fileArea = document.getElementById('fileUploadArea');
+
+      customArea.classList.add('hidden');
+      fileArea.classList.add('hidden');
+
+      if (selected === 'customUrl') customArea.classList.remove('hidden');
+      if (selected === 'fileUpload') fileArea.classList.remove('hidden');
+    }
 
     function toggleModeEnable() {
       const isChecked = document.getElementById('enableModeCheckbox').checked;
@@ -434,28 +497,44 @@
     function saveConfigModal() {
       const isEnabled = document.getElementById('enableModeCheckbox').checked;
       const radios = document.getElementsByName('drawMode');
-      let selected = 'mode1';
-      for (let r of radios) { if (r.checked) selected = r.value; }
+      let selectedMode = 'mode1';
+      for (let r of radios) { if (r.checked) selectedMode = r.value; }
 
       const mode2Cons = parseInt(document.getElementById('mode2ConsolationCount').value, 10) || 10;
       const useDefaultPickCount = document.getElementById('useDefaultPickCountCheckbox').checked;
       const defaultPickCount = parseInt(document.getElementById('defaultPickCountInput').value, 10) || 4;
 
+      const importMode = document.querySelector('input[name="importMode"]:checked')?.value || 'default';
+      const customSheetUrl = document.getElementById('customSheetUrlInput').value.trim();
+
       if (!state.modeConfig) state.modeConfig = {};
       state.modeConfig.enabled = isEnabled;
-      state.modeConfig.selectedMode = selected;
+      state.modeConfig.selectedMode = selectedMode;
       state.modeConfig.mode2ConsolationCount = mode2Cons;
       state.modeConfig.useDefaultPickCount = useDefaultPickCount;
       state.modeConfig.defaultPickCount = defaultPickCount;
+      state.modeConfig.importMode = importMode;
+      state.modeConfig.customSheetUrl = customSheetUrl;
 
       saveState();
       updateModeBadgeUI();
       closeConfigModal();
-      alert("⚙️ 模式与规则已成功更新！");
+
+      // 如果选了本地文件并上传了，直接解析
+      if (importMode === 'fileUpload') {
+        const fileInput = document.getElementById('localFileInput');
+        if (fileInput && fileInput.files.length > 0) {
+          readLocalFileAndParse(fileInput.files[0]);
+          return;
+        }
+      }
+
+      fetchGoogleSheetsData(true);
     }
 
     function syncModalUIWithState() {
-      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4 };
+      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '' };
+      
       document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
       document.getElementById('useDefaultPickCountCheckbox').checked = state.modeConfig.useDefaultPickCount !== false;
       document.getElementById('defaultPickCountInput').value = state.modeConfig.defaultPickCount || 4;
@@ -466,6 +545,14 @@
         if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true;
       }
       document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
+
+      const importRadios = document.getElementsByName('importMode');
+      for (let r of importRadios) {
+        if (r.value === (state.modeConfig.importMode || 'default')) r.checked = true;
+      }
+      document.getElementById('customSheetUrlInput').value = state.modeConfig.customSheetUrl || '';
+      toggleImportModeUI();
+
       updateModeBadgeUI();
     }
 
@@ -495,6 +582,175 @@
         badge.className = "text-emerald-400 font-bold";
         tooltip.innerHTML = lang.mode2FlowAdmin.replace(/{n}/g, consCount);
       }
+    }
+
+    function fetchGoogleSheetsData(isManual) {
+      if (currentRoundIndex !== 0) { 
+        if (isManual) alert("仅限在第 1 轮刷新/导入数据！"); 
+        return; 
+      }
+
+      const cfg = state.modeConfig || {};
+      const importMode = cfg.importMode || 'default';
+
+      if (importMode === 'fileUpload') {
+        const fileInput = document.getElementById('localFileInput');
+        if (fileInput && fileInput.files.length > 0) {
+          readLocalFileAndParse(fileInput.files[0]);
+          return;
+        } else if (isManual) {
+          alert("⚠️ 请先在设置弹窗中选择并上传本地 .csv 或 .txt 文件！");
+          openConfigModal();
+          return;
+        }
+      }
+
+      let fetchUrl = DEFAULT_SHEET_CSV_URL;
+      if (importMode === 'customUrl' && cfg.customSheetUrl) {
+        fetchUrl = cfg.customSheetUrl;
+      }
+
+      fetch(fetchUrl)
+        .then(response => response.text())
+        .then(csvText => {
+          parseCSVToFirstRound(csvText);
+          if (isManual) alert("✅ 已成功导入买家名单！");
+        })
+        .catch(err => {
+          alert("❌ 导入失败，请检查链接格式或网络连接！");
+        });
+    }
+
+    function readLocalFileAndParse(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseCSVToFirstRound(e.target.result);
+        alert(`✅ 已成功从本地文件【${file.name}】导入买家名单！`);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCSVToFirstRound(csvText) {
+      const lines = csvText.split('\n');
+      const candidates = [];
+      lines.forEach((line, idx) => {
+        if (!line.trim()) return;
+        const parts = line.replace(/"/g, '').split(',');
+        if (parts[0] && parts[0].trim() !== '买家姓名' && parts[0].trim() !== 'Name') {
+          candidates.push({ id: Date.now() + idx, name: parts[0].trim(), orderNo: parts[1] ? parts[1].trim() : '', status: 'pending' });
+        }
+      });
+      state.rounds[0].candidates = candidates;
+      saveState();
+      renderRoundTabs();
+    }
+
+    // 📄 PDF 结果导出功能 (可自由调效)
+    function checkAndTogglePdfExportBtn() {
+      const pdfBtn = document.getElementById('exportPdfBtn');
+      if (!pdfBtn) return;
+
+      let hasChampion = false;
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => {
+          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") hasChampion = true;
+        });
+      });
+
+      if (hasChampion) pdfBtn.classList.remove('hidden');
+      else pdfBtn.classList.add('hidden');
+    }
+
+    function exportResultsToPDF() {
+      let champion = null;
+      let runnerUp = null;
+      let thirdPlace = null;
+      let consolations = [];
+
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => {
+          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
+          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
+          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
+          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
+        });
+      });
+
+      const todayStr = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+      let pdfContainer = document.createElement('div');
+      pdfContainer.className = "p-8 bg-white text-slate-900 font-sans border-8 border-amber-500 rounded-2xl";
+      pdfContainer.style.width = "750px";
+
+      pdfContainer.innerHTML = `
+        <div style="text-align: center; border-bottom: 2px solid #f59e0b; padding-bottom: 12px; margin-bottom: 20px;">
+          <h1 style="font-size: 26px; font-weight: 900; color: #b45309; margin: 0;">🏆 Mochiishop 官方抽奖活动 - 终极荣誉报告</h1>
+          <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Mochiishop Shopee Live Monthly Event Official Draw Report</p>
+          <p style="font-size: 11px; color: #94a3b8; margin-top: 2px;">生成日期 Date: ${todayStr}</p>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 16px; font-weight: bold; color: #0f172a; border-left: 4px solid #f59e0b; padding-left: 8px; margin-bottom: 12px;">👑 冠亚季军最高荣誉榜 (Podium Winners)</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+              <tr style="background-color: #fef3c7; color: #92400e; border-bottom: 2px solid #fde68a;">
+                <th style="padding: 8px 12px;">名次 Rank</th>
+                <th style="padding: 8px 12px;">买家姓名 Name</th>
+                <th style="padding: 8px 12px;">订单编号 Order No.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #e2e8f0; background-color: #fffbeb;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #d97706;">👑 冠军 (Champion)</td>
+                <td style="padding: 10px 12px; font-weight: bold;">${champion ? escapeHtml(champion.name) : '无'}</td>
+                <td style="padding: 10px 12px; font-family: monospace;">${champion ? escapeHtml(champion.orderNo) : '-'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #475569;">🥈 亚军 (Runner-up)</td>
+                <td style="padding: 10px 12px; font-weight: bold;">${runnerUp ? escapeHtml(runnerUp.name) : '无'}</td>
+                <td style="padding: 10px 12px; font-family: monospace;">${runnerUp ? escapeHtml(runnerUp.orderNo) : '-'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 12px; font-weight: bold; color: #b45309;">🥉 季军 (3rd Place)</td>
+                <td style="padding: 10px 12px; font-weight: bold;">${thirdPlace ? escapeHtml(thirdPlace.name) : '无'}</td>
+                <td style="padding: 10px 12px; font-family: monospace;">${thirdPlace ? escapeHtml(thirdPlace.orderNo) : '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        ${consolations.length > 0 ? `
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 16px; font-weight: bold; color: #0f172a; border-left: 4px solid #10b981; padding-left: 8px; margin-bottom: 12px;">🎁 安慰奖获奖名单 (Consolation Winners - 共 ${consolations.length} 名)</h2>
+          <div style="display: grid; grid-template-cols: repeat(2, 1fr); gap: 8px; font-size: 12px;">
+            ${consolations.map((c, i) => `
+              <div style="padding: 6px 10px; background-color: #f0fdf4; border: 1px solid #bbf7d0; rounded: 6px;">
+                <span style="font-weight: bold; color: #166534;">#${i+1} ${escapeHtml(c.name)}</span>
+                <span style="color: #64748b; font-family: monospace; font-size: 11px; float: right;">${escapeHtml(c.orderNo)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+
+        <div style="border-top: 1px dashed #cbd5e1; pt-4; margin-top: 30px; font-size: 10px; color: #94a3b8; text-align: center;">
+          <p>© Mochiishop Official Live Tournament System. Verified Result.</p>
+        </div>
+      `;
+
+      document.body.appendChild(pdfContainer);
+
+      const opt = {
+        margin:       0.3,
+        filename:     `Mochiishop_Tournament_Results_${todayStr}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(pdfContainer).save().then(() => {
+        document.body.removeChild(pdfContainer);
+      });
     }
 
     function pickRandomGroup() {
@@ -743,6 +999,7 @@
           saveState();
           const alertStr = i18n[currentLang].alertFinalSuccess.replace('{winner}', target.name).replace('{runnerUp}', runnerUpName);
           alert(alertStr);
+          checkAndTogglePdfExportBtn();
           return;
         }
       }
@@ -777,7 +1034,6 @@
       const r = state.rounds[idx];
       if (!r) return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
       
-      // 🌟 轮次卡片多语言平滑适配
       if (r.isConsolationStage) {
         return `🎁 Consolation (${r.candidates ? r.candidates.length : 0})`;
       } else if (r.stageName && r.stageName.includes("冠亚军")) {
@@ -787,31 +1043,6 @@
       }
 
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
-    }
-
-    function fetchGoogleSheetsData(isManual) {
-      if (currentRoundIndex !== 0) { alert("仅限在第 1 轮刷新表格数据！"); return; }
-      fetch(SHEET_CSV_URL)
-        .then(response => response.text())
-        .then(csvText => {
-          parseCSVToFirstRound(csvText);
-          if (isManual) alert("✅ 已成功从 Google Sheets 同步名单！");
-        });
-    }
-
-    function parseCSVToFirstRound(csvText) {
-      const lines = csvText.split('\n');
-      const candidates = [];
-      lines.forEach((line, idx) => {
-        if (!line.trim()) return;
-        const parts = line.replace(/"/g, '').split(',');
-        if (parts[0] && parts[0].trim() !== '买家姓名' && parts[0].trim() !== 'Name') {
-          candidates.push({ id: Date.now() + idx, name: parts[0].trim(), orderNo: parts[1] ? parts[1].trim() : '', status: 'pending' });
-        }
-      });
-      state.rounds[0].candidates = candidates;
-      saveState();
-      renderRoundTabs();
     }
 
     function goToPrevRound() {
@@ -920,9 +1151,9 @@
       localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
       updateStats();
       renderAdminView();
+      checkAndTogglePdfExportBtn();
     }
 
-    // 🌟 修复后台【晋级区】计算，精准统计当前轮次 status === 'pass' 人数
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
@@ -935,7 +1166,6 @@
       document.getElementById('statPassedCount').innerText = passedCount;
       document.getElementById('statPendingCount').innerText = pendingCount;
       
-      // 更新晋级区右上角计数 badge
       const passedBadge = document.getElementById('passedBadgeCount');
       if (passedBadge) passedBadge.innerText = passedCount;
 
@@ -1018,7 +1248,6 @@
           let passBtnLabel = i18n[currentLang].btnPass;
           let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
 
-          // 🌟 核心逻辑修正：模式2在冠亚季阶段也直接显示【季军 - 冠军】按钮
           if (isConsolationStage) {
             passBtnLabel = i18n[currentLang].btnPassConsolation;
             passBtnClass = "bg-emerald-600 text-white font-bold hover:bg-emerald-500";
@@ -1065,7 +1294,6 @@
         });
       });
 
-      // 🌟 去除“人”字后缀，仅保留数值计算
       document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
 
       if (allOutCandidates.length === 0) {
