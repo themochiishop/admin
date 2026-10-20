@@ -589,7 +589,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 🌟 3. 按轮次分组区分展示的淘汰名单
+    // 🌟 3. 按轮次分组区分展示的淘汰名单 (只展示名字 · 单列模式 · 轮次从新到旧)
       const outContainer = document.getElementById('outListContainer');
       
       // 收集所有轮次中的淘汰者
@@ -605,6 +605,46 @@
           }
         });
       });
+
+      if (allOutCandidates.length === 0) {
+        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${i18n[currentLang].noOut}</p>`;
+      } else {
+        // 按淘汰轮次聚类分组
+        const grouped = {};
+        allOutCandidates.forEach(c => {
+          const key = c.roundIndex;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(c);
+        });
+
+        // 🌟 将轮次按数字【从大到小 (从新到旧)】倒序排列
+        const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
+
+        outContainer.innerHTML = sortedKeys.map(rIdxKey => {
+          const rNum = Number(rIdxKey) + 1;
+          const groupTitle = i18n[currentLang].eliminatedInRound.replace('{r}', rNum);
+          const candidatesInGroup = grouped[rIdxKey];
+
+          // 🌟 只展示名字，并采用 1 列（grid-cols-1）展示
+          const groupCardsHtml = candidatesInGroup.map(c => `
+            <div class="p-2 bg-slate-900/80 border border-slate-800 rounded-lg flex items-center justify-between opacity-70 hover:opacity-100 transition">
+              <span class="font-bold text-slate-300 text-xs truncate w-full">${escapeHtml(c.name)}</span>
+            </div>
+          `).join('');
+
+          return `
+            <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/80">
+              <div class="text-[11px] font-bold text-rose-400/90 mb-2 border-b border-slate-800 pb-1 flex justify-between items-center">
+                <span>❌ ${groupTitle}</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}人</span>
+              </div>
+              <div class="grid grid-cols-1 gap-1.5">
+                ${groupCardsHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
 
       if (allOutCandidates.length === 0) {
         outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">${i18n[currentLang].noOut}</p>`;
