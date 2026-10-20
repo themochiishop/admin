@@ -58,7 +58,7 @@
           </button>
         </div>
 
-        <!-- 📄 导出 PDF 结果按钮 (冠军产生后点亮) -->
+        <!-- 📄 导出 PDF 结果按钮 -->
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
           <span>📄</span>
           <span>Export PDF Report</span>
@@ -74,7 +74,7 @@
     </div>
   </header>
 
-  <!-- ⚙️ 抽奖模式、导入源、自定义标题与 PDF 配置弹窗 -->
+  <!-- ⚙️ 抽奖模式、导入源、自定义标题配置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -95,13 +95,13 @@
             <span id="arrow-cardTitleSetting" class="text-slate-400 transition-transform">▼</span>
           </button>
           <div id="cardTitleSetting" class="hidden p-3 pt-0 border-t border-slate-800 space-y-3">
-            <div>
+            <div class="mt-2">
               <label class="block text-slate-400 mb-1">后台控制台标题:</label>
               <input type="text" id="adminTitleInput" placeholder="Mochiishop 每月抽奖 - 直播控制台" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-amber-300 focus:outline-none">
             </div>
             <div>
-              <label class="block text-slate-400 mb-1">前台公示大屏标题 (留空跟随语言切换):</label>
-              <input type="text" id="publicTitleInput" placeholder="默认跟随语言自动切换" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-amber-300 focus:outline-none">
+              <label class="block text-slate-400 mb-1">前台公示大屏标题 (留空跟随语言自动切换):</label>
+              <input type="text" id="publicTitleInput" placeholder="默认跟随语言自动切换，在此输入可自定义覆盖" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-amber-300 focus:outline-none">
             </div>
           </div>
         </div>
@@ -135,7 +135,6 @@
             </label>
             <div id="fileUploadArea" class="pl-6 hidden space-y-1.5">
               <input type="file" id="localFileInput" accept=".csv, .txt" class="text-xs text-slate-300 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400">
-              <p class="text-[10px] text-slate-400">示例：每行一位买家，如 <code class="text-amber-400">张三, ORDER123456</code></p>
             </div>
           </div>
         </div>
@@ -194,18 +193,18 @@
           </div>
         </div>
 
-        <!-- 🎴 折叠卡片 4：📄 PDF 报告导出内容自定义 -->
+        <!-- 🎴 折叠卡片 4：PDF 报告导出内容自定义 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardPdfCustomSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
               <span>📄</span>
-              <span>PDF 报告导出内容与模板设置 (全英文)</span>
+              <span>PDF 报告导出内容设置</span>
             </span>
             <span id="arrow-cardPdfCustomSetting" class="text-slate-400 transition-transform">▼</span>
           </button>
           
           <div id="cardPdfCustomSetting" class="hidden p-3 pt-0 border-t border-slate-800 space-y-2.5">
-            <div>
+            <div class="mt-2">
               <label class="block text-slate-400 mb-1">Report Title (主标题):</label>
               <input type="text" id="pdfTitleInput" placeholder="MOCHIISHOP OFFICIAL DRAW REPORT" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-300 focus:outline-none">
             </div>
@@ -318,7 +317,7 @@
         <div id="adminViewContainer"></div>
       </div>
 
-      <!-- 后台淘汰区 (无“人”字) -->
+      <!-- 后台淘汰区 -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[300px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
@@ -574,6 +573,7 @@
       else group.classList.add('opacity-50', 'pointer-events-none');
     }
 
+    // 💾 关键保存逻辑：精准将前台标题写入 state 保存，前台实时同步
     function saveConfigModal() {
       state.customAdminTitle = document.getElementById('adminTitleInput').value.trim();
       state.customPublicTitle = document.getElementById('publicTitleInput').value.trim();
@@ -747,7 +747,6 @@
       renderRoundTabs();
     }
 
-    // 📄 PDF 导出生成（保留原本的黄色边框与外观框架）
     function checkAndTogglePdfExportBtn() {
       const pdfBtn = document.getElementById('exportPdfBtn');
       if (!pdfBtn) return;
