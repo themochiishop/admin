@@ -8,6 +8,11 @@
   <!-- 引入高兼容性 html2canvas 与 jsPDF 库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- 🔥 引入 Firebase 8.x SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -34,7 +39,6 @@
             <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式与导入规则">⚙️</button>
           </div>
 
-          <!-- Hover 详细规则说明 -->
           <div class="absolute right-0 top-full mt-2 w-80 p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
             <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-sm">
               <span>📋</span>
@@ -86,7 +90,6 @@
 
       <div class="space-y-3 text-xs">
         
-        <!-- 卡片 1：系统标题设置 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardTitleSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -107,7 +110,6 @@
           </div>
         </div>
 
-        <!-- 卡片 2：买家名单导入模式 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardImportSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -140,7 +142,6 @@
           </div>
         </div>
 
-        <!-- 卡片 3：抽奖模式与规则选择 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardDrawModeSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -193,7 +194,6 @@
           </div>
         </div>
 
-        <!-- 卡片 4：PDF 报告导出内容与模板设置 -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardPdfCustomSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2">
@@ -296,7 +296,6 @@
       </div>
     </div>
 
-    <!-- 当前选中的盲抽组展示区 -->
     <div id="activeGroupDisplay" class="mb-6 hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 shadow-xl">
       <div class="flex justify-between items-center mb-3">
         <div class="flex items-center space-x-2">
@@ -308,20 +307,17 @@
       <div id="activeGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
     </div>
 
-    <!-- 特殊轮次提示 Banner -->
     <div id="specialRoundBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center animate-pulse">
       <h3 id="specialRoundBannerTitle" class="text-base font-black text-amber-300"></h3>
       <p id="specialRoundBannerSub" class="text-xs text-amber-200/90 mt-1"></p>
     </div>
 
-    <!-- 名单池 & 淘汰区 -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div id="adminViewWrapper" class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[160px]">
         <h2 class="text-md font-bold text-amber-400 mb-4 pb-2 border-b border-slate-700">待 PK 买家名单池</h2>
         <div id="adminViewContainer"></div>
       </div>
 
-      <!-- 后台淘汰区 -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[300px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
@@ -341,6 +337,23 @@
   </footer>
 
   <script>
+    // ----------------------------------------------------
+    // 🔥 Firebase 云端初始化设置 (你的真实配置)
+    // ----------------------------------------------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
+      authDomain: "draw-tournament.firebaseapp.com",
+      databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "draw-tournament",
+      storageBucket: "draw-tournament.firebasestorage.app",
+      messagingSenderId: "803720903757",
+      appId: "1:803720903757:web:8b561daabc0d69af9e7004",
+      measurementId: "G-X7PJ23JKDB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1VSfYPx-lpdSAw8pgebnABW3rlSFK-8t4oxqPPcjKtt0/gviz/tq?tqx=out:csv&gid=322881163";
 
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
@@ -535,16 +548,6 @@
       setLanguage(currentLang);
       syncModalUIWithState();
       updateHeaderTitle();
-
-      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
-      if (!activeRound.candidates || activeRound.candidates.length === 0) {
-        fetchGoogleSheetsData();
-      } else {
-        renderRoundTabs();
-        renderAdminView();
-        updateStats();
-        checkAndTogglePdfExportBtn();
-      }
     };
 
     function toggleCardAccordion(cardId) {
@@ -768,7 +771,6 @@
       else pdfBtn.classList.add('hidden');
     }
 
-    // 📄 A4 高保真 PDF 导出引擎
     async function exportResultsToPDF() {
       let champion = null;
       let runnerUp = null;
@@ -805,7 +807,6 @@
 
       container.innerHTML = `
         <div style="border: 3px double #d97706; border-radius: 12px; padding: 30px; background: #ffffff; box-sizing: border-box; width: 100%;">
-          
           <div style="height: 6px; background: linear-gradient(90deg, #b45309 0%, #f59e0b 50%, #b45309 100%); margin-bottom: 24px; border-radius: 3px;"></div>
 
           <div style="text-align: center; margin-bottom: 26px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 18px;">
@@ -825,7 +826,6 @@
             </div>
           </div>
 
-          <!-- 👑 Podium Winners 领奖台专区 -->
           <div style="margin-bottom: 26px;">
             <div style="font-size: 14px; font-weight: 800; color: #1e293b; border-left: 5px solid #d97706; padding-left: 10px; margin-bottom: 12px; text-transform: uppercase;">
               👑 Official Podium Winners
@@ -858,7 +858,6 @@
             </table>
           </div>
 
-          <!-- 🎁 Consolation Prize Winners 安慰奖专区 -->
           ${consolations.length > 0 ? `
           <div style="margin-bottom: 26px;">
             <div style="font-size: 14px; font-weight: 800; color: #1e293b; border-left: 5px solid #10b981; padding-left: 10px; margin-bottom: 12px; text-transform: uppercase;">
@@ -878,11 +877,9 @@
           </div>
           ` : ''}
 
-          <!-- Footer -->
           <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 20px; font-size: 10px; color: #94a3b8; text-align: center;">
             <p style="margin: 0;">${escapeHtml(pdfFooter)}</p>
           </div>
-
         </div>
       `;
 
@@ -1302,20 +1299,31 @@
     function switchRound(idx) { currentRoundIndex = idx; renderRoundTabs(); renderAdminView(); updateStats(); }
 
     function loadState() {
-      const saved = localStorage.getItem('mochii_tournament_state');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && Array.isArray(parsed.rounds)) {
-            state = parsed;
-            if (state.activeGroupIds) activeGroup4Ids = state.activeGroupIds;
+      // 实时同步加载云端最新状态
+      db.ref('tournament_state').once('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          state = val;
+          if (state.activeGroupIds) activeGroup4Ids = state.activeGroupIds;
+          renderRoundTabs();
+          renderAdminView();
+          updateStats();
+          checkAndTogglePdfExportBtn();
+        } else {
+          const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
+          if (!activeRound.candidates || activeRound.candidates.length === 0) {
+            fetchGoogleSheetsData();
           }
-        } catch(e){}
-      }
+        }
+      });
     }
 
     function saveState() {
+      // 1. 保留 LocalStorage 备份
       localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
+      // 2. 毫秒级同步推送至 Firebase 云端数据库
+      db.ref('tournament_state').set(state);
+
       updateStats();
       renderAdminView();
       checkAndTogglePdfExportBtn();
