@@ -6,14 +6,13 @@
   <title>Mochiishop 每月抽奖 - 实时晋级大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* 🌟 隐藏滚动条但保留上下滚动功能 */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 (冠军独占放大排，亚军下一排) -->
+  <!-- 🌟 全屏豪华恭喜弹窗 (称号放大一号，名字保持原样) -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
@@ -25,9 +24,9 @@
         热烈祝贺！成功获得荣誉！
       </h3>
 
-      <!-- 👑 冠军人物放大居中一排，亚军人物在下一排 -->
+      <!-- 👑 称号放大一号 (text-sm/text-base)，名字维持原有字号大小 (text-2xl/text-xl) -->
       <div id="congratModalBody" class="my-5 space-y-3">
-        <!-- 动态渲染冠军排与亚军排 -->
+        <!-- 动态渲染冠军与亚军区 -->
       </div>
 
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow mt-2">
@@ -43,13 +42,13 @@
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🏆</span>
         <div>
-          <h1 class="text-xl font-bold text-amber-400" data-i18n="publicTitle">Mochiishop 每月抽奖普及榜</h1>
+          <h1 class="text-xl font-bold text-amber-400" data-i18n="publicTitle">Mochiishop 每月抽奖晋级榜</h1>
           <p class="text-xs text-slate-400" data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</p>
         </div>
       </div>
       
       <div class="flex items-center space-x-4">
-        <!-- 当前生效模式徽章 + Hover 放大卡片及详细说明 -->
+        <!-- 当前生效模式徽章 + Hover 观众视角规则流程卡片 -->
         <div class="relative group cursor-pointer">
           <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
             模式: 加载中...
@@ -58,7 +57,7 @@
           <div class="absolute right-0 top-full mt-2 w-80 p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
             <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-sm">
               <span>📋</span>
-              <span data-i18n="tooltipTitle">当前模式规则与晋级说明</span>
+              <span data-i18n="tooltipTitle">当前模式规则与晋级流程</span>
             </div>
             <div id="modeTooltipContent" class="space-y-2 text-slate-300 text-[11px] leading-relaxed">
               模式规则加载中...
@@ -99,7 +98,6 @@
     <div class="mb-6 flex items-center justify-between border-b border-slate-800 pb-3 gap-4">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar"></div>
       <div class="relative flex-shrink-0">
-        <!-- 🔍 搜索框修短为 w-36 -->
         <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍 名字或订单号..." class="w-36 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
       </div>
     </div>
@@ -122,7 +120,7 @@
         <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已普及/晋级</span>
+        <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已晋级</span>
         <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
       </div>
       <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
@@ -135,12 +133,12 @@
       </div>
     </div>
 
-    <!-- 已普及/晋级名单 -->
+    <!-- 已晋级名单 -->
     <div class="mb-6 bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
       <div class="flex-1 w-full">
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
-          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">已普及/晋级名单</h2>
+          <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">已晋级名单</h2>
           <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
@@ -160,7 +158,7 @@
         <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
       </div>
 
-      <!-- 前台 1 列极简淘汰区 (隐藏滚动条，保留上下滑动) -->
+      <!-- 前台 1 列极简淘汰区 (隐藏滚动条) -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
@@ -192,12 +190,12 @@
 
     const i18n = {
       zh: {
-        publicTitle: "Mochiishop 每月抽奖普及榜",
+        publicTitle: "Mochiishop 每月抽奖晋级榜",
         publicSubTitle: "直播实时同步 · 买家公开公示大屏",
         liveSyncText: "直播实时同步中...",
-        tooltipTitle: "当前模式规则与晋级流程说明",
+        tooltipTitle: "当前模式规则与晋级流程",
         statTotal: "本轮参选人数",
-        statPassed: "本轮已普及/晋级",
+        statPassed: "本轮已晋级",
         statPending: "本轮待PK人数",
         statOut: "本轮已淘汰人数",
         passedBadgeSuffix: "人",
@@ -207,9 +205,9 @@
         searchPlaceholder: "🔍 名字或订单号...",
         roundPrefix: "第 ",
         roundSuffix: " 轮",
-        passedTitle: "已普及/晋级名单",
+        passedTitle: "已晋级名单",
         pendingTitle: "待PK买家名单",
-        noPassed: "本轮暂无普及买家，直播抽出中...",
+        noPassed: "本轮暂无晋级买家，直播抽出中...",
         noCandidates: "本轮抽奖名单同步中，请关注直播间...",
         allDone: "本轮全员判定完毕",
         noOut: "暂无淘汰人员",
@@ -229,14 +227,14 @@
         bannerRunnerUpText: " | 🥈 亚军得主是：",
         bannerFinalSub: "(🔥 👑 冠亚军决战 2 选 1 开启中！)",
         eliminatedInRound: "第 {r} 轮淘汰",
-        mode1FlowDetail: "<b>冠亚季模式流程：</b><br>1. 普通轮次：多选选手【普及/晋级】至下一轮，至少需留 3 人推进。<br>2. <b>季军战 (3选1)</b>：点击【🥉 设为季军】，系统弹出喜报并自动将余下 2 人推进决战。<br>3. <b>冠亚军决战 (2选1)</b>：点击【👑 设为冠军】，未被选者自动锁定为【🥈 亚军】。",
-        mode2FlowDetail: "<b>安慰奖模式流程：</b><br>保留冠亚季军流程的同时，多余名额自动划入安慰奖区。"
+        mode1FlowPublic: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 当前模式：冠军 1 人，亚军 1 人，季军 1 人</div><b>晋级流程说明：</b><br>1. <b>多轮选拔</b>：每轮分组盲抽 PK，胜出者成功晋级下一轮。<br>2. <b>季军争夺战</b>：当全场仅剩 3 人时，争夺并产生 🥉 季军。<br>3. <b>冠亚军决战</b>：最终 2 人进入终极PK，角逐 👑 冠军 与 🥈 亚军！",
+        mode2FlowPublic: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 当前模式：冠军 1 人，亚军 1 人，季军 1 人，安慰奖 {n} 人</div><b>晋级流程说明：</b><br>在角逐冠亚季军的同时，其余晋级选手均可获得安慰奖名额！"
       },
       en: {
         publicTitle: "Mochiishop Monthly Draw Leaderboard",
         publicSubTitle: "Live Synchronization · Public Display Screen",
         liveSyncText: "Syncing Live...",
-        tooltipTitle: "Current Mode Flow Details",
+        tooltipTitle: "Current Mode Rules & Flow",
         statTotal: "Round Candidates",
         statPassed: "Passed / Advanced",
         statPending: "Currently In Battle",
@@ -270,14 +268,14 @@
         bannerRunnerUpText: " | 🥈 Runner-up: ",
         bannerFinalSub: "(🔥 👑 2-Way Final Showdown Live!)",
         eliminatedInRound: "Eliminated in Round {r}",
-        mode1FlowDetail: "<b>Podium Flow:</b><br>1. Normal Rounds: Pass candidates to next round (at least 3 candidates needed).<br>2. <b>3rd Place Battle</b>: Pick [3rd Place] to auto-advance remaining 2.<br>3. <b>Final Showdown</b>: Pick [Champion], remaining becomes [Runner-up].",
-        mode2FlowDetail: "<b>Consolation Flow:</b><br>Includes podium showdown plus N consolation winners."
+        mode1FlowPublic: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place</div><b>Tournament Flow:</b><br>1. <b>Qualifying Rounds</b>: Group voting PK to advance.<br>2. <b>3rd Place Match</b>: When 3 candidates left, compete for 🥉 3rd Place.<br>3. <b>Final Showdown</b>: Top 2 battle for 👑 Champion & 🥈 Runner-up!",
+        mode2FlowPublic: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place, {n} Consolation Winners</div><b>Tournament Flow:</b><br>Compete for podium ranked places plus {n} consolation winners!"
       },
       ms: {
         publicTitle: "Mochiishop Papan Pendahulu Cabutan Bulanan",
         publicSubTitle: "Masa Nyata Siaran Langsung · Paparan Awam",
         liveSyncText: "Diselaraskan Masa Nyata...",
-        tooltipTitle: "Butiran Aliran Peraturan Mod",
+        tooltipTitle: "Peraturan Mod & Aliran Kejohanan",
         statTotal: "Jumlah Calon Pusingan",
         statPassed: "Lulus / Layak",
         statPending: "Dalam Bersaing",
@@ -311,8 +309,8 @@
         bannerRunnerUpText: " | 🥈 Naib Juara: ",
         bannerFinalSub: "(🔥 👑 Pusingan Akhir 2 Calon!)",
         eliminatedInRound: "Tersingkir Pusingan {r}",
-        mode1FlowDetail: "<b>Aliran 3 Teratas:</b><br>1. Pusingan Biasa: Pilih calon layak (sekurang-kurangnya 3 calon diperlukan).<br>2. <b>Perebutan Tempat Ke-3</b>: Pilih [Tempat Ke-3] untuk mara ke pusingan Akhir.<br>3. <b>Pusingan Akhir</b>: Pilih [Juara], calon satu lagi menjadi [Naib Juara].",
-        mode2FlowDetail: "<b>Aliran Saguhati:</b><br>Termasuk pusingan 3 teratas dan N hadiah saguhati."
+        mode1FlowPublic: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3</div><b>Aliran Kejohanan:</b><br>1. <b>Pusingan Kelayakan</b>: Undian kumpulan untuk mara.<br>2. <b>Perebutan Tempat Ke-3</b>: Tinggal 3 calon untuk merebut 🥉 Tempat Ke-3.<br>3. <b>Pusingan Akhir</b>: 2 calon terbaik merebut 👑 Juara & 🥈 Naib Juara!",
+        mode2FlowPublic: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3, {n} Saguhati</div><b>Aliran Kejohanan:</b><br>Merebut kedudukan 3 teratas dan {n} hadiah saguhati!"
       }
     };
 
@@ -362,11 +360,11 @@
 
       if (m === 'mode1') {
         badge.innerText = `${lang.modePrefix}${lang.mode1}`;
-        tooltip.innerHTML = lang.mode1FlowDetail;
+        tooltip.innerHTML = lang.mode1FlowPublic;
       } else if (m === 'mode2') {
         const consCount = state.modeConfig.mode2ConsolationCount || 10;
         badge.innerText = `${lang.modePrefix}${lang.mode2}`;
-        tooltip.innerHTML = lang.mode2FlowDetail;
+        tooltip.innerHTML = lang.mode2FlowPublic.replace(/{n}/g, consCount);
       }
     }
 
@@ -449,29 +447,28 @@
       }
     }
 
-    // 🌟 弹窗渲染重构：冠军独占放大排，亚军在下一排
+    // 🌟 称号放大一号（text-sm/text-base），人名字号维持原样（text-2xl/text-xl）
     function showWinnerPopup(eventData, durationSeconds) {
       const modal = document.getElementById('congratModal');
       const bodyContainer = document.getElementById('congratModalBody');
-      const lang = i18n[currentLang];
 
       if (eventData.winnerNamesKey === 'third') {
         bodyContainer.innerHTML = `
           <div class="bg-amber-950/80 p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
-            <span class="text-xs font-bold text-amber-400 block mb-1">🥉 季军得主</span>
+            <span class="text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
             <span class="text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
           </div>
         `;
       } else if (eventData.winnerNamesKey === 'final') {
         bodyContainer.innerHTML = `
-          <!-- 👑 冠军人物放大居中第一排 -->
+          <!-- 👑 冠军人物：称号放大为 text-base，名字保持 text-2xl/3xl 原样 -->
           <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
-            <span class="text-xs font-black text-amber-300 uppercase tracking-widest block mb-1">👑 WINNER / 冠军得主</span>
-            <span class="text-3xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
+            <span class="text-base font-black text-amber-300 uppercase tracking-widest block mb-1">👑 冠军得主 / CHAMPION</span>
+            <span class="text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
           </div>
-          <!-- 🥈 亚军人物在下一排 -->
+          <!-- 🥈 亚军人物：称号放大为 text-sm，名字保持 text-xl 原样 -->
           <div class="bg-slate-800/90 p-3.5 rounded-xl border border-slate-600 text-center shadow">
-            <span class="text-[11px] font-bold text-slate-400 block mb-0.5">🥈 RUNNER-UP / 亚军得主</span>
+            <span class="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
             <span class="text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
           </div>
         `;
@@ -569,7 +566,7 @@
         publicGroupContainer.classList.add('hidden');
       }
 
-      // 1. 已普及/获胜买家
+      // 1. 已晋级买家
       const passedContainer = document.getElementById('passedListContainer');
       const passedList = list.filter(c => c.status === 'pass');
 
@@ -614,7 +611,7 @@
         pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
       }
 
-      // 3. 前台极简 1 列淘汰区 (隐藏滚动条，保留上下滑动，倒序新至旧)
+      // 3. 前台极简 1 列淘汰区 (隐藏滚动条，倒序新至旧)
       const outContainer = document.getElementById('outListContainer');
       let allOutCandidates = [];
 
