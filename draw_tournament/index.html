@@ -440,7 +440,7 @@
       renderPublicView();
     }
 
-    function revealPKWinnerFromPublic() {
+       function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
 
       db.ref('tournament_state').transaction((latestState) => {
@@ -470,6 +470,7 @@
         const lockedMemberIds = (latestState.activeGroupMembers || []).map(m => String(m.id));
 
         const total = lockedMemberIds.length;
+        // 随机分配号码
         const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
 
         const newMembers = lockedMemberIds.map((id, idx) => {
@@ -482,6 +483,7 @@
           };
         });
 
+        // 找到中奖者
         const winnerMember = newMembers.find(m => m.displayNumber === lockedTriggerNumber);
         const lockedWinnerId = winnerMember ? String(winnerMember.id) : null;
 
@@ -490,39 +492,10 @@
           return latestState;
         }
 
-        const activeRound = latestState.rounds[lockedDrawRoundIndex];
-        if (activeRound) {
-          const pollLabel = `POLL #${lockedPollNumber} (#${lockedTriggerNumber})`;
-          
-          if (!latestState.passHistory) latestState.passHistory = [];
-          const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(lockedWinnerId));
-          if (winnerCandidate && !latestState.passHistory.some(p => String(p.id) === String(lockedWinnerId))) {
-            latestState.passHistory.push({
-              id: winnerCandidate.id,
-              name: winnerCandidate.name,
-              orderNo: winnerCandidate.orderNo,
-              pollLabel: pollLabel,
-              roundIndex: lockedDrawRoundIndex
-            });
-          }
-
-          lockedGroupIds.forEach(id => {
-            const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-            if (target) {
-              if (String(id) === String(lockedWinnerId)) {
-                target.status = 'pass';
-                target.pollLabel = pollLabel;
-              } else {
-                target.status = 'out';
-                target.eliminatedRoundIndex = lockedDrawRoundIndex;
-              }
-            }
-          });
-        }
-
+        // 🔥 关键修改 1：此时先不把 winner 写入 passHistory，先只改变 pkStage 触发前端翻牌动画
         latestState.activeGroupMembers = newMembers;
-        latestState.pkStage = 'revealed';
-        latestState.settled = true;
+        latestState.pkStage = 'revealed'; // 改变状态，触发翻牌
+        // 暂时不设置 settled = true，也不立刻更新 status
 
         return latestState;
       }, (error, committed, snapshot) => {
@@ -531,30 +504,94 @@
           return;
         }
         if (committed) {
+          // 前台立刻读取最新的 state，渲染翻牌动画
           state = snapshot.val();
           renderRoundTabs();
           renderPublicView();
           updateStats();
-          renderFinalSummaryPanel();
-          updateWinnerBannerUI();
 
+          // 🔥 关键修改 2：等待 2.6 秒，让 CSS 的 2.5 秒翻牌动画播完，再进行正式结算
           setTimeout(() => {
-            db.ref('tournament_state').once('value', (snap) => {
-              const latest = snap.val();
-              if (!latest) return;
-              if (!latest.activeGroupIds || latest.activeGroupIds.length === 0) {
-                state = latest;
-                renderPublicView();
-                return;
+            db.ref('tournament_state').transaction((finalState) => {
+              if (!finalState) return finalState;
+              
+              const lockedDrawRoundIndex = finalState.drawRoundIndex ?? currentRoundIndex;
+              const activeRound = finalState.rounds[lockedDrawRoundIndex];
+              
+              if (activeRound) {
+                const lockedPollNumber = finalState.currentPollNumber || 1;
+                const lockedTriggerNumber = finalState.triggerNumber;
+                
+                // 寻找刚才分配的那个胜出者
+                const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === lockedTriggerNumber);
+                const lockedWinnerId = winnerMember ? String(winnerMember.id) : null;
+
+                if (lockedWinnerId) {
+                  const pollLabel = `POLL #${lockedPollNumber} (#${lockedTriggerNumber})`;
+                  
+                  // 写入历史池
+                  if (!finalState.passHistory) finalState.passHistory = [];
+                  const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(lockedWinnerId));
+                  if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === String(lockedWinnerId))) {
+                    finalState.passHistory.push({
+                      id: winnerCandidate.id,
+                      name: winnerCandidate.name,
+                      orderNo: winnerCandidate.orderNo,
+                      pollLabel: pollLabel,
+                      roundIndex: lockedDrawRoundIndex
+                    });
+                  }
+
+                  // 更新其他人为淘汰
+                  finalState.activeGroupIds.forEach(id => {
+                    const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
+                    if (target) {
+                      if (String(id) === String(lockedWinnerId)) {
+                        target.status = 'pass';
+                        target.pollLabel = pollLabel;
+                      } else {
+                        target.status = 'out';
+                        target.eliminatedRoundIndex = lockedDrawRoundIndex;
+                      }
+                    }
+                  });
+                }
               }
-              latest.activeGroupIds = [];
-              latest.activeGroupMembers = [];
-              latest.pkStage = 'voting';
-              latest.triggerNumber = null;
-              latest.settled = false;
-              db.ref('tournament_state').set(latest);
+
+              // 正式标记为已结算
+              finalState.settled = true;
+              return finalState;
+            }, (err, committed2, snap2) => {
+              if (committed2) {
+                state = snap2.val();
+                renderRoundTabs();
+                renderPublicView();
+                updateStats();
+                renderFinalSummaryPanel();
+                updateWinnerBannerUI();
+              }
             });
-          }, 3800);
+
+            // 🔥 关键修改 3：结算完之后，再等 3.8 秒，把 PK 区域收起来（清空 activeGroup）
+            setTimeout(() => {
+              db.ref('tournament_state').once('value', (snap) => {
+                const latest = snap.val();
+                if (!latest) return;
+                if (!latest.activeGroupIds || latest.activeGroupIds.length === 0) {
+                  state = latest;
+                  renderPublicView();
+                  return;
+                }
+                latest.activeGroupIds = [];
+                latest.activeGroupMembers = [];
+                latest.pkStage = 'voting';
+                latest.triggerNumber = null;
+                latest.settled = false;
+                db.ref('tournament_state').set(latest);
+              });
+            }, 3800);
+
+          }, 2600); // 等待 2.6 秒让翻牌动画播完
         }
       });
     }
