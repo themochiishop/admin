@@ -427,130 +427,124 @@
       renderPublicView();
     }
 
-   function revealPKWinnerFromPublic() {
-  if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
+    function revealPKWinnerFromPublic() {
+      if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
 
-  // 🔥 使用事务进行前台开奖，确保数据 100% 安全写入
-  db.ref('tournament_state').transaction((latestState) => {
-    if (!latestState) return latestState;
-    if (!latestState.activeGroupIds || latestState.activeGroupIds.length === 0) {
-      setTimeout(() => alert("⚠️ 当前没有进行中的盲抽组！"), 10);
-      return latestState;
-    }
-    if (!latestState.triggerNumber) {
-      setTimeout(() => alert("⚠️ 请先在后台或选择【触发号 #N】后再点击揭晓开奖！"), 10);
-      return latestState;
-    }
-    if (latestState.settled) {
-      setTimeout(() => console.warn("重复开奖已拦截"), 10);
-      return latestState;
-    }
-    
-    // 检查是否已经分配过号码
-    if ((latestState.activeGroupMembers || []).every(m => m.displayNumber !== null && m.displayNumber !== undefined)) {
-      setTimeout(() => alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"), 10);
-      return latestState;
-    }
+      db.ref('tournament_state').transaction((latestState) => {
+        if (!latestState) return latestState;
+        if (!latestState.activeGroupIds || latestState.activeGroupIds.length === 0) {
+          setTimeout(() => alert("⚠️ 当前没有进行中的盲抽组！"), 10);
+          return latestState;
+        }
+        if (!latestState.triggerNumber) {
+          setTimeout(() => alert("⚠️ 请先在后台或选择【触发号 #N】后再点击揭晓开奖！"), 10);
+          return latestState;
+        }
+        if (latestState.settled) {
+          setTimeout(() => console.warn("重复开奖已拦截"), 10);
+          return latestState;
+        }
+        
+        if ((latestState.activeGroupMembers || []).every(m => m.displayNumber !== null && m.displayNumber !== undefined)) {
+          setTimeout(() => alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"), 10);
+          return latestState;
+        }
 
-    const lockedDrawRoundIndex = latestState.drawRoundIndex ?? currentRoundIndex;
-    const lockedGroupIds = [...latestState.activeGroupIds.map(id => String(id))];
-    const lockedTriggerNumber = latestState.triggerNumber;
-    const lockedPollNumber = latestState.currentPollNumber || 1;
-    const lockedMemberIds = (latestState.activeGroupMembers || []).map(m => String(m.id));
+        const lockedDrawRoundIndex = latestState.drawRoundIndex ?? currentRoundIndex;
+        const lockedGroupIds = [...latestState.activeGroupIds.map(id => String(id))];
+        const lockedTriggerNumber = latestState.triggerNumber;
+        const lockedPollNumber = latestState.currentPollNumber || 1;
+        const lockedMemberIds = (latestState.activeGroupMembers || []).map(m => String(m.id));
 
-    const total = lockedMemberIds.length;
-    const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+        const total = lockedMemberIds.length;
+        const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
 
-    const newMembers = lockedMemberIds.map((id, idx) => {
-      const originalMember = (latestState.activeGroupMembers || []).find(m => String(m.id) === id);
-      return {
-        id: id,
-        displayNumber: nums[idx], // 分配随机号
-        name: originalMember ? originalMember.name : '',
-        orderNo: originalMember ? originalMember.orderNo : ''
-      };
-    });
-
-    const winnerMember = newMembers.find(m => m.displayNumber === lockedTriggerNumber);
-    const lockedWinnerId = winnerMember ? String(winnerMember.id) : null;
-
-    if (!lockedWinnerId) {
-      setTimeout(() => alert("⚠️ 无法定位中奖者，请检查后台数据！"), 10);
-      return latestState;
-    }
-
-    // 写入获胜者和淘汰者状态
-    const activeRound = latestState.rounds[lockedDrawRoundIndex];
-    if (activeRound) {
-      const pollLabel = `POLL #${lockedPollNumber} (#${lockedTriggerNumber})`;
-      
-      if (!latestState.passHistory) latestState.passHistory = [];
-      const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(lockedWinnerId));
-      if (winnerCandidate && !latestState.passHistory.some(p => String(p.id) === String(lockedWinnerId))) {
-        latestState.passHistory.push({
-          id: winnerCandidate.id,
-          name: winnerCandidate.name,
-          orderNo: winnerCandidate.orderNo,
-          pollLabel: pollLabel,
-          roundIndex: lockedDrawRoundIndex
+        const newMembers = lockedMemberIds.map((id, idx) => {
+          const originalMember = (latestState.activeGroupMembers || []).find(m => String(m.id) === id);
+          return {
+            id: id,
+            displayNumber: nums[idx],
+            name: originalMember ? originalMember.name : '',
+            orderNo: originalMember ? originalMember.orderNo : ''
+          };
         });
-      }
 
-      lockedGroupIds.forEach(id => {
-        const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-        if (target) {
-          if (String(id) === String(lockedWinnerId)) {
-            target.status = 'pass';
-            target.pollLabel = pollLabel;
-          } else {
-            target.status = 'out';
-            target.eliminatedRoundIndex = lockedDrawRoundIndex;
+        const winnerMember = newMembers.find(m => m.displayNumber === lockedTriggerNumber);
+        const lockedWinnerId = winnerMember ? String(winnerMember.id) : null;
+
+        if (!lockedWinnerId) {
+          setTimeout(() => alert("⚠️ 无法定位中奖者，请检查后台数据！"), 10);
+          return latestState;
+        }
+
+        const activeRound = latestState.rounds[lockedDrawRoundIndex];
+        if (activeRound) {
+          const pollLabel = `POLL #${lockedPollNumber} (#${lockedTriggerNumber})`;
+          
+          if (!latestState.passHistory) latestState.passHistory = [];
+          const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(lockedWinnerId));
+          if (winnerCandidate && !latestState.passHistory.some(p => String(p.id) === String(lockedWinnerId))) {
+            latestState.passHistory.push({
+              id: winnerCandidate.id,
+              name: winnerCandidate.name,
+              orderNo: winnerCandidate.orderNo,
+              pollLabel: pollLabel,
+              roundIndex: lockedDrawRoundIndex
+            });
           }
+
+          lockedGroupIds.forEach(id => {
+            const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
+            if (target) {
+              if (String(id) === String(lockedWinnerId)) {
+                target.status = 'pass';
+                target.pollLabel = pollLabel;
+              } else {
+                target.status = 'out';
+                target.eliminatedRoundIndex = lockedDrawRoundIndex;
+              }
+            }
+          });
+        }
+
+        latestState.activeGroupMembers = newMembers;
+        latestState.pkStage = 'revealed';
+        latestState.settled = true;
+
+        return latestState;
+      }, (error, committed, snapshot) => {
+        if (error) {
+          alert("⚠️ 开奖数据同步失败，请重试！");
+          return;
+        }
+        if (committed) {
+          state = snapshot.val();
+          renderRoundTabs();
+          renderPublicView();
+          updateStats();
+          renderFinalSummaryPanel();
+          updateWinnerBannerUI();
+
+          setTimeout(() => {
+            db.ref('tournament_state').once('value', (snap) => {
+              const latest = snap.val();
+              if (!latest) return;
+              if (!latest.activeGroupIds || latest.activeGroupIds.length === 0) {
+                state = latest;
+                renderPublicView();
+                return;
+              }
+              latest.activeGroupIds = [];
+              latest.activeGroupMembers = [];
+              latest.pkStage = 'voting';
+              latest.triggerNumber = null;
+              latest.settled = false;
+              db.ref('tournament_state').set(latest);
+            });
+          }, 3800);
         }
       });
     }
-
-    // 更新翻开的状态
-    latestState.activeGroupMembers = newMembers;
-    latestState.pkStage = 'revealed';
-    latestState.settled = true;
-
-    return latestState; // 推送状态去前台
-  }, (error, committed, snapshot) => {
-    if (error) {
-      alert("⚠️ 开奖数据同步失败，请重试！");
-      return;
-    }
-    if (committed) {
-      // 事务成功，本地更新状态并渲染
-      state = snapshot.val();
-      renderRoundTabs();
-      renderPublicView();
-      updateStats();
-      renderFinalSummaryPanel();
-      updateWinnerBannerUI();
-
-      // 3.8秒后清理 PK 组区域，让界面恢复整洁
-      setTimeout(() => {
-        db.ref('tournament_state').once('value', (snap) => {
-          const latest = snap.val();
-          if (!latest) return;
-          if (!latest.activeGroupIds || latest.activeGroupIds.length === 0) {
-            state = latest;
-            renderPublicView();
-            return;
-          }
-          latest.activeGroupIds = [];
-          latest.activeGroupMembers = [];
-          latest.pkStage = 'voting';
-          latest.triggerNumber = null;
-          latest.settled = false;
-          db.ref('tournament_state').set(latest);
-        });
-      }, 3800);
-    }
-  });
-}
 
     function updatePublicOverlayState() {
       const mask = document.getElementById('publicOverlayMask');
@@ -935,20 +929,20 @@
 
       const passedContainer = document.getElementById('passedListContainer');
       
-     let passedList = list.filter(c => c.status === 'pass');
-if (state.passHistory) {
-  state.passHistory.forEach(hist => {
-    if (!passedList.some(c => String(c.id) === String(hist.id))) {
-      passedList.push(hist);
-    }
-  });
-}
-// 🔥 新增：按 POLL #N 排序
-passedList.sort((a, b) => {
-  const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-  const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-  return numA - numB;
-});
+      let passedList = list.filter(c => c.status === 'pass');
+      if (state.passHistory) {
+        state.passHistory.forEach(hist => {
+          if (!passedList.some(c => String(c.id) === String(hist.id))) {
+            passedList.push(hist);
+          }
+        });
+      }
+      // 🔥 新增：按 POLL #N 排序
+      passedList.sort((a, b) => {
+        const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
+        const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
+        return numA - numB;
+      });
 
       if (passedList.length === 0) {
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${lang.noPassed}</span>`;
