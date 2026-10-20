@@ -159,7 +159,7 @@
         <div class="flex items-center space-x-2 mb-2">
           <span class="text-lg">🏆</span>
           <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">本轮晋级区</h2>
-          <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0人</span>
+          <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
         <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
       </div>
@@ -214,14 +214,14 @@
         <div id="adminViewContainer"></div>
       </div>
 
-      <!-- 后台淘汰区 (可撤回) -->
+      <!-- 后台淘汰区 (无“人”字，仅显示数值) -->
       <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[400px] flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center space-x-1.5">
             <span class="text-sm">❌</span>
             <h3 class="text-xs font-bold text-slate-400">淘汰区 (新至旧)</h3>
           </div>
-          <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0人</span>
+          <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
         </div>
         <div id="adminOutListContainer" class="space-y-4 flex-1 overflow-y-auto no-scrollbar max-h-[600px] pr-1"></div>
       </div>
@@ -293,7 +293,11 @@
         eliminatedInRound: "第 {r} 轮淘汰",
         tooltipTitle: "当前模式规则与后台操作指南",
         mode1FlowAdmin: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 规则：冠军 1 人，亚军 1 人，季军 1 人</div><b>后台推进操作流程：</b><br>1. <b>普通轮次</b>：勾选多位买家【晋级】至下一轮，晋级区需留至少 3 人才能继续推进。<br>2. <b>季军争夺战 (3选1)</b>：点击【🥉 设为季军】，系统自动弹出恭喜海报并将剩下 2 人推进至决战。<br>3. <b>冠亚军终极决战 (2选1)</b>：点击【👑 设为冠军】，另一位买家将自动定为【🥈 亚军】。",
-        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 规则：冠军 1 人，亚军 1 人，季军 1 人，安慰奖 {n} 人</div><b>后台推进操作流程：</b><br>1. <b>防错校验</b>：晋级区至少需要选满 ({n} + 3) 人才能开启后续环节。<br>2. <b>安慰奖环节</b>：在选拔池中点击【🎁 设为安慰奖】选满 {n} 人，系统自动推进至冠亚季环节。<br>3. <b>冠亚季环节</b>：余下 3 人自动进行季军与冠亚军决战。"
+        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 规则：冠军 1 人，亚军 1 人，季军 1 人，安慰奖 {n} 人</div><b>后台推进操作流程：</b><br>1. <b>防错校验</b>：晋级区至少需要选满 ({n} + 3) 人才能开启后续环节。<br>2. <b>安慰奖环节</b>：在选拔池中点击【🎁 设为安慰奖】选满 {n} 人，系统自动推进至冠亚季环节。<br>3. <b>冠亚季环节</b>：余下 3 人自动进行季军与冠亚军决战。",
+        rankConsolation: "🎁 安慰奖",
+        rankThird: "🥉 季军",
+        rankChampion: "👑 冠军",
+        rankRunnerUp: "🥈 亚军"
       },
       en: {
         adminTitle: "Mochiishop Monthly Draw - Admin Console",
@@ -342,7 +346,11 @@
         eliminatedInRound: "Eliminated in Round {r}",
         tooltipTitle: "Mode Rules & Admin Instructions",
         mode1FlowAdmin: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place</div><b>Admin Process:</b><br>1. <b>Normal Rounds</b>: Pick qualified buyers to advance (min 3 buyers required).<br>2. <b>3rd Place Battle (3 to 1)</b>: Click [Set 3rd Place] to auto-advance remaining 2.<br>3. <b>Final Showdown (2 to 1)</b>: Click [Set Champion], unpicked becomes Runner-up.",
-        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place, {n} Consolation Winners</div><b>Admin Process:</b><br>1. <b>Validation</b>: Minimum ({n} + 3) candidates required in passed area.<br>2. <b>Consolation Phase</b>: Pick {n} consolation winners to auto-advance remaining 3.<br>3. <b>Podium Phase</b>: Remaining 3 battle for 3rd place and Champion."
+        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Rules: 1 Champion, 1 Runner-up, 1 3rd Place, {n} Consolation Winners</div><b>Admin Process:</b><br>1. <b>Validation</b>: Minimum ({n} + 3) candidates required in passed area.<br>2. <b>Consolation Phase</b>: Pick {n} consolation winners to auto-advance remaining 3.<br>3. <b>Podium Phase</b>: Remaining 3 battle for 3rd place and Champion.",
+        rankConsolation: "🎁 Consolation",
+        rankThird: "🥉 3rd Place",
+        rankChampion: "👑 Champion",
+        rankRunnerUp: "🥈 Runner-up"
       },
       ms: {
         adminTitle: "Mochiishop Cabutan Bulanan - Konsol Kawalan",
@@ -391,7 +399,11 @@
         eliminatedInRound: "Tersingkir Pusingan {r}",
         tooltipTitle: "Peraturan Mod & Panduan Pentadbir",
         mode1FlowAdmin: "<div class='bg-amber-500/10 border border-amber-500/30 p-2 rounded-lg text-amber-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3</div><b>Aliran Pentadbir:</b><br>1. <b>Pusingan Biasa</b>: Pilih calon layak (sekurang-kurangnya 3 calon diperlukan).<br>2. <b>Perebutan Tempat Ke-3 (3 ke 1)</b>: Pilih [Tempat Ke-3] untuk mara ke Pusingan Akhir.<br>3. <b>Pusingan Akhir (2 ke 1)</b>: Pilih [Juara], calon satu lagi menjadi Naib Juara.",
-        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3, {n} Saguhati</div><b>Aliran Pentadbir:</b><br>1. <b>Pengesahan</b>: Sekurang-kurangnya ({n} + 3) calon di kawasan layak.<br>2. <b>Fasa Saguhati</b>: Pilih {n} saguhati untuk mara secara automatik.<br>3. <b>Fasa 3 Teratas</b>: Baki 3 calon merebut Tempat Ke-3 dan Juara."
+        mode2FlowAdmin: "<div class='bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg text-emerald-300 font-bold mb-2'>🏆 Peraturan: 1 Juara, 1 Naib Juara, 1 Tempat Ke-3, {n} Saguhati</div><b>Aliran Pentadbir:</b><br>1. <b>Pengesahan</b>: Sekurang-kurangnya ({n} + 3) calon di kawasan layak.<br>2. <b>Fasa Saguhati</b>: Pilih {n} saguhati untuk mara secara automatik.<br>3. <b>Fasa 3 Teratas</b>: Baki 3 calon merebut Tempat Ke-3 dan Juara.",
+        rankConsolation: "🎁 Saguhati",
+        rankThird: "🥉 Tempat Ke-3",
+        rankChampion: "👑 Juara",
+        rankRunnerUp: "🥈 Naib Juara"
       }
     };
 
@@ -426,14 +438,14 @@
       for (let r of radios) { if (r.checked) selected = r.value; }
 
       const mode2Cons = parseInt(document.getElementById('mode2ConsolationCount').value, 10) || 10;
-      const useDefaultPick = document.getElementById('useDefaultPickCountCheckbox').checked;
+      const useDefaultPickCount = document.getElementById('useDefaultPickCountCheckbox').checked;
       const defaultPickCount = parseInt(document.getElementById('defaultPickCountInput').value, 10) || 4;
 
       if (!state.modeConfig) state.modeConfig = {};
       state.modeConfig.enabled = isEnabled;
       state.modeConfig.selectedMode = selected;
       state.modeConfig.mode2ConsolationCount = mode2Cons;
-      state.modeConfig.useDefaultPickCount = useDefaultPick;
+      state.modeConfig.useDefaultPickCount = useDefaultPickCount;
       state.modeConfig.defaultPickCount = defaultPickCount;
 
       saveState();
@@ -594,6 +606,7 @@
             c.status = 'pending';
             delete c.eliminatedRoundIndex;
             delete c.rankTitle;
+            delete c.rankKey;
           }
         });
       });
@@ -639,11 +652,12 @@
         if (selectedMode === 'mode2' && activeRound.isConsolationStage) {
           if (newStatus === 'pass') {
             target.rankTitle = "🎁 安慰奖";
-            const consolationsPicked = totalCandidates.filter(c => c.rankTitle === "🎁 安慰奖");
+            target.rankKey = "rankConsolation";
+            const consolationsPicked = totalCandidates.filter(c => c.rankKey === "rankConsolation");
             const targetConsolationTotal = state.modeConfig.mode2ConsolationCount || 10;
 
             if (consolationsPicked.length >= targetConsolationTotal) {
-              const remainingThree = totalCandidates.filter(c => c.rankTitle !== "🎁 安慰奖");
+              const remainingThree = totalCandidates.filter(c => c.rankKey !== "rankConsolation");
 
               const stageLabel = "🏆 冠亚季争夺战 (剩3人)";
               const podiumCandidates = remainingThree.map((c, idx) => ({
@@ -672,6 +686,7 @@
         // 🌟 模式 1 / 模式 2 衔接的季军战 (剩 3 人)
         if (totalCandidates.length === 3 && newStatus === 'pass' && !activeRound.isConsolationStage) {
           target.rankTitle = "🥉 季军";
+          target.rankKey = "rankThird";
           const remainingTwo = totalCandidates.filter(c => c.id !== target.id);
 
           state.latestEvent = {
@@ -706,12 +721,14 @@
         // 🌟 冠亚军决战 (剩 2 人)
         if (totalCandidates.length === 2 && newStatus === 'pass' && !activeRound.isConsolationStage) {
           target.rankTitle = "👑 冠军";
+          target.rankKey = "rankChampion";
           
           const runnerUpObj = totalCandidates.find(c => c.id !== target.id);
           let runnerUpName = "未知买家";
           if (runnerUpObj) {
             runnerUpObj.status = 'pass';
             runnerUpObj.rankTitle = "🥈 亚军";
+            runnerUpObj.rankKey = "rankRunnerUp";
             runnerUpName = runnerUpObj.name;
           }
 
@@ -758,7 +775,17 @@
 
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
-      if (r && r.stageName) return r.stageName;
+      if (!r) return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
+      
+      // 🌟 轮次卡片多语言平滑适配
+      if (r.isConsolationStage) {
+        return `🎁 Consolation (${r.candidates ? r.candidates.length : 0})`;
+      } else if (r.stageName && r.stageName.includes("冠亚军")) {
+        return `👑 Final (2)`;
+      } else if (r.stageName && r.stageName.includes("冠亚季")) {
+        return `🏆 Podium (3)`;
+      }
+
       return `${i18n[currentLang].roundPrefix}${idx + 1}${i18n[currentLang].roundSuffix}`;
     }
 
@@ -797,7 +824,6 @@
       }
     }
 
-    // 🌟 核心防错升级：模式1（少于3人报错），模式2（少于 N+3 人报错）
     function createNewRound() {
       const currentRound = state.rounds[currentRoundIndex];
       const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
@@ -812,13 +838,11 @@
         return;
       }
 
-      // 🛡️ 模式 1 防错拦截：少于 3 人报错
       if (isModeEnabled && selectedMode === 'mode1' && passedCandidates.length < 3) {
         alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passedCandidates.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
         return;
       }
 
-      // 🛡️ 模式 2 防错拦截：少于 (N + 3) 人报错
       if (isModeEnabled && selectedMode === 'mode2' && passedCandidates.length < (N + 3)) {
         alert(`⚠️ 【模式 2 (3+安慰奖) 规则限制】\n\n在包含 ${N} 名安慰奖模式下，晋级区人数必须至少包含 N + 3 人（即至少 ${N + 3} 人）才能开启后续安慰奖与冠亚季环节！\n\n当前仅选择了 ${passedCandidates.length} 位晋级买家，缺少 ${ (N + 3) - passedCandidates.length } 人，请继续挑选晋级买家后再点击推进。`);
         return;
@@ -847,7 +871,6 @@
       let stageLabel = `第 ${nextRoundNumber} 轮 (${passedCandidates.length}人角逐)`;
       let isConsolationStage = false;
 
-      // 如果模式 2 刚好达到了 N + 3 人，直接进入安慰奖遴选阶段
       if (isModeEnabled && selectedMode === 'mode2' && passedCandidates.length === (N + 3)) {
         stageLabel = `🎁 安慰奖遴选阶段 (${passedCandidates.length}人角逐${N}名安慰奖)`;
         isConsolationStage = true;
@@ -899,14 +922,23 @@
       renderAdminView();
     }
 
+    // 🌟 修复后台【晋级区】计算，精准统计当前轮次 status === 'pass' 人数
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
 
-      document.getElementById('statTotalCandidates').innerText = candidates.length;
-      document.getElementById('statPassedCount').innerText = candidates.filter(c => c.status === 'pass').length;
-      document.getElementById('statPendingCount').innerText = candidates.filter(c => c.status === 'pending').length;
+      const totalCount = candidates.length;
+      const passedCount = candidates.filter(c => c.status === 'pass').length;
+      const pendingCount = candidates.filter(c => c.status === 'pending').length;
+
+      document.getElementById('statTotalCandidates').innerText = totalCount;
+      document.getElementById('statPassedCount').innerText = passedCount;
+      document.getElementById('statPendingCount').innerText = pendingCount;
       
+      // 更新晋级区右上角计数 badge
+      const passedBadge = document.getElementById('passedBadgeCount');
+      if (passedBadge) passedBadge.innerText = passedCount;
+
       let totalOutCount = 0;
       (state.rounds || []).forEach(r => {
         totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length;
@@ -923,8 +955,8 @@
 
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
-      const isMode1ThreeLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 3;
-      const isMode1TwoLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 2;
+      const isMode1ThreeLeft = isModeEnabled && activeRound.candidates.length === 3;
+      const isMode1TwoLeft = isModeEnabled && activeRound.candidates.length === 2;
 
       const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
 
@@ -933,7 +965,7 @@
       const bannerSub = document.getElementById('specialRoundBannerSub');
 
       if (isConsolationStage) {
-        const consolationsPicked = activeRound.candidates.filter(c => c.rankTitle === "🎁 安慰奖").length;
+        const consolationsPicked = activeRound.candidates.filter(c => c.rankKey === "rankConsolation").length;
         const totalTarget = state.modeConfig.mode2ConsolationCount || 10;
         banner.classList.remove('hidden');
         bannerTitle.innerText = i18n[currentLang].bannerConsolationTitle.replace('{need}', totalTarget - consolationsPicked).replace('{done}', consolationsPicked).replace('{total}', totalTarget);
@@ -957,7 +989,8 @@
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${i18n[currentLang].noPassed}</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => {
-          const rankText = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${c.rankTitle}</span>` : '';
+          const displayRank = c.rankKey ? i18n[currentLang][c.rankKey] : c.rankTitle;
+          const rankText = displayRank ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${displayRank}</span>` : '';
           return '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
             rankText +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
@@ -985,6 +1018,7 @@
           let passBtnLabel = i18n[currentLang].btnPass;
           let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
 
+          // 🌟 核心逻辑修正：模式2在冠亚季阶段也直接显示【季军 - 冠军】按钮
           if (isConsolationStage) {
             passBtnLabel = i18n[currentLang].btnPassConsolation;
             passBtnClass = "bg-emerald-600 text-white font-bold hover:bg-emerald-500";
@@ -1031,7 +1065,8 @@
         });
       });
 
-      document.getElementById('outBadgeCount').innerText = allOutCandidates.length + "人";
+      // 🌟 去除“人”字后缀，仅保留数值计算
+      document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
 
       if (allOutCandidates.length === 0) {
         outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`;
@@ -1067,7 +1102,7 @@
           <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800">
             <div class="text-[11px] font-bold text-rose-400/90 mb-2 border-b border-slate-800 pb-1 flex justify-between items-center">
               <span>❌ ${groupTitle}</span>
-              <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}人</span>
+              <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}</span>
             </div>
             <div class="grid grid-cols-1 gap-1.5">
               ${groupCardsHtml}
