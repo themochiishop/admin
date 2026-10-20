@@ -2,17 +2,15 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <!-- 核心视口自适应设置 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 每月抽奖 - 实时晋级大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 📸 网页一键截图库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <!-- 🔥 引入 Firebase 8.x SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <!-- 🔥 引入 Firebase 8.x SDK (包含 App, Database, Auth) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -154,6 +152,7 @@
             <span class="text-lg sm:text-xl animate-bounce">🔥</span>
             <h3 class="text-xs sm:text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
           </div>
+          <span id="publicPollBadge" class="hidden text-xs bg-amber-500 text-slate-950 px-2 py-0.5 rounded font-black">POLL #1</span>
         </div>
         <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3"></div>
       </div>
@@ -247,9 +246,6 @@
   </footer>
 
   <script>
-    // ----------------------------------------------------
-    // 🔥 Firebase 云端初始化设置 (你的真实配置)
-    // ----------------------------------------------------
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -264,6 +260,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    firebase.auth().signInAnonymously().catch((error) => {
+      console.error("匿名登录失败:", error);
+    });
+
     let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
     let lastSeenEventTime = 0; 
@@ -276,11 +276,6 @@
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
       rounds: [{ roundName: "第 1 轮", candidates: [] }] 
     };
-
-firebase.auth().signInAnonymously().catch((error) => {
-  console.error("匿名登录失败:", error);
-});
-    
 
     const i18n = {
       zh: {
@@ -414,6 +409,10 @@ firebase.auth().signInAnonymously().catch((error) => {
         noCandidates: "Menyelaraskan senarai calon...",
         allDone: "Semua calon telah diproses",
         noOut: "Tiada calon tersingkir",
+        modalCongratsHeader: "🎉 Tahniah kepada Pemenang!",
+        finalTitle: "👑 Pengumuman Pemenang!",
+        autoCloseText: "Kembali secara automatik dalam",
+        autoCloseSuffix: "saat...",
         modePrefix: "Mod: ",
         mode1: "Mod Tiga Teratas",
         mode2: "3 + Saguhati",
@@ -444,7 +443,6 @@ firebase.auth().signInAnonymously().catch((error) => {
     };
 
     window.onload = function() {
-      // 实时监听 Firebase 云端数据库变动
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -500,15 +498,12 @@ firebase.auth().signInAnonymously().catch((error) => {
       const searchInp = document.getElementById('searchInput');
       if (searchInp) searchInp.placeholder = i18n[lang].searchPlaceholder;
 
-      const h1 = document.getElementById('publicHeaderTitle');
-      if (h1) {
-        h1.innerText = i18n[currentLang].publicTitle;
-      }
-
+      updatePublicHeaderTitle();
       renderRoundTabs();
       renderPublicView();
       updateStats();
       updatePublicModeUI();
+      updateWinnerBannerUI();
       renderFinalSummaryPanel();
     }
 
@@ -650,69 +645,6 @@ firebase.auth().signInAnonymously().catch((error) => {
         collapsibleSection.classList.add('hidden');
         toggleBtnText.innerText = i18n[currentLang].expandText;
         isProcessAreaCollapsed = false;
-      }
-    }
-
-    function generateSummaryCanvas() {
-      const panel = document.getElementById('finalTournamentSummaryPanel');
-      if (!panel) return Promise.reject("Panel not found");
-
-      return html2canvas(panel, {
-        scale: 3,
-        backgroundColor: '#0f172a',
-        useCORS: true,
-        logging: false,
-        foreignObjectRendering: false,
-        onclone: (clonedDoc) => {
-          const clonedPanel = clonedDoc.getElementById('finalTournamentSummaryPanel');
-          if (clonedPanel) {
-            clonedPanel.style.height = 'auto';
-            clonedPanel.style.maxHeight = 'none';
-            clonedPanel.style.paddingBottom = '50px';
-            clonedPanel.style.overflow = 'visible';
-
-            const textNodes = clonedPanel.querySelectorAll('div, span, p');
-            textNodes.forEach(node => {
-              node.style.overflow = 'visible';
-              node.style.lineHeight = '1.4';
-            });
-          }
-        }
-      });
-    }
-
-    function saveSummaryAsImage() {
-      generateSummaryCanvas().then(canvas => {
-        const link = document.createElement('a');
-        link.download = `Mochiishop_Tournament_Summary_${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      }).catch(err => {
-        alert("图片生成失败，请重试！");
-      });
-    }
-
-    async function shareSummaryImage() {
-      try {
-        const canvas = await generateSummaryCanvas();
-        canvas.toBlob(async (blob) => {
-          if (!blob) return;
-
-          const file = new File([blob], `Mochiishop_Tournament_Summary.png`, { type: 'image/png' });
-
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: i18n[currentLang].finalSummaryTitle,
-              text: i18n[currentLang].finalSummarySub,
-              files: [file]
-            });
-          } else {
-            saveSummaryAsImage();
-            alert("✅ 榜单高精图片已为您自动保存！链接已复制到剪贴板，快去发给买家或社交媒体分享吧！");
-          }
-        }, 'image/png');
-      } catch (e) {
-        saveSummaryAsImage();
       }
     }
 
@@ -864,9 +796,17 @@ firebase.auth().signInAnonymously().catch((error) => {
 
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
       const publicGroupGrid = document.getElementById('publicActiveGroupGrid');
+      const publicPollBadge = document.getElementById('publicPollBadge');
       
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
         publicGroupContainer.classList.remove('hidden');
+        if (state.currentPollNumber) {
+          publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
+          publicPollBadge.classList.remove('hidden');
+        } else {
+          publicPollBadge.classList.add('hidden');
+        }
+
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
           <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-2.5 sm:p-3 shadow text-center">
@@ -888,7 +828,9 @@ firebase.auth().signInAnonymously().catch((error) => {
         passedContainer.innerHTML = passedList.map(c => {
           const displayRank = c.rankKey ? lang[c.rankKey] : c.rankTitle;
           const rankTag = displayRank ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${displayRank}</span>` : '';
+          const pollBadge = c.pollLabel ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] shadow-sm">${escapeHtml(c.pollLabel)}</span>` : '';
           return '<div class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-1.5 sm:space-x-2 text-xs shadow-sm">' +
+            pollBadge +
             rankTag +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
             '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px]">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</span>' +
