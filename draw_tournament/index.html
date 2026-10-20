@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 核心视口自适应设置 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 每月抽奖 - 实时晋级大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 📸 网页一键截图库 -->
@@ -14,51 +15,58 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-16">
 
-  <!-- 🌟 全屏豪华恭喜弹窗 -->
-  <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-500">
-    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
-      <div class="absolute -top-24 -left-24 w-56 h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-24 -right-24 w-56 h-56 bg-emerald-500/30 rounded-full blur-3xl"></div>
+  <!-- 🌟 全屏豪华恭喜弹窗 (自适应多端居中与 padding) -->
+  <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
+    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
+      <div class="absolute -top-24 -left-24 w-40 h-40 sm:w-56 sm:h-56 bg-amber-500/30 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-24 -right-24 w-40 h-40 sm:w-56 sm:h-56 bg-emerald-500/30 rounded-full blur-3xl"></div>
 
-      <div class="text-7xl mb-3 animate-bounce">👑</div>
-      <h2 id="congratBadge" class="text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
-      <h3 id="congratModalTitle" class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-4" data-i18n="modalCongratsHeader">
+      <div class="text-5xl sm:text-7xl mb-2 sm:mb-3 animate-bounce">👑</div>
+      <h2 id="congratBadge" class="text-[10px] sm:text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
+      <h3 id="congratModalTitle" class="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3 sm:mb-4" data-i18n="modalCongratsHeader">
         热烈祝贺！成功获得荣誉！
       </h3>
 
-      <div id="congratModalBody" class="my-5 space-y-3"></div>
+      <div id="congratModalBody" class="my-3 sm:my-5 space-y-2 sm:space-y-3"></div>
 
-      <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-5 py-2 text-xs text-slate-300 shadow mt-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-        <span><span data-i18n="autoCloseText">将在</span> <span id="congratCountdown" class="text-amber-400 font-extrabold text-base">10</span> <span data-i18n="autoCloseSuffix">秒后自动切回大屏榜单...</span></span>
+      <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-4 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs text-slate-300 shadow mt-2">
+        <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+        <span><span data-i18n="autoCloseText">将在</span> <span id="congratCountdown" class="text-amber-400 font-extrabold text-sm sm:text-base">10</span> <span data-i18n="autoCloseSuffix">秒后自动切回大屏榜单...</span></span>
       </div>
     </div>
   </div>
 
-  <!-- 顶部 Header -->
+  <!-- 顶部 Header (手机端自动换行缩放，电脑端保持一行) -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
-    <div class="max-w-[1600px] mx-auto px-4 py-3 flex justify-between items-center">
-      <div class="flex items-center space-x-3">
-        <span class="text-2xl">🏆</span>
-        <div>
-          <h1 id="publicHeaderTitle" class="text-xl font-bold text-amber-400">Mochiishop 每月抽奖晋级榜</h1>
-          <p class="text-xs text-slate-400" data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</p>
+    <div class="max-w-[1600px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row justify-between items-center gap-2.5 sm:gap-0">
+      <div class="flex items-center space-x-2.5 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl sm:text-2xl">🏆</span>
+          <div>
+            <h1 id="publicHeaderTitle" class="text-base sm:text-xl font-bold text-amber-400 leading-tight">Mochiishop 每月抽奖晋级榜</h1>
+            <p class="text-[10px] sm:text-xs text-slate-400" data-i18n="publicSubTitle">直播实时同步 · 买家公开公示大屏</p>
+          </div>
+        </div>
+        
+        <!-- 移动端显示的实时同步圆点 -->
+        <div class="flex sm:hidden items-center space-x-1 text-[10px] text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
         </div>
       </div>
       
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
         <!-- 当前生效模式徽章 -->
         <div class="relative group cursor-pointer">
-          <span id="publicModeBadge" class="text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
+          <span id="publicModeBadge" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60">
             模式: 3+安慰奖
           </span>
 
-          <div class="absolute right-0 top-full mt-2 w-80 p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
-            <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-sm">
+          <div class="absolute right-0 top-full mt-2 w-72 sm:w-80 p-3 sm:p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-xs">
+            <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-xs sm:text-sm">
               <span>📋</span>
               <span data-i18n="tooltipTitle">当前模式规则与晋级流程</span>
             </div>
-            <div id="modeTooltipContent" class="space-y-2 text-slate-300 text-[11px] leading-relaxed">
+            <div id="modeTooltipContent" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">
               模式规则加载中...
             </div>
           </div>
@@ -70,15 +78,15 @@
         </div>
 
         <!-- 🌐 语言切换选择器 -->
-        <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
-          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
-            <span>🇨🇳</span> <span class="text-[11px]">ZH</span>
+        <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded-lg">
+          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1">
+            <span>🇨🇳</span> <span class="text-[10px] sm:text-[11px]">ZH</span>
           </button>
-          <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
-            <span>🇬🇧</span> <span class="text-[11px]">EN</span>
+          <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1">
+            <span>🇬🇧</span> <span class="text-[10px] sm:text-[11px]">EN</span>
           </button>
-          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1">
-            <span>🇲🇾</span> <span class="text-[11px]">MS</span>
+          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1">
+            <span>🇲🇾</span> <span class="text-[10px] sm:text-[11px]">MS</span>
           </button>
         </div>
       </div>
@@ -86,134 +94,136 @@
   </header>
 
   <!-- 主体区域 -->
-  <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
+  <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full">
 
     <!-- 🌟 全场终极获奖结果详细公示大面板 -->
-    <div id="finalTournamentSummaryPanel" class="mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-6 pb-12 shadow-2xl relative overflow-hidden">
-      <div class="text-center mb-6 pb-3 border-b border-amber-500/30">
-        <h2 class="text-2xl font-black text-amber-400 flex items-center justify-center space-x-2">
+    <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden">
+      <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
+        <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
           <span>🏆</span>
           <span data-i18n="finalSummaryTitle">全场抽奖比赛 - 终极荣誉汇总榜</span>
           <span>🏆</span>
         </h2>
-        <p class="text-xs text-slate-400 mt-1" data-i18n="finalSummarySub">祝贺所有获奖买家！感谢大家的参与与支持！</p>
+        <p class="text-[11px] sm:text-xs text-slate-400 mt-1" data-i18n="finalSummarySub">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
 
-      <!-- 👑 冠亚季荣誉卡片（位次：亚军在左，冠军居中，季军在右） -->
-      <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end"></div>
+      <!-- 👑 冠亚季荣誉卡片（手机端垂直单列居中，平板/电脑端 3 列） -->
+      <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end"></div>
 
       <!-- 🎁 安慰奖总结专区 -->
-      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-4 pb-8 rounded-xl border border-emerald-500/40">
+      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-xl border border-emerald-500/40">
         <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
-          <span class="text-lg">🎁</span>
-          <h3 class="text-sm font-bold text-emerald-400" data-i18n="consolationSummaryTitle">安慰奖得主全名单</h3>
-          <span id="consolationTotalBadge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+          <span class="text-base sm:text-lg">🎁</span>
+          <h3 class="text-xs sm:text-sm font-bold text-emerald-400" data-i18n="consolationSummaryTitle">安慰奖得主全名单</h3>
+          <span id="consolationTotalBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
-        <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5"></div>
+        <!-- 安慰奖网格自适应：手机 2 列 -> 平板 3 列 -> 电脑 5 列 -->
+        <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
       </div>
     </div>
 
     <!-- 🌟 多语言实时过程提示横幅 -->
-    <div id="winnerAnnouncementBanner" class="mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
-      <div id="winnerBannerContent" class="text-lg font-black text-amber-300 tracking-wide"></div>
+    <div id="winnerAnnouncementBanner" class="mb-4 sm:mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
+      <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
     </div>
 
     <!-- 📂 折叠控制器 -->
     <div id="processSectionToggleBar" class="hidden mb-4 flex justify-between items-center bg-slate-800/60 p-2.5 rounded-xl border border-slate-700">
-      <span class="text-xs text-slate-400 font-bold" data-i18n="processSectionLabel">📋 抽奖比赛全程选拔细节记录</span>
-      <button onclick="toggleProcessArea()" class="text-xs text-amber-400 hover:underline font-bold flex items-center space-x-1">
+      <span class="text-[11px] sm:text-xs text-slate-400 font-bold" data-i18n="processSectionLabel">📋 抽奖比赛全程选拔细节记录</span>
+      <button onclick="toggleProcessArea()" class="text-[11px] sm:text-xs text-amber-400 hover:underline font-bold flex items-center space-x-1">
         <span id="processToggleBtnText">展开选拔过程 ▼</span>
       </button>
     </div>
 
     <!-- 🔽 可折叠的过程区域包裹层 -->
-    <div id="collapsibleProcessSection" class="space-y-6 transition-all duration-300">
+    <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300">
       
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3 gap-4">
-        <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar"></div>
-        <div class="relative flex-shrink-0">
-          <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍 名字或订单号..." class="w-36 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-b border-slate-800 pb-3 gap-2.5 sm:gap-4">
+        <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
+        <div class="relative flex-shrink-0 w-full sm:w-auto">
+          <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="🔍 名字或订单号..." class="w-full sm:w-40 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
         </div>
       </div>
 
       <!-- 🔥 Shopee 直播间盲抽展示区 -->
-      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 shadow-xl">
+      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xl">
         <div class="flex justify-between items-center mb-3">
           <div class="flex items-center space-x-2">
-            <span class="text-xl animate-bounce">🔥</span>
-            <h3 class="text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
+            <span class="text-lg sm:text-xl animate-bounce">🔥</span>
+            <h3 class="text-xs sm:text-sm font-bold text-amber-400" data-i18n="shopeeGroupTitle">Shopee 直播间正在盲抽投票中！(快去直播间为您支持的买家投票)</h3>
           </div>
         </div>
-        <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
+        <!-- 盲抽网格自适应：手机 2 列 -> 平板 3 列 -> 电脑 5 列 -->
+        <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3"></div>
       </div>
 
-      <!-- 统计卡片区 -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-          <span class="text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
-          <span id="statTotalCandidates" class="text-2xl font-black text-blue-400">0</span>
+      <!-- 统计卡片区自适应：手机 2 列 -> 平板/电脑 4 列 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700">
+          <span class="text-[10px] sm:text-xs text-slate-400 block" data-i18n="statTotal">本轮参选人数</span>
+          <span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span>
         </div>
-        <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-          <span class="text-xs text-slate-400 block" data-i18n="statPassed">本轮已晋级</span>
-          <span id="statPassedCount" class="text-2xl font-black text-emerald-400">0</span>
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700">
+          <span class="text-[10px] sm:text-xs text-slate-400 block" data-i18n="statPassed">本轮已晋级</span>
+          <span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span>
         </div>
-        <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-          <span class="text-xs text-slate-400 block" data-i18n="statPending">本轮待PK人数</span>
-          <span id="statPendingCount" class="text-2xl font-black text-amber-400">0</span>
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700">
+          <span class="text-[10px] sm:text-xs text-slate-400 block" data-i18n="statPending">本轮待PK人数</span>
+          <span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span>
         </div>
-        <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
-          <span class="text-xs text-slate-400 block" data-i18n="statOut">本轮已淘汰人数</span>
-          <span id="statOutCount" class="text-2xl font-black text-slate-400">0</span>
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700">
+          <span class="text-[10px] sm:text-xs text-slate-400 block" data-i18n="statOut">本轮已淘汰人数</span>
+          <span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span>
         </div>
       </div>
 
       <!-- 已晋级名单 与 前台已胜出安慰奖面板 -->
       <div class="space-y-4">
-        <div class="bg-slate-800/90 p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-emerald-950/20">
+        <div class="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4 shadow-lg shadow-emerald-950/20">
           <div class="flex-1 w-full">
             <div class="flex items-center space-x-2 mb-2">
-              <span class="text-lg">🏆</span>
-              <h2 id="passedTitleText" class="text-md font-bold text-emerald-400">已晋级名单</h2>
-              <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+              <span class="text-base sm:text-lg">🏆</span>
+              <h2 id="passedTitleText" class="text-xs sm:text-md font-bold text-emerald-400">已晋级名单</h2>
+              <span id="passedBadgeCount" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
             </div>
             <div id="passedListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
           </div>
         </div>
 
         <!-- 🎁 前台专门显示的【已胜出安慰奖名单】框架面板 -->
-        <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 rounded-xl border border-emerald-500/40 shadow-lg">
+        <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/40 shadow-lg">
           <div class="flex items-center space-x-2 mb-2">
-            <span class="text-lg">🎁</span>
-            <h2 class="text-md font-bold text-emerald-300" data-i18n="publicConsolationTitle">已胜出安慰奖名单</h2>
-            <span id="publicConsolationCountBadge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+            <span class="text-base sm:text-lg">🎁</span>
+            <h2 class="text-xs sm:text-md font-bold text-emerald-300" data-i18n="publicConsolationTitle">已胜出安慰奖名单</h2>
+            <span id="publicConsolationCountBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
           </div>
           <div id="publicConsolationListContainer" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar pr-1"></div>
         </div>
       </div>
 
-      <!-- 名单池 (左) & 淘汰区极简模式 (右) -->
-      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-6 border border-slate-700 min-h-[160px]">
-          <div class="flex items-center space-x-2 mb-4 border-b border-slate-700/80 pb-3">
-            <span class="text-lg">⚡</span>
-            <h2 id="pendingTitleText" class="text-md font-bold text-amber-400">待PK买家名单</h2>
-            <span class="text-xs text-slate-300 ml-2">
-              <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span>
+      <!-- 名单池 (左) & 淘汰区极简模式 (右) 自适应栅格: 手机单列上下排，电脑端大屏 4:1 并排 -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 min-h-[160px]">
+          <div class="flex items-center space-x-2 mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
+            <span class="text-base sm:text-lg">⚡</span>
+            <h2 id="pendingTitleText" class="text-xs sm:text-md font-bold text-amber-400">待PK买家名单</h2>
+            <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">
+              <span data-i18n="totalPrefix">共</span> <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> <span data-i18n="pendingSuffix">人待角逐</span>
             </span>
           </div>
           <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
         </div>
 
-        <!-- 前台 1 列极简淘汰区 -->
-        <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-4 border border-slate-800 min-h-[300px] flex flex-col">
-          <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <!-- 前台淘汰区 -->
+        <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-3.5 sm:p-4 border border-slate-800 min-h-[200px] sm:min-h-[300px] flex flex-col">
+          <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-800 pb-2.5 sm:pb-3">
             <div class="flex items-center space-x-1.5">
-              <span class="text-sm">❌</span>
+              <span class="text-xs sm:text-sm">❌</span>
               <h3 class="text-xs font-bold text-slate-400" data-i18n="outListTitle">淘汰区 (新至旧)</h3>
             </div>
             <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
           </div>
-          <div id="outListContainer" class="space-y-4 flex-1 overflow-y-auto no-scrollbar max-h-[600px] pr-1"></div>
+          <div id="outListContainer" class="space-y-3 sm:space-y-4 flex-1 overflow-y-auto no-scrollbar max-h-[400px] sm:max-h-[600px] pr-1"></div>
         </div>
       </div>
 
@@ -221,19 +231,19 @@
 
   </main>
 
-  <!-- 📍 终极荣誉汇总榜框架外的右下角悬浮按钮区 -->
-  <div id="floatingActionButtons" class="fixed bottom-5 right-5 z-40 hidden flex items-center space-x-2 bg-slate-950/90 p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
-    <button onclick="shareSummaryImage()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1.5">
+  <!-- 📍 终极荣誉汇总榜框架外的右下角悬浮按钮区 (移动端居中贴底) -->
+  <div id="floatingActionButtons" class="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 hidden flex items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
+    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
       <span>🔗</span>
       <span data-i18n="btnShare">分享结果</span>
     </button>
-    <button onclick="saveSummaryAsImage()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1.5">
+    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
       <span>💾</span>
       <span data-i18n="btnSaveImage">保存为图片</span>
     </button>
   </div>
 
-  <footer class="bg-slate-950 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+  <footer class="bg-slate-950 border-t border-slate-800 py-3 sm:py-4 text-center text-[10px] sm:text-xs text-slate-500">
     © Mochiishop Shopee Monthly Event. All rights reserved.
   </footer>
 
@@ -434,7 +444,7 @@
 
       ['zh', 'en', 'ms'].forEach(l => {
         const btn = document.getElementById(`langBtn-${l}`);
-        if (btn) btn.className = (l === lang) ? "px-2 py-1 text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-2 py-1 text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
+        if (btn) btn.className = (l === lang) ? "px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1 bg-amber-500 text-slate-950 font-bold" : "px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1 text-slate-400 hover:text-slate-100";
       });
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -580,28 +590,28 @@
       const lang = i18n[currentLang];
 
       podiumGrid.innerHTML = `
-        <!-- 🥈 亚军 (左侧) -->
-        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-5 pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
-          <span class="text-3xl block mb-1">🥈</span>
-          <span class="text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / ${lang.rankRunnerUp}</span>
-          <div class="text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
-          <div class="text-xs text-slate-400 font-mono mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
+        <!-- 🥈 亚军 -->
+        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
+          <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
+          <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / ${lang.rankRunnerUp}</span>
+          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || lang.noOrderNoText) : '-'}</div>
         </div>
 
-        <!-- 👑 冠军 (中间居中凸显) -->
-        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-6 pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 -mt-2">
-          <span class="text-5xl block mb-2 animate-bounce">👑</span>
-          <span class="text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / ${lang.rankChampion}</span>
-          <div class="text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
-          <div class="text-xs text-amber-200/90 font-mono mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
+        <!-- 👑 冠军 (手机端垂直居顶置顶) -->
+        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
+          <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
+          <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / ${lang.rankChampion}</span>
+          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
+          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || lang.noOrderNoText)}</div>
         </div>
 
-        <!-- 🥉 季军 (右侧) -->
-        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-5 pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
-          <span class="text-3xl block mb-1">🥉</span>
-          <span class="text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / ${lang.rankThird}</span>
-          <div class="text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
-          <div class="text-xs text-slate-400 font-mono mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || lang.noOrderNoText) : '-'}</div>
+        <!-- 🥉 季军 -->
+        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
+          <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
+          <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / ${lang.rankThird}</span>
+          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || lang.noOrderNoText) : '-'}</div>
         </div>
       `;
 
@@ -609,12 +619,12 @@
         consolationBox.classList.remove('hidden');
         consolationBadge.innerText = consolations.length;
         consolationGrid.innerHTML = consolations.map((c, i) => `
-          <div class="p-3 pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[72px]">
+          <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
             <div>
-              <span class="text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1} ${lang.consolationLabelTag}</span>
+              <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1} ${lang.consolationLabelTag}</span>
               <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
             </div>
-            <div class="text-[10px] text-slate-400 font-mono truncate mt-1 leading-normal">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
           </div>
         `).join('');
       } else {
@@ -730,11 +740,11 @@
 
       if (championName && runnerUpName) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerFinalText}</span><span class="text-white bg-amber-500/30 px-2.5 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300">${lang.bannerRunnerUpText}</span><span class="text-white bg-slate-700 px-2.5 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerFinalText}</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300">${lang.bannerRunnerUpText}</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
       } 
       else if (thirdPlaceName) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerThirdPlaceText}</span><span class="text-white bg-amber-600/30 px-3 py-1 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal ml-2">${lang.bannerFinalSub}</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">${lang.bannerThirdPlaceText}</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">${lang.bannerFinalSub}</span>`;
       } 
       else if (isModeEnabled && selectedMode === 'mode1' && activeRound.candidates && activeRound.candidates.length === 3) {
         banner.classList.remove('hidden');
@@ -751,20 +761,20 @@
 
       if (eventData.winnerNamesKey === 'third') {
         bodyContainer.innerHTML = `
-          <div class="bg-amber-950/80 p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
-            <span class="text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
-            <span class="text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
+          <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
+            <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
           </div>
         `;
       } else if (eventData.winnerNamesKey === 'final') {
         bodyContainer.innerHTML = `
-          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
-            <span class="text-base font-black text-amber-300 uppercase tracking-widest block mb-1">👑 冠军得主 / CHAMPION</span>
-            <span class="text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
+          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
+            <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
           </div>
-          <div class="bg-slate-800/90 p-3.5 rounded-xl border border-slate-600 text-center shadow">
-            <span class="text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
-            <span class="text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
+          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
+            <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
+            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
           </div>
         `;
       }
@@ -794,7 +804,7 @@
         const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
         const title = getRoundTitle(idx);
         const passedCount = (r.candidates || []).filter(c => c.status === 'pass').length;
-        return `<button onclick="switchRound(${idx})" class="px-4 py-1.5 rounded-lg text-xs border transition ${activeClass}">
+        return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">
           ${escapeHtml(title)} (${passedCount})
         </button>`;
       }).join('');
@@ -852,10 +862,10 @@
         publicGroupContainer.classList.remove('hidden');
         const activeMembers = (activeRound.candidates || []).filter(c => state.activeGroupIds.includes(c.id));
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
-          <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-3 shadow text-center">
-            <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#${idx + 1}</span>
-            <div class="font-bold text-amber-300 text-sm truncate">${escapeHtml(c.name)}</div>
-            <div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
+          <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-2.5 sm:p-3 shadow text-center">
+            <span class="text-[9px] sm:text-[10px] font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full inline-block mb-1">#${idx + 1}</span>
+            <div class="font-bold text-amber-300 text-xs sm:text-sm truncate">${escapeHtml(c.name)}</div>
+            <div class="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate mt-0.5">${escapeHtml(c.orderNo || lang.noOrderNoText)}</div>
           </div>
         `).join('');
       } else {
@@ -871,10 +881,10 @@
         passedContainer.innerHTML = passedList.map(c => {
           const displayRank = c.rankKey ? lang[c.rankKey] : c.rankTitle;
           const rankTag = displayRank ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${displayRank}</span>` : '';
-          return '<div class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
+          return '<div class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center space-x-1.5 sm:space-x-2 text-xs shadow-sm">' +
             rankTag +
             '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
-            '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</span>' +
+            '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px]">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</span>' +
           '</div>';
         }).join('');
       }
@@ -896,10 +906,10 @@
         consolationPanel.classList.remove('hidden');
         consolationBadge.innerText = allConsolations.length;
         consolationContainer.innerHTML = allConsolations.map((c, i) => `
-          <div class="px-3 py-1.5 bg-emerald-950/80 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">
+          <div class="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-950/80 border border-emerald-500/50 rounded-lg flex items-center space-x-1.5 sm:space-x-2 text-xs shadow-sm">
             <span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1} ${lang.consolationLabelTag}</span>
             <span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span>
-            <span class="text-slate-400 font-mono text-[11px]">${escapeHtml(c.orderNo || lang.noOrderNoText)}</span>
+            <span class="text-slate-400 font-mono text-[10px] sm:text-[11px]">${escapeHtml(c.orderNo || lang.noOrderNoText)}</span>
           </div>
         `).join('');
       } else {
@@ -910,9 +920,9 @@
       const pendingList = list.filter(c => c.status === 'pending');
 
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-8 text-slate-500"><p class="text-4xl mb-2">📋</p><p>${lang.noCandidates}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-3xl sm:text-4xl mb-2">📋</p><p class="text-xs sm:text-sm">${lang.noCandidates}</p></div>`;
       } else if (pendingList.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-8 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${lang.allDone}</p></div>`;
+        pendingContainer.innerHTML = `<div class="text-center py-6 sm:py-8 text-slate-500"><p class="text-xl sm:text-2xl mb-2">🎉</p><p class="text-xs sm:text-sm">${lang.allDone}</p></div>`;
       } else {
         const cardsHtml = pendingList.map((c, index) => {
           let extraStyle = 'border-slate-700 bg-slate-800/80';
@@ -921,16 +931,17 @@
             extraStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
-          return '<div class="p-3.5 rounded-xl border ' + extraStyle + ' transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
+          return '<div class="p-2.5 sm:p-3.5 rounded-xl border ' + extraStyle + ' transition hover:border-amber-400/80 min-w-0 flex flex-col justify-between shadow">' +
             '<div>' +
-              '<div class="text-[11px] font-mono text-slate-400 mb-1">#' + (index + 1) + pkBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-sm truncate">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</div>' +
+              '<div class="text-[10px] sm:text-[11px] font-mono text-slate-400 mb-0.5 sm:mb-1">#' + (index + 1) + pkBadge + '</div>' +
+              '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-[10px] sm:text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || lang.noOrderNoText) + '</div>' +
             '</div>' +
           '</div>';
         }).join('');
 
-        pendingContainer.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
+        // 名单卡片自适应: 手机 2 列 -> 平板 3 列 -> 电脑 5 列
+        pendingContainer.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3">' + cardsHtml + '</div>';
       }
 
       const outContainer = document.getElementById('outListContainer');
@@ -967,7 +978,7 @@
 
           const groupCardsHtml = candidatesInGroup.map(c => `
             <div class="p-1.5 bg-slate-900/80 border border-slate-800 rounded-md opacity-70 hover:opacity-100 transition shadow-sm text-center">
-              <span class="font-bold text-slate-300 text-xs truncate block">${escapeHtml(c.name)}</span>
+              <span class="font-bold text-slate-300 text-[11px] sm:text-xs truncate block">${escapeHtml(c.name)}</span>
             </div>
           `).join('');
 
