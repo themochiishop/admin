@@ -113,7 +113,11 @@
             <span id="arrow-cardTitleSetting" class="text-slate-400 transition-transform">▼</span>
           </button>
           <div id="cardTitleSetting" class="hidden p-3 pt-0 border-t border-slate-800 space-y-3">
-            <div class="mt-2">
+            <label class="flex items-center space-x-2 bg-slate-800/80 p-2.5 rounded-lg border border-amber-500/30 cursor-pointer mt-2">
+              <input type="checkbox" id="publicVisibleCheckbox" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
+              <span class="font-bold text-slate-200">🌐 开启前台网页对外公开显示 (勾选对外公开，取消勾选显示“计算与更新中”)</span>
+            </label>
+            <div>
               <label class="block text-slate-400 mb-1">后台控制台标题:</label>
               <input type="text" id="adminTitleInput" placeholder="Mochiishop 每月抽奖 - 直播控制台" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-amber-300 focus:outline-none">
             </div>
@@ -379,6 +383,7 @@
     let state = {
       customAdminTitle: '',
       customPublicTitle: '',
+      isPublicVisible: true,
       pollCount: 0,
       currentPollNumber: 0,
       pdfConfig: {
@@ -600,6 +605,7 @@
     }
 
     function saveConfigModal() {
+      state.isPublicVisible = document.getElementById('publicVisibleCheckbox').checked;
       state.customAdminTitle = document.getElementById('adminTitleInput').value.trim();
       state.customPublicTitle = document.getElementById('publicTitleInput').value.trim();
 
@@ -654,6 +660,7 @@
     }
 
     function syncModalUIWithState() {
+      document.getElementById('publicVisibleCheckbox').checked = state.isPublicVisible !== false;
       document.getElementById('adminTitleInput').value = state.customAdminTitle || '';
       document.getElementById('publicTitleInput').value = state.customPublicTitle || '';
 
@@ -1370,6 +1377,7 @@
           renderAdminView();
           updateStats();
           checkAndTogglePdfExportBtn();
+          syncModalUIWithState();
         } else {
           const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
           if (!activeRound.candidates || activeRound.candidates.length === 0) {
