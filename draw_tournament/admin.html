@@ -790,3 +790,186 @@
     }
 
     function updateStats() {
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
+      const candidates = activeRound.candidates || [];
+
+      document.getElementById('statTotalCandidates').innerText = candidates.length;
+      document.getElementById('statPassedCount').innerText = candidates.filter(c => c.status === 'pass').length;
+      document.getElementById('statPendingCount').innerText = candidates.filter(c => c.status === 'pending').length;
+      
+      let totalOutCount = 0;
+      (state.rounds || []).forEach(r => {
+        totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length;
+      });
+      document.getElementById('statOutCount').innerText = totalOutCount;
+    }
+
+    function renderAdminView() {
+      renderActiveGroupUI();
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
+      const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+
+      let list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
+
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+      const isMode1ThreeLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 3;
+      const isMode1TwoLeft = isModeEnabled && selectedMode === 'mode1' && activeRound.candidates.length === 2;
+
+      const banner = document.getElementById('specialRoundBanner');
+      const bannerTitle = document.getElementById('specialRoundBannerTitle');
+      const bannerSub = document.getElementById('specialRoundBannerSub');
+
+      if (isMode1ThreeLeft) {
+        banner.classList.remove('hidden');
+        bannerTitle.innerText = i18n[currentLang].banner3LeftTitle;
+        bannerSub.innerText = i18n[currentLang].banner3LeftSub;
+      } else if (isMode1TwoLeft) {
+        banner.classList.remove('hidden');
+        bannerTitle.innerText = i18n[currentLang].banner2LeftTitle;
+        bannerSub.innerText = i18n[currentLang].banner2LeftSub;
+      } else {
+        banner.classList.add('hidden');
+      }
+
+      const passedContainer = document.getElementById('passedListContainer');
+      const passedList = list.filter(c => c.status === 'pass');
+
+      if (passedList.length === 0) {
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${i18n[currentLang].noPassed}</span>`;
+      } else {
+        passedContainer.innerHTML = passedList.map(c => {
+          const rankText = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">${c.rankTitle}</span>` : '';
+          return '<div class="px-3 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-2 text-xs shadow-sm">' +
+            rankText +
+            '<span class="font-bold text-emerald-300">' + escapeHtml(c.name) + '</span>' +
+            '<span class="text-slate-400 font-mono text-[11px]">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+            '<button onclick="changeStatus(' + c.id + ', \'pending\')" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-1 rounded">✕</button>' +
+          '</div>';
+        }).join('');
+      }
+
+      // 名单池主卡片网格 (强制一行 5 个)
+      const container = document.getElementById('adminViewContainer');
+      const pendingList = list.filter(c => c.status === 'pending');
+
+      if (pendingList.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-slate-500"><p class="text-2xl mb-2">🎉</p><p>${i18n[currentLang].noPendingList}</p></div>`;
+      } else {
+        const cardsHtml = pendingList.map((c, index) => {
+          let borderStyle = 'border-slate-700 bg-slate-800';
+          let statusBadge = '';
+
+          if (activeGroup4Ids.includes(c.id)) {
+            borderStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500 text-slate-950 font-black">🔥 PK中</span>`;
+          }
+
+          let passBtnLabel = i18n[currentLang].btnPass;
+          let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
+
+          if (isMode1ThreeLeft) {
+            passBtnLabel = i18n[currentLang].btnPassThird;
+            passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce";
+          } else if (isMode1TwoLeft) {
+            passBtnLabel = i18n[currentLang].btnPassChampion;
+            passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse";
+          }
+
+          return '<div class="p-3 rounded-xl border ' + borderStyle + ' flex flex-col justify-between shadow transition min-w-0">' +
+            '<div>' +
+              '<div class="flex justify-between items-start mb-1"><span class="text-[10px] font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
+              '<div class="font-bold text-slate-100 text-sm truncate">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+            '</div>' +
+            '<div class="mt-3 pt-2 border-t border-slate-700/60 flex space-x-1">' +
+              `<button onclick="changeStatus(${c.id}, 'pass')" class="flex-1 py-1 text-[11px] rounded font-bold transition ${passBtnClass}">${passBtnLabel}</button>` +
+              `<button onclick="changeStatus(${c.id}, 'out')" class="px-2 py-1 text-[11px] rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">${i18n[currentLang].btnOut}</button>` +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        container.innerHTML = '<div class="grid grid-cols-5 gap-3">' + cardsHtml + '</div>';
+      }
+
+      renderAdminOutList(search);
+    }
+
+    function renderAdminOutList(search) {
+      const outContainer = document.getElementById('adminOutListContainer');
+      let allOutCandidates = [];
+
+      (state.rounds || []).forEach((r, rIdx) => {
+        (r.candidates || []).forEach(c => {
+          if (c.status === 'out') {
+            const matchesSearch = (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search);
+            if (matchesSearch) {
+              const elIndex = (c.eliminatedRoundIndex !== undefined) ? c.eliminatedRoundIndex : rIdx;
+              allOutCandidates.push({ ...c, roundIndex: elIndex });
+            }
+          }
+        });
+      });
+
+      document.getElementById('outBadgeCount').innerText = allOutCandidates.length + "人";
+
+      if (allOutCandidates.length === 0) {
+        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`;
+        return;
+      }
+
+      const grouped = {};
+      allOutCandidates.forEach(c => {
+        const key = c.roundIndex;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(c);
+      });
+
+      const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
+
+      outContainer.innerHTML = sortedKeys.map(rIdxKey => {
+        const rNum = Number(rIdxKey) + 1;
+        const groupTitle = i18n[currentLang].eliminatedInRound.replace('{r}', rNum);
+        const candidatesInGroup = grouped[rIdxKey];
+
+        const groupCardsHtml = candidatesInGroup.map(c => `
+          <div class="p-2 bg-slate-900/90 border border-slate-800 rounded-lg flex items-center justify-between opacity-80 hover:opacity-100 transition shadow-sm">
+            <div class="truncate max-w-[100px]">
+              <div class="font-bold text-slate-200 text-xs truncate">${escapeHtml(c.name)}</div>
+            </div>
+            <button onclick="undoEliminatedCandidate(${c.id})" class="px-2 py-0.5 text-[10px] rounded bg-amber-600 hover:bg-amber-500 text-white font-bold shadow transition">
+              ${i18n[currentLang].btnUndoOut}
+            </button>
+          </div>
+        `).join('');
+
+        return `
+          <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-bold text-rose-400/90 mb-2 border-b border-slate-800 pb-1 flex justify-between items-center">
+              <span>❌ ${groupTitle}</span>
+              <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">${candidatesInGroup.length}人</span>
+            </div>
+            <div class="grid grid-cols-1 gap-1.5">
+              ${groupCardsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function resetRounds() {
+      if (confirm("确认重置所有数据？")) {
+        currentRoundIndex = 0;
+        state.rounds = [{ roundName: "第 1 轮", candidates: [] }];
+        activeGroup4Ids = [];
+        delete state.activeGroupIds;
+        delete state.latestEvent;
+        saveState();
+        fetchGoogleSheetsData(true);
+      }
+    }
+
+    function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+  </script>
+</body>
+</html>
