@@ -935,14 +935,20 @@
 
       const passedContainer = document.getElementById('passedListContainer');
       
-      let passedList = list.filter(c => c.status === 'pass');
-      if (state.passHistory) {
-        state.passHistory.forEach(hist => {
-          if (!passedList.some(c => String(c.id) === String(hist.id))) {
-            passedList.push(hist);
-          }
-        });
-      }
+     let passedList = list.filter(c => c.status === 'pass');
+if (state.passHistory) {
+  state.passHistory.forEach(hist => {
+    if (!passedList.some(c => String(c.id) === String(hist.id))) {
+      passedList.push(hist);
+    }
+  });
+}
+// 🔥 新增：按 POLL #N 排序
+passedList.sort((a, b) => {
+  const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
+  const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
+  return numA - numB;
+});
 
       if (passedList.length === 0) {
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">${lang.noPassed}</span>`;
