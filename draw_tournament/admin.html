@@ -136,8 +136,6 @@
             </div>
           </div>
         </div>
-        
-        <!-- 补全缺失的 PDF 配置 UI -->
         <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
           <button onclick="toggleCardAccordion('cardPdfCustomSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
             <span class="flex items-center space-x-2"><span>📄</span><span>PDF 报告导出内容与模板设置</span></span>
@@ -343,36 +341,7 @@
       else group.classList.add('opacity-50', 'pointer-events-none');
     }
 
-    function syncModalUIWithState() {
-      document.getElementById('publicVisibleCheckbox').checked = state.isPublicVisible !== false;
-      document.getElementById('adminTitleInput').value = state.customAdminTitle || '';
-      document.getElementById('publicTitleInput').value = state.customPublicTitle || '';
-
-      if (!state.pdfConfig) state.pdfConfig = { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' };
-      document.getElementById('pdfTitleInput').value = state.pdfConfig.title || '';
-      document.getElementById('pdfTitle2Input').value = state.pdfConfig.title2 || '';
-      document.getElementById('pdfSubTitleInput').value = state.pdfConfig.subTitle || '';
-      document.getElementById('pdfFooterInput').value = state.pdfConfig.footer || '';
-
-      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '' };
-      document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
-      document.getElementById('useDefaultPickCountCheckbox').checked = state.modeConfig.useDefaultPickCount !== false;
-      document.getElementById('defaultPickCountInput').value = state.modeConfig.defaultPickCount || 4;
-      toggleModeEnable();
-
-      const radios = document.getElementsByName('drawMode');
-      for (let r of radios) { if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true; }
-      document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
-      
-      const importRadios = document.getElementsByName('importMode');
-      for (let r of importRadios) { if (r.value === (state.modeConfig.importMode || 'default')) r.checked = true; }
-      document.getElementById('customSheetUrlInput').value = state.modeConfig.customSheetUrl || '';
-      toggleImportModeUI();
-      
-      updateModeBadgeUI();
-    }
-
-    // 🔥 修复了卡死问题的保存函数
+    // 🔥 补全了所有配置的读取
     function saveConfigModal() {
       state.isPublicVisible = document.getElementById('publicVisibleCheckbox').checked;
       state.customAdminTitle = document.getElementById('adminTitleInput').value.trim();
@@ -410,7 +379,6 @@
       updateModeBadgeUI();
       closeConfigModal();
 
-      // 🔥 核心修复：如果是本地文件，直接读取，绝对不去碰网络
       if (importMode === 'fileUpload') {
         const fileInput = document.getElementById('localFileInput');
         if (fileInput && fileInput.files.length > 0) {
@@ -421,8 +389,55 @@
         return;
       }
 
-      // 如果是网络链接，再去抓取
       fetchGoogleSheetsData(true);
+    }
+
+    function syncModalUIWithState() {
+      document.getElementById('publicVisibleCheckbox').checked = state.isPublicVisible !== false;
+      document.getElementById('adminTitleInput').value = state.customAdminTitle || '';
+      document.getElementById('publicTitleInput').value = state.customPublicTitle || '';
+
+      if (!state.pdfConfig) state.pdfConfig = { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' };
+      document.getElementById('pdfTitleInput').value = state.pdfConfig.title || '';
+      document.getElementById('pdfTitle2Input').value = state.pdfConfig.title2 || '';
+      document.getElementById('pdfSubTitleInput').value = state.pdfConfig.subTitle || '';
+      document.getElementById('pdfFooterInput').value = state.pdfConfig.footer || '';
+
+      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '' };
+      document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
+      document.getElementById('useDefaultPickCountCheckbox').checked = state.modeConfig.useDefaultPickCount !== false;
+      document.getElementById('defaultPickCountInput').value = state.modeConfig.defaultPickCount || 4;
+      toggleModeEnable();
+
+      const radios = document.getElementsByName('drawMode');
+      for (let r of radios) { if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true; }
+      document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
+      
+      const importRadios = document.getElementsByName('importMode');
+      for (let r of importRadios) { if (r.value === (state.modeConfig.importMode || 'default')) r.checked = true; }
+      document.getElementById('customSheetUrlInput').value = state.modeConfig.customSheetUrl || '';
+      toggleImportModeUI();
+      
+      updateModeBadgeUI();
+    }
+
+    function updateModeBadgeUI() {
+      const badge = document.getElementById('currentModeBadge');
+      if (!badge) return;
+      if (!state.modeConfig || !state.modeConfig.enabled) {
+        badge.innerText = "模式: 未启用规则";
+        badge.className = "text-slate-400 font-bold";
+        return;
+      }
+      const m = state.modeConfig.selectedMode || 'mode1';
+      if (m === 'mode1') {
+        badge.innerText = "模式: 冠亚季模式";
+        badge.className = "text-amber-400 font-bold";
+      } else if (m === 'mode2') {
+        const consCount = state.modeConfig.mode2ConsolationCount || 10;
+        badge.innerText = `模式: 3+安慰奖模式(${consCount}名)`;
+        badge.className = "text-emerald-400 font-bold";
+      }
     }
 
     function fetchGoogleSheetsData(isManual) {
@@ -742,7 +757,6 @@
     }
 
     function setLanguage(lang) { currentLang = lang; renderRoundTabs(); renderAdminView(); updateStats(); updateModeBadgeUI(); }
-    function updateModeBadgeUI() { /* muted for brevity, visual only */ }
     function updateHeaderTitle() { document.getElementById('adminHeaderTitle').innerText = state.customAdminTitle || 'Mochiishop 每月抽奖 - 直播控制台'; }
     function getRoundTitle(idx) { const r = state.rounds[idx]; return r.isConsolationStage ? `🎁 Consolation (${r.candidates.length})` : (r.stageName && r.stageName.includes("冠亚军") ? `👑 Final (2)` : (r.stageName && r.stageName.includes("冠亚季") ? `🏆 Podium (3)` : `第 ${idx + 1} 轮`)); }
 
