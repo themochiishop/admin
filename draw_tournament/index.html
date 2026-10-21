@@ -190,7 +190,6 @@
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
-    // 🎉 中奖恭喜弹窗（带 10 秒倒计时）
     let __popupTimer = null;
     function showWinnerPopup(eventData, durationSeconds) {
       const modal = document.getElementById('congratModal');
@@ -234,7 +233,6 @@
       }, 1000);
     }
 
-    // 🔥 角逐横幅
     function updateWinnerBannerUI() {
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
@@ -255,20 +253,17 @@
         });
       });
 
-      // ① 冠军+亚军都诞生
       if (championName && runnerUpName) {
         banner.classList.remove('hidden');
         content.innerHTML = `🎉 <span class="text-amber-400">👑 冠军得主是：</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300"> | 🥈 亚军得主是：</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
         return;
       }
-      // ② 季军诞生
       if (thirdPlaceName) {
         banner.classList.remove('hidden');
         content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
         return;
       }
 
-      // ③ 安慰奖阶段
       const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
       if (isConsolationStage) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
@@ -279,7 +274,6 @@
         return;
       }
 
-      // ④ 剩 3 人
       const roundTotal = (activeRound.candidates || []).length;
       if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
         banner.classList.remove('hidden');
@@ -287,7 +281,6 @@
         return;
       }
 
-      // ⑤ 剩 2 人
       if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
         banner.classList.remove('hidden');
         content.innerHTML = `<span class="text-amber-300 font-bold">🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！</span>`;
@@ -327,7 +320,7 @@
           if (!state.passHistory) state.passHistory = [];
           if (!state.modeConfig) state.modeConfig = {};
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
-          // 🔥 监听中奖事件弹恭喜弹窗
+          
           if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
             window.__lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') {
@@ -345,6 +338,7 @@
       });
     };
 
+    // 🔥 前台文字简化，悬浮显示完整
     function updateModeBadge() {
       const badge = document.getElementById('publicModeBadge');
       const tooltip = document.getElementById('modeTooltipBody');
@@ -359,12 +353,12 @@
       const mixed = state.modeConfig.mixedModeEnabled !== false;
 
       if (m === 'mode1') {
-        badge.innerText = mixed ? "模式: 冠亚季模式 · 🎲混合" : "模式: 冠亚季模式 · ✋仅手动";
+        badge.innerText = "模式: 冠亚季模式";
         if (tooltip) tooltip.innerHTML = mixed
           ? "🥇 <b>模式1：冠亚季排位 · 混合模式</b><br>• 每轮手动点晋级 或 抽组PK 均可<br>• 剩 3 人时点 1 人晋级 → 季军<br>• 剩 2 人时点 1 人晋级 → 冠军<br>• 另一人自动为亚军"
           : "🥇 <b>模式1：冠亚季排位 · 仅手动</b><br>• 禁止抽组PK<br>• 每轮手动点晋级<br>• 剩 3 人 → 季军，剩 2 人 → 冠军";
       } else if (m === 'mode2') {
-        badge.innerText = mixed ? `模式: 3+安慰奖(${N}名) · 🎲混合` : `模式: 3+安慰奖(${N}名) · ✋仅手动`;
+        badge.innerText = "模式: 3+安慰奖模式";
         if (tooltip) tooltip.innerHTML = mixed
           ? `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 混合模式</b><br>• 手动点晋级 或 抽组PK 均可<br>• 先选出 ${N} 名安慰奖（任意方式）<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`
           : `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 仅手动</b><br>• 禁止抽组PK<br>• 手动点晋级选出 ${N} 名安慰奖<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`;
@@ -607,7 +601,6 @@
         '</div>';
       }).join('');
 
-      // 🎁 安慰奖面板（模式2）
       const cPanel = document.getElementById('publicConsolationWinnerPanel');
       const cList = document.getElementById('publicConsolationListContainer');
       const cBadge = document.getElementById('publicConsolationCountBadge');
@@ -689,7 +682,7 @@
         }).join('');
       }
 
-      updateWinnerBannerUI();   // ✅ 函数最后无条件调用
+      updateWinnerBannerUI();   // 函数最后无条件调用
     }
 
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
