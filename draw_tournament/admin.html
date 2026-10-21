@@ -876,7 +876,7 @@
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
-      function advanceModeLogic(activeRound, justPassed) {
+    function advanceModeLogic(activeRound, justPassed) {
       if (!state.modeConfig || !state.modeConfig.enabled) return;
       const mode = state.modeConfig.selectedMode || 'mode1';
       const total = activeRound.candidates || [];
