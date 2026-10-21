@@ -51,10 +51,6 @@
           <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[11px]">MS</span></button>
         </div>
 
-        <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
-          <span>📄</span><span>Export PDF Report</span>
-        </button>
-
         <button onclick="goToPrevRound()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">🔙 返回上一轮</button>
         <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
           <span>⏩ 锁定本轮晋级者并推进下一轮</span>
@@ -134,18 +130,6 @@
                 </div>
               </label>
             </div>
-          </div>
-        </div>
-        <div class="bg-slate-900/90 rounded-xl border border-slate-700 overflow-hidden">
-          <button onclick="toggleCardAccordion('cardPdfCustomSetting')" class="w-full p-3 flex justify-between items-center text-amber-300 font-bold hover:bg-slate-800/60 transition">
-            <span class="flex items-center space-x-2"><span>📄</span><span>PDF 报告导出内容与模板设置</span></span>
-            <span id="arrow-cardPdfCustomSetting" class="text-slate-400 transition-transform">▼</span>
-          </button>
-          <div id="cardPdfCustomSetting" class="hidden p-3 pt-0 border-t border-slate-800 space-y-2.5">
-            <div class="mt-2"><label class="block text-slate-400 mb-1">Main Title 1 (主标题 1):</label><input type="text" id="pdfTitleInput" placeholder="MOCHIISHOP OFFICIAL DRAW" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-300 focus:outline-none"></div>
-            <div><label class="block text-slate-400 mb-1">Main Title 2 (主标题 2):</label><input type="text" id="pdfTitle2Input" placeholder="OCTOBER FINAL WINNER REPORT" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-300 focus:outline-none"></div>
-            <div><label class="block text-slate-400 mb-1">Sub Title (副标题):</label><input type="text" id="pdfSubTitleInput" placeholder="Shopee Live Monthly Event Official Certificate" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-slate-300 focus:outline-none"></div>
-            <div><label class="block text-slate-400 mb-1">Footer Text (页脚说明):</label><input type="text" id="pdfFooterInput" placeholder="© Mochiishop Official Live Tournament System. Verified Result." class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-slate-400 focus:outline-none"></div>
           </div>
         </div>
       </div>
@@ -257,7 +241,6 @@
       customAdminTitle: '', customPublicTitle: '', isPublicVisible: true, pollCount: 0, currentPollNumber: 0,
       pkStage: 'voting', triggerNumber: null, drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [],
       passHistory: [], settled: false,
-      pdfConfig: { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' },
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '' },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
@@ -341,17 +324,10 @@
       else group.classList.add('opacity-50', 'pointer-events-none');
     }
 
-    // 🔥 补全了所有配置的读取
     function saveConfigModal() {
       state.isPublicVisible = document.getElementById('publicVisibleCheckbox').checked;
       state.customAdminTitle = document.getElementById('adminTitleInput').value.trim();
       state.customPublicTitle = document.getElementById('publicTitleInput').value.trim();
-
-      if (!state.pdfConfig) state.pdfConfig = {};
-      state.pdfConfig.title = document.getElementById('pdfTitleInput').value.trim() || 'MOCHIISHOP OFFICIAL DRAW';
-      state.pdfConfig.title2 = document.getElementById('pdfTitle2Input').value.trim() || 'OCTOBER FINAL WINNER REPORT';
-      state.pdfConfig.subTitle = document.getElementById('pdfSubTitleInput').value.trim() || 'Shopee Live Monthly Event Official Certificate';
-      state.pdfConfig.footer = document.getElementById('pdfFooterInput').value.trim() || '© Mochiishop Official Live Tournament System. Verified Result.';
 
       const isEnabled = document.getElementById('enableModeCheckbox').checked;
       const radios = document.getElementsByName('drawMode');
@@ -381,14 +357,10 @@
 
       if (importMode === 'fileUpload') {
         const fileInput = document.getElementById('localFileInput');
-        if (fileInput && fileInput.files.length > 0) {
-          readLocalFileAndParse(fileInput.files[0]);
-        } else {
-          alert("✅ 设置已保存！\n但您还未选择文件，请点击【🔄 刷新 / 导入名单】旁边的按钮上传本地文件。");
-        }
+        if (fileInput && fileInput.files.length > 0) readLocalFileAndParse(fileInput.files[0]);
+        else alert("✅ 设置已保存！\n但您还未选择文件，请点击【🔄 刷新 / 导入名单】旁边的按钮上传本地文件。");
         return;
       }
-
       fetchGoogleSheetsData(true);
     }
 
@@ -396,12 +368,6 @@
       document.getElementById('publicVisibleCheckbox').checked = state.isPublicVisible !== false;
       document.getElementById('adminTitleInput').value = state.customAdminTitle || '';
       document.getElementById('publicTitleInput').value = state.customPublicTitle || '';
-
-      if (!state.pdfConfig) state.pdfConfig = { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' };
-      document.getElementById('pdfTitleInput').value = state.pdfConfig.title || '';
-      document.getElementById('pdfTitle2Input').value = state.pdfConfig.title2 || '';
-      document.getElementById('pdfSubTitleInput').value = state.pdfConfig.subTitle || '';
-      document.getElementById('pdfFooterInput').value = state.pdfConfig.footer || '';
 
       if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '' };
       document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
@@ -430,14 +396,8 @@
         return;
       }
       const m = state.modeConfig.selectedMode || 'mode1';
-      if (m === 'mode1') {
-        badge.innerText = "模式: 冠亚季模式";
-        badge.className = "text-amber-400 font-bold";
-      } else if (m === 'mode2') {
-        const consCount = state.modeConfig.mode2ConsolationCount || 10;
-        badge.innerText = `模式: 3+安慰奖模式(${consCount}名)`;
-        badge.className = "text-emerald-400 font-bold";
-      }
+      if (m === 'mode1') { badge.innerText = "模式: 冠亚季模式"; badge.className = "text-amber-400 font-bold"; }
+      else if (m === 'mode2') { badge.innerText = `模式: 3+安慰奖模式(${state.modeConfig.mode2ConsolationCount || 10}名)`; badge.className = "text-emerald-400 font-bold"; }
     }
 
     function fetchGoogleSheetsData(isManual) {
@@ -487,20 +447,27 @@
       renderRoundTabs();
     }
 
+    // 🎲 抽组PK（独立玩法，安慰奖阶段禁用）
     function pickRandomGroup() {
       const activeRound = state.rounds[currentRoundIndex];
-      const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
 
+      // 安慰奖遴选阶段禁用抽组PK
+      if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2' && activeRound.isConsolationStage) {
+        alert("⚠️ 安慰奖遴选阶段请用【手动点晋级】选出安慰奖，不支持抽组PK！\n（选满 N 名后会自动进入冠亚季争夺战）");
+        return;
+      }
+
+      const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
       if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
 
       let targetCount = 4;
       const cfg = state.modeConfig || {};
       if (cfg.useDefaultPickCount) targetCount = cfg.defaultPickCount || 4;
       else {
-        const inputStr = prompt("请输入本次要随机盲抽的人数:", "4");
-        if (inputStr === null) return;
-        targetCount = parseInt(inputStr, 10);
-        if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效的数字！"); return; }
+        const s = prompt("请输入本次要随机盲抽的人数:", "4");
+        if (s === null) return;
+        targetCount = parseInt(s, 10);
+        if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
       }
 
       state.pollCount = (state.pollCount || 0) + 1;
@@ -512,16 +479,9 @@
 
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
-      
       activeGroup4Ids = selected.map(c => String(c.id));
       state.activeGroupIds = activeGroup4Ids;
-
-      state.activeGroupMembers = selected.map((c) => ({
-        id: String(c.id),
-        displayNumber: null,
-        name: c.name,
-        orderNo: c.orderNo
-      }));
+      state.activeGroupMembers = selected.map((c) => ({ id: String(c.id), displayNumber: null, name: c.name, orderNo: c.orderNo }));
 
       saveState();
       renderActiveGroupUI();
@@ -571,8 +531,8 @@
       renderAdminView();
     }
 
+    // 🎲 抽组PK开奖结果处理（独立玩法，不触发模式跳转）
     function passWinnerAndEliminateOthers(winnerId) {
-      if (state.settled && state.pkStage === 'voting' && activeGroup4Ids.length === 0) return;
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
 
@@ -695,6 +655,7 @@
       alert(`↩️ 买家【${foundCandidate.name}】已撤回并重新回到当前轮次名单池！`);
     }
 
+    // 🎯 手动点晋级/淘汰（唯一触发模式判定的入口）
     function changeStatus(id, newStatus) {
       if (newStatus === 'pending') { undoEliminatedCandidate(id); return; }
 
@@ -705,55 +666,65 @@
       target.status = newStatus;
       if (newStatus === 'out') target.eliminatedRoundIndex = currentRoundIndex;
 
-      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
-      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+      if (newStatus === 'pass') advanceModeLogic(activeRound, target);
 
-      if (isModeEnabled && activeRound) {
-        const totalCandidates = activeRound.candidates || [];
-
-        if (selectedMode === 'mode2' && activeRound.isConsolationStage) {
-          if (newStatus === 'pass') {
-            target.rankTitle = "🎁 安慰奖"; target.rankKey = "rankConsolation";
-            const consolationsPicked = totalCandidates.filter(c => c.rankKey === "rankConsolation");
-            const targetConsolationTotal = state.modeConfig.mode2ConsolationCount || 10;
-            if (consolationsPicked.length >= targetConsolationTotal) {
-              const remainingThree = totalCandidates.filter(c => c.rankKey !== "rankConsolation");
-              const stageLabel = "🏆 冠亚季争夺战 (剩3人)";
-              const podiumCandidates = remainingThree.map((c, idx) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${idx}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-              state.rounds.push({ roundName: stageLabel, stageName: stageLabel, candidates: podiumCandidates });
-              currentRoundIndex = state.rounds.length - 1;
-              saveState(); renderRoundTabs();
-              alert(i18n[currentLang].alertConsolationDone.replace('{total}', targetConsolationTotal));
-              return;
-            }
-          }
-        }
-
-        if (totalCandidates.length === 3 && newStatus === 'pass' && !activeRound.isConsolationStage) {
-          target.rankTitle = "🥉 季军"; target.rankKey = "rankThird";
-          const remainingTwo = totalCandidates.filter(c => String(c.id) !== String(target.id));
-          state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: target.name };
-          const finalRoundCandidates = remainingTwo.map((c, idx) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${idx}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-          const stageLabel = "👑 冠亚军终极决战 (2选1)";
-          state.rounds.push({ roundName: stageLabel, stageName: stageLabel, candidates: finalRoundCandidates });
-          currentRoundIndex = state.rounds.length - 1;
-          saveState(); renderRoundTabs();
-          alert(i18n[currentLang].alertThirdSuccess.replace('{name}', target.name));
-          return;
-        }
-
-        if (totalCandidates.length === 2 && newStatus === 'pass' && !activeRound.isConsolationStage) {
-          target.rankTitle = "👑 冠军"; target.rankKey = "rankChampion";
-          const runnerUpObj = totalCandidates.find(c => String(c.id) !== String(target.id));
-          let runnerUpName = "未知买家";
-          if (runnerUpObj) { runnerUpObj.status = 'pass'; runnerUpObj.rankTitle = "🥈 亚军"; runnerUpObj.rankKey = "rankRunnerUp"; runnerUpName = runnerUpObj.name; }
-          state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: target.name, runnerUpName: runnerUpName };
-          saveState();
-          alert(i18n[currentLang].alertFinalSuccess.replace('{winner}', target.name).replace('{runnerUp}', runnerUpName));
-          return;
-        }
-      }
       saveState();
+      renderRoundTabs();
+      renderAdminView();
+      updateStats();
+    }
+
+    // 🔥 模式判定：只在手动点晋级时调用
+    function advanceModeLogic(activeRound, justPassed) {
+      if (!state.modeConfig || !state.modeConfig.enabled) return;
+      const mode = state.modeConfig.selectedMode || 'mode1';
+      const total = activeRound.candidates || [];
+
+      // 模式2：安慰奖遴选阶段
+      if (mode === 'mode2' && activeRound.isConsolationStage) {
+        justPassed.rankTitle = "🎁 安慰奖";
+        justPassed.rankKey = "rankConsolation";
+        const N = state.modeConfig.mode2ConsolationCount || 10;
+        const picked = total.filter(c => c.rankKey === "rankConsolation").length;
+
+        if (picked >= N) {
+          const remain = total.filter(c => c.rankKey !== "rankConsolation" && c.status === 'pending');
+          if (remain.length !== 3) {
+            alert(`⚠️ 安慰奖已选满 ${N} 名，但剩余 ${remain.length} 人（应为3人）。请检查本轮名单是否正好 ${N + 3} 人！`);
+            justPassed.rankTitle = undefined; justPassed.rankKey = undefined; justPassed.status = 'pending';
+            return;
+          }
+          const label = "🏆 冠亚季争夺战 (剩3人)";
+          const podium = remain.map((c, i) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
+          currentRoundIndex = state.rounds.length - 1;
+          alert(`🎁 已选满 ${N} 名安慰奖！\n自动进入【${label}】阶段。`);
+        }
+        return;
+      }
+
+      // 季军（3人轮次，点1人）
+      if (total.length === 3 && !activeRound.isConsolationStage) {
+        justPassed.rankTitle = "🥉 季军"; justPassed.rankKey = "rankThird";
+        const two = total.filter(c => String(c.id) !== String(justPassed.id));
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
+        const label = "👑 冠亚军终极决战 (2选1)";
+        const finalC = two.map((c, i) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+        state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
+        currentRoundIndex = state.rounds.length - 1;
+        alert(`🥉 【${justPassed.name}】锁定季军！\n自动进入【${label}】。`);
+        return;
+      }
+
+      // 冠军（2人轮次，点1人）
+      if (total.length === 2 && !activeRound.isConsolationStage) {
+        justPassed.rankTitle = "👑 冠军"; justPassed.rankKey = "rankChampion";
+        const ru = total.find(c => String(c.id) !== String(justPassed.id));
+        let ruName = "未知买家";
+        if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ruName = ru.name; }
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
+        alert(`👑 【${justPassed.name}】冠军！\n🥈 亚军：【${ruName}】\n🎉 比赛结束！`);
+      }
     }
 
     function setLanguage(lang) { currentLang = lang; renderRoundTabs(); renderAdminView(); updateStats(); updateModeBadgeUI(); }
@@ -769,36 +740,36 @@
       }
     }
 
+    // ⏩ 批量推进到下一轮
     function createNewRound() {
-      const currentRound = state.rounds[currentRoundIndex];
-      const passedCandidates = (currentRound.candidates || []).filter(c => c.status === 'pass');
-      const totalCandidates = currentRound.candidates || [];
-      
-      if (passedCandidates.length === 0) { alert("⚠️ 请先选出晋级/胜出的买家！"); return; }
-      if (passedCandidates.length === totalCandidates.length) { alert("⚠️ 全员都是晋级，无人被淘汰！请确认。"); return; }
+      const cur = state.rounds[currentRoundIndex];
+      const passed = (cur.candidates || []).filter(c => c.status === 'pass');
+      const total = cur.candidates || [];
+      if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
+      if (passed.length === total.length) { alert("⚠️ 全员晋级，无人淘汰！"); return; }
 
-      currentRound.candidates.forEach(c => {
+      cur.candidates.forEach(c => {
         if (c.status !== 'pass') { c.status = 'out'; if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex; }
       });
 
-      const nextRoundNumber = state.rounds.length + 1;
-      const nextRoundCandidates = passedCandidates.map((c, idx) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${idx}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+      const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
+      const N = state.modeConfig.mode2ConsolationCount || 10;
+      const nextC = passed.map((c, i) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
 
-      let stageLabel = `第 ${nextRoundNumber} 轮 (${passedCandidates.length}人角逐)`;
-      let isConsolationStage = false;
-      if (state.modeConfig.selectedMode === 'mode2' && passedCandidates.length === (state.modeConfig.mode2ConsolationCount + 3)) {
-        stageLabel = `🎁 安慰奖遴选阶段 (${passedCandidates.length}人角逐${state.modeConfig.mode2ConsolationCount}名安慰奖)`;
-        isConsolationStage = true;
-      }
+      let label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
+      let isCons = false;
+      if (isMode2 && passed.length === N + 3) { label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; isCons = true; }
+      else if (!cur.isConsolationStage && passed.length === 3) label = "🏆 冠亚季争夺战 (剩3人)";
+      else if (!cur.isConsolationStage && passed.length === 2) label = "👑 冠亚军终极决战 (2选1)";
 
-      state.rounds.push({ roundName: stageLabel, stageName: stageLabel, isConsolationStage: isConsolationStage, candidates: nextRoundCandidates });
+      state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isCons, candidates: nextC });
       currentRoundIndex = state.rounds.length - 1;
-      
+
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
 
       saveState(); renderRoundTabs();
-      alert(`🎉 成功开启【${stageLabel}】！`);
+      alert(`🎉 已开启【${label}】！`);
     }
 
     function renderRoundTabs() {
@@ -821,7 +792,7 @@
     function saveState() {
       localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
       db.ref('tournament_state').set(state);
-      updateStats(); renderAdminView(); updateRefreshButtonState();
+      updateStats(); renderAdminView();
     }
 
     function updateStats() {
@@ -839,7 +810,6 @@
       let totalOutCount = 0;
       (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
       document.getElementById('statOutCount').innerText = totalOutCount;
-      updateRefreshButtonState();
     }
 
     function renderAdminView() {
@@ -914,24 +884,6 @@
             alert("✅ 所有数据已重置清空！"); fetchGoogleSheetsData(true);
           } else alert("❌ 重置失败，请重试");
         });
-      }
-    }
-
-    function updateRefreshButtonState() {
-      const btn = document.getElementById('refreshSheetsBtn');
-      if (!btn) return;
-      const isFirstRoundDrawStarted = (state.rounds && state.rounds.length > 1) || ((state.rounds[0].candidates || []).some(c => c.status !== 'pending'));
-      
-      if (isFirstRoundDrawStarted) {
-        btn.disabled = true;
-        btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
-        btn.classList.add('bg-slate-700', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
-        btn.title = "第一轮已开始抽取，已锁定导入功能！";
-      } else {
-        btn.disabled = false;
-        btn.classList.remove('bg-slate-700', 'text-slate-500', 'cursor-not-allowed', 'opacity-60');
-        btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
-        btn.title = "";
       }
     }
 
