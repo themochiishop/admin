@@ -84,7 +84,7 @@
       <div id="congratModalBody" class="my-3 sm:my-5 space-y-2 sm:space-y-3"></div>
       <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-4 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs text-slate-300 shadow mt-2">
         <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-        <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-sm sm:text-base">10</span> 秒后自动切回大屏榜单...</span>
+        <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-sm sm:text-base">5</span> 秒后自动切回大屏榜单...</span>
       </div>
     </div>
   </div>
@@ -323,6 +323,7 @@
 
       modal.classList.remove('hidden');
 
+      // 把倒计时改为 5 秒
       let timeLeft = durationSeconds;
       const countdown = document.getElementById('congratCountdown');
       if (countdown) countdown.innerText = timeLeft;
@@ -580,7 +581,7 @@
           if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
             window.__lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') {
-              showWinnerPopup(state.latestEvent, 10);
+              showWinnerPopup(state.latestEvent, 5);
             }
           }
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
