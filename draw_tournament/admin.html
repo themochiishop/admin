@@ -335,14 +335,20 @@
       }
     }
 
-    // 控制导入按钮状态（名单一旦存在就锁定不可点）
+    // 控制导入按钮状态：只要晋级区有名单便不可操作
     function updateRefreshBtnState() {
       const btn = document.getElementById('refreshSheetsBtn');
       if (!btn) return;
-      const hasCandidates = state.rounds && state.rounds[0] && state.rounds[0].candidates && state.rounds[0].candidates.length > 0;
-      if (hasCandidates) {
+      
+      let hasPassed = false;
+      (state.rounds || []).forEach(r => {
+        if ((r.candidates || []).some(c => c.status === 'pass')) hasPassed = true;
+      });
+      const isStarted = state.rounds.length > 1 || hasPassed;
+
+      if (isStarted) {
         btn.disabled = true;
-        btn.title = "已导入买家名单，锁定不可点击";
+        btn.title = "比赛已经开始，名单已锁定，不可重新导入";
       } else {
         btn.disabled = false;
         btn.title = "点击刷新或导入买家名单";
@@ -546,7 +552,6 @@
       const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
       if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
       
-      // 🔥 无论是否设置默认抽取数，每次强制弹出询问
       let targetCount = 4;
       const defaultVal = state.modeConfig && state.modeConfig.defaultPickCount ? state.modeConfig.defaultPickCount : 4;
       
@@ -614,6 +619,7 @@
         }
       });
 
+      // 🔥 修复混合模式下的冠亚季军自动判定
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === true) {
         const winnerTarget = activeRound.candidates.find(c => String(c.id) === String(winnerId));
         if (winnerTarget) advanceModeLogic(activeRound, winnerTarget);
@@ -735,7 +741,6 @@
           state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
           currentRoundIndex = state.rounds.length - 1;
           state.passHistory = []; // 清空历史
-          
           state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
           alert(`🎁 已选满 ${N} 名安慰奖！\n自动进入【${label}】阶段。`);
         }
@@ -751,7 +756,7 @@
         state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
         currentRoundIndex = state.rounds.length - 1;
         state.passHistory = []; // 清空历史
-        // ❌ 删除这里的 state.latestRoundEvent，不弹轮次窗
+        // ❌ 删除 latestRoundEvent，不弹轮次窗，只弹恭喜
         alert(`🥉 【${justPassed.name}】锁定季军！\n自动进入【${label}】。`);
         return;
       }
