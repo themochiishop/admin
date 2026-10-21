@@ -76,6 +76,7 @@
 
   <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full">
     
+    <!-- 全场最终得奖名单汇总框架 -->
     <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden">
       <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
         <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
@@ -85,7 +86,9 @@
         </h2>
         <p class="text-[11px] sm:text-xs text-slate-400 mt-1">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
+
       <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end"></div>
+
       <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-xl border border-emerald-500/40">
         <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
           <span class="text-base sm:text-lg">🎁</span>
@@ -94,106 +97,106 @@
         </div>
         <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
       </div>
+
+      <!-- 右下角分享与保存 -->
+      <div class="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center space-x-2 bg-slate-950/80 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
+        <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
+          <span>🔗</span><span>分享结果</span>
+        </button>
+        <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
+          <span>💾</span><span>保存为图片</span>
+        </button>
+      </div>
     </div>
 
     <div id="winnerAnnouncementBanner" class="mb-4 sm:mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
       <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
     </div>
 
-    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
-      <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
-    </div>
-
-    <!-- 🔥 全新环绕式排版布局 -->
-    <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-2xl relative overflow-hidden mb-4">
-      
-      <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
-        <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
-          <span class="text-base sm:text-2xl animate-bounce">🔥</span>
-          <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
-        </div>
-        <div class="flex-shrink-0">
-          <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
-        </div>
+    <!-- 过程折叠区域 -->
+    <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
       </div>
 
-      <!-- 中间控制区 + 左右两侧买家卡片 -->
-      <div class="flex flex-col lg:flex-row items-center justify-center gap-4 sm:gap-6 w-full max-w-5xl mx-auto py-2">
+      <!-- 上下排法的盲抽组 -->
+      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-2xl relative overflow-hidden mb-4">
         
-        <!-- 左侧卡片区域 (在大屏时显示，手机端隐藏) -->
-        <div id="pk-group-left" class="hidden lg:flex flex-row-reverse flex-wrap justify-end gap-2.5 sm:gap-3.5 flex-1 max-w-[40%]"></div>
-
-        <!-- 中间票选框与按钮 -->
-        <div class="flex flex-col items-center justify-center flex-shrink-0 z-10">
-          <div class="flex flex-col items-center justify-center bg-slate-950/90 px-10 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.3)]">
-            <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-            <span id="centerTriggerNumberBox" class="text-4xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+        <div class="flex flex-row justify-between items-center mb-3.5 pb-3 border-b border-amber-500/30 gap-2">
+          <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
+            <span class="text-base sm:text-2xl animate-bounce">🔥</span>
+            <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
           </div>
-          <div id="publicRevealButtonBox" class="hidden mt-3">
+          <div class="flex-shrink-0">
+            <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center mb-4">
+          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-10 py-3.5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.3)]">
+            <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
+            <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+          </div>
+          <div id="publicRevealButtonBox" class="hidden mt-3 flex justify-center">
             <button onclick="revealPKWinnerFromPublic()" class="px-8 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-1.5">
               <span>🎰</span><span>点击揭晓</span>
             </button>
           </div>
         </div>
 
-        <!-- 右侧卡片区域 (在大屏时显示，手机端隐藏) -->
-        <div id="pk-group-right" class="hidden lg:flex flex-row flex-wrap justify-start gap-2.5 sm:gap-3.5 flex-1 max-w-[40%]"></div>
-
-        <!-- 移动端/平板端的统一网格区 (在屏幕较小时显示) -->
-        <div id="publicActiveGroupGrid" class="flex lg:hidden flex-wrap justify-center gap-2.5 sm:gap-3.5 w-full mt-2"></div>
-
+        <div id="publicActiveGroupGrid" class="flex flex-wrap justify-center gap-2.5 sm:gap-3.5"></div>
       </div>
-    </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
-      <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选人数</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
-      <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
-      <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮待PK人数</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
-      <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已淘汰人数</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
-    </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选人数</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮待PK人数</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
+        <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已淘汰人数</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
+      </div>
 
-    <div class="space-y-4 mb-4">
-      <div class="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4 shadow-lg shadow-emerald-950/20">
-        <div class="flex-1 w-full">
+      <div class="space-y-4 mb-4">
+        <div class="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4 shadow-lg shadow-emerald-950/20">
+          <div class="flex-1 w-full">
+            <div class="flex items-center space-x-2 mb-2">
+              <span class="text-base sm:text-lg">🏆</span>
+              <h2 class="text-xs sm:text-md font-bold text-emerald-400">已晋级名单</h2>
+              <span id="passedBadgeCount" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+            </div>
+            <div id="passedListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
+          </div>
+        </div>
+        <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/40 shadow-lg">
           <div class="flex items-center space-x-2 mb-2">
-            <span class="text-base sm:text-lg">🏆</span>
-            <h2 class="text-xs sm:text-md font-bold text-emerald-400">已晋级名单</h2>
-            <span id="passedBadgeCount" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+            <span class="text-base sm:text-lg">🎁</span>
+            <h2 class="text-xs sm:text-md font-bold text-emerald-300">已胜出安慰奖名单</h2>
+            <span id="publicConsolationCountBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
           </div>
-          <div id="passedListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
+          <div id="publicConsolationListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
         </div>
       </div>
-      <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/40 shadow-lg">
-        <div class="flex items-center space-x-2 mb-2">
-          <span class="text-base sm:text-lg">🎁</span>
-          <h2 class="text-xs sm:text-md font-bold text-emerald-300">已胜出安慰奖名单</h2>
-          <span id="publicConsolationCountBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
-        </div>
-        <div id="publicConsolationListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
-      </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
-      <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 min-h-[160px]">
-        <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
-          <div class="flex items-center space-x-2">
-            <span class="text-base sm:text-lg">⚡</span>
-            <h2 class="text-xs sm:text-md font-bold text-amber-400">待PK买家名单</h2>
-            <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> 人待角逐</span>
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 min-h-[160px]">
+          <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-base sm:text-lg">⚡</span>
+              <h2 class="text-xs sm:text-md font-bold text-amber-400">待PK买家名单</h2>
+              <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> 人待角逐</span>
+            </div>
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
+              <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
+              <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
+            </div>
           </div>
-          <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
-            <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
-            <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
+          <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
+        </div>
+        <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-3.5 sm:p-4 border border-slate-800 min-h-[200px] sm:min-h-[300px] flex flex-col">
+          <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-800 pb-2.5 sm:pb-3">
+            <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区 (新至旧)</h3></div>
+            <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
           </div>
+          <div id="outListContainer" class="space-y-3 sm:space-y-4 flex-1 overflow-y-auto no-scrollbar max-h-[400px] sm:max-h-[600px] pr-1"></div>
         </div>
-        <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
-      </div>
-      <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-3.5 sm:p-4 border border-slate-800 min-h-[200px] sm:min-h-[300px] flex flex-col">
-        <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-800 pb-2.5 sm:pb-3">
-          <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区 (新至旧)</h3></div>
-          <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
-        </div>
-        <div id="outListContainer" class="space-y-3 sm:space-y-4 flex-1 overflow-y-auto no-scrollbar max-h-[400px] sm:max-h-[600px] pr-1"></div>
       </div>
     </div>
   </main>
@@ -276,18 +279,49 @@
       }, 1000);
     }
 
+    // 🔥 分享与保存图片逻辑（仅针对终极荣誉汇总榜）
+    async function shareSummaryImage() {
+      const panel = document.getElementById('finalTournamentSummaryPanel');
+      if (!panel) return;
+      try {
+        const canvas = await html2canvas(panel, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
+        const imgData = canvas.toDataURL('image/png');
+        // 使用 Web Share API
+        if (navigator.share) {
+          const blob = await (await fetch(imgData)).blob();
+          const file = new File([blob], 'Mochiishop_Winners.png', { type: 'image/png' });
+          await navigator.share({ title: '全场抽奖比赛荣誉汇总', text: '祝贺所有获奖买家！', files: [file] });
+        } else {
+          alert("⚠️ 您的浏览器不支持一键分享，请使用【保存为图片】");
+        }
+      } catch (err) {
+        alert("❌ 分享失败，请重试！");
+      }
+    }
+
+    async function saveSummaryAsImage() {
+      const panel = document.getElementById('finalTournamentSummaryPanel');
+      if (!panel) return;
+      try {
+        const canvas = await html2canvas(panel, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
+        const link = document.createElement('a');
+        link.download = 'Mochiishop_Winners.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (err) {
+        alert("❌ 生成图片失败，请重试！");
+      }
+    }
+
     function renderFinalSummaryPanel() {
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
+      const collapsibleSection = document.getElementById('collapsibleProcessSection');
       const podiumGrid = document.getElementById('podiumSummaryGrid');
       const consolationBox = document.getElementById('consolationSummaryBox');
       const consolationGrid = document.getElementById('consolationSummaryGrid');
       const consolationBadge = document.getElementById('consolationTotalBadge');
 
-      let champion = null;
-      let runnerUp = null;
-      let thirdPlace = null;
-      let consolations = [];
-
+      let champion = null, runnerUp = null, thirdPlace = null, consolations = [];
       (state.rounds || []).forEach(r => {
         (r.candidates || []).forEach(c => {
           if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
@@ -299,10 +333,13 @@
 
       if (!champion) {
         summaryPanel.classList.add('hidden');
+        collapsibleSection.classList.remove('hidden'); // 展开下方区域
         return;
       }
 
+      // 出结果后显示大框架，并折叠下方过程
       summaryPanel.classList.remove('hidden');
+      collapsibleSection.classList.add('hidden');
       document.getElementById('winnerAnnouncementBanner').classList.add('hidden');
 
       podiumGrid.innerHTML = `
@@ -312,14 +349,12 @@
           <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
           <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || '无订单号') : '-'}</div>
         </div>
-
         <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
           <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
           <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
           <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || '无订单号')}</div>
         </div>
-
         <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
@@ -360,21 +395,14 @@
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
-      const mixed = state.modeConfig && state.modeConfig.mixedModeEnabled !== false;
 
-      let championName = "", runnerUpName = "", thirdPlaceName = "";
+      let thirdPlaceName = "";
       (state.rounds || []).forEach(r => {
         (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") championName = c.name;
-          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUpName = c.name;
           if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlaceName = c.name;
         });
       });
 
-      if (championName && runnerUpName) {
-        banner.classList.add('hidden');
-        return;
-      }
       if (thirdPlaceName) {
         banner.classList.remove('hidden');
         content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
@@ -385,9 +413,8 @@
       if (isConsolationStage) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         banner.classList.remove('hidden');
-        content.innerHTML = mixed
-          ? `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主（支持手动晋级或抽组PK），选满 ${N} 位后自动进入【冠亚季争夺战】！</span>`
-          : `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主，选满 ${N} 位后自动进入【冠亚季争夺战】！</span>`;
+        // 🔥 修改指定格式
+        content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主 🎁</span>`;
         return;
       }
 
@@ -513,7 +540,8 @@
         return;
       }
 
-      const activeCards = document.querySelectorAll('#pk-group-left > div, #pk-group-right > div, #publicActiveGroupGrid > div');
+      // 🔥 修复失效 Bug：限定在正确的容器内寻找卡片
+      const activeCards = document.querySelectorAll('#publicActiveGroupGrid > div');
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
@@ -524,6 +552,7 @@
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
       let currentIndex = 0, speed = 80, iterations = 0;
       const maxFastIterations = 15;
+      
       function runMarquee() {
         activeCards.forEach(el => el.classList.remove('marquee-flash'));
         activeCards[currentIndex].classList.add('marquee-flash');
@@ -640,7 +669,7 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-    // 辅助函数：生成单张卡片的 HTML（用于左右两侧或移动端）
+    // 辅助函数：生成单张卡片的 HTML（上下排法）
     function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
@@ -684,8 +713,6 @@
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
       const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
 
-      const groupLeft = document.getElementById('pk-group-left');
-      const groupRight = document.getElementById('pk-group-right');
       const groupMobile = document.getElementById('publicActiveGroupGrid');
 
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
@@ -711,24 +738,7 @@
           }).filter(Boolean);
         }
 
-        // 分配左右两侧名单 (交替分配)
-        let leftHtml = '';
-        let rightHtml = '';
-        
-        activeMembers.forEach((c, idx) => {
-          const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          if (idx % 2 === 0) {
-            leftHtml += cardHtml;
-          } else {
-            rightHtml += cardHtml;
-          }
-        });
-
-        // 大屏左右渲染 (为了让票选号居中，如果是奇数个，左侧会多一个)
-        groupLeft.innerHTML = leftHtml;
-        groupRight.innerHTML = rightHtml;
-
-        // 移动端渲染全部
+        // 上下排法直接铺满
         groupMobile.innerHTML = activeMembers.map((c, idx) => getCardHtml(c, idx, state.pkStage === 'revealed')).join('');
 
       } else {
@@ -833,7 +843,7 @@
         }).join('');
       }
 
-      updateWinnerBannerUI();
+      updateWinnerBannerUI();   // 函数最后无条件调用
     }
 
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
