@@ -163,7 +163,6 @@
   <main class="max-w-[1600px] mx-auto px-4 py-6 flex-1 w-full">
     <div class="mb-4 flex items-center justify-between border-b border-slate-800 pb-2">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto"></div>
-      <!-- 🔥 按钮化重置 -->
       <button onclick="resetRounds()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/50 text-xs font-bold rounded-lg transition shadow flex items-center space-x-1.5">
         <span>⚠️</span><span>重置所有轮次数据</span>
       </button>
@@ -299,7 +298,7 @@
           updateHeaderTitle();
           updateModeBadgeUI();
           checkAndTogglePdfExportBtn();
-          updatePickRandomBtnState(); // 更新盲抽按钮状态
+          updatePickRandomBtnState();
         }
       });
       db.ref('tournament_state/publicAdminActive').on('value', (snap) => {
@@ -308,7 +307,6 @@
       });
     };
 
-    // 切换设置 Tab
     function switchConfigTab(tabId) {
       document.querySelectorAll('.config-tab-panel').forEach(el => el.classList.add('hidden'));
       document.getElementById(tabId).classList.remove('hidden');
@@ -324,7 +322,6 @@
       });
     }
 
-    // 盲抽按钮禁用状态更新
     function updatePickRandomBtnState() {
       const btn = document.getElementById('pickRandomGroupBtn');
       if (!btn) return;
@@ -337,7 +334,6 @@
       }
     }
 
-    // 前后台冲突锁定
     function updateAdminRevealButtonLock() {
       const btn = document.getElementById('adminRevealBtn');
       const hint = document.getElementById('adminLockedHint');
@@ -359,7 +355,7 @@
 
     function openConfigModal() { 
       document.getElementById('configModal').classList.remove('hidden'); 
-      switchConfigTab('tabTitle'); // 默认打开第一个
+      switchConfigTab('tabTitle');
     }
     function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
     
@@ -717,6 +713,7 @@
           const podium = remain.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
           state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
           currentRoundIndex = state.rounds.length - 1;
+          state.passHistory = []; // 🔥 清空历史
           alert(`🎁 已选满 ${N} 名安慰奖！\n自动进入【${label}】阶段。`);
         }
         return;
@@ -730,6 +727,7 @@
         const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
         state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
         currentRoundIndex = state.rounds.length - 1;
+        state.passHistory = []; // 🔥 清空历史
         alert(`🥉 【${justPassed.name}】锁定季军！\n自动进入【${label}】。`);
         return;
       }
@@ -796,6 +794,7 @@
       currentRoundIndex = state.rounds.length - 1;
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+      state.passHistory = []; // 🔥 清空历史
       saveState(); renderRoundTabs();
       alert(`🎉 已开启【${label}】！`);
     }
