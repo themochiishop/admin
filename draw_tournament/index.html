@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN"> 
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -9,40 +9,14 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .folder-tab {
-      position: absolute; top: -15px; left: 0px;
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #0f172a; font-weight: 900; font-size: 9px;
-      padding: 1px 8px;
-      border-top-left-radius: 6px; border-top-right-radius: 6px;
-      box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
-      letter-spacing: 0.5px; z-index: 10;
-    }
-    
-    @keyframes ringPulse {
-      0% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); }
-      50% { box-shadow: 0 0 25px #fbbf24, inset 0 0 15px #fbbf24; border-color: #fbbf24; transform: scale(1.05); }
-      100% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); }
-    }
-    .marquee-flash {
-      animation: ringPulse 0.15s infinite alternate;
-      background-color: rgba(245, 158, 11, 0.2) !important;
-    }
-
-    @keyframes winnerBlast {
-      0% { transform: scale(1); box-shadow: 0 0 30px #10b981; }
-      50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981; }
-      100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399; }
-    }
-    .winner-glow {
-      animation: winnerBlast 1s infinite alternate;
-      border: 4px solid #34d399 !important;
-      background-color: #064e3b !important;
-    }
+    .folder-tab { position: absolute; top: -15px; left: 0px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 9px; padding: 1px 8px; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); letter-spacing: 0.5px; z-index: 10; }
+    @keyframes ringPulse { 0% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02);} 50% { box-shadow: 0 0 25px #fbbf24, inset 0 0 15px #fbbf24; border-color: #fbbf24; transform: scale(1.05);} 100% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02);} }
+    .marquee-flash { animation: ringPulse 0.15s infinite alternate; background-color: rgba(245, 158, 11, 0.2) !important; }
+    @keyframes winnerBlast { 0% { transform: scale(1); box-shadow: 0 0 30px #10b981;} 50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981;} 100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399;} }
+    .winner-glow { animation: winnerBlast 1s infinite alternate; border: 4px solid #34d399 !important; background-color: #064e3b !important; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -87,7 +61,6 @@
             <div id="modeTooltipBody" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
           </div>
         </div>
-
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span>云端毫秒级同步中...</span>
@@ -102,17 +75,13 @@
   </header>
 
   <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full">
-
     <div id="winnerAnnouncementBanner" class="mb-4 sm:mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
       <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
     </div>
-
     <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
     </div>
-
     <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-2xl relative overflow-hidden mb-4">
-      
       <div class="flex flex-row justify-between items-center mb-3.5 pb-3 border-b border-amber-500/30 gap-2">
         <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
           <span class="text-base sm:text-2xl animate-bounce">🔥</span>
@@ -122,30 +91,25 @@
           <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
         </div>
       </div>
-
       <div class="mb-4 flex flex-col items-center justify-center">
         <div class="flex flex-col items-center justify-center bg-slate-950/80 px-8 py-3 rounded-xl border-2 border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
           <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮触发号</span>
           <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
         </div>
       </div>
-
       <div id="publicRevealButtonBox" class="hidden mb-4 flex justify-center">
         <button onclick="revealPKWinnerFromPublic()" class="w-full max-w-xs px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
           <span>🎰</span><span>点击揭晓开奖</span>
         </button>
       </div>
-
       <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
     </div>
-
     <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选人数</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮待PK人数</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已淘汰人数</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
     </div>
-
     <div class="space-y-4 mb-4">
       <div class="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4 shadow-lg shadow-emerald-950/20">
         <div class="flex-1 w-full">
@@ -166,7 +130,6 @@
         <div id="publicConsolationListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
       </div>
     </div>
-
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 min-h-[160px]">
         <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
@@ -211,29 +174,20 @@
       messagingSenderId: "803720903757",
       appId: "1:803720903757:web:8b561daabc0d69af9e7004"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
-
     const ADMIN_PASSWORD = "023457";
 
     let currentRoundIndex = 0;
-    let userManuallySelectedRound = false; 
-    let isAdminUnlocked = false; 
+    let userManuallySelectedRound = false;
+    let isAdminUnlocked = false;
 
-    let state = { 
-      customPublicTitle: '',
-      isPublicVisible: true,
-      pkStage: 'voting', 
-      triggerNumber: null,
-      drawRoundIndex: 0,
-      activeGroupIds: [],
-      activeGroupMembers: [],
-      passHistory: [],
-      settled: false,
-      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 }, 
-      rounds: [{ roundName: "第 1 轮", candidates: [] }] 
+    let state = {
+      customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
+      drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false,
+      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 },
+      rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
     function toggleModeTooltip(e) {
@@ -256,7 +210,6 @@
           renderPublicView();
         }, 100);
       }
-
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -265,11 +218,8 @@
           if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
           if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
           if (!state.passHistory) state.passHistory = [];
-
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-          
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
-
           updatePublicOverlayState();
           updateModeBadge();
           renderRoundTabs();
@@ -324,43 +274,29 @@
     function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
-
       const activeCards = document.querySelectorAll('#publicActiveGroupGrid > div');
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
-
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
-
       const tempMembers = [];
-      activeCards.forEach((cardEl, idx) => {
-        tempMembers.push({ id: state.activeGroupMembers[idx].id, displayNumber: nums[idx] });
-      });
-
+      activeCards.forEach((cardEl, idx) => tempMembers.push({ id: state.activeGroupMembers[idx].id, displayNumber: nums[idx] }));
       let winnerIndex = -1;
       tempMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
-
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
-
-      let currentIndex = 0;
-      let speed = 80;
-      let iterations = 0;
+      let currentIndex = 0, speed = 80, iterations = 0;
       const maxFastIterations = 15;
-      
       function runMarquee() {
         activeCards.forEach(el => el.classList.remove('marquee-flash'));
         activeCards[currentIndex].classList.add('marquee-flash');
-
         if (iterations >= maxFastIterations) speed += 30;
-
         if (speed > 300 && currentIndex === winnerIndex) {
           activeCards.forEach(el => el.classList.remove('marquee-flash'));
           activeCards[currentIndex].classList.add('winner-glow');
-          
           setTimeout(() => {
             db.ref('tournament_state').transaction((latestState) => {
               if (!latestState) return latestState;
               latestState.activeGroupMembers = latestState.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
-              latestState.pkStage = 'revealed'; 
+              latestState.pkStage = 'revealed';
               return latestState;
             }, (error, committed, snapshot) => {
               if (committed) {
@@ -370,21 +306,17 @@
                     if (!finalState) return finalState;
                     const roundIdx = finalState.drawRoundIndex ?? currentRoundIndex;
                     const activeRound = finalState.rounds[roundIdx];
-                    
                     if (activeRound) {
                       const triggerNum = finalState.triggerNumber;
                       const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
-                      
                       if (winnerMember) {
                         const winnerId = String(winnerMember.id);
                         const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                        
                         if (!finalState.passHistory) finalState.passHistory = [];
                         const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
                         if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
                           finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx });
                         }
-
                         finalState.activeGroupIds.forEach(id => {
                           const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
                           if (target) {
@@ -416,12 +348,10 @@
           }, 1500);
           return;
         }
-
         currentIndex = (currentIndex + 1) % total;
         iterations++;
         setTimeout(runMarquee, speed);
       }
-
       runMarquee();
     }
 
@@ -431,7 +361,6 @@
       if (state.isPublicVisible === false) mask.classList.remove('hidden');
       else mask.classList.add('hidden');
     }
-
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
       if (!r) return `第 ${idx + 1} 轮`;
@@ -440,7 +369,6 @@
       else if (r.stageName && r.stageName.includes("冠亚季")) return `🏆 Podium (3)`;
       return `第 ${idx + 1} 轮`;
     }
-
     function renderRoundTabs() {
       const container = document.getElementById('roundTabsContainer');
       if (!container) return;
@@ -451,25 +379,19 @@
         return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">${escapeHtml(getRoundTitle(idx))} (${passedCount})</button>`;
       }).join('');
     }
-
     function switchRound(idx) {
       currentRoundIndex = idx;
-      userManuallySelectedRound = true; 
+      userManuallySelectedRound = true;
       renderRoundTabs(); renderPublicView(); updateStats();
     }
-
     function setLanguage(lang) { renderRoundTabs(); renderPublicView(); updateStats(); }
-
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
-      
       let passedCount = candidates.filter(c => c.status === 'pass').length;
       if (state.passHistory) passedCount = Math.max(passedCount, state.passHistory.filter(h => h.roundIndex === currentRoundIndex).length);
-      
       let totalOutCount = 0;
       (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
-
       document.getElementById('statTotalCandidates').innerText = candidates.length;
       document.getElementById('statPassedCount').innerText = passedCount;
       document.getElementById('statPendingCount').innerText = candidates.filter(c => c.status === 'pending').length;
@@ -485,7 +407,6 @@
         if (currentRoundIndex < 0) currentRoundIndex = 0;
         activeRound = state.rounds[currentRoundIndex];
       }
-
       const searchEl = document.getElementById('searchInput');
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
@@ -500,13 +421,10 @@
         publicGroupContainer.classList.remove('hidden');
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-
         if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
-
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
-        
         let activeMembers;
         if (state.activeGroupMembers && state.activeGroupMembers.length > 0) {
           activeMembers = state.activeGroupMembers.map(m => {
@@ -519,13 +437,7 @@
             return c ? { ...c, displayNumber: null } : null;
           }).filter(Boolean);
         }
-
-        publicGroupGrid.innerHTML = activeMembers.map((c, idx) => {
-          const realNum = c.displayNumber;
-          const hasNumber = realNum !== null && realNum !== undefined;
-          const isWinner = (state.pkStage === 'revealed') && hasNumber && (realNum === state.triggerNumber);
-
-          return `
+        publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
             <div id="pk-card-${idx}" class="relative w-full h-36 rounded-xl border-2 border-amber-500/50 bg-slate-900 overflow-hidden shadow-xl transition-all duration-300">
               <div class="absolute inset-0 p-3 flex flex-col justify-center items-center text-center">
                 <span class="card-header text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>
@@ -534,9 +446,7 @@
                   <div class="text-[11px] text-slate-400 font-mono truncate max-w-[120px] mx-auto mt-0.5">${escapeHtml(c.orderNo)}</div>
                 </div>
               </div>
-            </div>`;
-        }).join('');
-        
+            </div>`).join('');
         if (state.pkStage === 'revealed') {
           activeMembers.forEach((c, idx) => {
             const realNum = c.displayNumber;
@@ -553,34 +463,26 @@
             }
           });
         }
-
       } else {
         publicGroupContainer.classList.add('hidden');
       }
 
-      // 晋级名单
       let passedList = list.filter(c => c.status === 'pass');
-      if (state.passHistory) {
-        state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
-      }
+      if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       passedList.sort((a, b) => {
         const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
         const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
         return numA - numB;
       });
-
       const passedContainer = document.getElementById('passedListContainer');
-      if (passedList.length === 0) {
-        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
-      } else {
-        passedContainer.innerHTML = passedList.map(c => {
-          const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5">` + folderTabHtml +
-            '<span class="font-bold text-emerald-300 mt-1">' + escapeHtml(c.name) + '</span>' +
-            '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px] mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
-          '</div>';
-        }).join('');
-      }
+      if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
+      else passedContainer.innerHTML = passedList.map(c => {
+        const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
+        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5">` + folderTabHtml +
+          '<span class="font-bold text-emerald-300 mt-1">' + escapeHtml(c.name) + '</span>' +
+          '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px] mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+        '</div>';
+      }).join('');
 
       // 🎁 安慰奖面板（模式2）
       const cPanel = document.getElementById('publicConsolationWinnerPanel');
@@ -589,21 +491,19 @@
       if (cPanel && cList && cBadge) {
         const cons = [];
         (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => {
-          if (c.rankKey === 'rankConsolation') cons.push(c);
+          if (c.rankKey === 'rankConsolation' || c.rankTitle === '🎁 安慰奖') cons.push(c);
         }));
         if (cons.length > 0) {
           cPanel.classList.remove('hidden');
           cBadge.innerText = cons.length;
-          cList.innerHTML = cons.map(c => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(c.orderNo || '无订单号')}</span></div>`).join('');
+          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(c.orderNo || '无订单号')}</span></div>`).join('');
         } else {
           cPanel.classList.add('hidden');
         }
       }
 
-      // 待PK名单
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
-
       if (!activeRound.candidates || activeRound.candidates.length === 0) {
         pendingContainer.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-3xl mb-2">📋</p><p class="text-xs">本轮抽奖名单同步中，请关注直播间...</p></div>`;
       } else if (pendingList.length === 0) {
@@ -618,8 +518,7 @@
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-          cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` +
-            folderTabHtml +
+          cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` + folderTabHtml +
             '<div>' +
               '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
               '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + escapeHtml(c.name) + '</div>' +
@@ -630,7 +529,6 @@
         pendingContainer.innerHTML = '<div class="flex flex-wrap gap-2.5 sm:gap-3">' + cardsHtml + '</div>';
       }
 
-      // 淘汰区
       const outContainer = document.getElementById('outListContainer');
       let allOutCandidates = [];
       (state.rounds || []).forEach((r, rIdx) => {
@@ -644,9 +542,7 @@
           }
         });
       });
-
       document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
-
       if (allOutCandidates.length === 0) {
         outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`;
       } else {
@@ -659,17 +555,14 @@
           const groupCardsHtml = candidatesInGroup.map(c => `
             <div class="p-1.5 bg-slate-900/80 border border-slate-800 rounded-md opacity-70 hover:opacity-100 transition shadow-sm text-center">
               <span class="font-bold text-slate-300 text-[11px] sm:text-xs truncate block">${escapeHtml(c.name)}</span>
+            </div>`).join('');
+          return `<div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800">
+            <div class="text-[10px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
+              <span>❌ 第 ${rNum} 轮淘汰</span>
+              <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
             </div>
-          `).join('');
-          return `
-            <div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800">
-              <div class="text-[10px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
-                <span>❌ 第 ${rNum} 轮淘汰</span>
-                <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
-              </div>
-              <div class="grid grid-cols-1 gap-1">${groupCardsHtml}</div>
-            </div>
-          `;
+            <div class="grid grid-cols-1 gap-1">${groupCardsHtml}</div>
+          </div>`;
         }).join('');
       }
     }
