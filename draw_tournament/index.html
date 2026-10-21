@@ -25,12 +25,12 @@
     }
     .animate-pop { animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     
-    /* 修改进度条动画：从右向左缩短 */
-    @keyframes shrinkBarRightToLeft {
-      from { width: 100%; }
-      to { width: 0%; }
+    /* 进度条：灰色底色，黄色从左向右填满 */
+    @keyframes fillBarLeftToRight {
+      from { width: 0%; }
+      to { width: 100%; }
     }
-    .animate-bar { animation: shrinkBarRightToLeft 5s linear forwards; }
+    .animate-bar { animation: fillBarLeftToRight 5s linear forwards; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -55,7 +55,8 @@
       </div>
       <p class="text-sm sm:text-base text-amber-200/80 mb-8 font-medium">🔥 请各位买家/观众做好准备，激烈的角逐即将开始！</p>
       
-      <div class="w-full bg-slate-800 rounded-full h-2 mb-4 overflow-hidden border border-slate-700 flex justify-end">
+      <!-- 灰色底，黄色从左至右填满 -->
+      <div class="w-full bg-slate-700/50 rounded-full h-2 mb-4 overflow-hidden border border-slate-600/50 flex justify-start">
         <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-2 rounded-full animate-bar"></div>
       </div>
       <p class="text-[10px] text-slate-500 uppercase tracking-widest">Automatically closing in 5 seconds...</p>
@@ -75,7 +76,6 @@
     </div>
   </div>
 
-  <!-- 🔥 横放悬浮按钮 -->
   <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
     <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
       <span>🔗</span><span>分享结果</span>
