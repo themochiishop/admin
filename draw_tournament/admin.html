@@ -58,7 +58,6 @@
     </div>
   </header>
 
-  <!-- 🚦 推进轮次选择弹窗 -->
   <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
       <button onclick="closeAdvanceModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -790,7 +789,7 @@
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
-           function advanceModeLogic(activeRound, justPassed) {
+    function advanceModeLogic(activeRound, justPassed) {
       if (!state.modeConfig || !state.modeConfig.enabled) return;
       const mode = state.modeConfig.selectedMode || 'mode1';
       const total = activeRound.candidates || [];
@@ -815,7 +814,9 @@
           state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
           currentRoundIndex = state.rounds.length - 1;
           state.passHistory = []; // 清空历史
-          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+          
+          // 设置事件，让前台5秒后自动弹轮次窗
+          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label, delay: 5000 };
           
           saveState(); renderRoundTabs();
           
@@ -829,25 +830,24 @@
         justPassed.rankTitle = "🥉 季军"; justPassed.rankKey = "rankThird";
         const two = total.filter(c => String(c.id) !== String(justPassed.id));
         
+        // 1. 设置季军恭喜事件
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
+        
+        // 2. 准备决战的数据
+        const label = "👑 冠亚军终极决战 (2选1)";
+        const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+        
+        // 3. 将决战数据直接压入，但推迟前台的轮次弹窗（延迟 3500ms）
+        state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
+        currentRoundIndex = state.rounds.length - 1;
+        state.passHistory = [];
+        state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label, delay: 3500 };
         
         saveState(); 
         renderRoundTabs();
 
-        setTimeout(() => {
-          const label = "👑 冠亚军终极决战 (2选1)";
-          const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-          
-          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
-          currentRoundIndex = state.rounds.length - 1;
-          state.passHistory = [];
-          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-          
-          saveState(); 
-          renderRoundTabs();
-          
-          setTimeout(() => alert(`🥉 【${justPassed.name}】锁定季军！\n已自动进入【${label}】。`), 200);
-        }, 3500);
+        // 4. 后台这边延迟弹一下提示，给直播主看
+        setTimeout(() => alert(`🥉 【${justPassed.name}】锁定季军！\n即将开启【${label}】。`), 3500);
         
         return;
       }
@@ -969,7 +969,8 @@
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
       state.passHistory = []; 
       
-      state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+      // 延迟 0，立即弹窗
+      state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label, delay: 0 };
       
       saveState(); renderRoundTabs();
       alert(`🎉 已开启【${label}】！`);
