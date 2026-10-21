@@ -3,109 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Gallery</title>
+    <title>Gallery Viewer</title>
     <style>
+        /* 全局重置与基础样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; }
+        html, body { height: 100%; overflow: hidden; } /* 锁定页面高度，禁止外层滚动 */
         body {
-            background: #1a1e2b; min-height: 100vh; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; font-family: system-ui, 'Segoe UI', sans-serif;
-            padding: clamp(0.5rem, 3vw, 1.5rem);
+            background-color: #0d1117; /* 极其深邃的底色 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
         }
-        
-        /* 顶部目录切换栏 */
-        .top-bar {
-            width: 100%; max-width: 1000px; display: flex; justify-content: center;
-            align-items: center; margin-bottom: 1rem; padding: 0 0.5rem; flex-wrap: wrap; gap: 0.5rem;
+
+        /* 顶部导航栏 - 玻璃拟态 */
+        .top-nav {
+            width: 100%;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(13, 17, 23, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 10;
+            flex-shrink: 0;
         }
-        
+
+        .nav-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #ffffff;
+        }
+
+        /* 顶部目录切换按钮 */
+        .cat-tabs {
+            display: flex;
+            gap: 0.5rem;
+        }
+
         .cat-btn {
-            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #aab3cd; padding: 0.5rem 1rem; border-radius: 2rem; cursor: pointer;
-            font-size: 0.9rem; transition: all 0.2s; outline: none;
-        }
-        .cat-btn:hover { background: rgba(79, 124, 255, 0.2); color: #fff; }
-        .cat-btn.active { background: #4f7cff; border-color: #4f7cff; color: white; font-weight: 600; }
-
-        .slider-container {
-            width: 100%; max-width: 1000px; background: #0f1219; border-radius: clamp(1rem, 3vw, 2rem);
-            padding: clamp(0.75rem, 2.5vw, 1.5rem); box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #8b949e;
+            padding: 0.4rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
+        .cat-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .cat-btn.active {
+            color: #58a6ff; /* 科技蓝 */
+            background: rgba(88, 166, 255, 0.1);
+            border-color: rgba(88, 166, 255, 0.2);
+        }
+
+        /* 主体展示区 */
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            position: relative;
+            min-height: 0; /* 关键，防止子元素撑破 flex 容器 */
+        }
+
+        /* 图片轮播框 */
         .slider-viewport {
-            overflow: hidden; border-radius: clamp(0.75rem, 2vw, 1.25rem);
-            background: #1e2330; width: 100%; position: relative; min-height: 300px;
+            width: 100%;
+            height: 100%;
+            max-width: 1200px;
+            background: #161b22;
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
         }
 
         .slider-track {
-            display: flex; transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform;
+            display: flex;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
         }
 
         .slide {
-            flex: 0 0 100%; display: flex; align-items: center; justify-content: center;
-            padding: clamp(0.4rem, 1.5vw, 0.75rem);
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
         }
 
+        /* 核心图片样式：保证完整显示 */
         .slide img {
-            display: block; width: 100%; height: auto; max-height: min(460px, 60vh);
-            object-fit: cover; border-radius: clamp(0.5rem, 1.5vw, 1rem);
-            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.5); background: #151a24;
-            user-select: none; -webkit-user-drag: none;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            user-select: none;
+            -webkit-user-drag: none;
         }
 
-        .slider-nav {
-            display: flex; justify-content: center; align-items: center;
-            gap: clamp(0.75rem, 3vw, 1.5rem); margin-top: clamp(0.75rem, 2vw, 1.25rem); margin-bottom: 0.5rem;
-        }
-
+        /* 左右切换按钮 */
         .nav-btn {
-            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #eef2f8; width: clamp(2.4rem, 6vw, 3rem); height: clamp(2.4rem, 6vw, 3rem);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: clamp(1.2rem, 4vw, 1.8rem); cursor: pointer; transition: all 0.2s ease; flex-shrink: 0;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(13, 17, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            color: #ffffff;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
         }
-        .nav-btn:hover { background: #4f7cff; border-color: #4f7cff; color: white; }
+
+        .nav-btn:hover {
+            background: rgba(88, 166, 255, 0.2);
+            border-color: rgba(88, 166, 255, 0.5);
+            color: #58a6ff;
+        }
+
+        .prev-btn { left: 2rem; }
+        .next-btn { right: 2rem; }
+
+        /* 底部信息栏 */
+        .bottom-bar {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13, 17, 23, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 10;
+        }
 
         .page-indicator {
-            color: #aab3cd; font-size: clamp(0.9rem, 2.8vw, 1.1rem); font-weight: 500;
-            background: rgba(0, 0, 0, 0.35); padding: 0.4em 1em; border-radius: 3rem; min-width: 4.5em; text-align: center;
+            font-size: 0.9rem;
+            font-family: monospace;
+            color: #8b949e;
+            min-width: 3.5em;
+            text-align: center;
         }
 
-        .dots { display: flex; justify-content: center; gap: clamp(0.5rem, 2vw, 0.8rem); margin-top: 0.5rem; flex-wrap: wrap; }
+        .dots { display: flex; gap: 0.5rem; align-items: center; }
         .dot {
-            width: clamp(8px, 2vw, 10px); height: clamp(8px, 2vw, 10px); border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2); border: none; cursor: pointer; transition: all 0.25s ease;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0;
         }
-        .dot.active { background: #4f7cff; transform: scale(1.4); box-shadow: 0 0 12px #4f7cff; }
+        .dot.active {
+            background: #58a6ff;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.6);
+            transform: scale(1.3);
+        }
 
-        .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aab3cd; font-size: 0.9rem; }
+        .loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #8b949e;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .top-nav { padding: 0.8rem; flex-direction: column; gap: 0.8rem; }
+            .cat-tabs { width: 100%; overflow-x: auto; justify-content: flex-start; padding-bottom: 0.2rem; }
+            .cat-tabs::-webkit-scrollbar { display: none; }
+            .cat-btn { white-space: nowrap; }
+            .slide { padding: 0.5rem; }
+            .prev-btn { left: 0.5rem; width: 2.4rem; height: 2.4rem; }
+            .next-btn { right: 0.5rem; width: 2.4rem; height: 2.4rem; }
+            .bottom-bar { bottom: 1rem; padding: 0.4rem 1rem; gap: 0.8rem; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- 顶部目录切换按钮 -->
-    <div class="top-bar" id="topBar">
-        <button class="cat-btn active" data-cat="1">目录 1</button>
-        <button class="cat-btn" data-cat="2">目录 2</button>
-        <button class="cat-btn" data-cat="3">目录 3</button>
-        <button class="cat-btn" data-cat="4">目录 4</button>
-        <button class="cat-btn" data-cat="5">目录 5</button>
+    <!-- 顶部导航 -->
+    <div class="top-nav">
+        <div class="nav-title">GALLERY</div>
+        <div class="cat-tabs" id="topBar">
+            <button class="cat-btn active" data-cat="1">目录 01</button>
+            <button class="cat-btn" data-cat="2">目录 02</button>
+            <button class="cat-btn" data-cat="3">目录 03</button>
+            <button class="cat-btn" data-cat="4">目录 04</button>
+            <button class="cat-btn" data-cat="5">目录 05</button>
+        </div>
     </div>
 
-    <div class="slider-container">
+    <!-- 主体轮播区 -->
+    <div class="main-container">
         <div class="slider-viewport" id="sliderViewport">
-            <div class="loading" id="loadingText">正在读取图片...</div>
+            <div class="loading" id="loadingText">READING DATA...</div>
             <div class="slider-track" id="sliderTrack"></div>
-        </div>
+            
+            <button class="nav-btn prev-btn" id="prevBtn">←</button>
+            <button class="nav-btn next-btn" id="nextBtn">→</button>
 
-        <div class="slider-nav">
-            <button class="nav-btn" id="prevBtn">←</button>
-            <span class="page-indicator" id="pageIndicator">0 / 0</span>
-            <button class="nav-btn" id="nextBtn">→</button>
+            <div class="bottom-bar">
+                <span class="page-indicator" id="pageIndicator">0 / 0</span>
+                <div class="dots" id="dotsContainer"></div>
+            </div>
         </div>
-
-        <div class="dots" id="dotsContainer"></div>
     </div>
 
     <script type="module">
@@ -137,21 +283,17 @@
         let currentIndex = 0;
         let slideWidth = 0;
         let totalSlides = 0;
-        let currentCategory = '1'; // 默认目录 1
+        let currentCategory = '1';
 
-        // 切换目录点击事件
         topBar.addEventListener('click', (e) => {
             if (e.target.classList.contains('cat-btn')) {
-                // 更新按钮高亮
                 document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 
-                // 加载新目录
                 currentCategory = e.target.dataset.cat;
                 currentIndex = 0;
-                track.innerHTML = ''; // 清空旧图片
+                track.innerHTML = ''; 
                 loadingText.style.display = 'block';
-                loadingText.textContent = "正在读取图片...";
                 fetchImages();
             }
         });
@@ -160,13 +302,12 @@
             try {
                 const folderRef = ref(storage, currentCategory); 
                 const result = await listAll(folderRef);
-                
                 const sortedItems = result.items.sort((a, b) => a.name.localeCompare(b.name));
                 const urls = await Promise.all(sortedItems.map(item => getDownloadURL(item)));
                 
                 loadingText.style.display = 'none';
                 if (urls.length === 0) {
-                    loadingText.textContent = "该目录下暂无图片";
+                    loadingText.textContent = "暂无图片";
                     loadingText.style.display = 'block';
                     totalSlides = 0;
                     updateSlider();
@@ -176,14 +317,14 @@
                 renderImages(urls);
             } catch (error) {
                 console.error(error);
-                loadingText.textContent = "加载失败，请检查网络";
+                loadingText.textContent = "加载失败";
             }
         }
 
         function renderImages(urls) {
             track.innerHTML = '';
             totalSlides = urls.length;
-            urls.forEach((src, index) => {
+            urls.forEach((src) => {
                 const slide = document.createElement('div');
                 slide.className = 'slide';
                 const img = document.createElement('img');
@@ -218,8 +359,11 @@
             pageIndicator.textContent = `${currentIndex + 1} / ${totalSlides}`;
             const dots = dotsContainer.querySelectorAll('.dot');
             dots.forEach((dot, idx) => dot.classList.toggle('active', idx === currentIndex));
-            prevBtn.style.display = totalSlides > 1 ? 'flex' : 'none';
-            nextBtn.style.display = totalSlides > 1 ? 'flex' : 'none';
+            
+            // 只有一张图时隐藏按钮
+            const showNav = totalSlides > 1;
+            prevBtn.style.display = showNav ? 'flex' : 'none';
+            nextBtn.style.display = showNav ? 'flex' : 'none';
         }
 
         function measureAndUpdate() {
@@ -235,7 +379,6 @@
             updateSlider();
         }
 
-        // 初始化
         fetchImages();
         prevBtn.addEventListener('click', () => goToSlide(currentIndex - 1));
         nextBtn.addEventListener('click', () => goToSlide(currentIndex + 1));
