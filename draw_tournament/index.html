@@ -17,6 +17,22 @@
     .marquee-flash { animation: ringPulse 0.15s infinite alternate; background-color: rgba(245, 158, 11, 0.2) !important; }
     @keyframes winnerBlast { 0% { transform: scale(1); box-shadow: 0 0 30px #10b981;} 50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981;} 100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399;} }
     .winner-glow { animation: winnerBlast 1s infinite alternate; border: 4px solid #34d399 !important; background-color: #064e3b !important; }
+    
+    /* 环绕布局 Grid */
+    .grid-center-pk {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-areas: 
+        "left-top center right-top"
+        "left-bottom center right-bottom";
+      gap: 1rem;
+      align-items: center;
+      justify-items: center;
+    }
+    @media (max-width: 768px) {
+      .grid-center-pk { grid-template-columns: 1fr; grid-template-areas: "center" "left-top" "right-top" "left-bottom" "right-bottom"; }
+      .area-center { margin-bottom: 1rem; }
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -40,6 +56,16 @@
         <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-sm sm:text-base">10</span> 秒后自动切回大屏榜单...</span>
       </div>
     </div>
+  </div>
+
+  <!-- 🔥 全局悬浮按钮 (仅在汇总榜出现时显示) -->
+  <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
+    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
+      <span>🔗</span><span>分享结果</span>
+    </button>
+    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
+      <span>💾</span><span>保存为图片</span>
+    </button>
   </div>
 
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
@@ -97,20 +123,18 @@
         </div>
         <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
       </div>
-
-      <!-- 右下角分享与保存 -->
-      <div class="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center space-x-2 bg-slate-950/80 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
-        <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
-          <span>🔗</span><span>分享结果</span>
-        </button>
-        <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
-          <span>💾</span><span>保存为图片</span>
-        </button>
-      </div>
     </div>
 
     <div id="winnerAnnouncementBanner" class="mb-4 sm:mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
       <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
+    </div>
+
+    <!-- 折叠控制器 (有冠军后出现) -->
+    <div id="processSectionToggleBar" class="hidden mb-4 flex justify-between items-center bg-slate-800/60 p-2.5 rounded-xl border border-slate-700">
+      <span class="text-[11px] sm:text-xs text-slate-400 font-bold">📋 抽奖比赛全程选拔细节记录</span>
+      <button onclick="toggleProcessArea()" class="text-[11px] sm:text-xs text-amber-400 hover:underline font-bold flex items-center space-x-1">
+        <span id="processToggleBtnText">展开选拔过程 ▼</span>
+      </button>
     </div>
 
     <!-- 过程折叠区域 -->
@@ -119,10 +143,10 @@
         <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
       </div>
 
-      <!-- 上下排法的盲抽组 -->
-      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-2xl relative overflow-hidden mb-4">
+      <!-- 🔥 盲抽组：图片2的环绕布局 -->
+      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden mb-4">
         
-        <div class="flex flex-row justify-between items-center mb-3.5 pb-3 border-b border-amber-500/30 gap-2">
+        <div class="flex flex-row justify-between items-center mb-6 pb-3 border-b border-amber-500/30 gap-2">
           <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
             <span class="text-base sm:text-2xl animate-bounce">🔥</span>
             <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
@@ -132,19 +156,33 @@
           </div>
         </div>
 
-        <div class="flex flex-col items-center justify-center mb-4">
-          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-10 py-3.5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.3)]">
-            <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-            <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+        <div class="grid-center-pk w-full max-w-4xl mx-auto">
+          <!-- 左侧上方区域 -->
+          <div id="pk-area-left-top" class="area-left-top flex flex-wrap justify-center gap-3"></div>
+          <!-- 右侧上方区域 -->
+          <div id="pk-area-right-top" class="area-right-top flex flex-wrap justify-center gap-3"></div>
+          
+          <!-- 中间票选框与按钮 -->
+          <div class="area-center flex flex-col items-center justify-center z-10">
+            <div class="flex flex-col items-center justify-center bg-slate-950/90 px-10 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.3)]">
+              <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
+              <span id="centerTriggerNumberBox" class="text-4xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+            </div>
+            <div id="publicRevealButtonBox" class="hidden mt-3">
+              <button onclick="revealPKWinnerFromPublic()" class="px-8 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-1.5">
+                <span>🎰</span><span>点击揭晓</span>
+              </button>
+            </div>
           </div>
-          <div id="publicRevealButtonBox" class="hidden mt-3 flex justify-center">
-            <button onclick="revealPKWinnerFromPublic()" class="px-8 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-1.5">
-              <span>🎰</span><span>点击揭晓</span>
-            </button>
-          </div>
-        </div>
 
-        <div id="publicActiveGroupGrid" class="flex flex-wrap justify-center gap-2.5 sm:gap-3.5"></div>
+          <!-- 左侧下方区域 -->
+          <div id="pk-area-left-bottom" class="area-left-bottom flex flex-wrap justify-center gap-3"></div>
+          <!-- 右侧下方区域 -->
+          <div id="pk-area-right-bottom" class="area-right-bottom flex flex-wrap justify-center gap-3"></div>
+        </div>
+        
+        <!-- 供移动端/兜底渲染 -->
+        <div id="publicActiveGroupGrid" class="hidden flex-wrap justify-center gap-2.5 sm:gap-3.5 mt-4 w-full"></div>
       </div>
 
       <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
@@ -228,6 +266,7 @@
     let currentRoundIndex = 0;
     let userManuallySelectedRound = false;
     let isAdminUnlocked = false;
+    let isProcessAreaCollapsed = false;
 
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
@@ -279,14 +318,13 @@
       }, 1000);
     }
 
-    // 🔥 分享与保存图片逻辑（仅针对终极荣誉汇总榜）
+    // 分享与保存图片逻辑
     async function shareSummaryImage() {
       const panel = document.getElementById('finalTournamentSummaryPanel');
       if (!panel) return;
       try {
         const canvas = await html2canvas(panel, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
         const imgData = canvas.toDataURL('image/png');
-        // 使用 Web Share API
         if (navigator.share) {
           const blob = await (await fetch(imgData)).blob();
           const file = new File([blob], 'Mochiishop_Winners.png', { type: 'image/png' });
@@ -313,9 +351,25 @@
       }
     }
 
+    function toggleProcessArea() {
+      const collapsibleSection = document.getElementById('collapsibleProcessSection');
+      const toggleBtnText = document.getElementById('processToggleBtnText');
+      if (collapsibleSection.classList.contains('hidden')) {
+        collapsibleSection.classList.remove('hidden');
+        toggleBtnText.innerText = "折叠选拔过程 ▲";
+        isProcessAreaCollapsed = true;
+      } else {
+        collapsibleSection.classList.add('hidden');
+        toggleBtnText.innerText = "展开选拔过程 ▼";
+        isProcessAreaCollapsed = false;
+      }
+    }
+
     function renderFinalSummaryPanel() {
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
+      const toggleBar = document.getElementById('processSectionToggleBar');
       const collapsibleSection = document.getElementById('collapsibleProcessSection');
+      const floatingBtns = document.getElementById('floatingActionButtons');
       const podiumGrid = document.getElementById('podiumSummaryGrid');
       const consolationBox = document.getElementById('consolationSummaryBox');
       const consolationGrid = document.getElementById('consolationSummaryGrid');
@@ -333,13 +387,23 @@
 
       if (!champion) {
         summaryPanel.classList.add('hidden');
-        collapsibleSection.classList.remove('hidden'); // 展开下方区域
+        toggleBar.classList.add('hidden');
+        if (floatingBtns) floatingBtns.classList.add('hidden');
+        collapsibleSection.classList.remove('hidden'); // 没出结果时全部展开
         return;
       }
 
-      // 出结果后显示大框架，并折叠下方过程
+      // 出结果后：显示大框架，并默认折叠下方过程
       summaryPanel.classList.remove('hidden');
-      collapsibleSection.classList.add('hidden');
+      toggleBar.classList.remove('hidden');
+      if (floatingBtns) floatingBtns.classList.remove('hidden');
+      
+      // 默认折叠逻辑
+      if (!isProcessAreaCollapsed) {
+        collapsibleSection.classList.add('hidden');
+        document.getElementById('processToggleBtnText').innerText = "展开选拔过程 ▼";
+      }
+
       document.getElementById('winnerAnnouncementBanner').classList.add('hidden');
 
       podiumGrid.innerHTML = `
@@ -413,7 +477,6 @@
       if (isConsolationStage) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         banner.classList.remove('hidden');
-        // 🔥 修改指定格式
         content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主 🎁</span>`;
         return;
       }
@@ -540,7 +603,6 @@
         return;
       }
 
-      // 🔥 修复失效 Bug：限定在正确的容器内寻找卡片
       const activeCards = document.querySelectorAll('#publicActiveGroupGrid > div');
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
@@ -669,7 +731,7 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-    // 辅助函数：生成单张卡片的 HTML（上下排法）
+    // 辅助函数：生成单张卡片的 HTML（图片2样式）
     function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
@@ -689,7 +751,7 @@
       }
 
       return `
-        <div id="pk-card-${idx}" class="relative w-36 h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
+        <div id="pk-card-${idx}" class="relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
           <div class="font-bold text-amber-300 text-sm truncate w-full text-center">${escapeHtml(c.name)}</div>
           <div class="text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1">${escapeHtml(c.orderNo)}</div>
@@ -713,6 +775,10 @@
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
       const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
 
+      const areaLT = document.getElementById('pk-area-left-top');
+      const areaRT = document.getElementById('pk-area-right-top');
+      const areaLB = document.getElementById('pk-area-left-bottom');
+      const areaRB = document.getElementById('pk-area-right-bottom');
       const groupMobile = document.getElementById('publicActiveGroupGrid');
 
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
@@ -738,8 +804,33 @@
           }).filter(Boolean);
         }
 
-        // 上下排法直接铺满
-        groupMobile.innerHTML = activeMembers.map((c, idx) => getCardHtml(c, idx, state.pkStage === 'revealed')).join('');
+        // 清空四周区域
+        areaLT.innerHTML = ''; areaRT.innerHTML = ''; areaLB.innerHTML = ''; areaRB.innerHTML = '';
+        
+        // 环绕分配 (最多4个，若更多则平铺下方)
+        let mobileHtml = '';
+        activeMembers.forEach((c, idx) => {
+          const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
+          mobileHtml += cardHtml;
+
+          // 目标分配区域 (0-3 环绕，4及以后全塞到下方)
+          if (idx === 0) areaLT.innerHTML += cardHtml;
+          else if (idx === 1) areaRT.innerHTML += cardHtml;
+          else if (idx === 2) areaLB.innerHTML += cardHtml;
+          else if (idx === 3) areaRB.innerHTML += cardHtml;
+          else if (idx >= 4) areaLB.innerHTML += cardHtml; 
+        });
+
+        // 移动端兜底渲染
+        if (window.innerWidth <= 768) {
+          groupMobile.classList.remove('hidden');
+          groupMobile.classList.add('flex');
+          groupMobile.innerHTML = mobileHtml;
+          areaLT.innerHTML = ''; areaRT.innerHTML = ''; areaLB.innerHTML = ''; areaRB.innerHTML = '';
+        } else {
+          groupMobile.classList.add('hidden');
+          groupMobile.classList.remove('flex');
+        }
 
       } else {
         publicGroupContainer.classList.add('hidden');
