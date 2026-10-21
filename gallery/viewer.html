@@ -5,13 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Gallery Viewer</title>
     <style>
-        /* 全局重置与基础样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; background-color: #0d1117; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #c9d1d9; }
-        
         .app-container { display: flex; flex-direction: column; height: 100%; }
-
-        /* 顶部导航栏 */
         .top-nav {
             padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;
             background: rgba(13, 17, 23, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -27,30 +23,20 @@
         }
         .cat-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
         .cat-btn.active { color: #58a6ff; background: rgba(88, 166, 255, 0.1); border-color: rgba(88, 166, 255, 0.2); }
-
-        /* 主体展示区 */
-        .main-container {
-            flex: 1; display: flex; align-items: center; justify-content: center; padding: 1.5rem; position: relative; min-height: 0;
-        }
+        .main-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 1.5rem; position: relative; min-height: 0; }
         .slider-viewport {
             width: 100%; height: 100%; max-width: 1200px; background: #161b22; border-radius: 1rem;
             border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             position: relative; overflow: hidden; display: flex; align-items: center;
         }
-        .slider-track {
-            display: flex; width: 100%; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform;
-        }
-        .slide {
-            flex: 0 0 100%; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 1.5rem;
-        }
+        .slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform; }
+        .slide { flex: 0 0 100%; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
         .slide img {
             max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
             border-radius: 0.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); cursor: zoom-in;
             user-select: none; -webkit-user-drag: none; transition: transform 0.2s;
         }
         .slide img:hover { transform: scale(1.02); }
-
-        /* 左右按钮 */
         .nav-btn {
             position: absolute; top: 50%; transform: translateY(-50%);
             background: rgba(13, 17, 23, 0.6); border: 1px solid rgba(255, 255, 255, 0.1);
@@ -60,8 +46,6 @@
         .nav-btn:hover { background: rgba(88, 166, 255, 0.2); border-color: rgba(88, 166, 255, 0.5); color: #58a6ff; }
         .prev-btn { left: 2rem; }
         .next-btn { right: 2rem; }
-
-        /* 底部信息栏 */
         .bottom-bar {
             position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
             background: rgba(13, 17, 23, 0.7); backdrop-filter: blur(12px);
@@ -70,51 +54,19 @@
         }
         .page-indicator { font-size: 0.9rem; font-family: monospace; color: #8b949e; min-width: 3.5em; text-align: center; }
         .dots { display: flex; gap: 0.5rem; align-items: center; }
-        .dot {
-            width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.2);
-            border: none; cursor: pointer; transition: all 0.3s; padding: 0;
-        }
+        .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: none; cursor: pointer; transition: all 0.3s; padding: 0; }
         .dot.active { background: #58a6ff; box-shadow: 0 0 8px rgba(88, 166, 255, 0.6); transform: scale(1.3); }
-
         .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #8b949e; font-size: 0.9rem; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-
-        /* 全屏预览模态框 */
-        .lightbox {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.95); z-index: 9999;
-            display: none; justify-content: center; align-items: center; overflow: hidden;
-            touch-action: none;
-        }
+        .lightbox { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 9999; display: none; justify-content: center; align-items: center; overflow: hidden; touch-action: none; }
         .lightbox.active { display: flex; }
-        .lb-track {
-            display: flex; height: 100%; width: 100%;
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .lb-slide {
-            flex: 0 0 100%; width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center; padding: 1rem;
-        }
-        .lb-slide img {
-            max-width: 100%; max-height: 100%; object-fit: contain;
-            user-select: none; -webkit-user-drag: none; cursor: grab;
-        }
+        .lb-track { display: flex; height: 100%; width: 100%; transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .lb-slide { flex: 0 0 100%; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 1rem; }
+        .lb-slide img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; cursor: grab; }
         .lb-slide img:active { cursor: grabbing; }
-        .lb-close {
-            position: absolute; top: 1.5rem; right: 1.5rem;
-            background: rgba(255, 255, 255, 0.1); border: none; color: #fff;
-            width: 3rem; height: 3rem; border-radius: 50%; font-size: 1.5rem;
-            cursor: pointer; z-index: 10000; display: flex; align-items: center; justify-content: center;
-            transition: background 0.2s;
-        }
+        .lb-close { position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255, 255, 255, 0.1); border: none; color: #fff; width: 3rem; height: 3rem; border-radius: 50%; font-size: 1.5rem; cursor: pointer; z-index: 10000; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
         .lb-close:hover { background: rgba(255, 255, 255, 0.2); }
-        .lb-indicator {
-            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
-            color: #fff; font-size: 1rem; background: rgba(0, 0, 0, 0.5);
-            padding: 0.4rem 1rem; border-radius: 1rem; pointer-events: none;
-        }
-
-        /* 响应式 */
+        .lb-indicator { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); color: #fff; font-size: 1rem; background: rgba(0, 0, 0, 0.5); padding: 0.4rem 1rem; border-radius: 1rem; pointer-events: none; }
         @media (max-width: 768px) {
             .top-nav { padding: 0.8rem; flex-direction: column; gap: 0.8rem; align-items: flex-start; }
             .cat-tabs { width: 100%; }
@@ -126,23 +78,17 @@
     </style>
 </head>
 <body>
-
     <div class="app-container">
-        <!-- 顶部导航 -->
         <div class="top-nav">
             <div class="nav-title">GALLERY</div>
             <div class="cat-tabs" id="topBar"></div>
         </div>
-
-        <!-- 主体轮播区 -->
         <div class="main-container">
             <div class="slider-viewport" id="sliderViewport">
                 <div class="loading" id="loadingText">READING DATA...</div>
                 <div class="slider-track" id="sliderTrack"></div>
-                
                 <button class="nav-btn prev-btn" id="prevBtn">←</button>
                 <button class="nav-btn next-btn" id="nextBtn">→</button>
-
                 <div class="bottom-bar">
                     <span class="page-indicator" id="pageIndicator">0 / 0</span>
                     <div class="dots" id="dotsContainer"></div>
@@ -150,8 +96,6 @@
             </div>
         </div>
     </div>
-
-    <!-- 全屏预览模态框 -->
     <div class="lightbox" id="lightbox">
         <button class="lb-close" id="lbCloseBtn">×</button>
         <div class="lb-track" id="lbTrack"></div>
@@ -161,6 +105,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBCkb5eDLElnQZ8Pt3Ud5euOmdkCo4QxqM",
@@ -174,8 +119,8 @@
 
         const app = initializeApp(firebaseConfig);
         const storage = getStorage(app);
+        const db = getFirestore(app);
 
-        // 主界面 DOM
         const track = document.getElementById('sliderTrack');
         const viewport = document.getElementById('sliderViewport');
         const prevBtn = document.getElementById('prevBtn');
@@ -184,35 +129,10 @@
         const dotsContainer = document.getElementById('dotsContainer');
         const loadingText = document.getElementById('loadingText');
         const topBar = document.getElementById('topBar');
-
-        // 全屏模态框 DOM
         const lightbox = document.getElementById('lightbox');
         const lbCloseBtn = document.getElementById('lbCloseBtn');
         const lbTrack = document.getElementById('lbTrack');
         const lbIndicator = document.getElementById('lbIndicator');
-
-        // 1. 获取本地保存的目录名称
-        function getSavedCategories() {
-            const saved = localStorage.getItem('gallery_categories');
-            const defaultCategories = {
-                "1": "目录 01", "2": "目录 02", "3": "目录 03", "4": "目录 04", "5": "目录 05"
-            };
-            return saved ? JSON.parse(saved) : defaultCategories;
-        }
-
-        const categoryTitles = getSavedCategories();
-
-        function renderTopBar() {
-            topBar.innerHTML = '';
-            for (const [key, name] of Object.entries(categoryTitles)) {
-                const btn = document.createElement('button');
-                btn.className = `cat-btn ${key === '1' ? 'active' : ''}`;
-                btn.dataset.cat = key;
-                btn.textContent = name;
-                topBar.appendChild(btn);
-            }
-        }
-        renderTopBar();
 
         let currentIndex = 0;
         let slideWidth = 0;
@@ -220,12 +140,37 @@
         let currentCategory = '1';
         let currentImageUrls = [];
 
-        // 2. 目录切换
+        // 初始化顶部目录
+        async function initTopBar() {
+            const defaultCategories = { "1": "目录 01", "2": "目录 02", "3": "目录 03", "4": "目录 04", "5": "目录 05" };
+            let categories = defaultCategories;
+            
+            try {
+                const docRef = doc(db, "settings", "gallery_categories");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    categories = docSnap.data();
+                }
+            } catch (error) {
+                console.error("获取云端目录名失败", error);
+            }
+
+            topBar.innerHTML = '';
+            for (const [key, name] of Object.entries(categories)) {
+                const btn = document.createElement('button');
+                btn.className = `cat-btn ${key === '1' ? 'active' : ''}`;
+                btn.dataset.cat = key;
+                btn.textContent = name;
+                topBar.appendChild(btn);
+            }
+            
+            fetchImages(); // 渲染完名字后，立刻抓取第一目录的图片
+        }
+
         topBar.addEventListener('click', (e) => {
             if (e.target.classList.contains('cat-btn')) {
                 document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
-                
                 currentCategory = e.target.dataset.cat;
                 currentIndex = 0;
                 track.innerHTML = ''; 
@@ -234,17 +179,13 @@
             }
         });
 
-        // 3. 抓取图片 (⭐ 核心修改：按文件名倒序，最新的排最前)
         async function fetchImages() {
             try {
                 const folderRef = ref(storage, currentCategory); 
                 const result = await listAll(folderRef);
-                
-                // 倒序排列（b - a），因为文件名带时间戳，越新的时间戳越大
+                // 倒序：最新上传的在最前面
                 const sortedItems = result.items.sort((a, b) => b.name.localeCompare(a.name));
-                
                 const urls = await Promise.all(sortedItems.map(item => getDownloadURL(item)));
-                
                 currentImageUrls = urls;
 
                 loadingText.style.display = 'none';
@@ -302,7 +243,6 @@
             pageIndicator.textContent = `${currentIndex + 1} / ${totalSlides}`;
             const dots = dotsContainer.querySelectorAll('.dot');
             dots.forEach((dot, idx) => dot.classList.toggle('active', idx === currentIndex));
-            
             const showNav = totalSlides > 1;
             prevBtn.style.display = showNav ? 'flex' : 'none';
             nextBtn.style.display = showNav ? 'flex' : 'none';
@@ -328,7 +268,7 @@
             new ResizeObserver(() => requestAnimationFrame(measureAndUpdate)).observe(viewport);
         }
 
-        // 4. 全屏预览逻辑
+        // 全屏逻辑
         let lbCurrentIndex = 0;
         let lbSlideWidth = window.innerWidth;
         let startX = 0;
@@ -346,10 +286,8 @@
                 slide.appendChild(img);
                 lbTrack.appendChild(slide);
             });
-
             document.body.style.overflow = 'hidden';
             lightbox.classList.add('active');
-            
             lbSlideWidth = window.innerWidth;
             updateLightboxPosition(false);
         }
@@ -362,27 +300,19 @@
         }
 
         function updateLightboxPosition(animate = true) {
-            if (animate) {
-                lbTrack.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-            } else {
-                lbTrack.style.transition = 'none';
-            }
+            if (animate) lbTrack.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            else lbTrack.style.transition = 'none';
             const offset = -lbCurrentIndex * lbSlideWidth;
             lbTrack.style.transform = `translateX(${offset}px)`;
             lbIndicator.textContent = `${lbCurrentIndex + 1} / ${currentImageUrls.length}`;
         }
 
         lbCloseBtn.addEventListener('click', closeLightbox);
-
         window.addEventListener('keydown', (e) => {
             if (!lightbox.classList.contains('active')) return;
             if (e.key === 'Escape') closeLightbox();
-            if (e.key === 'ArrowLeft') {
-                if (lbCurrentIndex > 0) { lbCurrentIndex--; updateLightboxPosition(); }
-            }
-            if (e.key === 'ArrowRight') {
-                if (lbCurrentIndex < currentImageUrls.length - 1) { lbCurrentIndex++; updateLightboxPosition(); }
-            }
+            if (e.key === 'ArrowLeft' && lbCurrentIndex > 0) { lbCurrentIndex--; updateLightboxPosition(); }
+            if (e.key === 'ArrowRight' && lbCurrentIndex < currentImageUrls.length - 1) { lbCurrentIndex++; updateLightboxPosition(); }
         });
 
         window.addEventListener('resize', () => {
@@ -393,14 +323,12 @@
         });
 
         const getPositionX = (e) => e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-
         function dragStart(e) {
             if (e.target.closest('.lb-close')) return;
             startX = getPositionX(e);
             isDragging = true;
             lbTrack.style.transition = 'none';
         }
-
         function dragMove(e) {
             if (!isDragging) return;
             const currentX = getPositionX(e);
@@ -408,21 +336,15 @@
             currentTranslate = -lbCurrentIndex * lbSlideWidth + diff;
             lbTrack.style.transform = `translateX(${currentTranslate}px)`;
         }
-
         function dragEnd(e) {
             if (!isDragging) return;
             isDragging = false;
             const currentX = e.type.includes('mouse') ? e.pageX : e.changedTouches[0].clientX;
             const diff = currentX - startX;
-            
-            if (diff < -50 && lbCurrentIndex < currentImageUrls.length - 1) {
-                lbCurrentIndex++;
-            } else if (diff > 50 && lbCurrentIndex > 0) {
-                lbCurrentIndex--;
-            }
+            if (diff < -50 && lbCurrentIndex < currentImageUrls.length - 1) lbCurrentIndex++;
+            else if (diff > 50 && lbCurrentIndex > 0) lbCurrentIndex--;
             updateLightboxPosition(true);
         }
-
         lbTrack.addEventListener('mousedown', dragStart);
         window.addEventListener('mousemove', dragMove);
         window.addEventListener('mouseup', dragEnd);
@@ -432,7 +354,7 @@
         lbTrack.addEventListener('dragstart', (e) => e.preventDefault());
 
         // 启动
-        fetchImages();
+        initTopBar();
     </script>
 </body>
 </html>
