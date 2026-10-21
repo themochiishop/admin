@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1e2b; min-height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; font-family: system-ui, 'Segoe UI', sans-serif; padding: 2rem;
+        }
+        .upload-container {
+            width: 100%; max-width: 600px; background: #0f1219; border-radius: 2rem; padding: 2rem;
+            box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.7); border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        h2 { color: #fff; margin-bottom: 1.5rem; font-weight: 500; text-align: center; }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; color: #aab3cd; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        
+        select, input[type="email"], input[type="password"] {
+            width: 100%; padding: 1rem; border-radius: 0.75rem;
+            background: #1e2330; color: #fff; border: 1px solid rgba(255,255,255,0.1);
+            font-size: 1rem; outline: none;
+        }
+        select:focus, input:focus { border-color: #4f7cff; }
+
+        .drop-zone {
+            border: 2px dashed rgba(255,255,255,0.2); border-radius: 1rem; padding: 3rem 1rem;
+            text-align: center; color: #aab3cd; cursor: pointer; transition: all 0.3s ease; background: #1e2330;
+        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: #4f7cff; background: rgba(79, 124, 255, 0.1); color: #fff; }
+        .drop-zone input[type="file"] { display: none; }
+
+        .btn-submit {
+            width: 100%; padding: 1rem; border-radius: 0.75rem; background: #4f7cff; color: white;
+            border: none; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 1rem;
+        }
+        .btn-submit:hover:not(:disabled) { background: #3b62cc; }
+        .btn-submit:disabled { background: #333; color: #888; cursor: not-allowed; }
+
+        .progress-bar { width: 100%; height: 8px; background: #1e2330; border-radius: 4px; margin-top: 1rem; overflow: hidden; display: none; }
+        .progress-fill { height: 100%; width: 0%; background: #4f7cff; transition: width 0.2s; }
+
+        .status-msg { margin-top: 1rem; text-align: center; font-size: 0.9rem; color: #aab3cd; }
+        .status-msg.success { color: #4ffb7a; }
+        .status-msg.error { color: #ff4f4f; }
+
+        .link-back { display: block; text-align: center; margin-top: 1.5rem; color: #6b7a9c; text-decoration: none; }
+        .link-back:hover { color: #fff; }
+        .logout-btn { background: transparent; border: none; color: #ff4f4f; cursor: pointer; float: right; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <!-- 登录区域 -->
+    <div class="upload-container" id="loginSection">
+        <h2>管理员登录</h2>
+        <div class="form-group">
+            <label>邮箱：</label>
+            <input type="email" id="emailInput" placeholder="请输入你的 Firebase 管理员邮箱">
+        </div>
+        <div class="form-group">
+            <label>密码：</label>
+            <input type="password" id="passwordInput" placeholder="请输入密码">
+        </div>
+        <button class="btn-submit" id="loginBtn">登录</button>
+        <div class="status-msg" id="loginMsg"></div>
+        <a href="../index.html" class="link-back">← 返回首页</a>
+    </div>
+
+    <!-- 上传区域 (默认隐藏) -->
+    <div class="upload-container" id="uploadSection" style="display: none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <h2 style="margin:0;">上传新图片</h2>
+            <button class="logout-btn" id="logoutBtn">退出登录</button>
+        </div>
+
+        <div class="form-group">
+            <label>选择保存的目录：</label>
+            <select id="categorySelect">
+                <option value="1">目录 1</option>
+                <option value="2">目录 2</option>
+                <option value="3">目录 3</option>
+                <option value="4">目录 4</option>
+                <option value="5">目录 5</option>
+            </select>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept="image/*" multiple>
+            <p>点击选择图片，或将图片拖拽到此处</p>
+            <p style="font-size:0.8rem; margin-top:0.5rem; color:#555;">(支持多选，不限大小)</p>
+        </div>
+
+        <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+        <button class="btn-submit" id="uploadBtn" disabled>开始上传</button>
+        <div class="status-msg" id="statusMsg"></div>
+        <a href="../index.html" class="link-back">← 返回首页</a>
+    </div>
+
+    <!-- Firebase 逻辑 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getStorage, ref, uploadBytesResumable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // 🚨 你的 Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyBCkb5eDLElnQZ8Pt3Ud5euOmdkCo4QxqM",
+            authDomain: "my-gallery-43e8a.firebaseapp.com",
+            projectId: "my-gallery-43e8a",
+            storageBucket: "my-gallery-43e8a.firebasestorage.app",
+            messagingSenderId: "616009345293",
+            appId: "1:616009345293:web:a61335e41cd7158014a844",
+            measurementId: "G-47Q10H9FM3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+        const auth = getAuth(app);
+
+        // DOM 元素
+        const loginSection = document.getElementById('loginSection');
+        const uploadSection = document.getElementById('uploadSection');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const loginMsg = document.getElementById('loginMsg');
+        
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const categorySelect = document.getElementById('categorySelect');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const statusMsg = document.getElementById('statusMsg');
+
+        let selectedFiles = [];
+
+        // 1. 认证逻辑
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                loginSection.style.display = 'none';
+                uploadSection.style.display = 'block';
+            } else {
+                loginSection.style.display = 'block';
+                uploadSection.style.display = 'none';
+            }
+        });
+
+        loginBtn.addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            loginMsg.textContent = "登录中...";
+            loginMsg.className = "status-msg";
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                loginMsg.textContent = "登录失败，请检查邮箱和密码";
+                loginMsg.className = "status-msg error";
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => signOut(auth));
+
+        // 2. 文件选择逻辑
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            if (imageFiles.length === 0) return;
+            selectedFiles = imageFiles;
+            dropZone.innerHTML = `<p style="color:#4ffb7a; font-weight:bold;">已选择 ${selectedFiles.length} 张图片</p><p style="font-size:0.8rem; margin-top:0.5rem;">点击重新选择</p>`;
+            uploadBtn.disabled = false;
+            statusMsg.textContent = "";
+        }
+
+        // 3. 上传逻辑
+        uploadBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            const category = categorySelect.value;
+            uploadBtn.disabled = true;
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+            statusMsg.textContent = "正在上传...";
+            statusMsg.className = "status-msg";
+
+            let uploadedCount = 0;
+            let totalFiles = selectedFiles.length;
+
+            for (const file of selectedFiles) {
+                try {
+                    const fileName = `${Date.now()}_${file.name}`;
+                    const storageRef = ref(storage, `${category}/${fileName}`);
+                    const uploadTask = uploadBytesResumable(storageRef, file);
+
+                    await new Promise((resolve, reject) => {
+                        uploadTask.on('state_changed', 
+                            (snapshot) => {
+                                const currentFileProgress = snapshot.bytesTransferred / snapshot.totalBytes;
+                                const overallProgress = ((uploadedCount + currentFileProgress) / totalFiles) * 100;
+                                progressFill.style.width = overallProgress + '%';
+                            }, 
+                            (error) => reject(error), 
+                            () => resolve()
+                        );
+                    });
+                    uploadedCount++;
+                } catch (error) {
+                    statusMsg.textContent = `上传失败: ${error.message} (请检查是否已登录)`;
+                    statusMsg.className = "status-msg error";
+                    uploadBtn.disabled = false;
+                    return;
+                }
+            }
+
+            progressFill.style.width = '100%';
+            statusMsg.textContent = `🎉 成功上传 ${uploadedCount} 张图片到目录 ${category}！`;
+            statusMsg.className = "status-msg success";
+            
+            setTimeout(() => {
+                dropZone.innerHTML = `<input type="file" id="fileInput" accept="image/*" multiple><p>点击选择图片，或将图片拖拽到此处</p><p style="font-size:0.8rem; margin-top:0.5rem; color:#555;">(支持多选，不限大小)</p>`;
+                document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(e.target.files));
+                selectedFiles = [];
+                uploadBtn.disabled = true;
+                progressBar.style.display = 'none';
+                statusMsg.textContent = "";
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
