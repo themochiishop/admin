@@ -58,10 +58,8 @@
     </div>
   </header>
 
-  <!-- 优化后的设置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden" style="height: 80vh; max-height: 600px;">
-      <!-- 侧边导航 -->
       <div class="w-full md:w-56 bg-slate-900/50 border-r border-slate-700 flex flex-col p-4 shrink-0">
         <h3 class="text-sm font-bold text-amber-400 mb-4 flex items-center space-x-2"><span>⚙️</span><span>系统配置</span></h3>
         <div class="space-y-1 text-xs flex-1">
@@ -76,12 +74,10 @@
         </div>
       </div>
       
-      <!-- 内容区 -->
       <div class="flex-1 flex flex-col bg-slate-800 relative">
         <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg z-10">✕</button>
         <div class="flex-1 overflow-y-auto p-6 pt-8 text-xs">
           
-          <!-- Tab 1: 标题显示 -->
           <div id="tabTitle" class="config-tab-panel space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">系统标题与显示配置</h4>
             <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
@@ -92,7 +88,6 @@
             <div><label class="block text-slate-400 mb-1">前台公示大屏标题:</label><input type="text" id="publicTitleInput" placeholder="留空则跟随语言自动切换" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
           </div>
 
-          <!-- Tab 2: 导入配置 -->
           <div id="tabImport" class="config-tab-panel hidden space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">买家名单导入模式配置</h4>
             <div class="bg-slate-900/60 rounded-xl border border-slate-700 p-4 space-y-3">
@@ -104,7 +99,6 @@
             </div>
           </div>
 
-          <!-- Tab 3: 抽奖规则 -->
           <div id="tabDraw" class="config-tab-panel hidden space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">抽奖规则与玩法模式</h4>
             <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
@@ -113,7 +107,6 @@
             </label>
             
             <div id="modeRadioGroup" class="space-y-3 opacity-50 pointer-events-none transition-all">
-              <!-- 默认抽数 -->
               <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-2">
                 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="useDefaultPickCountCheckbox" class="w-4 h-4 text-amber-500 rounded focus:ring-0"><span class="font-bold text-amber-300">启用默认盲抽数量</span></label>
                 <div class="flex items-center space-x-2 pl-6">
@@ -123,7 +116,6 @@
                 </div>
               </div>
 
-              <!-- 模式1 -->
               <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 cursor-pointer transition">
                 <input type="radio" name="drawMode" value="mode1" class="mt-1">
                 <div>
@@ -132,7 +124,6 @@
                 </div>
               </label>
               
-              <!-- 模式2 -->
               <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 cursor-pointer transition">
                 <input type="radio" name="drawMode" value="mode2" class="mt-1">
                 <div class="flex-1">
@@ -146,7 +137,6 @@
                 </div>
               </label>
 
-              <!-- 混合模式开关 -->
               <label class="flex items-start space-x-2 p-3 rounded-xl border-2 border-sky-500/40 bg-sky-950/20 hover:bg-sky-900/30 cursor-pointer mt-1 transition">
                 <input type="checkbox" id="mixedModeCheckbox" class="mt-1 w-4 h-4 text-sky-500 rounded focus:ring-0" checked>
                 <div class="flex-1">
@@ -157,7 +147,6 @@
             </div>
           </div>
 
-          <!-- Tab 4: PDF 配置 -->
           <div id="tabPdf" class="config-tab-panel hidden space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">PDF 报告导出内容与模板设置</h4>
             <div><label class="block text-slate-400 mb-1">Main Title 1 (主标题 1):</label><input type="text" id="pdfTitleInput" placeholder="MOCHIISHOP OFFICIAL DRAW" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
@@ -212,10 +201,10 @@
           <span class="text-xl">🔥</span>
           <h3 class="text-sm font-bold text-amber-400">当前正在直播盲抽 PK 组</h3>
           <span id="adminPollBadge" class="text-xs bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded shadow">POLL #1</span>
-          <span id="triggerStatusTag" class="text-xs bg-slate-900 border border-amber-400 text-amber-300 px-2 py-0.5 rounded font-bold">🎯 等待设定触发号...</span>
+          <span id="triggerStatusTag" class="text-xs bg-slate-900 border border-amber-400 text-amber-300 px-2 py-0.5 rounded font-bold">🎯 等待设定票选号...</span>
         </div>
         <div class="flex items-center space-x-2 w-full md:w-auto justify-end flex-wrap gap-1">
-          <span class="text-xs text-slate-300 font-bold">根据观众投票输入触发号:</span>
+          <span class="text-xs text-slate-300 font-bold">根据观众投票输入票选号:</span>
           <div id="triggerButtonsContainer" class="flex items-center space-x-1"></div>
           <button onclick="revealPKWinner()" id="adminRevealBtn" class="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-xs rounded-lg transition shadow-lg animate-pulse">🎰 揭晓开奖</button>
           <span id="adminLockedHint" class="hidden text-[10px] text-rose-400 font-bold">🚫 前台已登入管理员，后台锁定</span>
@@ -339,6 +328,7 @@
       }
     }
 
+    // 前后台冲突锁定
     function updateAdminRevealButtonLock() {
       const btn = document.getElementById('adminRevealBtn');
       const hint = document.getElementById('adminLockedHint');
@@ -546,7 +536,7 @@
     
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
-      if (num < 1 || num > activeGroup4Ids.length) { alert("触发号超出当前组人数范围！"); return; }
+      if (num < 1 || num > activeGroup4Ids.length) { alert("票选号超出当前组人数范围！"); return; }
       state.triggerNumber = num; state.pkStage = 'triggered';
       saveState(); renderActiveGroupUI();
     }
@@ -554,7 +544,7 @@
     function revealPKWinner() {
       if (publicAdminActive) { alert("⚠️ 前台已登入管理员，请在前台大屏上点击开奖！"); return; }
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
-      if (!state.triggerNumber) { alert("⚠️ 请先设定触发号！"); return; }
+      if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
       if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"); return; }
       state.pkStage = 'revealed'; state.settled = true; saveState();
@@ -613,10 +603,10 @@
       if (pollBadge && state.currentPollNumber) pollBadge.innerText = `POLL #${state.currentPollNumber}`;
       if (triggerStatusTag) {
         if (state.triggerNumber) {
-          triggerStatusTag.innerText = `🎯 设定触发号：#${state.triggerNumber}`;
+          triggerStatusTag.innerText = `🎯 设定票选号：#${state.triggerNumber}`;
           triggerStatusTag.className = "text-xs bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded shadow animate-bounce";
         } else {
-          triggerStatusTag.innerText = `🎯 等待设定触发号...`;
+          triggerStatusTag.innerText = `🎯 等待设定票选号...`;
           triggerStatusTag.className = "text-xs bg-slate-900 border border-amber-400 text-amber-300 px-2 py-0.5 rounded font-bold";
         }
       }
@@ -948,10 +938,8 @@
       }).join('');
     }
     
-    // 🔥 彻底清理双端并静默刷新
     function resetRounds() {
       if (confirm("⚠️ 确认重置所有数据？\n这将同时清除后台和前台的所有名单并自动重新导入！")) {
-        // 使用 transaction 确保在数据一致的情况下重置
         db.ref('tournament_state').transaction((currentData) => {
           return {
             customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
@@ -963,7 +951,6 @@
         }, (error) => {
           if (!error) {
             currentRoundIndex = 0; activeGroup4Ids = [];
-            // 重置后直接静默拉取数据，不再弹框
             fetchGoogleSheetsData(false);
           } else {
             alert("❌ 重置失败，请重试");
