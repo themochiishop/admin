@@ -358,17 +358,12 @@
       const btn = document.getElementById('adminRevealBtn');
       const hint = document.getElementById('adminLockedHint');
       if (!btn) return;
+      // 允许后台测试，不再强制禁用！只做视觉提示
       if (publicAdminActive) {
-        btn.disabled = true;
-        btn.classList.add('opacity-40', 'cursor-not-allowed', 'grayscale');
-        btn.classList.remove('animate-pulse');
-        btn.textContent = '🚫 前台管理员已接管';
+        btn.classList.add('opacity-80');
         if (hint) hint.classList.remove('hidden');
       } else {
-        btn.disabled = false;
-        btn.classList.remove('opacity-40', 'cursor-not-allowed', 'grayscale');
-        btn.classList.add('animate-pulse');
-        btn.textContent = '🎰 揭晓开奖';
+        btn.classList.remove('opacity-80');
         if (hint) hint.classList.add('hidden');
       }
     }
@@ -535,11 +530,12 @@
       saveState(); renderRoundTabs();
     }
 
-        // 🎲 抽组PK
+    // 🎲 抽组PK
     function pickRandomGroup() {
+      // 允许后台盲抽，不再受前台的绝对封锁（保留测试能力，但给提示）
       if (publicAdminActive) {
-        alert("⚠️ 前台管理员已登入控盘，后台无法使用盲抽功能，以免发生冲突！\n如需使用，请先在前台退出管理员模式。");
-        return;
+         // 仅提示，不阻断
+         console.log("提示：前台管理员已接管开奖，后台盲抽仅作测试准备。");
       }
       
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
@@ -560,16 +556,10 @@
       
       let promptMsg = "请输入本次要随机盲抽的买家数量:";
       
-      // 如果在安慰奖阶段，动态提示当前剩余名额
       if (isConsolation) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         const remainN = N - picked;
         promptMsg = `🎁 安慰奖遴选阶段。\n还需选出 ${remainN} 名安慰奖，当前池子有 ${pendingList.length} 人。\n\n请输入本次盲抽人数:`;
-        
-        // 强制保护：如果抽取人数会把池子里的人抽光（不够留给后面），提示
-        if (pendingList.length - targetCount < 3) {
-           // 下面处理
-        }
       }
 
       const s = prompt(promptMsg, defaultVal.toString());
@@ -577,7 +567,6 @@
       targetCount = parseInt(s, 10);
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
 
-      // 🔥 终极防呆：安慰奖阶段，如果抽的人数导致剩下的不够选完安慰奖，或者不够留 3 个头部奖
       if (isConsolation) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         const remainN = N - picked;
@@ -612,11 +601,11 @@
     }
     
     function revealPKWinner() {
-      if (publicAdminActive) { alert("⚠️ 前台已登入管理员，请在前台大屏上点击开奖！"); return; }
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
-      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"); return; }
+      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); return; }
+      
       state.pkStage = 'revealed'; state.settled = true; saveState();
       setTimeout(() => {
         const total = state.activeGroupMembers.length;
@@ -633,7 +622,7 @@
       saveState(); document.getElementById('activeGroupDisplay').classList.add('hidden'); renderAdminView();
     }
     
-       function passWinnerAndEliminateOthers(winnerId) {
+    function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
       const winnerMember = (state.activeGroupMembers || []).find(m => String(m.id) === String(winnerId));
@@ -653,7 +642,7 @@
             target.status = 'pass'; 
             target.pollLabel = pollLabel; 
           } else { 
-            // 🔥 终极安全隔离：如果在模式2的安慰奖阶段，未中奖的人绝对不淘汰，原路退回！
+            // 🔥 核心逻辑：如果在模式2的安慰奖阶段，未中奖的人绝对不淘汰，原路退回！
             if (isMode2 && activeRound.isConsolationStage) {
               target.status = 'pending';
             } else {
@@ -673,6 +662,7 @@
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
       saveState(); renderActiveGroupUI();
     }
+    
     function renderActiveGroupUI() {
       const displayContainer = document.getElementById('activeGroupDisplay');
       const grid = document.getElementById('activeGroupGrid');
@@ -1039,8 +1029,8 @@
           };
         }, (error) => {
           if (!error) {
-            currentRoundIndex = 0; activeGroup4Ids = [];
-            fetchGoogleSheetsData(false);
+          currentRoundIndex = 0; activeGroup4Ids = [];
+          fetchGoogleSheetsData(false);
           } else {
             alert("❌ 重置失败，请重试");
           }
