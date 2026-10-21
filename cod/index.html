@@ -270,7 +270,8 @@
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
     .awb-info-table td { padding: 2px 0; font-size: 11.5px; font-weight: 600; color: #000; vertical-align: middle !important; line-height: 1.2; }
     .awb-info-table td.lbl, .awb-info-table td.colon, #awbBuyer { display: table-cell; vertical-align: middle !important; }
-    .awb-info-table .lbl { font-weight: 600; width: 100px; }
+    /* 重点调整：左侧标签列增加左内边距，使文字整体向中间移动，提升美观 */
+    .awb-info-table .lbl { font-weight: 600; width: 100px; padding-left: 22px; }
     .awb-info-table .colon { width: 12px; text-align: center; }
     .awb-info-table .val { word-break: break-all; }
 
