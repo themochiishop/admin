@@ -655,30 +655,53 @@
     }
 
     // ⏩ 批量推进到下一轮
-    function createNewRound() {
-      const cur = state.rounds[currentRoundIndex];
-      const passed = (cur.candidates || []).filter(c => c.status === 'pass');
-      const total = cur.candidates || [];
-      if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
-      if (passed.length === total.length) { alert("⚠️ 全员晋级，无人淘汰！"); return; }
-      cur.candidates.forEach(c => {
-        if (c.status !== 'pass') { c.status = 'out'; if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex; }
-      });
-      const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
-      const N = state.modeConfig.mode2ConsolationCount || 10;
-      const nextC = passed.map((c, i) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-      let label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
-      let isCons = false;
-      if (isMode2 && passed.length === N + 3) { label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; isCons = true; }
-      else if (!cur.isConsolationStage && passed.length === 3) label = "🏆 冠亚季争夺战 (剩3人)";
-      else if (!cur.isConsolationStage && passed.length === 2) label = "👑 冠亚军终极决战 (2选1)";
-      state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isCons, candidates: nextC });
-      currentRoundIndex = state.rounds.length - 1;
-      activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
-      state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
-      saveState(); renderRoundTabs();
-      alert(`🎉 已开启【${label}】！`);
-    }
+   function createNewRound() {
+  const cur = state.rounds[currentRoundIndex];
+  const passed = (cur.candidates || []).filter(c => c.status === 'pass');
+  const total = cur.candidates || [];
+
+  if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
+
+  const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+  const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+  const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+
+  // 🔥 模式1：至少 3 人才能推进
+  if (isModeEnabled && selectedMode === 'mode1' && passed.length < 3) {
+    alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passed.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
+    return;
+  }
+
+  // 🔥 模式2：至少 N+3 人才能推进
+  if (isModeEnabled && selectedMode === 'mode2' && passed.length < (N + 3)) {
+    alert(`⚠️ 【模式 2 (3+安慰奖) 规则限制】\n\n在包含 ${N} 名安慰奖模式下，晋级区人数必须至少包含 N + 3 人（即至少 ${N + 3} 人）才能开启后续安慰奖与冠亚季环节！\n\n当前仅选择了 ${passed.length} 位晋级买家，缺少 ${(N + 3) - passed.length} 人，请继续挑选晋级买家后再点击推进。`);
+    return;
+  }
+
+  if (passed.length === total.length) { alert("⚠️ 全员晋级，无人淘汰！"); return; }
+
+  cur.candidates.forEach(c => {
+    if (c.status !== 'pass') { c.status = 'out'; if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex; }
+  });
+
+  const isMode2 = isModeEnabled && selectedMode === 'mode2';
+  const nextC = passed.map((c, i) => ({ id: `${c.name}_${c.orderNo}_${Date.now()}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+
+  let label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
+  let isCons = false;
+  if (isMode2 && passed.length === N + 3) { label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; isCons = true; }
+  else if (!cur.isConsolationStage && passed.length === 3) label = "🏆 冠亚季争夺战 (剩3人)";
+  else if (!cur.isConsolationStage && passed.length === 2) label = "👑 冠亚军终极决战 (2选1)";
+
+  state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isCons, candidates: nextC });
+  currentRoundIndex = state.rounds.length - 1;
+
+  activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
+  state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+
+  saveState(); renderRoundTabs();
+  alert(`🎉 已开启【${label}】！`);
+}
 
     function renderRoundTabs() {
       const container = document.getElementById('roundTabsContainer');
