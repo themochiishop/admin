@@ -790,7 +790,7 @@
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
-    function advanceModeLogic(activeRound, justPassed) {
+        function advanceModeLogic(activeRound, justPassed) {
       if (!state.modeConfig || !state.modeConfig.enabled) return;
       const mode = state.modeConfig.selectedMode || 'mode1';
       const total = activeRound.candidates || [];
@@ -809,18 +809,18 @@
             return;
           }
           
-          alert(`🎁 已选满 ${N} 名安慰奖！\n即将自动进入【🏆 冠亚季争夺战】。`);
-
           const label = "🏆 冠亚季争夺战 (剩3人)";
           const podium = remain.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
           
-          setTimeout(() => {
-            state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
-            currentRoundIndex = state.rounds.length - 1;
-            state.passHistory = []; // 清空历史
-            state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-            saveState(); renderRoundTabs();
-          }, 500);
+          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
+          currentRoundIndex = state.rounds.length - 1;
+          state.passHistory = []; // 清空历史
+          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+          
+          saveState(); renderRoundTabs();
+          
+          // 使用微延迟防止与上一次渲染冲突
+          setTimeout(() => alert(`🎁 已选满 ${N} 名安慰奖！\n自动进入【${label}】阶段。`), 100);
         }
         return;
       }
@@ -829,24 +829,48 @@
       if (total.length === 3 && !activeRound.isConsolationStage) {
         justPassed.rankTitle = "🥉 季军"; justPassed.rankKey = "rankThird";
         const two = total.filter(c => String(c.id) !== String(justPassed.id));
-        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
-        const label = "👑 冠亚军终极决战 (2选1)";
-        const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
         
-        // 🔥 1. 先更新状态，让前台立刻监听到 latestEvent，弹出「季军恭喜弹窗」
-        saveState(); renderRoundTabs();
+        // 1. 设置恭喜事件
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
+        
+        // 2. 先把数据推送到前台（前台会立刻弹出恭喜弹窗）
+        saveState(); 
+        renderRoundTabs();
 
-        // 🔥 2. 延迟 3.5 秒（配合前台的弹窗展示）后，再在后台弹出提示，并将数据推送到下一轮
+        // 3. 延迟 3.5 秒，等观众和主播看完恭喜弹窗
         setTimeout(() => {
-          alert(`🥉 【${justPassed.name}】锁定季军！\n即将开启【${label}】。`);
+          const label = "👑 冠亚军终极决战 (2选1)";
+          const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
           
+          // 4. 静默切换轮次，并触发前台新一轮弹窗
           state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
           currentRoundIndex = state.rounds.length - 1;
-          state.passHistory = []; // 清空历史
+          state.passHistory = [];
           state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
           
-          saveState(); renderRoundTabs();
+          saveState(); 
+          renderRoundTabs();
+          
+          // 5. 延迟 200ms 弹后台提示，避免和前台轮次弹窗渲染卡顿
+          setTimeout(() => alert(`🥉 【${justPassed.name}】锁定季军！\n已自动进入【${label}】。`), 200);
         }, 3500);
+        
+        return;
+      }
+
+      // ================= 冠军选择 =================
+      if (total.length === 2 && !activeRound.isConsolationStage) {
+        justPassed.rankTitle = "👑 冠军"; justPassed.rankKey = "rankChampion";
+        const ru = total.find(c => String(c.id) !== String(justPassed.id));
+        let ruName = "未知买家";
+        if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ruName = ru.name; }
+        
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
+        
+        saveState(); 
+        renderRoundTabs();
+      }
+    }
         
         return;
       }
