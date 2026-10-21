@@ -1,9 +1,8 @@
-<!DOCTYPE html> 
-<html lang="zh-CN"> 
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8"> 
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/jpeg" href="logo.png">
   <title>COD 面单打印系统 - The Mochii Shop</title>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
@@ -51,10 +50,10 @@
       overflow-y: auto;
     }
 
-    /* ⚡ 1. 左侧面单录入区域调宽至 360px */
+    /* 左侧面单录入区域调宽至 360px */
     .left-panel { width: 360px; flex-shrink: 0; }
     
-    /* ⚡ 2. 中间商品清单区域适度缩窄最小宽度 */
+    /* 中间商品清单区域适度缩窄最小宽度 */
     .middle-panel { flex: 1; min-width: 300px; }
     
     /* 右侧预览面板：沉浸式深灰蓝环境 */
@@ -81,7 +80,7 @@
       border-bottom: 2px solid #f1f5f9;
     }
 
-    .panel-title { font-size: 14px; font-weight: bold; color: #26468b; display: flex; align-items: center; gap: 8px; }
+    .panel-title { font-size: 14px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
 
     /* 按钮重置为官方靛蓝/深灰色系 */
     .btn-quick-paste {
@@ -169,7 +168,7 @@
       height: 28px;
     }
 
-    /* 🛍️ 商品卡片：重置为清新专业的浅天蓝底色 */
+    /* 商品卡片：重置为清新专业的浅天蓝底色 */
     .product-row {
       background-color: var(--primary-light);
       border: 1px dashed var(--primary-border);
@@ -245,7 +244,7 @@
     .btn-settings { padding: 7px 12px; background-color: #475569; color: white; border: none; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: background-color 0.2s; }
     .btn-settings:hover { background-color: #334155; }
 
-    /* AWB 预览卡片（保持规范热敏单白底） */
+    /* AWB 预览卡片 */
     .awb-card {
       width: 350px;
       background: #ffffff;
@@ -264,8 +263,8 @@
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .awb-logo-group { display: flex; align-items: center; gap: 8px; }
     .awb-logo { margin-left: 15px; width: 40px; height: 40px; object-fit: contain; }
-    .awb-title { padding-left: 16px; font-family: "Georgia", serif; font-size: 18px; font-weight: bold; color: #000; }
-    #barcode { width: 130px; height: 42px; }
+    .awb-title { padding-left: 20px; font-family: "Georgia", serif; font-size: 20px; font-weight: bold; color: #000; }
+    #barcode { width: 110px; height: 42px; }
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
@@ -381,13 +380,26 @@
         <input type="text" id="buyerInput" class="form-control" value="ssvo10dp9e" oninput="renderAWB()">
       </div>
 
+      <!-- ORDER NO (原 ORDER ID) 区域 -->
       <div class="form-group">
-        <label>ORDER ID (订单号)</label>
-        <input type="text" id="orderInput" class="form-control" value="261014HN714REB" oninput="renderAWB()">
+        <label>ORDER NO (订单号)</label>
+        <div class="input-gear-group">
+          <input type="text" id="orderInput" class="form-control" value="261014HN714REB" oninput="renderAWB()">
+          <button class="btn-gear" id="toggleTrackingBtn" onclick="toggleTrackingField()" title="展开/隐藏 TRACKING NO 填写框" style="font-weight: bold; width: 27px;">+</button>
+        </div>
+      </div>
+
+      <!-- TRACKING NO 可折叠输入框（对齐齿轮列） -->
+      <div class="form-group" id="trackingGroup" style="display: none;">
+        <label>TRACKING NO (物流单号)</label>
+        <div class="input-gear-group">
+          <input type="text" id="trackingInput" class="form-control" value="" placeholder="输入 Tracking Number" oninput="renderAWB()">
+          <div style="width: 27px; flex-shrink: 0;"></div>
+        </div>
       </div>
 
       <div class="form-group">
-        <label>LOGISTICS</label>
+        <label>SHIPP CHANNEL</label>
         <div class="input-gear-group">
           <input type="text" id="channelInput" class="form-control" value="COD" oninput="renderAWB()">
           <button class="btn-gear" onclick="openChannelModal()" title="选择或管理自定义物流渠道">⚙️</button>
@@ -456,8 +468,9 @@
 
           <table class="awb-info-table">
             <tr><td class="lbl">USER NAME</td><td class="colon">:</td><td class="val" id="awbBuyer">ssvo10dp9e</td></tr>
-            <tr><td class="lbl">ORDER ID</td><td class="colon">:</td><td class="val" id="awbOrder">261014HN714REB</td></tr>
-            <tr><td class="lbl">LOGISTICS</td><td class="colon">:</td><td class="val" id="awbChannel">COD</td></tr>
+            <tr><td class="lbl">ORDER NO</td><td class="colon">:</td><td class="val" id="awbOrder">261014HN714REB</td></tr>
+            <tr id="awbTrackingRow" style="display: none;"><td class="lbl">TRACKING NO</td><td class="colon">:</td><td class="val" id="awbTracking"></td></tr>
+            <tr><td class="lbl">SHIPP CHANNEL</td><td class="colon">:</td><td class="val" id="awbChannel">COD</td></tr>
             <tr><td class="lbl">STORE</td><td class="colon">:</td><td class="val" id="awbStore">The MoChii Shop@Shopee</td></tr>
             <tr><td class="lbl">TOTAL QTY</td><td class="colon">:</td><td class="val" id="awbTotalQty">0</td></tr>
           </table>
@@ -612,6 +625,23 @@
     };
 
     let activeRowIdForCatalog = null;
+
+    /* 展开/折叠 TRACKING NO 输入框逻辑 */
+    function toggleTrackingField() {
+      const trackingGroup = document.getElementById('trackingGroup');
+      const toggleBtn = document.getElementById('toggleTrackingBtn');
+      const trackingInput = document.getElementById('trackingInput');
+
+      if (trackingGroup.style.display === 'none') {
+        trackingGroup.style.display = 'block';
+        toggleBtn.innerText = '−';
+        trackingInput.focus();
+      } else {
+        trackingGroup.style.display = 'none';
+        toggleBtn.innerText = '+';
+      }
+      renderAWB();
+    }
 
     function triggerPrint() {
       const isChecked = document.getElementById('checkMsgBox').checked;
@@ -907,6 +937,18 @@
       document.getElementById('awbBuyer').innerText = document.getElementById('buyerInput').value;
       const orderNo = document.getElementById('orderInput').value;
       document.getElementById('awbOrder').innerText = orderNo;
+
+      /* 渲染 TRACKING NO 行逻辑 */
+      const trackingGroup = document.getElementById('trackingGroup');
+      const trackingVal = document.getElementById('trackingInput').value.trim();
+      const awbTrackingRow = document.getElementById('awbTrackingRow');
+      if (trackingGroup.style.display !== 'none' && trackingVal !== '') {
+        document.getElementById('awbTracking').innerText = trackingVal;
+        awbTrackingRow.style.display = 'table-row';
+      } else {
+        awbTrackingRow.style.display = 'none';
+      }
+
       document.getElementById('awbChannel').innerText = document.getElementById('channelInput').value || 'COD';
       document.getElementById('awbStore').innerText = document.getElementById('storeInput').value || 'The MoChii Shop@Shopee';
       
