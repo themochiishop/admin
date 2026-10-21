@@ -790,7 +790,7 @@
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
-          function advanceModeLogic(activeRound, justPassed) {
+           function advanceModeLogic(activeRound, justPassed) {
       if (!state.modeConfig || !state.modeConfig.enabled) return;
       const mode = state.modeConfig.selectedMode || 'mode1';
       const total = activeRound.candidates || [];
@@ -861,21 +861,6 @@
         
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
         
-        saveState(); 
-        renderRoundTabs();
-      }
-    }
-
-      // ================= 冠军选择 =================
-      if (total.length === 2 && !activeRound.isConsolationStage) {
-        justPassed.rankTitle = "👑 冠军"; justPassed.rankKey = "rankChampion";
-        const ru = total.find(c => String(c.id) !== String(justPassed.id));
-        let ruName = "未知买家";
-        if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ruName = ru.name; }
-        
-        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
-        
-        // 冠军诞生不再进入下一轮，直接保存即可，前台会弹出最终极的恭喜海报
         saveState(); 
         renderRoundTabs();
       }
