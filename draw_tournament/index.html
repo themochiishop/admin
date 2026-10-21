@@ -234,7 +234,7 @@ function showWinnerPopup(eventData, durationSeconds) {
   }, 1000);
 }
 
-// 🔥 角逐横幅（3人季军争夺 / 2人冠亚军决战 / 安慰奖阶段 / 冠军诞生）
+// 🔥 角逐横幅：3人冠亚季争夺 / 2人冠亚军决战 / 安慰奖阶段 / 冠军诞生
 function updateWinnerBannerUI() {
   const banner = document.getElementById('winnerAnnouncementBanner');
   const content = document.getElementById('winnerBannerContent');
@@ -245,6 +245,7 @@ function updateWinnerBannerUI() {
   const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
   const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
 
+  // 收集所有轮次里的冠亚季（模式1和模式2共用）
   let championName = "", runnerUpName = "", thirdPlaceName = "";
   (state.rounds || []).forEach(r => {
     (r.candidates || []).forEach(c => {
@@ -254,42 +255,44 @@ function updateWinnerBannerUI() {
     });
   });
 
-  // 冠军+亚军都诞生 → 终极祝贺横幅
+  // ① 冠军+亚军都诞生 → 终极祝贺横幅
   if (championName && runnerUpName) {
     banner.classList.remove('hidden');
     content.innerHTML = `🎉 <span class="text-amber-400">👑 冠军得主是：</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300"> | 🥈 亚军得主是：</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
     return;
   }
-  // 季军诞生 → 提示冠亚军决战
+  // ② 季军诞生 → 提示冠亚军决战
   if (thirdPlaceName) {
     banner.classList.remove('hidden');
     content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
     return;
   }
 
-  // 当前轮次：安慰奖阶段
+  // ③ 安慰奖阶段
   const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
   if (isConsolationStage) {
-    const picked = activeRound.candidates.filter(c => c.rankKey === "rankConsolation").length;
+    const picked = (activeRound.candidates || []).filter(c => c.rankKey === "rankConsolation").length;
     banner.classList.remove('hidden');
     content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主，选满 ${N} 位后自动进入【冠亚季争夺战】！</span>`;
     return;
   }
 
-  // 3 人 → 季军争夺
-  if (isModeEnabled && activeRound.candidates && activeRound.candidates.length === 3 && !activeRound.isConsolationStage) {
+  // ④ 剩 3 人 → 冠亚季争夺战（模式1和模式2都适用，只要当前轮次正好3人且不是安慰奖阶段）
+  const roundTotal = (activeRound.candidates || []).length;
+  if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
     banner.classList.remove('hidden');
     content.innerHTML = `<span class="text-amber-300 font-bold">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
     return;
   }
 
-  // 2 人 → 冠亚军决战
-  if (isModeEnabled && activeRound.candidates && activeRound.candidates.length === 2 && !activeRound.isConsolationStage) {
+  // ⑤ 剩 2 人 → 冠亚军终极决战
+  if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
     banner.classList.remove('hidden');
     content.innerHTML = `<span class="text-amber-300 font-bold">🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！</span>`;
     return;
   }
 
+  // ⑥ 其余情况隐藏横幅
   banner.classList.add('hidden');
 }
     
@@ -489,11 +492,12 @@ if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTi
         return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">${escapeHtml(getRoundTitle(idx))} (${passedCount})</button>`;
       }).join('');
     }
-    function switchRound(idx) {
-      currentRoundIndex = idx;
-      userManuallySelectedRound = true;
-      renderRoundTabs(); renderPublicView(); updateStats(); updateWinnerBannerUI();
-    }
+   function switchRound(idx) {
+  currentRoundIndex = idx;
+  userManuallySelectedRound = true;
+  renderRoundTabs(); renderPublicView(); updateStats();
+  updateWinnerBannerUI();  
+}
     function setLanguage(lang) { renderRoundTabs(); renderPublicView(); updateStats(); }
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
