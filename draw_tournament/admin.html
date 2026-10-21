@@ -876,7 +876,7 @@
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
-    function advanceModeLogic(activeRound, justPassed) {
+      function advanceModeLogic(activeRound, justPassed) {
       if (!state.modeConfig || !state.modeConfig.enabled) return;
       const mode = state.modeConfig.selectedMode || 'mode1';
       const total = activeRound.candidates || [];
@@ -894,49 +894,63 @@
             alert(`⚠️ 安慰奖已选满 ${N} 名，但剩余 ${remain.length} 人（应为3人）。请检查本轮名单是否正好 ${N + 3} 人！`);
             return;
           }
+          
+          alert(`🎁 已选满 ${N} 名安慰奖！\n即将自动进入【🏆 冠亚季争夺战】。`);
+
           const label = "🏆 冠亚季争夺战 (剩3人)";
           const podium = remain.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
-          currentRoundIndex = state.rounds.length - 1;
-          state.passHistory = []; // 清空历史
-          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-          alert(`🎁 已选满 ${N} 名安慰奖！\n自动进入【${label}】阶段。`);
+          
+          // 稍作延迟，避免与 alert 冲突
+          setTimeout(() => {
+            state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
+            currentRoundIndex = state.rounds.length - 1;
+            state.passHistory = []; // 清空历史
+            state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+            saveState(); renderRoundTabs();
+          }, 500);
         }
         return;
       }
 
+      // ================= 季军选择 =================
       if (total.length === 3 && !activeRound.isConsolationStage) {
         justPassed.rankTitle = "🥉 季军"; justPassed.rankKey = "rankThird";
         const two = total.filter(c => String(c.id) !== String(justPassed.id));
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
         const label = "👑 冠亚军终极决战 (2选1)";
         const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-        state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
-        currentRoundIndex = state.rounds.length - 1;
-        state.passHistory = []; // 清空历史
-        alert(`🥉 【${justPassed.name}】锁定季军！\n自动进入【${label}】。`);
+        
+        // 🔥 1. 先更新状态，让前台立刻监听到 latestEvent，弹出「季军恭喜弹窗」
+        saveState(); renderRoundTabs();
+
+        // 🔥 2. 延迟 3.5 秒（配合前台的弹窗展示）后，再在后台弹出提示，并将数据推送到下一轮
+        // 这样前台观众看完恭喜海报后，刚好看到下一轮开启
+        setTimeout(() => {
+          alert(`🥉 【${justPassed.name}】锁定季军！\n即将开启【${label}】。`);
+          
+          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
+          currentRoundIndex = state.rounds.length - 1;
+          state.passHistory = []; // 清空历史
+          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+          
+          saveState(); renderRoundTabs();
+        }, 3500);
+        
         return;
       }
 
+      // ================= 冠军选择 =================
       if (total.length === 2 && !activeRound.isConsolationStage) {
         justPassed.rankTitle = "👑 冠军"; justPassed.rankKey = "rankChampion";
         const ru = total.find(c => String(c.id) !== String(justPassed.id));
         let ruName = "未知买家";
         if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ruName = ru.name; }
+        
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
-        alert(`👑 【${justPassed.name}】冠军！\n🥈 亚军：【${ruName}】\n🎉 比赛结束！`);
-      }
-    }
-
-    function setLanguage(lang) { currentLang = lang; localStorage.setItem('mochii_lang', lang); renderRoundTabs(); renderAdminView(); updateStats(); updateModeBadgeUI(); updateHeaderTitle(); }
-    function updateHeaderTitle() { document.getElementById('adminHeaderTitle').innerText = state.customAdminTitle || 'Mochiishop 每月抽奖 - 直播控制台'; }
-    function getRoundTitle(idx) { const r = state.rounds[idx]; if(!r) return `第 ${idx+1} 轮`; return r.isConsolationStage ? `🎁 安慰奖遴选阶段` : (r.stageName && r.stageName.includes("冠亚军") ? `👑 冠亚军终极决战` : (r.stageName && r.stageName.includes("冠亚季") ? `🏆 冠亚季争夺战` : `第 ${idx + 1} 轮`)); }
-    function goToPrevRound() {
-      if (currentRoundIndex === 0) return;
-      if (confirm("确认返回上一轮？")) {
-        if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) state.rounds.pop();
-        currentRoundIndex = Math.max(0, currentRoundIndex - 1);
-        saveState(); renderRoundTabs();
+        
+        // 冠军诞生不再进入下一轮，直接保存即可，前台会弹出最终极的恭喜海报
+        saveState(); 
+        renderRoundTabs();
       }
     }
 
