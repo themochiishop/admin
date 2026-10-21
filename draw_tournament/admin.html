@@ -815,16 +815,29 @@
       }
     }
 
-    function createNewRound() {
+        function createNewRound() {
       const cur = state.rounds[currentRoundIndex];
-      const passed = (cur.candidates || []).filter(c => c.status === 'pass');
+      let passed = (cur.candidates || []).filter(c => c.status === 'pass');
+      const pending = (cur.candidates || []).filter(c => c.status === 'pending');
       const total = cur.candidates || [];
-
-      if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
 
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+      const isCons = cur.isConsolationStage;
+
+      // 🔥 智能放行：如果在模式2的安慰奖阶段，已选满N人，且池子刚好剩3人，自动把他们加入晋级区
+      if (isModeEnabled && selectedMode === 'mode2' && isCons && passed.length === N && pending.length === 3) {
+         pending.forEach(p => {
+            p.status = 'pass';
+            p.rankTitle = "🏆 冠亚季候选";
+            p.rankKey = "rankPodiumCandidate";
+         });
+         passed = (cur.candidates || []).filter(c => c.status === 'pass');
+         saveState();
+      }
+
+      if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
 
       if (isModeEnabled && selectedMode === 'mode1' && passed.length < 3) {
         alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passed.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
@@ -842,19 +855,31 @@
       });
 
       const isMode2 = isModeEnabled && selectedMode === 'mode2';
+      // 重新生成唯一 ID 进入下一轮
       const nextC = passed.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
 
       let label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
-      let isCons = false;
-      if (isMode2 && passed.length === N + 3) { label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; isCons = true; }
-      else if (!cur.isConsolationStage && passed.length === 3) label = "🏆 冠亚季争夺战 (剩3人)";
-      else if (!cur.isConsolationStage && passed.length === 2) label = "👑 冠亚军终极决战 (2选1)";
+      let isConsNext = false;
+      
+      // 判断进入的阶段
+      if (isMode2 && isCons) {
+        // 如果是从安慰奖阶段出来，一定是进入冠亚季争夺战
+        label = "🏆 冠亚季争夺战 (剩3人)";
+      } else if (isMode2 && passed.length === N + 3) {
+        label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; 
+        isConsNext = true; 
+      } else if (!cur.isConsolationStage && passed.length === 3) {
+        label = "🏆 冠亚季争夺战 (剩3人)";
+      } else if (!cur.isConsolationStage && passed.length === 2) {
+        label = "👑 冠亚军终极决战 (2选1)";
+      }
 
-      state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isCons, candidates: nextC });
+      state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isConsNext, candidates: nextC });
       currentRoundIndex = state.rounds.length - 1;
+      
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
-      state.passHistory = [];
+      state.passHistory = []; // 务必清空历史，不然前台会残留
       
       state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
       
