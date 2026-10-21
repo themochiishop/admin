@@ -335,7 +335,6 @@
       }
     }
 
-    // 控制导入按钮状态：只要晋级区有名单便不可操作
     function updateRefreshBtnState() {
       const btn = document.getElementById('refreshSheetsBtn');
       if (!btn) return;
@@ -536,7 +535,7 @@
       saveState(); renderRoundTabs();
     }
 
-    // 🎲 抽组PK（每次弹出询问人数）
+    // 🎲 抽组PK（包含模式2防呆安全机制）
     function pickRandomGroup() {
       if (publicAdminActive) {
         alert("⚠️ 前台管理员已登入控盘，后台无法使用盲抽功能，以免发生冲突！\n如需使用，请先在前台退出管理员模式。");
@@ -551,6 +550,9 @@
       const activeRound = state.rounds[currentRoundIndex];
       const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
       if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
+
+      const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
+      const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
       
       let targetCount = 4;
       const defaultVal = state.modeConfig && state.modeConfig.defaultPickCount ? state.modeConfig.defaultPickCount : 4;
@@ -559,11 +561,29 @@
       if (s === null) return;
       targetCount = parseInt(s, 10);
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
+
+      // 🔥 模式2安全机制：如果当前人数紧张，并且盲抽会淘汰掉人，强行提示并转安全模式
+      let safeMode = false;
+      if (isMode2 && (activeRound.candidates || []).length <= N + 3) {
+        const remainAfter = pendingList.length - targetCount;
+        if (remainAfter < 3) {
+          // 如果剩下的不够3个，说明这次盲抽会淘汰过多，触发安全模式（不淘汰）
+          if (confirm(`⚠️ 防呆保护：当前总人数仅剩 ${pendingList.length} 人。\n如果本次抽取 ${targetCount} 人，未中奖的会被淘汰，将导致凑不齐 ${N} 名安慰奖 + 3 名头部奖！\n\n👉 是否开启「安全晋级」模式？（未中奖者将退回池子，不被淘汰）`)) {
+            safeMode = true;
+          } else {
+            return; // 用户取消
+          }
+        }
+      }
       
       state.pollCount = (state.pollCount || 0) + 1;
       state.currentPollNumber = state.pollCount;
       state.pkStage = 'voting'; state.triggerNumber = null;
       state.drawRoundIndex = currentRoundIndex; state.settled = false;
+      
+      // 记录本轮是否安全模式
+      state.currentSafeMode = safeMode;
+
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
       activeGroup4Ids = selected.map(c => String(c.id));
@@ -614,12 +634,21 @@
       activeGroup4Ids.forEach(id => {
         const target = activeRound.candidates.find(c => String(c.id) === String(id));
         if (target) {
-          if (String(id) === String(winnerId)) { target.status = 'pass'; target.pollLabel = pollLabel; }
-          else { target.status = 'out'; target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; }
+          if (String(id) === String(winnerId)) { 
+            target.status = 'pass'; 
+            target.pollLabel = pollLabel; 
+          } else { 
+            // 🔥 如果开启了安全模式，落选者不淘汰，保持 pending
+            if (state.currentSafeMode) {
+               target.status = 'pending';
+            } else {
+               target.status = 'out'; 
+               target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; 
+            }
+          }
         }
       });
 
-      // 🔥 修复混合模式下的冠亚季军自动判定
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === true) {
         const winnerTarget = activeRound.candidates.find(c => String(c.id) === String(winnerId));
         if (winnerTarget) advanceModeLogic(activeRound, winnerTarget);
@@ -627,6 +656,7 @@
 
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+      state.currentSafeMode = false; // 重置安全状态
       saveState(); renderActiveGroupUI();
     }
     
@@ -756,7 +786,6 @@
         state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
         currentRoundIndex = state.rounds.length - 1;
         state.passHistory = []; // 清空历史
-        // ❌ 删除 latestRoundEvent，不弹轮次窗，只弹恭喜
         alert(`🥉 【${justPassed.name}】锁定季军！\n自动进入【${label}】。`);
         return;
       }
@@ -822,7 +851,7 @@
       currentRoundIndex = state.rounds.length - 1;
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
-      state.passHistory = []; // 清空历史
+      state.passHistory = [];
       
       state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
       
