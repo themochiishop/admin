@@ -75,12 +75,39 @@
   </header>
 
   <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full">
+    
+    <!-- 全场最终得奖名单汇总框架 -->
+    <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden">
+      <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
+        <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
+          <span>🏆</span>
+          <span>全场抽奖比赛 - 终极荣誉汇总榜</span>
+          <span>🏆</span>
+        </h2>
+        <p class="text-[11px] sm:text-xs text-slate-400 mt-1">祝贺所有获奖买家！感谢大家的参与与支持！</p>
+      </div>
+
+      <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end"></div>
+
+      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-xl border border-emerald-500/40">
+        <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
+          <span class="text-base sm:text-lg">🎁</span>
+          <h3 class="text-xs sm:text-sm font-bold text-emerald-400">安慰奖得主全名单</h3>
+          <span id="consolationTotalBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
+      </div>
+    </div>
+
+    <!-- 动态横幅 -->
     <div id="winnerAnnouncementBanner" class="mb-4 sm:mb-6 hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
       <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
     </div>
+
     <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
       <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
     </div>
+
     <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-3.5 sm:p-5 shadow-2xl relative overflow-hidden mb-4">
       <div class="flex flex-row justify-between items-center mb-3.5 pb-3 border-b border-amber-500/30 gap-2">
         <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
@@ -91,25 +118,39 @@
           <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
         </div>
       </div>
-      <div class="mb-4 flex flex-col items-center justify-center">
-        <div class="flex flex-col items-center justify-center bg-slate-950/80 px-8 py-3 rounded-xl border-2 border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-          <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮触发号</span>
-          <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+
+      <!-- 票选号与按钮布局优化 -->
+      <div class="mb-4 flex flex-col items-center justify-center gap-3">
+        <div class="w-full flex items-center justify-center gap-3 sm:gap-4">
+          <!-- 左侧占位（如果人多的话会显示一排数字，这里用来做左右延伸感） -->
+          <div class="flex gap-2 text-amber-500/30 text-xl font-black hidden sm:block"><span>#</span><span>#</span></div>
+
+          <div class="flex flex-col items-center justify-center bg-slate-950/80 px-8 py-3 rounded-xl border-2 border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+            <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
+            <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+          </div>
+
+          <!-- 右侧占位 -->
+          <div class="flex gap-2 text-amber-500/30 text-xl font-black hidden sm:block"><span>#</span><span>#</span></div>
+        </div>
+
+        <div id="publicRevealButtonBox" class="hidden flex justify-center mt-2">
+          <button onclick="revealPKWinnerFromPublic()" class="px-6 py-2 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-1.5">
+            <span>🎰</span><span>点击揭晓</span>
+          </button>
         </div>
       </div>
-      <div id="publicRevealButtonBox" class="hidden mb-4 flex justify-center">
-        <button onclick="revealPKWinnerFromPublic()" class="w-full max-w-xs px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-          <span>🎰</span><span>点击揭晓开奖</span>
-        </button>
-      </div>
+
       <div id="publicActiveGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
     </div>
+
     <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选人数</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮待PK人数</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
       <div class="bg-slate-800/80 rounded-xl p-3 sm:p-4 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮已淘汰人数</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
     </div>
+
     <div class="space-y-4 mb-4">
       <div class="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4 shadow-lg shadow-emerald-950/20">
         <div class="flex-1 w-full">
@@ -130,6 +171,7 @@
         <div id="publicConsolationListContainer" class="flex flex-wrap gap-3 max-h-40 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
       </div>
     </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
       <div class="lg:col-span-4 bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 min-h-[160px]">
         <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
@@ -233,10 +275,88 @@
       }, 1000);
     }
 
+    // 🔥 渲染最终大奖框架
+    function renderFinalSummaryPanel() {
+      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
+      const podiumGrid = document.getElementById('podiumSummaryGrid');
+      const consolationBox = document.getElementById('consolationSummaryBox');
+      const consolationGrid = document.getElementById('consolationSummaryGrid');
+      const consolationBadge = document.getElementById('consolationTotalBadge');
+
+      let champion = null;
+      let runnerUp = null;
+      let thirdPlace = null;
+      let consolations = [];
+
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => {
+          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
+          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
+          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
+          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
+        });
+      });
+
+      // 有冠军才展示汇总大框架
+      if (!champion) {
+        summaryPanel.classList.add('hidden');
+        return;
+      }
+
+      summaryPanel.classList.remove('hidden');
+      document.getElementById('winnerAnnouncementBanner').classList.add('hidden'); // 有总框架时隐藏横幅
+
+      podiumGrid.innerHTML = `
+        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
+          <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
+          <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / 亚军</span>
+          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || '无订单号') : '-'}</div>
+        </div>
+
+        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
+          <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
+          <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
+          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
+          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || '无订单号')}</div>
+        </div>
+
+        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
+          <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
+          <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
+          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || '无订单号') : '-'}</div>
+        </div>
+      `;
+
+      if (consolations.length > 0) {
+        consolationBox.classList.remove('hidden');
+        consolationBadge.innerText = consolations.length;
+        consolationGrid.innerHTML = consolations.map((c, i) => `
+          <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
+            <div>
+              <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}安慰奖</span>
+              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
+            </div>
+            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(c.orderNo || '无订单号')}</div>
+          </div>
+        `).join('');
+      } else {
+        consolationBox.classList.add('hidden');
+      }
+    }
+
     function updateWinnerBannerUI() {
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
       if (!banner || !content) return;
+
+      // 如果已经出了最终大奖汇总框架，隐藏横幅
+      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
+      if (summaryPanel && !summaryPanel.classList.contains('hidden')) {
+        banner.classList.add('hidden');
+        return;
+      }
 
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
@@ -254,8 +374,8 @@
       });
 
       if (championName && runnerUpName) {
-        banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">👑 冠军得主是：</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300"> | 🥈 亚军得主是：</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
+        // 此时由 FinalSummaryPanel 接管
+        banner.classList.add('hidden');
         return;
       }
       if (thirdPlaceName) {
@@ -334,11 +454,11 @@
           renderRoundTabs();
           renderPublicView();
           updateStats();
+          renderFinalSummaryPanel();
         }
       });
     };
 
-    // 🔥 前台文字简化，悬浮显示完整
     function updateModeBadge() {
       const badge = document.getElementById('publicModeBadge');
       const tooltip = document.getElementById('modeTooltipBody');
@@ -390,6 +510,13 @@
     function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
+      
+      // 未选票选号拦截
+      if (!state.triggerNumber) {
+        alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。");
+        return;
+      }
+
       const activeCards = document.querySelectorAll('#publicActiveGroupGrid > div');
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
@@ -538,8 +665,10 @@
         publicGroupContainer.classList.remove('hidden');
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
+        
         if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
+        
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
         let activeMembers;
