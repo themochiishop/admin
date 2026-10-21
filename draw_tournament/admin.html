@@ -42,11 +42,6 @@
             <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-1" title="设置抽奖模式与导入规则">⚙️</button>
           </div>
         </div>
-
-        <button onclick="openCalculatorModal()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
-          <span>🧮</span><span>排期计算器</span>
-        </button>
-
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[11px]">ZH</span></button>
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[11px]">EN</span></button>
@@ -102,28 +97,6 @@
           </div>
           <span class="text-rose-400">→</span>
         </button>
-      </div>
-    </div>
-  </div>
-
-  <div id="calculatorModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-      <button onclick="closeCalculatorModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
-      <h3 class="text-lg font-bold text-sky-400 mb-4 flex items-center space-x-2"><span>🧮</span><span>排期与赛制计算器</span></h3>
-      
-      <div class="space-y-4 text-sm">
-        <div>
-          <label class="block text-slate-300 mb-1">当前总名单人数：</label>
-          <input type="number" id="calcTotalInput" placeholder="例如: 40" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-sky-300 focus:outline-none focus:border-sky-500">
-        </div>
-        <div>
-          <label class="block text-slate-300 mb-1">设置安慰奖名额 (N)：</label>
-          <input type="number" id="calcConsolationInput" placeholder="例如: 10" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-emerald-300 focus:outline-none focus:border-emerald-500">
-        </div>
-        <button onclick="calculateSchedule()" class="w-full py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black rounded-lg transition shadow-lg">计算结论</button>
-      </div>
-
-      <div id="calcResultBox" class="mt-5 p-4 bg-slate-900/80 border border-slate-700 rounded-xl hidden space-y-2 text-xs leading-relaxed text-slate-300">
       </div>
     </div>
   </div>
@@ -377,65 +350,6 @@
         updateAdminRevealButtonLock();
       });
     };
-
-    // 🧮 计算器逻辑
-    function openCalculatorModal() { document.getElementById('calculatorModal').classList.remove('hidden'); }
-    function closeCalculatorModal() { document.getElementById('calculatorModal').classList.add('hidden'); }
-    
-    function calculateSchedule() {
-      const total = parseInt(document.getElementById('calcTotalInput').value, 10);
-      const cons = parseInt(document.getElementById('calcConsolationInput').value, 10);
-      const resultBox = document.getElementById('calcResultBox');
-      
-      if (isNaN(total) || isNaN(cons) || total <= 0 || cons < 0) {
-        alert("请输入有效的人数！");
-        return;
-      }
-
-      const target = cons + 3; 
-      
-      if (total < target) {
-        resultBox.innerHTML = `<div class="text-rose-400 font-bold">⚠️ 名单人数不足！</div><p>你需要至少 <b>${target}</b> 人（${cons}安慰奖 + 3头部）才能开启模式2。</p>`;
-        resultBox.classList.remove('hidden');
-        return;
-      }
-
-      if (total === target) {
-        resultBox.innerHTML = `<div class="text-emerald-400 font-bold">✅ 完美匹配！</div>
-          <p>当前总人数正好等于 <b>${cons} + 3 = ${target}</b> 人。</p>
-          <p class="mt-2 text-amber-300">👉 做法：直接把所有人选中【晋级】，进入下一轮后，直接开启【安慰奖遴选阶段】。</p>`;
-        resultBox.classList.remove('hidden');
-        return;
-      }
-
-      const needEliminate = total - target;
-      let rounds = 0;
-      let curr = total;
-      let detail = [];
-      
-      while (curr > target) {
-        const next = Math.ceil(curr / 2); 
-        const actuallyKeep = (next <= target) ? target : next;
-        const eliminate = curr - actuallyKeep;
-        rounds++;
-        detail.push(`第 ${rounds} 轮：从 ${curr} 人中淘汰 ${eliminate} 人，保留 ${actuallyKeep} 人晋级。`);
-        curr = actuallyKeep;
-      }
-
-      resultBox.innerHTML = `
-        <div class="text-sky-400 font-bold mb-1">📊 计算结论：</div>
-        <p>你的目标是保留 <b class="text-emerald-400">${target} 人</b>（${cons} 安慰奖 + 3 头部）。</p>
-        <p>总共需要淘汰：<b class="text-rose-400">${needEliminate} 人</b>。</p>
-        <p class="mt-2 text-slate-400">推荐赛制排期（按50%淘汰率计算）：</p>
-        <ul class="list-disc pl-4 mt-1 space-y-1 text-slate-300">
-          ${detail.map(d => `<li>${d}</li>`).join('')}
-        </ul>
-        <div class="mt-3 p-2 bg-emerald-950/40 border border-emerald-500/30 rounded text-emerald-300 text-[11px]">
-          👉 <b>怎么做：</b>在后台手动选中对应的人晋级，或者用盲抽。最后人数一旦等于 ${target} 人，点击推进就会自动进入【安慰奖阶段】！
-        </div>
-      `;
-      resultBox.classList.remove('hidden');
-    }
 
     function switchConfigTab(tabId) {
       document.querySelectorAll('.config-tab-panel').forEach(el => el.classList.add('hidden'));
@@ -900,7 +814,6 @@
           const label = "🏆 冠亚季争夺战 (剩3人)";
           const podium = remain.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
           
-          // 稍作延迟，避免与 alert 冲突
           setTimeout(() => {
             state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
             currentRoundIndex = state.rounds.length - 1;
@@ -924,7 +837,6 @@
         saveState(); renderRoundTabs();
 
         // 🔥 2. 延迟 3.5 秒（配合前台的弹窗展示）后，再在后台弹出提示，并将数据推送到下一轮
-        // 这样前台观众看完恭喜海报后，刚好看到下一轮开启
         setTimeout(() => {
           alert(`🥉 【${justPassed.name}】锁定季军！\n即将开启【${label}】。`);
           
@@ -951,6 +863,18 @@
         // 冠军诞生不再进入下一轮，直接保存即可，前台会弹出最终极的恭喜海报
         saveState(); 
         renderRoundTabs();
+      }
+    }
+
+    function setLanguage(lang) { currentLang = lang; localStorage.setItem('mochii_lang', lang); renderRoundTabs(); renderAdminView(); updateStats(); updateModeBadgeUI(); updateHeaderTitle(); }
+    function updateHeaderTitle() { document.getElementById('adminHeaderTitle').innerText = state.customAdminTitle || 'Mochiishop 每月抽奖 - 直播控制台'; }
+    function getRoundTitle(idx) { const r = state.rounds[idx]; if(!r) return `第 ${idx+1} 轮`; return r.isConsolationStage ? `🎁 安慰奖遴选阶段` : (r.stageName && r.stageName.includes("冠亚军") ? `👑 冠亚军终极决战` : (r.stageName && r.stageName.includes("冠亚季") ? `🏆 冠亚季争夺战` : `第 ${idx + 1} 轮`)); }
+    function goToPrevRound() {
+      if (currentRoundIndex === 0) return;
+      if (confirm("确认返回上一轮？")) {
+        if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) state.rounds.pop();
+        currentRoundIndex = Math.max(0, currentRoundIndex - 1);
+        saveState(); renderRoundTabs();
       }
     }
 
