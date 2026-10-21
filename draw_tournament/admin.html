@@ -535,7 +535,7 @@
       saveState(); renderRoundTabs();
     }
 
-    // 🎲 抽组PK（包含模式2防呆安全机制）
+        // 🎲 抽组PK
     function pickRandomGroup() {
       if (publicAdminActive) {
         alert("⚠️ 前台管理员已登入控盘，后台无法使用盲抽功能，以免发生冲突！\n如需使用，请先在前台退出管理员模式。");
@@ -553,26 +553,41 @@
 
       const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+      const isConsolation = isMode2 && activeRound.isConsolationStage;
       
       let targetCount = 4;
       const defaultVal = state.modeConfig && state.modeConfig.defaultPickCount ? state.modeConfig.defaultPickCount : 4;
       
-      const s = prompt("请输入本次要随机盲抽的买家数量:", defaultVal.toString());
+      let promptMsg = "请输入本次要随机盲抽的买家数量:";
+      
+      // 如果在安慰奖阶段，动态提示当前剩余名额
+      if (isConsolation) {
+        const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
+        const remainN = N - picked;
+        promptMsg = `🎁 安慰奖遴选阶段。\n还需选出 ${remainN} 名安慰奖，当前池子有 ${pendingList.length} 人。\n\n请输入本次盲抽人数:`;
+        
+        // 强制保护：如果抽取人数会把池子里的人抽光（不够留给后面），提示
+        if (pendingList.length - targetCount < 3) {
+           // 下面处理
+        }
+      }
+
+      const s = prompt(promptMsg, defaultVal.toString());
       if (s === null) return;
       targetCount = parseInt(s, 10);
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
 
-      // 🔥 模式2安全机制：如果当前人数紧张，并且盲抽会淘汰掉人，强行提示并转安全模式
-      let safeMode = false;
-      if (isMode2 && (activeRound.candidates || []).length <= N + 3) {
-        const remainAfter = pendingList.length - targetCount;
-        if (remainAfter < 3) {
-          // 如果剩下的不够3个，说明这次盲抽会淘汰过多，触发安全模式（不淘汰）
-          if (confirm(`⚠️ 防呆保护：当前总人数仅剩 ${pendingList.length} 人。\n如果本次抽取 ${targetCount} 人，未中奖的会被淘汰，将导致凑不齐 ${N} 名安慰奖 + 3 名头部奖！\n\n👉 是否开启「安全晋级」模式？（未中奖者将退回池子，不被淘汰）`)) {
-            safeMode = true;
-          } else {
-            return; // 用户取消
-          }
+      // 🔥 终极防呆：安慰奖阶段，如果抽的人数导致剩下的不够选完安慰奖，或者不够留 3 个头部奖
+      if (isConsolation) {
+        const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
+        const remainN = N - picked;
+        if (targetCount > pendingList.length) {
+           alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`);
+           return;
+        }
+        if (targetCount > remainN + 3) {
+           alert(`⚠️ 规则限制：当前还需选 ${remainN} 名安慰奖，且必须保留 3 名头部奖。\n单次最多只能抽取 ${remainN + 3} 人！`);
+           return;
         }
       }
       
@@ -581,9 +596,6 @@
       state.pkStage = 'voting'; state.triggerNumber = null;
       state.drawRoundIndex = currentRoundIndex; state.settled = false;
       
-      // 记录本轮是否安全模式
-      state.currentSafeMode = safeMode;
-
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
       activeGroup4Ids = selected.map(c => String(c.id));
@@ -621,7 +633,7 @@
       saveState(); document.getElementById('activeGroupDisplay').classList.add('hidden'); renderAdminView();
     }
     
-    function passWinnerAndEliminateOthers(winnerId) {
+       function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
       const winnerMember = (state.activeGroupMembers || []).find(m => String(m.id) === String(winnerId));
@@ -631,6 +643,9 @@
       if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerId))) {
         state.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: state.drawRoundIndex ?? currentRoundIndex });
       }
+      
+      const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
+      
       activeGroup4Ids.forEach(id => {
         const target = activeRound.candidates.find(c => String(c.id) === String(id));
         if (target) {
@@ -638,12 +653,12 @@
             target.status = 'pass'; 
             target.pollLabel = pollLabel; 
           } else { 
-            // 🔥 如果开启了安全模式，落选者不淘汰，保持 pending
-            if (state.currentSafeMode) {
-               target.status = 'pending';
+            // 🔥 终极安全隔离：如果在模式2的安慰奖阶段，未中奖的人绝对不淘汰，原路退回！
+            if (isMode2 && activeRound.isConsolationStage) {
+              target.status = 'pending';
             } else {
-               target.status = 'out'; 
-               target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; 
+              target.status = 'out'; 
+              target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; 
             }
           }
         }
@@ -656,10 +671,8 @@
 
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
-      state.currentSafeMode = false; // 重置安全状态
       saveState(); renderActiveGroupUI();
     }
-    
     function renderActiveGroupUI() {
       const displayContainer = document.getElementById('activeGroupDisplay');
       const grid = document.getElementById('activeGroupGrid');
