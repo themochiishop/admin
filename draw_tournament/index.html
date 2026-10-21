@@ -883,22 +883,52 @@
         publicGroupContainer.classList.add('hidden');
       }
 
+           // 🔥 终极修复：合并所有已晋级的记录，绝不丢失 POLL 1
       let passedList = list.filter(c => c.status === 'pass');
-      if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
-      passedList.sort((a, b) => {
-        const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-        const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-        return numA - numB;
+      
+      // 把历史记录里可能遗漏的补上
+      if (state.passHistory) {
+        state.passHistory.forEach(hist => { 
+          if (!passedList.some(c => String(c.id) === String(hist.id))) {
+            // 使用历史记录里的名字、订单号、编号，以便正确显示
+            passedList.push(hist); 
+          }
+        });
+      }
+      
+      // 去重（防止有重复的 ID）
+      const uniquePassed = [];
+      const seenIds = new Set();
+      passedList.forEach(c => {
+        if (!seenIds.has(String(c.id))) {
+          seenIds.add(String(c.id));
+          uniquePassed.push(c);
+        }
       });
+
+      // 按照 POLL 编号从小到大排序（没有 POLL 的手动晋级排最后）
+      uniquePassed.sort((a, b) => {
+        const getNum = (str) => {
+          if (!str) return 9999;
+          const match = str.match(/POLL #(\d+)/);
+          return match ? parseInt(match[1], 10) : 9999;
+        };
+        return getNum(a.pollLabel) - getNum(b.pollLabel);
+      });
+
       const passedContainer = document.getElementById('passedListContainer');
-      if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
-      else passedContainer.innerHTML = passedList.map(c => {
-        const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5">` + folderTabHtml +
-          '<span class="font-bold text-emerald-300 mt-1">' + escapeHtml(c.name) + '</span>' +
-          '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px] mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
-        '</div>';
-      }).join('');
+      if (uniquePassed.length === 0) {
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
+      } else {
+        passedContainer.innerHTML = uniquePassed.map(c => {
+          const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
+          // 高亮显示名字，订单号放右边
+          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex flex-col justify-center text-xs shadow-sm mt-1.5 min-w-[120px]">` + folderTabHtml +
+            '<span class="font-bold text-emerald-300 truncate mt-1">' + escapeHtml(c.name) + '</span>' +
+            '<span class="text-slate-400 font-mono text-[9px] sm:text-[10px] mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+          '</div>';
+        }).join('');
+      }
 
       const cPanel = document.getElementById('publicConsolationWinnerPanel');
       const cList = document.getElementById('publicConsolationListContainer');
