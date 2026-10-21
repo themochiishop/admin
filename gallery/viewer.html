@@ -12,13 +12,20 @@
             justify-content: center; align-items: center; font-family: system-ui, 'Segoe UI', sans-serif;
             padding: clamp(0.5rem, 3vw, 1.5rem);
         }
+        
+        /* 顶部目录切换栏 */
         .top-bar {
-            width: 100%; max-width: 1000px; display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 1rem; padding: 0 0.5rem;
+            width: 100%; max-width: 1000px; display: flex; justify-content: center;
+            align-items: center; margin-bottom: 1rem; padding: 0 0.5rem; flex-wrap: wrap; gap: 0.5rem;
         }
-        .back-btn { color: #aab3cd; text-decoration: none; font-size: 0.95rem; }
-        .back-btn:hover { color: #fff; }
-        .category-title { color: #fff; font-weight: 600; font-size: 1.1rem; }
+        
+        .cat-btn {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #aab3cd; padding: 0.5rem 1rem; border-radius: 2rem; cursor: pointer;
+            font-size: 0.9rem; transition: all 0.2s; outline: none;
+        }
+        .cat-btn:hover { background: rgba(79, 124, 255, 0.2); color: #fff; }
+        .cat-btn.active { background: #4f7cff; border-color: #4f7cff; color: white; font-weight: 600; }
 
         .slider-container {
             width: 100%; max-width: 1000px; background: #0f1219; border-radius: clamp(1rem, 3vw, 2rem);
@@ -28,7 +35,7 @@
 
         .slider-viewport {
             overflow: hidden; border-radius: clamp(0.75rem, 2vw, 1.25rem);
-            background: #1e2330; width: 100%; position: relative;
+            background: #1e2330; width: 100%; position: relative; min-height: 300px;
         }
 
         .slider-track {
@@ -77,10 +84,13 @@
 </head>
 <body>
 
-    <div class="top-bar">
-        <a href="../index.html" class="back-btn">← 返回目录</a>
-        <div class="category-title" id="categoryTitle">加载中...</div>
-        <div style="width: 70px;"></div>
+    <!-- 顶部目录切换按钮 -->
+    <div class="top-bar" id="topBar">
+        <button class="cat-btn active" data-cat="1">目录 1</button>
+        <button class="cat-btn" data-cat="2">目录 2</button>
+        <button class="cat-btn" data-cat="3">目录 3</button>
+        <button class="cat-btn" data-cat="4">目录 4</button>
+        <button class="cat-btn" data-cat="5">目录 5</button>
     </div>
 
     <div class="slider-container">
@@ -102,7 +112,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-        // 🚨 你的 Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyBCkb5eDLElnQZ8Pt3Ud5euOmdkCo4QxqM",
             authDomain: "my-gallery-43e8a.firebaseapp.com",
@@ -116,51 +125,58 @@
         const app = initializeApp(firebaseConfig);
         const storage = getStorage(app);
 
-        // DOM 元素
         const track = document.getElementById('sliderTrack');
         const viewport = document.getElementById('sliderViewport');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
         const pageIndicator = document.getElementById('pageIndicator');
         const dotsContainer = document.getElementById('dotsContainer');
-        const categoryTitle = document.getElementById('categoryTitle');
         const loadingText = document.getElementById('loadingText');
-
-        // 获取网址参数
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentCategory = urlParams.get('category') || '1';
-
-        // 标题映射
-        const categoryTitles = {
-            "1": "第一目录", "2": "第二目录", "3": "第三目录", "4": "第四目录", "5": "第五目录"
-        };
-        categoryTitle.textContent = categoryTitles[currentCategory] || `目录 ${currentCategory}`;
+        const topBar = document.getElementById('topBar');
 
         let currentIndex = 0;
         let slideWidth = 0;
         let totalSlides = 0;
+        let currentCategory = '1'; // 默认目录 1
 
-        // 从 Firebase 抓取
+        // 切换目录点击事件
+        topBar.addEventListener('click', (e) => {
+            if (e.target.classList.contains('cat-btn')) {
+                // 更新按钮高亮
+                document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // 加载新目录
+                currentCategory = e.target.dataset.cat;
+                currentIndex = 0;
+                track.innerHTML = ''; // 清空旧图片
+                loadingText.style.display = 'block';
+                loadingText.textContent = "正在读取图片...";
+                fetchImages();
+            }
+        });
+
         async function fetchImages() {
             try {
                 const folderRef = ref(storage, currentCategory); 
                 const result = await listAll(folderRef);
                 
-                // 按文件名排序，保证顺序稳定
                 const sortedItems = result.items.sort((a, b) => a.name.localeCompare(b.name));
-
                 const urls = await Promise.all(sortedItems.map(item => getDownloadURL(item)));
                 
                 loadingText.style.display = 'none';
                 if (urls.length === 0) {
                     loadingText.textContent = "该目录下暂无图片";
                     loadingText.style.display = 'block';
+                    totalSlides = 0;
+                    updateSlider();
+                    dotsContainer.innerHTML = '';
                     return;
                 }
                 renderImages(urls);
             } catch (error) {
                 console.error(error);
-                loadingText.textContent = "加载失败，请检查网络或规则";
+                loadingText.textContent = "加载失败，请检查网络";
             }
         }
 
@@ -192,7 +208,11 @@
         }
 
         function updateSlider() {
-            if (totalSlides === 0) return;
+            if (totalSlides === 0) {
+                pageIndicator.textContent = `0 / 0`;
+                track.style.transform = `translateX(0px)`;
+                return;
+            }
             const offset = -currentIndex * slideWidth;
             track.style.transform = `translateX(${offset}px)`;
             pageIndicator.textContent = `${currentIndex + 1} / ${totalSlides}`;
@@ -208,6 +228,7 @@
         }
 
         function goToSlide(index) {
+            if (totalSlides === 0) return;
             if (index < 0) currentIndex = totalSlides - 1;
             else if (index >= totalSlides) currentIndex = 0;
             else currentIndex = index;
