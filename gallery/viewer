@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" type="image/jpeg" href="logo.png">
     <title>gallery</title>
     <style>
         /* 全局重置与基础样式 */
@@ -240,7 +241,7 @@
         </div>
 
         <div class="dots" id="dotsContainer"></div>
-        <div class="hint">滑动/点击切换 · 自动适应屏幕</div>
+        <div class="hint">Gallery Viewer</div>
     </div>
 
     <script>
