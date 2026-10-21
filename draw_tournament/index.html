@@ -186,116 +186,117 @@
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
       drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false,
-      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10 },
+      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
-// 🎉 中奖恭喜弹窗（带 10 秒倒计时）
-let __popupTimer = null;
-function showWinnerPopup(eventData, durationSeconds) {
-  const modal = document.getElementById('congratModal');
-  const bodyContainer = document.getElementById('congratModalBody');
-  if (!modal || !bodyContainer) return;
+    // 🎉 中奖恭喜弹窗（带 10 秒倒计时）
+    let __popupTimer = null;
+    function showWinnerPopup(eventData, durationSeconds) {
+      const modal = document.getElementById('congratModal');
+      const bodyContainer = document.getElementById('congratModalBody');
+      if (!modal || !bodyContainer) return;
 
-  if (eventData.winnerNamesKey === 'third') {
-    bodyContainer.innerHTML = `
-      <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
-        <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
-        <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
-      </div>
-    `;
-  } else if (eventData.winnerNamesKey === 'final') {
-    bodyContainer.innerHTML = `
-      <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
-        <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
-        <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
-      </div>
-      <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
-        <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
-        <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
-      </div>
-    `;
-  }
+      if (eventData.winnerNamesKey === 'third') {
+        bodyContainer.innerHTML = `
+          <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
+            <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
+          </div>
+        `;
+      } else if (eventData.winnerNamesKey === 'final') {
+        bodyContainer.innerHTML = `
+          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
+            <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
+          </div>
+          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
+            <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
+            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
+          </div>
+        `;
+      }
 
-  modal.classList.remove('hidden');
+      modal.classList.remove('hidden');
 
-  let timeLeft = durationSeconds;
-  const countdown = document.getElementById('congratCountdown');
-  if (countdown) countdown.innerText = timeLeft;
-  if (__popupTimer) clearInterval(__popupTimer);
+      let timeLeft = durationSeconds;
+      const countdown = document.getElementById('congratCountdown');
+      if (countdown) countdown.innerText = timeLeft;
+      if (__popupTimer) clearInterval(__popupTimer);
 
-  __popupTimer = setInterval(() => {
-    timeLeft--;
-    if (countdown) countdown.innerText = timeLeft;
-    if (timeLeft <= 0) {
-      clearInterval(__popupTimer);
-      modal.classList.add('hidden');
+      __popupTimer = setInterval(() => {
+        timeLeft--;
+        if (countdown) countdown.innerText = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(__popupTimer);
+          modal.classList.add('hidden');
+        }
+      }, 1000);
     }
-  }, 1000);
-}
 
-// 🔥 角逐横幅：3人冠亚季争夺 / 2人冠亚军决战 / 安慰奖阶段 / 冠军诞生
-function updateWinnerBannerUI() {
-  const banner = document.getElementById('winnerAnnouncementBanner');
-  const content = document.getElementById('winnerBannerContent');
-  if (!banner || !content) return;
+    // 🔥 角逐横幅
+    function updateWinnerBannerUI() {
+      const banner = document.getElementById('winnerAnnouncementBanner');
+      const content = document.getElementById('winnerBannerContent');
+      if (!banner || !content) return;
 
-  const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
-  const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
-  const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
-  const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+      const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+      const mixed = state.modeConfig && state.modeConfig.mixedModeEnabled !== false;
 
-  // 收集所有轮次里的冠亚季（模式1和模式2共用）
-  let championName = "", runnerUpName = "", thirdPlaceName = "";
-  (state.rounds || []).forEach(r => {
-    (r.candidates || []).forEach(c => {
-      if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") championName = c.name;
-      if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUpName = c.name;
-      if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlaceName = c.name;
-    });
-  });
+      let championName = "", runnerUpName = "", thirdPlaceName = "";
+      (state.rounds || []).forEach(r => {
+        (r.candidates || []).forEach(c => {
+          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") championName = c.name;
+          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUpName = c.name;
+          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlaceName = c.name;
+        });
+      });
 
-  // ① 冠军+亚军都诞生 → 终极祝贺横幅
-  if (championName && runnerUpName) {
-    banner.classList.remove('hidden');
-    content.innerHTML = `🎉 <span class="text-amber-400">👑 冠军得主是：</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300"> | 🥈 亚军得主是：</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
-    return;
-  }
-  // ② 季军诞生 → 提示冠亚军决战
-  if (thirdPlaceName) {
-    banner.classList.remove('hidden');
-    content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
-    return;
-  }
+      // ① 冠军+亚军都诞生
+      if (championName && runnerUpName) {
+        banner.classList.remove('hidden');
+        content.innerHTML = `🎉 <span class="text-amber-400">👑 冠军得主是：</span><span class="text-white bg-amber-500/30 px-2 py-0.5 rounded border border-amber-400 mx-1 font-black">${escapeHtml(championName)}</span><span class="text-slate-300"> | 🥈 亚军得主是：</span><span class="text-white bg-slate-700 px-2 py-0.5 rounded border border-slate-500 mx-1 font-black">${escapeHtml(runnerUpName)}</span>`;
+        return;
+      }
+      // ② 季军诞生
+      if (thirdPlaceName) {
+        banner.classList.remove('hidden');
+        content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
+        return;
+      }
 
-  // ③ 安慰奖阶段
-  const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
-  if (isConsolationStage) {
-    const picked = (activeRound.candidates || []).filter(c => c.rankKey === "rankConsolation").length;
-    banner.classList.remove('hidden');
-    content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主，选满 ${N} 位后自动进入【冠亚季争夺战】！</span>`;
-    return;
-  }
+      // ③ 安慰奖阶段
+      const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
+      if (isConsolationStage) {
+        const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
+        banner.classList.remove('hidden');
+        content.innerHTML = mixed
+          ? `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主（支持手动晋级或抽组PK），选满 ${N} 位后自动进入【冠亚季争夺战】！</span>`
+          : `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主，选满 ${N} 位后自动进入【冠亚季争夺战】！</span>`;
+        return;
+      }
 
-  // ④ 剩 3 人 → 冠亚季争夺战（模式1和模式2都适用，只要当前轮次正好3人且不是安慰奖阶段）
-  const roundTotal = (activeRound.candidates || []).length;
-  if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
-    banner.classList.remove('hidden');
-    content.innerHTML = `<span class="text-amber-300 font-bold">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
-    return;
-  }
+      // ④ 剩 3 人
+      const roundTotal = (activeRound.candidates || []).length;
+      if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
+        banner.classList.remove('hidden');
+        content.innerHTML = `<span class="text-amber-300 font-bold">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
+        return;
+      }
 
-  // ⑤ 剩 2 人 → 冠亚军终极决战
-  if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
-    banner.classList.remove('hidden');
-    content.innerHTML = `<span class="text-amber-300 font-bold">🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！</span>`;
-    return;
-  }
+      // ⑤ 剩 2 人
+      if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
+        banner.classList.remove('hidden');
+        content.innerHTML = `<span class="text-amber-300 font-bold">🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！</span>`;
+        return;
+      }
 
-  // ⑥ 其余情况隐藏横幅
-  banner.classList.add('hidden');
-}
-    
+      banner.classList.add('hidden');
+    }
+
     function toggleModeTooltip(e) {
       if(e) e.stopPropagation();
       document.getElementById('modeTooltipContent').classList.toggle('hidden');
@@ -324,13 +325,15 @@ function updateWinnerBannerUI() {
           if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
           if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
           if (!state.passHistory) state.passHistory = [];
-          // 🔥 监听中奖事件，弹恭喜弹窗
-if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
-  window.__lastSeenEventTime = state.latestEvent.timestamp;
-  if (state.latestEvent.type === 'finalCongrat') {
-    showWinnerPopup(state.latestEvent, 10);
-  }
-}
+          if (!state.modeConfig) state.modeConfig = {};
+          if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
+          // 🔥 监听中奖事件弹恭喜弹窗
+          if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
+            window.__lastSeenEventTime = state.latestEvent.timestamp;
+            if (state.latestEvent.type === 'finalCongrat') {
+              showWinnerPopup(state.latestEvent, 10);
+            }
+          }
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
           updatePublicOverlayState();
@@ -353,12 +356,18 @@ if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTi
       }
       const m = state.modeConfig.selectedMode || 'mode1';
       const N = state.modeConfig.mode2ConsolationCount || 10;
+      const mixed = state.modeConfig.mixedModeEnabled !== false;
+
       if (m === 'mode1') {
-        badge.innerText = "模式: 冠亚季模式";
-        if (tooltip) tooltip.innerHTML = "🥇 <b>模式1：冠亚季排位</b><br>• 每轮手动点晋级<br>• 剩 3 人时点 1 人晋级 → 季军<br>• 剩 2 人时点 1 人晋级 → 冠军<br>• 另一人自动为亚军";
+        badge.innerText = mixed ? "模式: 冠亚季模式 · 🎲混合" : "模式: 冠亚季模式 · ✋仅手动";
+        if (tooltip) tooltip.innerHTML = mixed
+          ? "🥇 <b>模式1：冠亚季排位 · 混合模式</b><br>• 每轮手动点晋级 或 抽组PK 均可<br>• 剩 3 人时点 1 人晋级 → 季军<br>• 剩 2 人时点 1 人晋级 → 冠军<br>• 另一人自动为亚军"
+          : "🥇 <b>模式1：冠亚季排位 · 仅手动</b><br>• 禁止抽组PK<br>• 每轮手动点晋级<br>• 剩 3 人 → 季军，剩 2 人 → 冠军";
       } else if (m === 'mode2') {
-        badge.innerText = `模式: 3+安慰奖(${N}名)`;
-        if (tooltip) tooltip.innerHTML = `🎁 <b>模式2：冠亚季 + ${N}名安慰奖</b><br>• 先手动点晋级选出 ${N} 名安慰奖<br>• 剩余 3 人自动进入冠亚季争夺战<br>• 3 人点 1 人晋级 → 季军<br>• 2 人点 1 人晋级 → 冠军`;
+        badge.innerText = mixed ? `模式: 3+安慰奖(${N}名) · 🎲混合` : `模式: 3+安慰奖(${N}名) · ✋仅手动`;
+        if (tooltip) tooltip.innerHTML = mixed
+          ? `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 混合模式</b><br>• 手动点晋级 或 抽组PK 均可<br>• 先选出 ${N} 名安慰奖（任意方式）<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`
+          : `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 仅手动</b><br>• 禁止抽组PK<br>• 手动点晋级选出 ${N} 名安慰奖<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`;
       }
     }
 
@@ -492,12 +501,12 @@ if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTi
         return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">${escapeHtml(getRoundTitle(idx))} (${passedCount})</button>`;
       }).join('');
     }
-   function switchRound(idx) {
-  currentRoundIndex = idx;
-  userManuallySelectedRound = true;
-  renderRoundTabs(); renderPublicView(); updateStats();
-  updateWinnerBannerUI();  
-}
+    function switchRound(idx) {
+      currentRoundIndex = idx;
+      userManuallySelectedRound = true;
+      renderRoundTabs(); renderPublicView(); updateStats();
+      updateWinnerBannerUI();
+    }
     function setLanguage(lang) { renderRoundTabs(); renderPublicView(); updateStats(); }
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
@@ -545,12 +554,12 @@ if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTi
             const c = (drawRound.candidates || []).find(x => String(x.id) === String(m.id));
             return c ? { ...c, displayNumber: m.displayNumber } : null;
           }).filter(Boolean);
-      } else {
-  activeMembers = state.activeGroupIds.map((id) => {
-    const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
-    return c ? { ...c, displayNumber: null } : null;
-  }).filter(Boolean);
-}
+        } else {
+          activeMembers = state.activeGroupIds.map((id) => {
+            const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
+            return c ? { ...c, displayNumber: null } : null;
+          }).filter(Boolean);
+        }
         publicGroupGrid.innerHTML = activeMembers.map((c, idx) => `
             <div id="pk-card-${idx}" class="relative w-full h-36 rounded-xl border-2 border-amber-500/50 bg-slate-900 overflow-hidden shadow-xl transition-all duration-300">
               <div class="absolute inset-0 p-3 flex flex-col justify-center items-center text-center">
@@ -656,7 +665,7 @@ if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTi
           }
         });
       });
-          document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
+      document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
       if (allOutCandidates.length === 0) {
         outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`;
       } else {
@@ -680,8 +689,8 @@ if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTi
         }).join('');
       }
 
-      updateWinnerBannerUI();   // ← ✅ 放在这里，函数最后
-    }   // ← ✅ 这是 renderPublicView 的结束括号，只保留这一个
+      updateWinnerBannerUI();   // ✅ 函数最后无条件调用
+    }
 
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
