@@ -814,7 +814,6 @@
           state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
           currentRoundIndex = state.rounds.length - 1;
           state.passHistory = []; // 清空历史
-          
           state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
           
           saveState(); renderRoundTabs();
@@ -836,7 +835,7 @@
         saveState(); 
         renderRoundTabs();
 
-        // 3. 等待 3.5 秒（前台看完恭喜海报）
+        // 3. 等待 5 秒（前台恭喜海报倒计时已改为 5 秒）
         setTimeout(() => {
           // 4. 生成决战轮次数据
           const label = "👑 冠亚军终极决战 (2选1)";
@@ -853,7 +852,7 @@
           
           // 后台给直播主一个提示
           setTimeout(() => alert(`🥉 【${justPassed.name}】锁定季军！\n已自动进入【${label}】。`), 100);
-        }, 3500);
+        }, 5000);
         
         return;
       }
