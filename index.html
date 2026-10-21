@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -56,6 +56,10 @@
     .card-wheel .card-icon { background: #eff6ff; color: #2563eb; }
     .card-search .card-icon { background: #f0fdf4; color: #16a34a; }
     .card-status .card-icon { background: #faf5ff; color: #9333ea; }
+    
+    /* 新增：图库卡片的图标颜色 */
+    .card-gallery .card-icon { background: #e0f2fe; color: #0284c7; }
+
     .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
     .card-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 18px; line-height: 1.5; }
     
@@ -87,6 +91,10 @@
     .btn-purple { background: #9333ea; }
     .btn-purple:hover { background: #7e22ce; }
     
+    /* 新增：图库按钮颜色 */
+    .btn-gallery { background: #0284c7; }
+    .btn-gallery:hover { background: #0369a1; }
+
     /* 弹窗 Modal 样式 */
     .modal-overlay {
       position: fixed;
@@ -174,7 +182,17 @@
         <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
       </div>
 
-      <!-- 3. 社交圈动态 my-admin-status -->
+      <!-- 3. 新增：图库管理 Gallery (插在订单查询之后) -->
+      <div class="card card-gallery">
+        <div>
+          <div class="card-icon">🖼️</div>
+          <div class="card-title">图库管理 Gallery</div>
+          <div class="card-desc">管理并在前台展示高清图库，支持分类浏览、全屏查看与后台一键上传。</div>
+        </div>
+        <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
+      </div>
+
+      <!-- 4. 社交圈动态 my-admin-status -->
       <div class="card card-status">
         <div>
           <div class="card-icon">⚙️</div>
@@ -184,7 +202,7 @@
         <a href="my-admin-status/admin.html" class="card-btn btn-purple">状态动态管理 ⚙️</a>
       </div>
 
-      <!-- 4. COD 面单打印系统 -->
+      <!-- 5. COD 面单打印系统 -->
       <div class="card card-cod">
         <div>
           <div class="card-icon">📦</div>
@@ -194,7 +212,7 @@
         <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
       </div>
      
-<!-- 5. 新增：每月抽奖 Monthly Draw -->
+      <!-- 6. 每月抽奖 Monthly Draw -->
       <div class="card card-draw">
         <div>
           <div class="card-icon">🎁</div>
@@ -208,7 +226,7 @@
     <footer>© 2026 themochiishop. All rights reserved.</footer>
   </div>
 
-<!-- 🎁 每月抽奖 - 系统入口弹窗 -->
+  <!-- 🎁 每月抽奖 - 系统入口弹窗 -->
   <div id="drawModalOverlay" class="modal-overlay">
     <div class="modal-card">
       <button onclick="closeDrawModal()" class="modal-close">✕</button>
@@ -226,21 +244,59 @@
     </div>
   </div>
 
-  <script>
-    function openDrawModal() {
-      // 密码验证提示
-      const pwd = prompt("请输入6位数密码");
-      if (pwd === null) return; // 用户点击取消
+  <!-- 🖼️ 图库管理 - 系统入口弹窗 -->
+  <div id="galleryModalOverlay" class="modal-overlay">
+    <div class="modal-card">
+      <button onclick="closeGalleryModal()" class="modal-close">✕</button>
+      <div style="font-size: 2.5rem; margin-bottom: 10px;">🖼️</div>
+      <div class="modal-title">图库系统入口</div>
+      <div class="modal-desc">请选择您要前往的图库页面：</div>
+      <div class="modal-links">
+        <!-- 注意这里加了 target="_blank" 方便新标签页打开，不需要可以删掉 -->
+        <a href="./gallery/viewer.html" class="modal-link-btn btn-admin-portal" target="_blank">
+          👁️ 查看前台展示页 (Viewer)
+        </a>
+        <a href="./gallery/upload.html" class="modal-link-btn btn-public-portal" target="_blank">
+          📤 进入后台上传页 (Upload)
+        </a>
+      </div>
+    </div>
+  </div>
 
+  <script>
+    // 每月抽奖弹窗逻辑
+    function openDrawModal() {
+      const pwd = prompt("请输入6位数密码");
+      if (pwd === null) return;
       if (pwd === "023457") {
         document.getElementById('drawModalOverlay').classList.add('active');
       } else {
         alert("🔒 密码错误，请重新输入！");
       }
     }
-
     function closeDrawModal() {
       document.getElementById('drawModalOverlay').classList.remove('active');
+    }
+
+    // 图库弹窗逻辑
+    function openGalleryModal() {
+      // 如果图库也需要密码，可以在这里加，不需要的话就直接显示
+      document.getElementById('galleryModalOverlay').classList.add('active');
+    }
+    function closeGalleryModal() {
+      document.getElementById('galleryModalOverlay').classList.remove('active');
+    }
+
+    // 点击弹窗外部关闭弹窗
+    window.onclick = function(event) {
+      const drawOverlay = document.getElementById('drawModalOverlay');
+      const galleryOverlay = document.getElementById('galleryModalOverlay');
+      if (event.target === drawOverlay) {
+        closeDrawModal();
+      }
+      if (event.target === galleryOverlay) {
+        closeGalleryModal();
+      }
     }
   </script>
 </body>
