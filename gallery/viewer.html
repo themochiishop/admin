@@ -19,10 +19,12 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.05); z-index: 10; flex-shrink: 0;
         }
         .nav-title { font-size: 1.1rem; font-weight: 600; letter-spacing: 1px; color: #ffffff; }
-        .cat-tabs { display: flex; gap: 0.5rem; }
+        .cat-tabs { display: flex; gap: 0.5rem; overflow-x: auto; }
+        .cat-tabs::-webkit-scrollbar { display: none; }
         .cat-btn {
             background: transparent; border: 1px solid transparent; color: #8b949e;
             padding: 0.4rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.9rem; transition: all 0.2s ease;
+            white-space: nowrap;
         }
         .cat-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
         .cat-btn.active { color: #58a6ff; background: rgba(88, 166, 255, 0.1); border-color: rgba(88, 166, 255, 0.2); }
@@ -47,7 +49,7 @@
             border-radius: 0.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); cursor: zoom-in;
             user-select: none; -webkit-user-drag: none; transition: transform 0.2s;
         }
-        .slide img:hover { transform: scale(1.02); } /* 提示可点击 */
+        .slide img:hover { transform: scale(1.02); }
 
         /* 左右按钮 */
         .nav-btn {
@@ -78,37 +80,27 @@
         .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #8b949e; font-size: 0.9rem; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
-        /* =========================================
-           全屏预览模态框 (Lightbox) 样式
-           ========================================= */
+        /* 全屏预览模态框 */
         .lightbox {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.95); z-index: 9999;
-            display: none; /* 默认隐藏 */
-            justify-content: center; align-items: center;
-            overflow: hidden;
-            touch-action: none; /* 禁用系统默认滑动，交给我们自己处理 */
+            display: none; justify-content: center; align-items: center; overflow: hidden;
+            touch-action: none;
         }
         .lightbox.active { display: flex; }
-        
-        /* 全屏图片轨道 */
         .lb-track {
             display: flex; height: 100%; width: 100%;
             transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .lb-slide {
             flex: 0 0 100%; width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center;
-            padding: 1rem;
+            display: flex; justify-content: center; align-items: center; padding: 1rem;
         }
         .lb-slide img {
             max-width: 100%; max-height: 100%; object-fit: contain;
-            user-select: none; -webkit-user-drag: none;
-            cursor: grab;
+            user-select: none; -webkit-user-drag: none; cursor: grab;
         }
         .lb-slide img:active { cursor: grabbing; }
-
-        /* 关闭按钮 */
         .lb-close {
             position: absolute; top: 1.5rem; right: 1.5rem;
             background: rgba(255, 255, 255, 0.1); border: none; color: #fff;
@@ -117,8 +109,6 @@
             transition: background 0.2s;
         }
         .lb-close:hover { background: rgba(255, 255, 255, 0.2); }
-
-        /* 全屏指示器 */
         .lb-indicator {
             position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
             color: #fff; font-size: 1rem; background: rgba(0, 0, 0, 0.5);
@@ -127,10 +117,8 @@
 
         /* 响应式 */
         @media (max-width: 768px) {
-            .top-nav { padding: 0.8rem; flex-direction: column; gap: 0.8rem; }
-            .cat-tabs { width: 100%; overflow-x: auto; justify-content: flex-start; }
-            .cat-tabs::-webkit-scrollbar { display: none; }
-            .cat-btn { white-space: nowrap; }
+            .top-nav { padding: 0.8rem; flex-direction: column; gap: 0.8rem; align-items: flex-start; }
+            .cat-tabs { width: 100%; }
             .slide { padding: 0.5rem; }
             .prev-btn { left: 0.5rem; width: 2.4rem; height: 2.4rem; }
             .next-btn { right: 0.5rem; width: 2.4rem; height: 2.4rem; }
@@ -144,13 +132,8 @@
         <!-- 顶部导航 -->
         <div class="top-nav">
             <div class="nav-title">GALLERY</div>
-            <div class="cat-tabs" id="topBar">
-                <button class="cat-btn active" data-cat="1">目录 01</button>
-                <button class="cat-btn" data-cat="2">目录 02</button>
-                <button class="cat-btn" data-cat="3">目录 03</button>
-                <button class="cat-btn" data-cat="4">目录 04</button>
-                <button class="cat-btn" data-cat="5">目录 05</button>
-            </div>
+            <!-- 目录按钮由 JS 动态生成 -->
+            <div class="cat-tabs" id="topBar"></div>
         </div>
 
         <!-- 主体轮播区 -->
@@ -170,14 +153,10 @@
         </div>
     </div>
 
-    <!-- =========================================
-         全屏预览模态框 (Lightbox) HTML 结构
-         ========================================= -->
+    <!-- 全屏预览模态框 -->
     <div class="lightbox" id="lightbox">
         <button class="lb-close" id="lbCloseBtn">×</button>
-        <div class="lb-track" id="lbTrack">
-            <!-- 图片会动态生成在这里 -->
-        </div>
+        <div class="lb-track" id="lbTrack"></div>
         <div class="lb-indicator" id="lbIndicator">1 / 1</div>
     </div>
 
@@ -214,6 +193,32 @@
         const lbTrack = document.getElementById('lbTrack');
         const lbIndicator = document.getElementById('lbIndicator');
 
+        // ==========================================
+        // 1. 获取本地保存的目录名称并渲染顶部按钮
+        // ==========================================
+        function getSavedCategories() {
+            const saved = localStorage.getItem('gallery_categories');
+            const defaultCategories = {
+                "1": "目录 01", "2": "目录 02", "3": "目录 03", "4": "目录 04", "5": "目录 05"
+            };
+            return saved ? JSON.parse(saved) : defaultCategories;
+        }
+
+        const categoryTitles = getSavedCategories();
+
+        function renderTopBar() {
+            topBar.innerHTML = '';
+            // 遍历保存的目录对象
+            for (const [key, name] of Object.entries(categoryTitles)) {
+                const btn = document.createElement('button');
+                btn.className = `cat-btn ${key === '1' ? 'active' : ''}`; // 默认选中第一个
+                btn.dataset.cat = key;
+                btn.textContent = name; // 使用自定义名称
+                topBar.appendChild(btn);
+            }
+        }
+        renderTopBar();
+
         // 状态数据
         let currentIndex = 0;
         let slideWidth = 0;
@@ -222,7 +227,7 @@
         let currentImageUrls = []; // 缓存当前目录的图片列表
 
         // ==========================================
-        // 1. 主界面加载与目录切换逻辑
+        // 2. 主界面加载与目录切换逻辑
         // ==========================================
         topBar.addEventListener('click', (e) => {
             if (e.target.classList.contains('cat-btn')) {
@@ -330,7 +335,7 @@
 
 
         // ==========================================
-        // 2. 全屏预览 (Lightbox) 逻辑
+        // 3. 全屏预览 (Lightbox) 逻辑
         // ==========================================
         let lbCurrentIndex = 0;
         let lbSlideWidth = window.innerWidth;
@@ -358,7 +363,7 @@
             
             // 初始化位置
             lbSlideWidth = window.innerWidth;
-            updateLightboxPosition(false); // false 代表不要动画，瞬间切换
+            updateLightboxPosition(false);
         }
 
         function closeLightbox() {
@@ -404,17 +409,16 @@
         });
 
         // ==========================================
-        // 3. 触摸/鼠标拖拽滑动支持
+        // 4. 触摸/鼠标拖拽滑动支持
         // ==========================================
         const getPositionX = (e) => e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
 
         function dragStart(e) {
-            // 如果点击的是关闭按钮，不触发拖拽
             if (e.target.closest('.lb-close')) return;
             
             startX = getPositionX(e);
             isDragging = true;
-            lbTrack.style.transition = 'none'; // 拖拽时去掉动画，跟手
+            lbTrack.style.transition = 'none';
         }
 
         function dragMove(e) {
@@ -423,7 +427,6 @@
             const diff = currentX - startX;
             currentTranslate = -lbCurrentIndex * lbSlideWidth + diff;
             
-            // 加上拖拽阻尼效果
             lbTrack.style.transform = `translateX(${currentTranslate}px)`;
         }
 
@@ -434,31 +437,26 @@
             const currentX = e.type.includes('mouse') ? e.pageX : e.changedTouches[0].clientX;
             const diff = currentX - startX;
             
-            // 滑动阈值（滑动超过 50px 即切换）
             if (diff < -50 && lbCurrentIndex < currentImageUrls.length - 1) {
-                lbCurrentIndex++; // 向左滑，看下一张
+                lbCurrentIndex++;
             } else if (diff > 50 && lbCurrentIndex > 0) {
-                lbCurrentIndex--; // 向右滑，看上一张
+                lbCurrentIndex--;
             }
             
-            // 恢复弹性动画并归位
             updateLightboxPosition(true);
         }
 
-        // 绑定鼠标事件
         lbTrack.addEventListener('mousedown', dragStart);
         window.addEventListener('mousemove', dragMove);
         window.addEventListener('mouseup', dragEnd);
         
-        // 绑定触摸事件 (移动端)
         lbTrack.addEventListener('touchstart', dragStart, { passive: true });
         lbTrack.addEventListener('touchmove', dragMove, { passive: true });
         lbTrack.addEventListener('touchend', dragEnd);
 
-        // 阻止拖拽图片时触发浏览器自带的图片拖拽
         lbTrack.addEventListener('dragstart', (e) => e.preventDefault());
 
-        // 启动
+        // 启动主页面
         fetchImages();
     </script>
 </body>
