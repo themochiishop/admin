@@ -815,7 +815,7 @@
       }
     }
 
-        function createNewRound() {
+           function createNewRound() {
       const cur = state.rounds[currentRoundIndex];
       let passed = (cur.candidates || []).filter(c => c.status === 'pass');
       const pending = (cur.candidates || []).filter(c => c.status === 'pending');
@@ -826,7 +826,7 @@
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
       const isCons = cur.isConsolationStage;
 
-      // 🔥 智能放行：如果在模式2的安慰奖阶段，已选满N人，且池子刚好剩3人，自动把他们加入晋级区
+      // 🔥 智能放行：在模式2的安慰奖阶段，选满N人且剩3人时，自动把他们加入晋级区
       if (isModeEnabled && selectedMode === 'mode2' && isCons && passed.length === N && pending.length === 3) {
          pending.forEach(p => {
             p.status = 'pass';
@@ -838,17 +838,13 @@
       }
 
       if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
+      if (passed.length === total.length) { alert("⚠️ 全员晋级，无人淘汰！"); return; }
 
+      // 🔥 移除原来模式2那个 < N+3 的强制拦截，允许人数不足时继续正常进入下一轮
       if (isModeEnabled && selectedMode === 'mode1' && passed.length < 3) {
         alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passed.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
         return;
       }
-      if (isModeEnabled && selectedMode === 'mode2' && passed.length < (N + 3)) {
-        alert(`⚠️ 【模式 2 (3+安慰奖) 规则限制】\n\n在包含 ${N} 名安慰奖模式下，晋级区人数必须至少包含 N + 3 人（即至少 ${N + 3} 人）才能开启后续安慰奖与冠亚季环节！\n\n当前仅选择了 ${passed.length} 位晋级买家，缺少 ${(N + 3) - passed.length} 人，请继续挑选晋级买家后再点击推进。`);
-        return;
-      }
-
-      if (passed.length === total.length) { alert("⚠️ 全员晋级，无人淘汰！"); return; }
 
       cur.candidates.forEach(c => {
         if (c.status !== 'pass') { c.status = 'out'; if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex; }
@@ -866,6 +862,7 @@
         // 如果是从安慰奖阶段出来，一定是进入冠亚季争夺战
         label = "🏆 冠亚季争夺战 (剩3人)";
       } else if (isMode2 && passed.length === N + 3) {
+        // 🔥 如果正好凑够 N+3 人，才进入安慰奖阶段
         label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; 
         isConsNext = true; 
       } else if (!cur.isConsolationStage && passed.length === 3) {
