@@ -25,14 +25,12 @@
     }
     .animate-pop { animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     
-    /* 进度条：灰色底色，黄色从左向右填满 */
     @keyframes fillBarLeftToRight {
       from { width: 0%; }
       to { width: 100%; }
     }
     .animate-bar { animation: fillBarLeftToRight 5s linear forwards; }
     
-    /* 环绕布局 Grid */
     .grid-center-pk {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -568,7 +566,6 @@
           if (!state.modeConfig) state.modeConfig = {};
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           
-          // 触发新轮次弹窗
           if (state.rounds.length > prevRoundCount && prevRoundCount > 0) {
             showRoundTransitionModal(getRoundTitle(state.rounds.length - 1));
           }
@@ -692,14 +689,15 @@
                         if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
                           finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx });
                         }
+                        
+                        const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
                         finalState.activeGroupIds.forEach(id => {
                           const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
                           if (target) {
-                            if (String(id) === winnerId) { 
-                              target.status = 'pass'; 
-                              target.pollLabel = pollLabel; 
-                            } else { 
-                              if (finalState.currentSafeMode) {
+                            if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
+                            else { 
+                              // 🔥 终极防呆：模式2的安慰奖阶段，不淘汰！
+                              if (isMode2 && activeRound.isConsolationStage) {
                                 target.status = 'pending';
                               } else {
                                 target.status = 'out'; 
@@ -721,7 +719,6 @@
                           const latest = snap.val();
                           if (!latest || !latest.activeGroupIds || latest.activeGroupIds.length === 0) return;
                           latest.activeGroupIds = []; latest.activeGroupMembers = []; latest.pkStage = 'voting'; latest.triggerNumber = null; latest.settled = false;
-                          latest.currentSafeMode = false; // 重置
                           db.ref('tournament_state').set(latest);
                         });
                       }, 3000);
