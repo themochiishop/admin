@@ -170,7 +170,7 @@
         <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
       </div>
 
-      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden mb-4">
+           <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden mb-4">
         <div class="flex flex-row justify-between items-center mb-6 pb-3 border-b border-amber-500/30 gap-2">
           <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
             <span class="text-base sm:text-2xl animate-bounce">🔥</span>
@@ -181,26 +181,31 @@
           </div>
         </div>
 
-        <div class="grid-center-pk w-full max-w-4xl mx-auto">
-          <div id="pk-area-left-top" class="area-left-top flex flex-wrap justify-center gap-3"></div>
-          <div id="pk-area-right-top" class="area-right-top flex flex-wrap justify-center gap-3"></div>
+        <!-- 左右对称环绕布局 -->
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-8 w-full max-w-5xl mx-auto">
           
-          <div class="area-center flex flex-col items-center justify-center z-10">
-            <div class="flex flex-col items-center justify-center bg-slate-950/90 px-10 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_25px_rgba(245,158,11,0.3)]">
+          <!-- 左侧卡片区 (由 JS 动态分配) -->
+          <div id="pk-area-left" class="flex flex-col gap-3 sm:gap-4 items-center md:items-end w-full md:w-[32%]"></div>
+
+          <!-- 中间票选号区 (固定居中) -->
+          <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 my-4 md:my-0">
+            <div class="flex flex-col items-center justify-center bg-slate-950/90 px-10 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
               <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-              <span id="centerTriggerNumberBox" class="text-4xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+              <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
             </div>
-            <div id="publicRevealButtonBox" class="hidden mt-3">
-              <button onclick="revealPKWinnerFromPublic()" class="px-8 py-2.5 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-1.5">
+            <div id="publicRevealButtonBox" class="hidden mt-4">
+              <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
                 <span>🎰</span><span>点击揭晓</span>
               </button>
             </div>
           </div>
 
-          <div id="pk-area-left-bottom" class="area-left-bottom flex flex-wrap justify-center gap-3"></div>
-          <div id="pk-area-right-bottom" class="area-right-bottom flex flex-wrap justify-center gap-3"></div>
+          <!-- 右侧卡片区 (由 JS 动态分配) -->
+          <div id="pk-area-right" class="flex flex-col gap-3 sm:gap-4 items-center md:items-start w-full md:w-[32%]"></div>
+
         </div>
         
+        <!-- 供移动端/平板端兜底使用的统一网格 -->
         <div id="publicActiveGroupGrid" class="hidden flex-wrap justify-center gap-2.5 sm:gap-3.5 mt-4 w-full"></div>
       </div>
 
@@ -833,10 +838,8 @@
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
       const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
 
-      const areaLT = document.getElementById('pk-area-left-top');
-      const areaRT = document.getElementById('pk-area-right-top');
-      const areaLB = document.getElementById('pk-area-left-bottom');
-      const areaRB = document.getElementById('pk-area-right-bottom');
+           const areaL = document.getElementById('pk-area-left');
+      const areaR = document.getElementById('pk-area-right');
       const groupMobile = document.getElementById('publicActiveGroupGrid');
 
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
@@ -862,25 +865,26 @@
           }).filter(Boolean);
         }
 
-        areaLT.innerHTML = ''; areaRT.innerHTML = ''; areaLB.innerHTML = ''; areaRB.innerHTML = '';
-        
+        areaL.innerHTML = ''; areaR.innerHTML = '';
         let mobileHtml = '';
+
         activeMembers.forEach((c, idx) => {
           const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
           mobileHtml += cardHtml;
 
-          if (idx === 0) areaLT.innerHTML += cardHtml;
-          else if (idx === 1) areaRT.innerHTML += cardHtml;
-          else if (idx === 2) areaLB.innerHTML += cardHtml;
-          else if (idx === 3) areaRB.innerHTML += cardHtml;
-          else if (idx >= 4) areaLB.innerHTML += cardHtml; 
+          // 左右交替分配
+          if (idx % 2 === 0) {
+            areaL.innerHTML += cardHtml;
+          } else {
+            areaR.innerHTML += cardHtml;
+          }
         });
 
-        if (window.innerWidth <= 768) {
+              if (window.innerWidth <= 768) {
           groupMobile.classList.remove('hidden');
           groupMobile.classList.add('flex');
           groupMobile.innerHTML = mobileHtml;
-          areaLT.innerHTML = ''; areaRT.innerHTML = ''; areaLB.innerHTML = ''; areaRB.innerHTML = '';
+          areaL.innerHTML = ''; areaR.innerHTML = '';
         } else {
           groupMobile.classList.add('hidden');
           groupMobile.classList.remove('flex');
