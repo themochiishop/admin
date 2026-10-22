@@ -58,16 +58,17 @@
       animation: countdownPop 0.5s ease-out forwards;
     }
 
-    /* 新增：跑马灯上下循环动画 */
-    @keyframes scrollUpDown {
-      0% { transform: translateY(10px); opacity: 0; }
-      20% { transform: translateY(0); opacity: 1; }
-      80% { transform: translateY(0); opacity: 1; }
-      100% { transform: translateY(-10px); opacity: 0; }
+    /* 新增：跑马灯上下循环动画（两行错开出现） */
+    @keyframes scrollRow1 {
+      0%, 100% { transform: translateY(0); opacity: 1; }
+      50% { transform: translateY(-10px); opacity: 0.8; }
     }
-    .animate-scroll-loop {
-      animation: scrollUpDown 4s ease-in-out infinite;
+    @keyframes scrollRow2 {
+      0%, 100% { transform: translateY(10px); opacity: 0.8; }
+      50% { transform: translateY(0); opacity: 1; }
     }
+    .animate-scroll-row1 { animation: scrollRow1 3s ease-in-out infinite; }
+    .animate-scroll-row2 { animation: scrollRow2 3s ease-in-out infinite; }
 
     /* 电脑端 7:3 自适应网格 */
     @media (min-width: 1024px) {
@@ -294,9 +295,9 @@
                   </div>
                 </div>
                 <!-- 恭喜中奖 与 新一轮盲抽即将开始 上下滚动提示 -->
-                <div id="nextRoundHint" class="hidden flex flex-col items-center justify-center animate-scroll-loop">
-                  <span class="text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
-                  <span class="text-sm sm:text-base font-bold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
+                <div id="nextRoundHint" class="hidden flex flex-col items-center justify-center">
+                  <span class="animate-scroll-row1 text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
+                  <span class="animate-scroll-row2 text-sm sm:text-base font-bold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
                 </div>
               </div>
 
