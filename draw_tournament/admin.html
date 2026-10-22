@@ -33,6 +33,13 @@
     .out-card { padding: 4px 6px; font-size: 11px; }
     .undo-btn { opacity: 0.5; transition: opacity 0.2s; }
     .out-card:hover .undo-btn { opacity: 1; }
+
+    /* 票选号按钮锁定样式 */
+    .trigger-btn-locked {
+      opacity: 0.4;
+      cursor: not-allowed !important;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
@@ -246,7 +253,7 @@
               <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
               <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
               
-              <!-- 新增：独立的盲抽设置齿轮按钮 -->
+              <!-- 独立的盲抽设置齿轮按钮 -->
               <button onclick="openDrawSettingsModal()" class="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-amber-400 border border-slate-600 rounded-lg transition shadow flex items-center justify-center" title="盲抽参数设置">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -682,6 +689,11 @@
     
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
+      // 状态锁：命中或已分配号码后不可修改
+      if (state.settled || state.pkStage === 'revealed') {
+        alert("⚠️ 开奖已确认，禁止修改票选号！");
+        return;
+      }
       if (num < 1 || num > activeGroup4Ids.length) { alert("票选号超出当前组人数范围！"); return; }
       state.triggerNumber = num; state.pkStage = 'triggered';
       saveState(); renderActiveGroupUI();
@@ -770,9 +782,12 @@
       }
       if (triggerButtonsContainer) {
         const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
+        // 锁定状态：开奖中或已揭晓，禁止点击票选号
+        const isLocked = state.settled || state.pkStage === 'revealed';
         triggerButtonsContainer.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(num => {
           const isSelected = (state.triggerNumber === num);
-          const btnClass = isSelected ? "bg-amber-500 text-slate-950 font-black scale-110 shadow-lg border-2 border-white" : "bg-slate-800 text-amber-300 border border-amber-500/50 hover:bg-amber-500 hover:text-slate-950";
+          let btnClass = isSelected ? "bg-amber-500 text-slate-950 font-black scale-110 shadow-lg border-2 border-white" : "bg-slate-800 text-amber-300 border border-amber-500/50 hover:bg-amber-500 hover:text-slate-950";
+          if (isLocked) btnClass += " trigger-btn-locked";
           return `<button onclick="setTriggerNumber(${num})" class="w-7 h-7 rounded-lg text-xs transition transform font-black ${btnClass}">#${num}</button>`;
         }).join('');
       }
