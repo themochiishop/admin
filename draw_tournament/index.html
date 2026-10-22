@@ -834,7 +834,7 @@
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          if (!countdownTimerId && scramblingMemberIds.size === 0) {
+          if (!countdownTimerId && scramblingMemberIds.size === 0 && !isShowingSkeleton) {
             showSkeletonThenCountdown();
           }
         }
