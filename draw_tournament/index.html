@@ -27,25 +27,85 @@
       100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399; } 
     }
     .winner-glow { animation: winnerBlast 1s infinite alternate; border: 4px solid #34d399 !important; background-color: #064e3b !important; }
-
-    /* 强制居中布局，避免各种屏幕下挤压 */
-    .pk-layout-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2rem;
-      width: 100%;
+    
+    @keyframes modalPop {
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
+    .animate-pop { animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    
+    @keyframes fillBarLeftToRight {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+    .animate-bar { animation: fillBarLeftToRight 5s linear forwards; }
+
+    /* 电脑端自定义分栏，不抢占手机端 */
     @media (min-width: 1024px) {
-      .pk-layout-wrapper {
-        flex-direction: row;
-        align-items: center;
+      .layout-grid {
+        display: grid;
+        grid-template-columns: 70% calc(30% - 1.5rem);
+        gap: 1.5rem;
+        align-items: start;
       }
     }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
+
+  <!-- 遮罩层 -->
+  <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
+    <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
+      <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
+      <h2 class="text-xl sm:text-2xl font-black text-amber-400 mb-2 leading-snug">网页正在计算与更新中，敬请期待...</h2>
+      <p class="text-xs sm:text-sm text-slate-400 font-medium">系统正在实时同步与整理买家数据，请留意直播间提示</p>
+    </div>
+  </div>
+
+  <!-- 轮次切换弹窗 -->
+  <div id="roundTransitionModal" class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-300" onclick="closeRoundModal()">
+    <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
+      
+      <div class="text-6xl sm:text-7xl mb-6 inline-block animate-bounce">🚀</div>
+      <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 mb-3 tracking-widest drop-shadow-sm">新一轮对决开启</h2>
+      <div id="roundTransitionTitle" class="text-xl sm:text-2xl font-bold text-white mb-6 bg-slate-800/80 py-3 px-6 rounded-2xl border border-slate-700 inline-block">
+        第 2 轮
+      </div>
+      <p class="text-sm sm:text-base text-amber-200/80 mb-8 font-medium">🔥 请各位买家/观众做好准备，激烈的角逐即将开始！</p>
+      
+      <div class="w-full bg-slate-700/50 rounded-full h-2 mb-4 overflow-hidden border border-slate-600/50 flex justify-start">
+        <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-2 rounded-full animate-bar"></div>
+      </div>
+      <p class="text-[10px] text-slate-500 uppercase tracking-widest">Automatically closing in 5 seconds...</p>
+    </div>
+  </div>
+
+  <!-- 恭喜弹窗 -->
+  <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
+    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
+      <div class="text-5xl sm:text-7xl mb-2 sm:mb-3 animate-bounce">👑</div>
+      <h2 id="congratBadge" class="text-[10px] sm:text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
+      <h3 id="congratModalTitle" class="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3 sm:mb-4">热烈祝贺！成功获得荣誉！</h3>
+      <div id="congratModalBody" class="my-3 sm:my-5 space-y-2 sm:space-y-3"></div>
+      <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-4 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs text-slate-300 shadow mt-2">
+        <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+        <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-sm sm:text-base">5</span> 秒后自动切回大屏榜单...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分享按钮 -->
+  <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
+    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
+      <span>🔗</span><span>分享结果</span>
+    </button>
+    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
+      <span>💾</span><span>保存为图片</span>
+    </button>
+  </div>
 
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row justify-between items-center gap-2.5 sm:gap-0">
@@ -66,6 +126,13 @@
             <div id="modeTooltipBody" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
           </div>
         </div>
+        
+        <!-- 🔥 实时同步图标 -->
+        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+          <span>云端毫秒级同步中...</span>
+        </div>
+
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px] sm:text-[11px]">ZH</span></button>
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px] sm:text-[11px]">EN</span></button>
@@ -120,45 +187,55 @@
         </div>
       </div>
 
-      <!-- 🔥 上半部分：网格分栏布局 (电脑7:3，手机全宽堆叠) -->
-      <div class="grid grid-cols-1 lg:grid-cols-10 gap-4 sm:gap-6 w-full items-start">
+      <!-- 🔥 核心区布局：自定义 CSS 电脑 7:3，手机竖排 -->
+      <div class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
         
-        <!-- 左侧：Shopee 直播间盲抽 PK 组 (lg占7列) -->
-        <div id="publicActiveGroupDisplay" class="hidden lg:col-span-7 w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[400px]">
-          <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
-            <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
-              <span class="text-base sm:text-2xl animate-bounce">🔥</span>
-              <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
-            </div>
-            <div class="flex-shrink-0">
-              <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
-            </div>
+        <!-- 左侧：Shopee 直播间盲抽 PK 组 -->
+        <div id="publicActiveGroupDisplay" class="bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[400px]">
+          
+          <!-- 默认空状态 (未抽卡时占位) -->
+          <div id="pk-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+            <span class="text-5xl mb-3">🎲</span>
+            <p class="text-sm font-bold">等待后台随机抽取盲抽组...</p>
           </div>
 
-          <div class="pk-layout-wrapper flex-1">
-            <!-- 左侧卡片区 -->
-            <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
-
-            <!-- 中间票选号区 -->
-            <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-                <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-                <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+          <!-- 数据渲染区 (默认隐藏) -->
+          <div id="pk-content-area" class="hidden flex-col flex-1 relative z-10 w-full h-full">
+            <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
+              <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
+                <span class="text-base sm:text-2xl animate-bounce">🔥</span>
+                <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
               </div>
-              <div id="publicRevealButtonBox" class="hidden mt-4">
-                <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                  <span>🎰</span><span>点击揭晓</span>
-                </button>
+              <div class="flex-shrink-0">
+                <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
               </div>
             </div>
 
-            <!-- 右侧卡片区 (仅电脑端) -->
-            <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
+            <div class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
+              <!-- 左侧/上方卡片区 -->
+              <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
+
+              <!-- 中间票选号区 -->
+              <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
+                <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+                  <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
+                  <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+                </div>
+                <div id="publicRevealButtonBox" class="hidden mt-4">
+                  <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+                    <span>🎰</span><span>点击揭晓</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 右侧卡片区 (仅电脑端) -->
+              <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
+            </div>
           </div>
         </div>
 
-        <!-- 右侧：晋级与得奖区 (lg占3列) -->
-        <div class="lg:col-span-3 w-full flex flex-col gap-4">
+        <!-- 右侧：晋级与得奖区 -->
+        <div class="w-full flex flex-col gap-4">
           <!-- 已晋级区 -->
           <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
@@ -221,56 +298,6 @@
 
     </div>
   </main>
-
-  <!-- 弹窗组件等全部保留... (与上面代码相同) -->
-  <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
-    <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
-      <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
-      <h2 class="text-xl sm:text-2xl font-black text-amber-400 mb-2 leading-snug">网页正在计算与更新中，敬请期待...</h2>
-      <p class="text-xs sm:text-sm text-slate-400 font-medium">系统正在实时同步与整理买家数据，请留意直播间提示</p>
-    </div>
-  </div>
-
-  <div id="roundTransitionModal" class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-300" onclick="closeRoundModal()">
-    <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
-      <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
-      
-      <div class="text-6xl sm:text-7xl mb-6 inline-block animate-bounce">🚀</div>
-      <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 mb-3 tracking-widest drop-shadow-sm">新一轮对决开启</h2>
-      <div id="roundTransitionTitle" class="text-xl sm:text-2xl font-bold text-white mb-6 bg-slate-800/80 py-3 px-6 rounded-2xl border border-slate-700 inline-block">
-        第 2 轮
-      </div>
-      <p class="text-sm sm:text-base text-amber-200/80 mb-8 font-medium">🔥 请各位买家/观众做好准备，激烈的角逐即将开始！</p>
-      
-      <div class="w-full bg-slate-700/50 rounded-full h-2 mb-4 overflow-hidden border border-slate-600/50 flex justify-start">
-        <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-2 rounded-full animate-bar"></div>
-      </div>
-      <p class="text-[10px] text-slate-500 uppercase tracking-widest">Automatically closing in 5 seconds...</p>
-    </div>
-  </div>
-
-  <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
-    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
-      <div class="text-5xl sm:text-7xl mb-2 sm:mb-3 animate-bounce">👑</div>
-      <h2 id="congratBadge" class="text-[10px] sm:text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
-      <h3 id="congratModalTitle" class="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3 sm:mb-4">热烈祝贺！成功获得荣誉！</h3>
-      <div id="congratModalBody" class="my-3 sm:my-5 space-y-2 sm:space-y-3"></div>
-      <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-4 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs text-slate-300 shadow mt-2">
-        <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-        <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-sm sm:text-base">5</span> 秒后自动切回大屏榜单...</span>
-      </div>
-    </div>
-  </div>
-
-  <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
-    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
-      <span>🔗</span><span>分享结果</span>
-    </button>
-    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
-      <span>💾</span><span>保存为图片</span>
-    </button>
-  </div>
 
   <footer class="bg-slate-950 border-t border-slate-800/80 py-3 text-center text-[10px] sm:text-xs text-slate-500">
     <div class="max-w-[1600px] mx-auto px-4 flex justify-between items-center">
@@ -838,6 +865,8 @@
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
+      const publicGroupContent = document.getElementById('pk-content-area');
+      const pkEmptyState = document.getElementById('pk-empty-state');
       const publicPollBadge = document.getElementById('publicPollBadge');
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
       const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
@@ -846,7 +875,10 @@
       const areaR = document.getElementById('pk-area-right');
 
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
-        publicGroupContainer.classList.remove('hidden');
+        publicGroupContent.classList.remove('hidden');
+        publicGroupContent.classList.add('flex');
+        pkEmptyState.classList.add('hidden');
+
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
         
@@ -881,7 +913,10 @@
         });
 
       } else {
-        publicGroupContainer.classList.add('hidden');
+        // 显示空状态
+        publicGroupContent.classList.add('hidden');
+        publicGroupContent.classList.remove('flex');
+        pkEmptyState.classList.remove('hidden');
       }
 
       let passedList = list.filter(c => c.status === 'pass');
