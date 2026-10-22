@@ -22,37 +22,17 @@
       box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
       letter-spacing: 0.5px; z-index: 10;
     }
-    /* 三栏布局：主内容 + 右侧窄淘汰栏 */
     .main-grid {
       display: grid;
-      grid-template-columns: 1fr 240px; /* 淘汰区收窄至 240px */
+      grid-template-columns: 1fr 240px;
       gap: 16px;
     }
     @media (max-width: 1280px) {
-      .main-grid {
-        grid-template-columns: 1fr;
-      }
+      .main-grid { grid-template-columns: 1fr; }
     }
-    /* 操作面板的微调 */
-    .action-strip {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px;
-    }
-    /* 淘汰区卡片更紧凑 */
-    .out-card {
-      padding: 4px 6px;
-      font-size: 11px;
-    }
-    /* 撤回按钮 */
-    .undo-btn {
-      opacity: 0.5;
-      transition: opacity 0.2s;
-    }
-    .out-card:hover .undo-btn {
-      opacity: 1;
-    }
+    .out-card { padding: 4px 6px; font-size: 11px; }
+    .undo-btn { opacity: 0.5; transition: opacity 0.2s; }
+    .out-card:hover .undo-btn { opacity: 1; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
@@ -90,7 +70,7 @@
     </div>
   </header>
 
-  <!-- ========= 弹窗（保持不变） ========= -->
+  <!-- ========= 弹窗 ========= -->
   <!-- 推进轮次弹窗 -->
   <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
@@ -118,7 +98,7 @@
     </div>
   </div>
 
-  <!-- 配置弹窗（保持不变） -->
+  <!-- 配置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden" style="height: 80vh; max-height: 600px;">
       <div class="w-full md:w-56 bg-slate-900/50 border-r border-slate-700 flex flex-col p-4 shrink-0">
@@ -158,6 +138,16 @@
           </div>
           <div id="tabDraw" class="config-tab-panel hidden space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">抽奖规则与玩法模式</h4>
+            
+            <!-- 新增：盲抽倒计时设置 -->
+            <div class="bg-slate-900/80 p-3 rounded-xl border border-amber-500/30">
+              <label class="block text-slate-200 font-bold mb-2">⏱️ 盲抽倒计时时长 (秒)</label>
+              <div class="flex items-center space-x-2">
+                <input type="number" id="drawdownCountdownInput" value="5" min="3" max="30" class="w-20 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold text-amber-400 focus:outline-none">
+                <span class="text-slate-400">秒 (前台点击开始后倒数此秒数再开跑)</span>
+              </div>
+            </div>
+
             <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
               <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
               <span class="font-bold text-slate-200">启用模式规则 (关闭后仅手动自由控盘)</span>
@@ -206,7 +196,6 @@
   <!-- ========= 主体 ========= -->
   <main class="max-w-[1600px] mx-auto px-4 py-3 flex-1 w-full flex flex-col">
 
-    <!-- 轮次导航 + 重置 -->
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
       <div id="roundTabsContainer" class="flex flex-wrap gap-1.5 overflow-x-auto"></div>
       <button onclick="resetRounds()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/50 text-[11px] font-bold rounded-lg transition shadow flex items-center space-x-1">
@@ -214,7 +203,6 @@
       </button>
     </div>
 
-    <!-- 统计卡片（更紧凑） -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
       <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-xl font-black text-blue-400">0</span></div>
       <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮晋级/胜出</span><span id="statPassedCount" class="text-xl font-black text-emerald-400">0</span></div>
@@ -222,11 +210,8 @@
       <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮已淘汰</span><span id="statOutCount" class="text-xl font-black text-slate-400">0</span></div>
     </div>
 
-    <!-- ===== 两栏布局：左侧主要操作 + 右侧窄淘汰栏 ===== -->
     <div class="main-grid">
-      <!-- 左侧列 -->
       <div class="flex flex-col gap-4 min-w-0">
-
         <!-- 晋级区 + 操作 -->
         <div class="bg-slate-800/90 rounded-xl p-3 border border-emerald-500/30 shadow-lg">
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -243,7 +228,7 @@
           <div id="passedListContainer" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar pr-1 pt-1.5 mt-1"></div>
         </div>
 
-        <!-- 抽组PK展示区（如果激活） -->
+        <!-- 抽组PK展示区 -->
         <div id="activeGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-xl p-3 shadow-xl">
           <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-amber-500/30 gap-2">
             <div class="flex items-center space-x-2">
@@ -268,9 +253,8 @@
           <p id="specialRoundBannerSub" class="text-[11px] text-amber-200/90 mt-0.5"></p>
         </div>
 
-        <!-- 待 PK 买家名单池（主力操作区） -->
+        <!-- 待 PK 买家名单池 -->
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700 flex-1 flex flex-col min-h-[200px]">
-          <!-- 搜索栏移动到刷新/导入按钮之前 -->
           <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
             <h2 class="text-sm font-bold text-amber-400">待 PK 买家名单池</h2>
             <div class="flex items-center gap-2">
@@ -280,10 +264,9 @@
           </div>
           <div id="adminViewContainer" class="flex-1 overflow-y-auto pr-0.5"></div>
         </div>
-
       </div>
 
-      <!-- 右侧列：淘汰区（收窄，带撤回功能） -->
+      <!-- 右侧列：淘汰区 -->
       <div class="bg-slate-800/30 rounded-xl p-2 border border-slate-800 flex flex-col min-h-[300px]">
         <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-1.5"><span class="text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
@@ -298,7 +281,6 @@
     © Mochiishop Shopee Monthly Event. All rights reserved.
   </footer>
 
-  <!-- ========= JavaScript ========= -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
@@ -329,7 +311,8 @@
         enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, 
         useDefaultPickCount: true, defaultPickCount: 4, 
         importMode: 'default', customSheetUrl: '',
-        mixedModeEnabled: true
+        mixedModeEnabled: true,
+        drawCountdownSeconds: 5 // 新增：倒计时秒数
       },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
@@ -345,6 +328,7 @@
           if (!state.passHistory) state.passHistory = [];
           if (!state.modeConfig) state.modeConfig = {};
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
+          if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           if (state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
           else activeGroup4Ids = [];
           renderRoundTabs();
@@ -465,6 +449,7 @@
       const importMode = document.querySelector('input[name="importMode"]:checked')?.value || 'default';
       const customSheetUrl = document.getElementById('customSheetUrlInput').value.trim();
       const mixedModeEnabled = document.getElementById('mixedModeCheckbox').checked;
+      const drawCountdownSeconds = parseInt(document.getElementById('drawdownCountdownInput').value, 10) || 5; // 新增
       
       if (!state.modeConfig) state.modeConfig = {};
       state.modeConfig.enabled = isEnabled;
@@ -475,6 +460,7 @@
       state.modeConfig.importMode = importMode;
       state.modeConfig.customSheetUrl = customSheetUrl;
       state.modeConfig.mixedModeEnabled = mixedModeEnabled;
+      state.modeConfig.drawCountdownSeconds = drawCountdownSeconds; // 新增
       
       saveState();
       updateHeaderTitle();
@@ -501,11 +487,12 @@
       document.getElementById('pdfSubTitleInput').value = state.pdfConfig.subTitle || '';
       document.getElementById('pdfFooterInput').value = state.pdfConfig.footer || '';
       
-      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '', mixedModeEnabled: true };
+      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, useDefaultPickCount: true, defaultPickCount: 4, importMode: 'default', customSheetUrl: '', mixedModeEnabled: true, drawCountdownSeconds: 5 };
       document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
       document.getElementById('useDefaultPickCountCheckbox').checked = state.modeConfig.useDefaultPickCount !== false;
       document.getElementById('defaultPickCountInput').value = state.modeConfig.defaultPickCount || 4;
       document.getElementById('mixedModeCheckbox').checked = state.modeConfig.mixedModeEnabled !== false;
+      document.getElementById('drawdownCountdownInput').value = state.modeConfig.drawCountdownSeconds || 5; // 新增
       toggleModeEnable();
       
       const radios = document.getElementsByName('drawMode');
@@ -773,7 +760,6 @@
       }).join('');
     }
     
-    // 撤回功能：将淘汰的买家重新放回当前轮的待PK池
     function undoEliminatedCandidate(id) {
       let foundCandidate = null;
       let sourceRoundIndex = -1;
@@ -783,14 +769,11 @@
       });
       if (!foundCandidate) return;
 
-      // 从所有轮次中移除该候选人
       (state.rounds || []).forEach(r => {
         r.candidates = (r.candidates || []).filter(c => String(c.id) !== String(id));
       });
-      // 从 passHistory 中移除
       if (state.passHistory) state.passHistory = state.passHistory.filter(c => String(c.id) !== String(id));
 
-      // 重新添加到当前轮次的待PK列表
       const currentRound = state.rounds[currentRoundIndex];
       currentRound.candidates.push({
         id: foundCandidate.id,
@@ -1098,7 +1081,6 @@
           else if (isMode1ThreeLeft) { passBtnLabel = '🥉 季军'; passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce"; }
           else if (isMode1TwoLeft) { passBtnLabel = '👑 冠军'; passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse"; }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-          // 名字和单号放大一号：text-xs -> text-sm / text-[10px] -> text-xs
           return `<div class="relative p-2 rounded-lg border ${borderStyle} flex flex-col justify-between shadow transition min-w-0 mt-1.5">` + folderTabHtml +
             '<div>' +
               '<div class="flex justify-between items-center mb-0.5"><span class="text-[9px] font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
@@ -1116,7 +1098,6 @@
       renderAdminOutList(search);
     }
     
-    // 淘汰区列表渲染（每个名字旁有撤回 ✕ 按钮）
     function renderAdminOutList(search) {
       const outContainer = document.getElementById('adminOutListContainer');
       let allOutCandidates = [];
@@ -1134,7 +1115,6 @@
       document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
       if (allOutCandidates.length === 0) { outContainer.innerHTML = `<p class="text-[10px] text-slate-600 text-center py-4 italic">暂无淘汰人员</p>`; return; }
 
-      // 按轮次分组，新淘汰的在前
       const grouped = {};
       allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
       const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
@@ -1142,7 +1122,6 @@
       outContainer.innerHTML = sortedKeys.map(rIdxKey => {
         const rNum = Number(rIdxKey) + 1;
         const candidatesInGroup = grouped[rIdxKey];
-        // 每个淘汰者一行：姓名 + 撤回按钮
         const rowsHtml = candidatesInGroup.map(c => `
           <div class="out-card flex items-center justify-between gap-1 bg-slate-900/60 border border-slate-800 rounded-md px-1.5 py-1 mt-0.5">
             <span class="font-bold text-slate-300 text-[10px] truncate flex-1">${escapeHtml(c.name)}</span>
