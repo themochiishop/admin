@@ -33,18 +33,11 @@
     .out-card { padding: 4px 6px; font-size: 11px; }
     .undo-btn { opacity: 0.5; transition: opacity 0.2s; }
     .out-card:hover .undo-btn { opacity: 1; }
-
-    /* 票选号按钮锁定样式 */
-    .trigger-btn-locked {
-      opacity: 0.4;
-      cursor: not-allowed !important;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <!-- ========= 顶部导航 ========= -->
+  <!-- 顶部导航 -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center space-x-3">
@@ -55,96 +48,45 @@
         </div>
       </div>
       <div class="flex items-center flex-wrap gap-2">
-        <div class="relative group cursor-pointer">
-          <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-lg text-xs shadow-inner hover:border-amber-400/60 transition">
-            <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
-            <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-0.5" title="设置抽奖模式与导入规则">⚙️</button>
-          </div>
+        <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-lg text-xs shadow-inner">
+          <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
+          <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-0.5">⚙️</button>
         </div>
-        <div class="flex items-center space-x-0.5 bg-slate-900 border border-slate-700 p-0.5 rounded-lg">
-          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px]">ZH</span></button>
-          <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px]">EN</span></button>
-          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[10px]">MS</span></button>
-        </div>
-        <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
-          <span>📄</span><span>Export PDF</span>
-        </button>
-        <button onclick="goToPrevRound()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">🔙 上一轮</button>
-        <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
-          <span>⏩ 锁定晋级并推进</span>
-        </button>
+        <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs rounded-lg shadow-lg">📄 Export PDF</button>
+        <button onclick="goToPrevRound()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600">🔙 上一轮</button>
+        <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow">⏩ 锁定晋级并推进</button>
       </div>
     </div>
   </header>
 
-  <!-- ========= 弹窗 ========= -->
   <!-- 推进轮次弹窗 -->
   <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
       <button onclick="closeAdvanceModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
       <h3 class="text-lg font-bold text-emerald-400 mb-2 flex items-center space-x-2"><span>⏩</span><span>开启新一轮</span></h3>
-      <p class="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-700">请选择下一轮的赛制模式。当前已选中 <span id="advancePassedCount" class="text-emerald-400 font-bold">0</span> 位晋级者。</p>
+      <p class="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-700">当前已选中 <span id="advancePassedCount" class="text-emerald-400 font-bold">0</span> 位晋级者。</p>
       <div class="space-y-3">
-        <button onclick="executeAdvanceRound('auto')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/50 transition text-left">
-          <div><div class="font-bold text-slate-200 text-sm">🤖 自动判断（推荐）</div><div class="text-[10px] text-slate-400 mt-0.5">系统根据剩余人数自动分配</div></div>
-          <span class="text-emerald-400">→</span>
-        </button>
-        <button onclick="executeAdvanceRound('normal')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-sky-500/50 transition text-left">
-          <div><div class="font-bold text-slate-200 text-sm">🔥 普通轮次（盲抽淘汰）</div><div class="text-[10px] text-slate-400 mt-0.5">继续盲抽 PK，淘汰至指定人数</div></div>
-          <span class="text-sky-400">→</span>
-        </button>
-        <button onclick="executeAdvanceRound('consolation')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500/50 transition text-left">
-          <div><div class="font-bold text-amber-300 text-sm">🎁 安慰奖遴选阶段</div><div class="text-[10px] text-slate-400 mt-0.5">强制开启挑选安慰奖环节</div></div>
-          <span class="text-amber-400">→</span>
-        </button>
-        <button onclick="executeAdvanceRound('final')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-rose-500/50 transition text-left">
-          <div><div class="font-bold text-rose-300 text-sm">👑 冠亚季终极决战</div><div class="text-[10px] text-slate-400 mt-0.5">直接进入季军/冠军争夺</div></div>
-          <span class="text-rose-400">→</span>
-        </button>
+        <button onclick="executeAdvanceRound('auto')" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/50 text-left">🤖 自动判断（推荐）</button>
+        <button onclick="executeAdvanceRound('normal')" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-sky-500/50 text-left">🔥 普通轮次（盲抽淘汰）</button>
+        <button onclick="executeAdvanceRound('consolation')" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500/50 text-left">🎁 安慰奖遴选阶段</button>
+        <button onclick="executeAdvanceRound('final')" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-rose-500/50 text-left">👑 冠亚季终极决战</button>
       </div>
     </div>
   </div>
 
-  <!-- 独立的盲抽设置弹窗 -->
+  <!-- 盲抽参数设置弹窗 -->
   <div id="drawSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
       <button onclick="closeDrawSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
-      <h3 class="text-lg font-bold text-amber-400 mb-2 flex items-center space-x-2"><span>🎲</span><span>盲抽参数设置</span></h3>
-      <p class="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-700">快速调整抽奖参数，保存后实时生效。</p>
-      
+      <h3 class="text-lg font-bold text-amber-400 mb-4">🎲 盲抽参数设置</h3>
       <div class="space-y-4 text-xs">
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-2">
-          <label class="block text-slate-200 font-bold mb-1">⏱️ 盲抽倒计时时长 (秒)</label>
-          <input type="number" id="drawCountdownInput" value="5" min="3" max="30" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-center font-bold text-amber-400 focus:outline-none focus:border-amber-500">
-          <p class="text-[10px] text-slate-400">前台点击开始后倒数此秒数再开跑</p>
-        </div>
-
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-2">
-          <label class="flex items-center space-x-2 cursor-pointer mb-2">
-            <input type="checkbox" id="drawUseDefaultPickCount" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
-            <span class="font-bold text-amber-300">启用默认盲抽数量</span>
-          </label>
-          <div class="flex items-center space-x-2 pl-6">
-            <span class="text-slate-400">每次默认抽取:</span>
-            <input type="number" id="drawDefaultPickCount" value="4" min="1" max="20" class="w-20 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold text-amber-400 focus:outline-none">
-            <span class="text-slate-400">人</span>
-          </div>
-        </div>
-
-        <div class="bg-slate-900/60 p-3 rounded-xl border-2 border-sky-500/40 space-y-2">
-          <label class="flex items-start space-x-2 cursor-pointer">
-            <input type="checkbox" id="drawMixedMode" class="mt-1 w-4 h-4 text-sky-500 rounded focus:ring-0">
-            <div>
-              <div class="font-bold text-sky-300 text-sm">🎲 启用混合模式</div>
-              <div class="text-[10px] text-slate-400 mt-1">打勾时该模式下所有阶段都支持抽组PK；不打勾时只能手动点晋级。</div>
-            </div>
-          </label>
-        </div>
+        <div><label class="block text-slate-200 font-bold mb-1">⏱️ 盲抽倒计时时长 (秒)</label><input type="number" id="drawCountdownInput" value="5" min="3" max="30" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-center font-bold text-amber-400"></div>
+        <div><label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="drawUseDefaultPickCount" class="w-4 h-4 text-amber-500 rounded"><span class="font-bold text-amber-300">启用默认盲抽数量</span></label><div class="flex items-center space-x-2 pl-6 mt-2"><span class="text-slate-400">每次默认抽取:</span><input type="number" id="drawDefaultPickCount" value="4" min="1" max="20" class="w-20 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold text-amber-400"></div></div>
+        <div><label class="flex items-start space-x-2 cursor-pointer"><input type="checkbox" id="drawMixedMode" class="mt-1 w-4 h-4 text-sky-500 rounded"><div><div class="font-bold text-sky-300 text-sm">🎲 启用混合模式</div><div class="text-[10px] text-slate-400 mt-1">打勾时支持抽组PK；不打勾时只能手动点晋级。</div></div></label></div>
       </div>
-
       <div class="mt-6 pt-4 border-t border-slate-700 flex space-x-2">
-        <button onclick="saveDrawSettings()" class="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm transition shadow-lg">💾 保存盲抽参数</button>
-        <button onclick="closeDrawSettingsModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm transition shadow">取消</button>
+        <button onclick="saveDrawSettings()" class="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm">💾 保存</button>
+        <button onclick="closeDrawSettingsModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm">取消</button>
       </div>
     </div>
   </div>
@@ -153,16 +95,16 @@
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden" style="height: 80vh; max-height: 600px;">
       <div class="w-full md:w-56 bg-slate-900/50 border-r border-slate-700 flex flex-col p-4 shrink-0">
-        <h3 class="text-sm font-bold text-amber-400 mb-4 flex items-center space-x-2"><span>⚙️</span><span>系统配置</span></h3>
+        <h3 class="text-sm font-bold text-amber-400 mb-4">⚙️ 系统配置</h3>
         <div class="space-y-1 text-xs flex-1">
           <button onclick="switchConfigTab('tabTitle')" id="nav-tabTitle" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition bg-slate-800 text-amber-300 border border-slate-700">✏️ 标题显示配置</button>
-          <button onclick="switchConfigTab('tabImport')" id="nav-tabImport" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent">📥 名单导入配置</button>
-          <button onclick="switchConfigTab('tabDraw')" id="nav-tabDraw" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent">🎮 抽奖模式规则</button>
-          <button onclick="switchConfigTab('tabPdf')" id="nav-tabPdf" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent">📄 PDF 报告设置</button>
+          <button onclick="switchConfigTab('tabImport')" id="nav-tabImport" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 border border-transparent">📥 名单导入配置</button>
+          <button onclick="switchConfigTab('tabDraw')" id="nav-tabDraw" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 border border-transparent">🎮 抽奖模式规则</button>
+          <button onclick="switchConfigTab('tabPdf')" id="nav-tabPdf" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 border border-transparent">📄 PDF 报告设置</button>
         </div>
         <div class="mt-4 pt-4 border-t border-slate-700">
-          <button onclick="saveConfigModal()" class="w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm transition shadow-lg">💾 保存全部设置</button>
-          <button onclick="closeConfigModal()" class="w-full mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm transition shadow">取消关闭</button>
+          <button onclick="saveConfigModal()" class="w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm">💾 保存设置</button>
+          <button onclick="closeConfigModal()" class="w-full mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm">取消</button>
         </div>
       </div>
       <div class="flex-1 flex flex-col bg-slate-800 relative">
@@ -170,66 +112,45 @@
         <div class="flex-1 overflow-y-auto p-6 pt-8 text-xs">
           <div id="tabTitle" class="config-tab-panel space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">系统标题与显示配置</h4>
-            <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
-              <input type="checkbox" id="publicVisibleCheckbox" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
-              <span class="font-bold text-slate-200">🌐 开启前台网页对外公开显示</span>
-            </label>
-            <div><label class="block text-slate-400 mb-1">后台控制台标题:</label><input type="text" id="adminTitleInput" placeholder="Mochiishop 每月抽奖 - 直播控制台" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
-            <div><label class="block text-slate-400 mb-1">前台公示大屏标题:</label><input type="text" id="publicTitleInput" placeholder="留空则跟随语言自动切换" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
+            <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30"><input type="checkbox" id="publicVisibleCheckbox" class="w-4 h-4 text-amber-500 rounded"><span class="font-bold text-slate-200">🌐 开启前台网页对外公开显示</span></label>
+            <div><label class="block text-slate-400 mb-1">后台控制台标题:</label><input type="text" id="adminTitleInput" placeholder="Mochiishop 每月抽奖 - 直播控制台" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300"></div>
+            <div><label class="block text-slate-400 mb-1">前台公示大屏标题:</label><input type="text" id="publicTitleInput" placeholder="留空则跟随语言自动切换" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300"></div>
           </div>
           <div id="tabImport" class="config-tab-panel hidden space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">买家名单导入模式配置</h4>
             <div class="bg-slate-900/60 rounded-xl border border-slate-700 p-4 space-y-3">
-              <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="importMode" value="default" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0"><span class="text-slate-200 font-bold">默认链接导入 (Google Sheets 预设)</span></label>
-              <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="importMode" value="customUrl" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0"><span class="text-slate-200 font-bold">修改链接导入 (自定义表格 CSV URL)</span></label>
-              <div id="customUrlInputArea" class="pl-6 hidden"><input type="url" id="customSheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../gviz/tq?tqx=out:csv" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-xs text-amber-300 focus:outline-none focus:border-amber-500"></div>
-              <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="importMode" value="fileUpload" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0"><span class="text-slate-200 font-bold">导入本地名单文件 (.csv / .txt)</span></label>
-              <div id="fileUploadArea" class="pl-6 hidden space-y-1.5"><input type="file" id="localFileInput" accept=".csv, .txt" class="text-xs text-slate-300 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400"></div>
+              <label class="flex items-center space-x-2"><input type="radio" name="importMode" value="default" onchange="toggleImportModeUI()" class="text-amber-500"><span class="text-slate-200 font-bold">默认链接导入</span></label>
+              <label class="flex items-center space-x-2"><input type="radio" name="importMode" value="customUrl" onchange="toggleImportModeUI()" class="text-amber-500"><span class="text-slate-200 font-bold">修改链接导入</span></label>
+              <div id="customUrlInputArea" class="pl-6 hidden"><input type="url" id="customSheetUrlInput" placeholder="https://..." class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-xs text-amber-300"></div>
+              <label class="flex items-center space-x-2"><input type="radio" name="importMode" value="fileUpload" onchange="toggleImportModeUI()" class="text-amber-500"><span class="text-slate-200 font-bold">导入本地名单</span></label>
+              <div id="fileUploadArea" class="pl-6 hidden"><input type="file" id="localFileInput" accept=".csv, .txt" class="text-xs text-slate-300 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950"></div>
             </div>
           </div>
           <div id="tabDraw" class="config-tab-panel hidden space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">抽奖规则与玩法模式</h4>
-            <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
-              <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
-              <span class="font-bold text-slate-200">启用模式规则 (关闭后仅手动自由控盘)</span>
-            </label>
+            <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30"><input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded"><span class="font-bold text-slate-200">启用模式规则</span></label>
             <div id="modeRadioGroup" class="space-y-3 opacity-50 pointer-events-none transition-all">
-              <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 cursor-pointer transition">
-                <input type="radio" name="drawMode" value="mode1" class="mt-1">
-                <div><div class="font-bold text-amber-300 text-sm">模式 1：冠亚季排位模式</div><div class="text-[11px] text-slate-400 mt-1">剩3人时点击设为【季军】，剩2人点击设为【冠军】。</div></div>
-              </label>
-              <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 cursor-pointer transition">
-                <input type="radio" name="drawMode" value="mode2" class="mt-1">
-                <div class="flex-1"><div class="font-bold text-emerald-300 text-sm">模式 2：冠亚季 + 安慰奖模式</div><div class="text-[11px] text-slate-400 mt-1 mb-2">晋级区需至少包含 (N + 3) 人才能开启。</div>
-                  <div class="flex items-center space-x-2 bg-slate-800 p-2.5 rounded-lg border border-slate-700">
-                    <span class="text-slate-300">安慰奖名额:</span>
-                    <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center font-bold text-emerald-400 focus:outline-none">
-                    <span class="text-slate-400">人</span>
-                  </div>
-                </div>
-              </label>
+              <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60"><input type="radio" name="drawMode" value="mode1" class="mt-1"><div><div class="font-bold text-amber-300 text-sm">模式 1：冠亚季排位模式</div><div class="text-[11px] text-slate-400 mt-1">剩3人时点击设为【季军】，剩2人点击设为【冠军】。</div></div></label>
+              <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60"><input type="radio" name="drawMode" value="mode2" class="mt-1"><div class="flex-1"><div class="font-bold text-emerald-300 text-sm">模式 2：冠亚季 + 安慰奖模式</div><div class="text-[11px] text-slate-400 mt-1 mb-2">晋级区需至少包含 (N + 3) 人才能开启。</div><div class="flex items-center space-x-2 bg-slate-800 p-2.5 rounded-lg border border-slate-700"><span class="text-slate-300">安慰奖名额:</span><input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center font-bold text-emerald-400"><span class="text-slate-400">人</span></div></div></label>
             </div>
           </div>
           <div id="tabPdf" class="config-tab-panel hidden space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">PDF 报告导出内容与模板设置</h4>
-            <div><label class="block text-slate-400 mb-1">Main Title 1 (主标题 1):</label><input type="text" id="pdfTitleInput" placeholder="MOCHIISHOP OFFICIAL DRAW" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
-            <div><label class="block text-slate-400 mb-1">Main Title 2 (主标题 2):</label><input type="text" id="pdfTitle2Input" placeholder="OCTOBER FINAL WINNER REPORT" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
-            <div><label class="block text-slate-400 mb-1">Sub Title (副标题):</label><input type="text" id="pdfSubTitleInput" placeholder="Shopee Live Monthly Event Official Certificate" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-slate-300 focus:outline-none focus:border-amber-500"></div>
-            <div><label class="block text-slate-400 mb-1">Footer Text (页脚说明):</label><input type="text" id="pdfFooterInput" placeholder="© Mochiishop Official Live Tournament System. Verified Result." class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-slate-400 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-slate-400 mb-1">Main Title 1 (主标题 1):</label><input type="text" id="pdfTitleInput" placeholder="MOCHIISHOP OFFICIAL DRAW" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300"></div>
+            <div><label class="block text-slate-400 mb-1">Main Title 2 (主标题 2):</label><input type="text" id="pdfTitle2Input" placeholder="OCTOBER FINAL WINNER REPORT" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300"></div>
+            <div><label class="block text-slate-400 mb-1">Sub Title (副标题):</label><input type="text" id="pdfSubTitleInput" placeholder="Shopee Live Monthly Event Official Certificate" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-slate-300"></div>
+            <div><label class="block text-slate-400 mb-1">Footer Text (页脚说明):</label><input type="text" id="pdfFooterInput" placeholder="© Mochiishop Official Live Tournament System. Verified Result." class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-slate-400"></div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ========= 主体 ========= -->
+  <!-- 主体 -->
   <main class="max-w-[1600px] mx-auto px-4 py-3 flex-1 w-full flex flex-col">
-
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
       <div id="roundTabsContainer" class="flex flex-wrap gap-1.5 overflow-x-auto"></div>
-      <button onclick="resetRounds()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/50 text-[11px] font-bold rounded-lg transition shadow flex items-center space-x-1">
-        <span>⚠️</span><span>重置所有轮次</span>
-      </button>
+      <button onclick="resetRounds()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 border border-rose-500/50 text-[11px] font-bold rounded-lg shadow">⚠️ 重置所有轮次</button>
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
@@ -241,7 +162,7 @@
 
     <div class="main-grid">
       <div class="flex flex-col gap-4 min-w-0">
-        <!-- 晋级区 + 操作 -->
+        <!-- 晋级区 -->
         <div class="bg-slate-800/90 rounded-xl p-3 border border-emerald-500/30 shadow-lg">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center space-x-2">
@@ -250,22 +171,15 @@
               <span id="passedBadgeCount" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">0</span>
             </div>
             <div class="flex items-center gap-2">
-              <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
-              <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
-              
-              <!-- 独立的盲抽设置齿轮按钮 -->
-              <button onclick="openDrawSettingsModal()" class="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-amber-400 border border-slate-600 rounded-lg transition shadow flex items-center justify-center" title="盲抽参数设置">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
+              <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[11px] rounded-lg shadow-lg">🎲 随机盲抽组</button>
+              <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 text-slate-300 text-[11px] rounded-lg font-bold">清空盲抽组</button>
+              <button onclick="openDrawSettingsModal()" class="px-2 py-1.5 bg-slate-700 text-amber-400 border border-slate-600 rounded-lg">⚙️</button>
             </div>
           </div>
           <div id="passedListContainer" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar pr-1 pt-1.5 mt-1"></div>
         </div>
 
-        <!-- 抽组PK展示区 -->
+        <!-- 抽组PK展示区（后台显示真实名字） -->
         <div id="activeGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-xl p-3 shadow-xl">
           <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-amber-500/30 gap-2">
             <div class="flex items-center space-x-2">
@@ -277,7 +191,7 @@
             <div class="flex items-center flex-wrap gap-1.5">
               <span class="text-[10px] text-slate-300 font-bold">票选号:</span>
               <div id="triggerButtonsContainer" class="flex items-center space-x-1"></div>
-              <button onclick="revealPKWinner()" id="adminRevealBtn" class="px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-[11px] rounded-lg transition shadow-lg animate-pulse">🎰 揭晓开奖</button>
+              <button onclick="revealPKWinner()" id="adminRevealBtn" class="px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-[11px] rounded-lg shadow-lg">🎰 揭晓开奖</button>
               <span id="adminLockedHint" class="hidden text-[9px] text-rose-400 font-bold">🚫 前台已登入管理员</span>
             </div>
           </div>
@@ -295,15 +209,15 @@
           <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
             <h2 class="text-sm font-bold text-amber-400">待 PK 买家名单池</h2>
             <div class="flex items-center gap-2">
-              <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-40 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
-              <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-[11px] shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700">🔄 刷新 / 导入名单</button>
+              <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-40 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
+              <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="px-2.5 py-1.5 bg-emerald-600 text-white font-medium rounded transition text-[11px] shadow">🔄 刷新 / 导入名单</button>
             </div>
           </div>
           <div id="adminViewContainer" class="flex-1 overflow-y-auto pr-0.5"></div>
         </div>
       </div>
 
-      <!-- 右侧列：淘汰区 -->
+      <!-- 右侧淘汰区 -->
       <div class="bg-slate-800/30 rounded-xl p-2 border border-slate-800 flex flex-col min-h-[300px]">
         <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-1.5"><span class="text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
@@ -386,7 +300,6 @@
       });
     };
 
-    // ================= 快速盲抽设置弹窗逻辑 =================
     function openDrawSettingsModal() {
       document.getElementById('drawCountdownInput').value = state.modeConfig.drawCountdownSeconds || 5;
       document.getElementById('drawUseDefaultPickCount').checked = state.modeConfig.useDefaultPickCount !== false;
@@ -413,7 +326,6 @@
       closeDrawSettingsModal();
       alert("✅ 盲抽参数已更新并生效！");
     }
-    // =======================================================
 
     function switchConfigTab(tabId) {
       document.querySelectorAll('.config-tab-panel').forEach(el => el.classList.add('hidden'));
@@ -454,7 +366,7 @@
 
       if (isStarted) {
         btn.disabled = true;
-        btn.title = "比赛已经开始，名单已锁定，不可重新导入";
+        btn.title = "比赛已经开始，名单已锁定";
       } else {
         btn.disabled = false;
         btn.title = "点击刷新或导入买家名单";
@@ -627,14 +539,11 @@
       saveState(); renderRoundTabs();
     }
 
-    // 🎲 抽组PK
     function pickRandomGroup() {
-      if (publicAdminActive) {
-         console.log("提示：前台管理员已接管开奖，后台盲抽仅作测试准备。");
-      }
+      if (publicAdminActive) console.log("前台管理员已接管开奖");
       
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
-        alert("⚠️ 当前模式已关闭【混合模式】，所有阶段均不支持抽组PK。\n如需抽组PK，请在设置里重新勾选【🎲 启用混合模式】。");
+        alert("⚠️ 当前模式已关闭【混合模式】，所有阶段均不支持抽组PK。");
         return;
       }
       
@@ -679,7 +588,7 @@
       state.currentPollNumber = state.pollCount;
       state.pkStage = 'voting'; state.triggerNumber = null;
       state.drawRoundIndex = currentRoundIndex; state.settled = false;
-      state.isDrawingScramble = true; // 🌟 核心：开启乱码遮盖
+      state.isDrawingScramble = true; // 开启乱码遮盖
       
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
@@ -691,12 +600,10 @@
     
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
-      // 状态锁：命中或已分配号码后不可修改
       if (state.settled || state.pkStage === 'revealed') {
         alert("⚠️ 开奖已确认，禁止修改票选号！");
         return;
       }
-      // 撤回选择逻辑：如果点的是同一个号码，则取消选择
       if (state.triggerNumber === num) {
         state.triggerNumber = null;
         state.pkStage = 'voting';
@@ -711,7 +618,7 @@
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
-      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); return; }
+      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！"); return; }
       
       state.pkStage = 'revealed'; state.settled = true; saveState();
       setTimeout(() => {
@@ -720,7 +627,7 @@
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
         const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
         if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
-        state.isDrawingScramble = false; // 🌟 核心：关闭乱码遮盖，显示真实名字
+        state.isDrawingScramble = false; // 开奖后关闭乱码遮盖
         saveState();
       }, 2200);
     }
@@ -793,7 +700,6 @@
       }
       if (triggerButtonsContainer) {
         const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
-        // 关键逻辑：只有在 voting/triggered 阶段且未 settled 时才能点击
         const isLocked = (state.pkStage !== 'voting' && state.pkStage !== 'triggered') || state.settled;
         triggerButtonsContainer.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(num => {
           const isSelected = (state.triggerNumber === num);
@@ -808,15 +714,15 @@
         return c ? { ...c, displayNumber: m.displayNumber } : null;
       }).filter(Boolean);
       const isRevealed = (state.pkStage === 'revealed');
+      
       grid.innerHTML = members.map((c) => {
         const realNum = c.displayNumber;
         const hasNumber = realNum !== null && realNum !== undefined;
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
-        // 🌟 核心：如果 isDrawingScramble 开启，强制显示乱码，不显示真实名字
-        const displayName = state.isDrawingScramble ? '??' : escapeHtml(c.name);
-        const displayOrder = state.isDrawingScramble ? '###' : escapeHtml(c.orderNo || '无订单号');
+        let displayName = escapeHtml(c.name);
+        let displayOrder = escapeHtml(c.orderNo || '无订单号');
 
         if (isRevealed && hasNumber) {
           if (isWinner) {
@@ -830,8 +736,8 @@
         return `<div class="${cardBorder} rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
-            <div class="font-bold text-amber-300 text-sm truncate mt-1 ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayName}</div>
-            <div class="text-[11px] text-slate-400 font-mono truncate ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayOrder}</div>
+            <div class="font-bold text-amber-300 text-sm truncate mt-1">${displayName}</div>
+            <div class="text-[11px] text-slate-400 font-mono truncate">${displayOrder}</div>
           </div>
         </div>`;
       }).join('');
@@ -839,10 +745,9 @@
     
     function undoEliminatedCandidate(id) {
       let foundCandidate = null;
-      let sourceRoundIndex = -1;
-      (state.rounds || []).forEach((r, rIdx) => {
+      (state.rounds || []).forEach(r => {
         const target = (r.candidates || []).find(c => String(c.id) === String(id));
-        if (target) { foundCandidate = target; sourceRoundIndex = rIdx; }
+        if (target) foundCandidate = target;
       });
       if (!foundCandidate) return;
 
