@@ -70,13 +70,14 @@
     .animate-scroll-row1 { animation: scrollRow1 3s ease-in-out infinite; }
     .animate-scroll-row2 { animation: scrollRow2 3s ease-in-out infinite; }
 
-    /* 中奖卡片外框高亮 2秒 */
-    @keyframes borderHighlightFlash {
-      0%, 100% { border-color: inherit; box-shadow: none; }
-      50% { border-color: #34d399; box-shadow: 0 0 25px #34d399; }
+    /* 中奖名字高亮效果 2秒 */
+    @keyframes highlightFlash {
+      0%, 100% { background-color: inherit; box-shadow: none; }
+      50% { background-color: rgba(52, 211, 153, 0.4); box-shadow: 0 0 20px #34d399; }
     }
     .pk-hit-highlight {
-      animation: borderHighlightFlash 0.5s ease-in-out 4; /* 0.5 * 4 = 2秒 */
+      animation: highlightFlash 0.5s ease-in-out 4; /* 0.5 * 4 = 2秒 */
+      border-color: #34d399 !important;
     }
 
     /* 电脑端 7:3 自适应网格 */
@@ -149,6 +150,17 @@
       <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
       <h2 class="text-xl sm:text-2xl font-black text-amber-400 mb-2 leading-snug">网页正在计算与更新中，敬请期待...</h2>
       <p class="text-xs sm:text-sm text-slate-400 font-medium">系统正在实时同步与整理买家数据，请留意直播间提示</p>
+    </div>
+  </div>
+
+  <!-- 新增：更新过渡遮罩层 -->
+  <div id="updateTransitionMask" class="fixed inset-0 z-[45] bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center transition-all duration-500">
+    <div class="flex flex-col items-center justify-center animate-pulse">
+      <div class="text-6xl sm:text-8xl mb-6 animate-spin" style="animation-duration: 2s;">🔄</div>
+      <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 tracking-widest drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+        ✨ 数据更新中 ✨
+      </h2>
+      <p class="text-sm sm:text-base text-amber-200/70 mt-4 font-medium tracking-wide">系统正在拉取最新盲抽名单...</p>
     </div>
   </div>
 
@@ -804,8 +816,8 @@
           renderFinalSummaryPanel();
 
           if (prevGroupSig !== newGroupSig && newGroupSig !== '' && state.pkStage === 'voting') {
-            // 检测到新的 PK 组，直接进入倒计时
-            startCountdownThenScramble();
+            // 检测到新的 PK 组，先显示更新过渡效果，再进入倒计时
+            showUpdateTransitionThenCountdown();
           }
         }
       });
@@ -820,10 +832,22 @@
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
           if (!countdownTimerId && scramblingMemberIds.size === 0) {
-            startCountdownThenScramble();
+            showUpdateTransitionThenCountdown();
           }
         }
       }
+    }
+
+    // 显示更新过渡效果（1.5秒），随后自动进入倒计时
+    function showUpdateTransitionThenCountdown() {
+      const mask = document.getElementById('updateTransitionMask');
+      if (mask) mask.classList.remove('hidden');
+      
+      // 过渡 1.5 秒后，进入倒计时
+      setTimeout(() => {
+        if (mask) mask.classList.add('hidden');
+        startCountdownThenScramble();
+      }, 1500);
     }
 
     function startCountdownThenScramble() {
@@ -909,7 +933,7 @@
       }, 120);
     }
 
-    // 新增：乱码结束后让 PK 卡片外框高亮闪烁 2 秒
+    // 新增：乱码结束后让 PK 卡片高亮闪烁 2 秒
     function triggerPkHitHighlight() {
       document.querySelectorAll('.pk-card').forEach(cardEl => {
         cardEl.classList.add('pk-hit-highlight');
@@ -1225,9 +1249,6 @@
       if (countdownIndicator) countdownIndicator.classList.add('hidden');
       if (nextRoundHint) nextRoundHint.classList.add('hidden');
 
-      const areaL = document.getElementById('pk-area-left');
-      const areaR = document.getElementById('pk-area-right');
-
       if (hasActiveGroup) {
         const publicPollBadge = document.getElementById('publicPollBadge');
         const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
@@ -1266,6 +1287,8 @@
           }).filter(Boolean);
         }
 
+        const areaL = document.getElementById('pk-area-left');
+        const areaR = document.getElementById('pk-area-right');
         areaL.innerHTML = ''; areaR.innerHTML = '';
 
         activeMembers.forEach((c, idx) => {
@@ -1278,6 +1301,8 @@
         });
 
       } else {
+        const areaL = document.getElementById('pk-area-left');
+        const areaR = document.getElementById('pk-area-right');
         const placeholders = getPlaceholderCardsHtml();
         if (window.innerWidth < 1024) {
           areaL.innerHTML = placeholders.join('');
