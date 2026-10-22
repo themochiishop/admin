@@ -1,6 +1,6 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="zh-CN">
-<head> 
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台（优化版）</title>
@@ -342,7 +342,7 @@
     let state = {
       customAdminTitle: '', customPublicTitle: '', isPublicVisible: true, pollCount: 0, currentPollNumber: 0,
       pkStage: 'voting', triggerNumber: null, drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [],
-      passHistory: [], settled: false,
+      passHistory: [], settled: false, isDrawingScramble: false,
       pdfConfig: { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' },
       modeConfig: { 
         enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, 
@@ -366,6 +366,7 @@
           if (!state.modeConfig) state.modeConfig = {};
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
+          if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
           if (state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
           else activeGroup4Ids = [];
           renderRoundTabs();
@@ -678,6 +679,7 @@
       state.currentPollNumber = state.pollCount;
       state.pkStage = 'voting'; state.triggerNumber = null;
       state.drawRoundIndex = currentRoundIndex; state.settled = false;
+      state.isDrawingScramble = true; // 🌟 核心：开启乱码遮盖
       
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
@@ -718,12 +720,15 @@
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
         const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
         if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
+        state.isDrawingScramble = false; // 🌟 核心：关闭乱码遮盖，显示真实名字
+        saveState();
       }, 2200);
     }
     
     function clearCurrentActiveGroup() {
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       delete state.currentPollNumber; state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+      state.isDrawingScramble = false;
       saveState(); document.getElementById('activeGroupDisplay').classList.add('hidden'); renderAdminView();
     }
     
@@ -788,7 +793,7 @@
       }
       if (triggerButtonsContainer) {
         const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
-        // 关键逻辑：只有在 voting 阶段且未 settled 时才能点击
+        // 关键逻辑：只有在 voting/triggered 阶段且未 settled 时才能点击
         const isLocked = (state.pkStage !== 'voting' && state.pkStage !== 'triggered') || state.settled;
         triggerButtonsContainer.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(num => {
           const isSelected = (state.triggerNumber === num);
@@ -809,6 +814,10 @@
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
+        // 🌟 核心：如果 isDrawingScramble 开启，强制显示乱码，不显示真实名字
+        const displayName = state.isDrawingScramble ? '??' : escapeHtml(c.name);
+        const displayOrder = state.isDrawingScramble ? '###' : escapeHtml(c.orderNo || '无订单号');
+
         if (isRevealed && hasNumber) {
           if (isWinner) {
             cardHeaderTag = `<span class="text-xs font-black bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
@@ -821,8 +830,8 @@
         return `<div class="${cardBorder} rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
-            <div class="font-bold text-amber-300 text-sm truncate mt-1">${escapeHtml(c.name)}</div>
-            <div class="text-[11px] text-slate-400 font-mono truncate">${escapeHtml(c.orderNo || '无订单号')}</div>
+            <div class="font-bold text-amber-300 text-sm truncate mt-1 ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayName}</div>
+            <div class="text-[11px] text-slate-400 font-mono truncate ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayOrder}</div>
           </div>
         </div>`;
       }).join('');
@@ -1213,7 +1222,7 @@
           return {
             customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
             isPublicVisible: true, pollCount: 0, currentPollNumber: 0, pkStage: 'voting', triggerNumber: null,
-            drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false,
+            drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false,
             pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
             rounds: [{ roundName: "第 1 轮", candidates: [] }], publicAdminActive: false
           };
