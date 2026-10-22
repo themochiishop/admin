@@ -731,6 +731,7 @@
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+      // 重要：将号码与 activeGroupMembers 中的 id 绑定
       const tempMembers = [];
       activeCards.forEach((cardEl, idx) => tempMembers.push({ id: state.activeGroupMembers[idx].id, displayNumber: nums[idx] }));
       let winnerIndex = -1;
@@ -755,8 +756,8 @@
             }, (error, committed, snapshot) => {
               if (committed) {
                 state = snapshot.val();
-                // 命中的瞬间立即在前台弹窗（不依赖 Firebase 回调）
-                const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+                // 修复：严格使用 tempMembers 中与票选号匹配的成员 id 来查找名字
+                const winnerMember = tempMembers.find(m => m.displayNumber === state.triggerNumber);
                 if (winnerMember) {
                   const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
                   const round = state.rounds[roundIdx] || {};
