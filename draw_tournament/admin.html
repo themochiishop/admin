@@ -236,7 +236,6 @@
               <span id="passedBadgeCount" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">0</span>
             </div>
             <div class="flex items-center gap-2">
-              <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-36 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
               <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
               <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
             </div>
@@ -269,11 +268,15 @@
           <p id="specialRoundBannerSub" class="text-[11px] text-amber-200/90 mt-0.5"></p>
         </div>
 
-        <!-- 待 PK 买家名单池 -->
+        <!-- 待 PK 买家名单池（主力操作区） -->
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700 flex-1 flex flex-col min-h-[200px]">
-          <div class="flex justify-between items-center mb-2">
+          <!-- 搜索栏移动到刷新/导入按钮之前 -->
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
             <h2 class="text-sm font-bold text-amber-400">待 PK 买家名单池</h2>
-            <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-[11px] shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700">🔄 刷新 / 导入名单</button>
+            <div class="flex items-center gap-2">
+              <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-40 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
+              <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-[11px] shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700">🔄 刷新 / 导入名单</button>
+            </div>
           </div>
           <div id="adminViewContainer" class="flex-1 overflow-y-auto pr-0.5"></div>
         </div>
@@ -1095,11 +1098,12 @@
           else if (isMode1ThreeLeft) { passBtnLabel = '🥉 季军'; passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce"; }
           else if (isMode1TwoLeft) { passBtnLabel = '👑 冠军'; passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse"; }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
+          // 名字和单号放大一号：text-xs -> text-sm / text-[10px] -> text-xs
           return `<div class="relative p-2 rounded-lg border ${borderStyle} flex flex-col justify-between shadow transition min-w-0 mt-1.5">` + folderTabHtml +
             '<div>' +
               '<div class="flex justify-between items-center mb-0.5"><span class="text-[9px] font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-xs truncate mt-0.5">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-[9px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+              '<div class="font-bold text-slate-100 text-sm truncate mt-0.5">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
             '</div>' +
             '<div class="mt-1.5 pt-1 border-t border-slate-700/60 flex space-x-1">' +
               `<button onclick="changeStatus('${c.id}', 'pass')" class="flex-1 py-0.5 text-[10px] rounded font-bold transition ${passBtnClass}">${passBtnLabel}</button>` +
