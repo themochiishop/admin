@@ -88,21 +88,14 @@
       opacity: 0.8;
     }
 
-    /* 折叠/展开动画：从右至左 */
+    /* 折叠动画 */
     .pk-panel-transition {
       transition: opacity 0.35s ease, transform 0.35s ease, max-height 0.35s ease, padding 0.35s ease, margin 0.35s ease, border-width 0.35s ease;
       transform-origin: right center;
       overflow: hidden;
     }
     .pk-panel-collapsed {
-      opacity: 0;
-      transform: translateX(60px) scaleX(0.85);
-      max-height: 0 !important;
-      min-height: 0 !important;
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-      margin-bottom: 0 !important;
-      border-width: 0 !important;
+      display: none !important;
     }
   </style>
 </head>
@@ -258,9 +251,9 @@
 
             <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              <!-- 盲抽中 大字提示 -->
-              <div id="blindDrawingIndicator" class="hidden mb-4 text-center">
-                <span class="blind-drawing-text text-3xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_25px_rgba(245,158,11,0.9)]">🎲 盲抽中…</span>
+              <!-- 盲抽中 大字提示（字体缩小一号） -->
+              <div id="blindDrawingIndicator" class="hidden mb-3 text-center">
+                <span class="blind-drawing-text text-2xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_20px_rgba(245,158,11,0.8)]">🎲 盲抽中…</span>
               </div>
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-7 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
@@ -373,7 +366,7 @@
     let isProcessAreaCollapsed = false;
     let __roundModalTimer = null;
 
-    // PK 面板折叠状态（仅控制视觉，不覆盖 hidden）
+    // PK 面板折叠状态
     let isPkPanelCollapsed = false;
 
     // 乱码状态管理
@@ -512,7 +505,7 @@
       }
     }
 
-    // ✅ 折叠/展开 PK 面板（不再使用 hidden，只用 CSS 类，确保可以反复切换）
+    // ✅ 折叠/展开 PK 面板：直接操作 display，保证可反复切换
     function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
@@ -526,14 +519,15 @@
       const toggleBtn = document.getElementById('togglePkPanelBtn');
 
       if (isPkPanelCollapsed) {
-        // 折叠：从右至左收起
-        pkPanel.classList.add('pk-panel-collapsed');
+        // 折叠：直接隐藏面板，晋级名单放大占满
+        pkPanel.style.display = 'none';
         mainLayout.classList.remove('active');
         mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
-        // 展开：恢复
+        // 展开：恢复显示
+        pkPanel.style.display = '';
         pkPanel.classList.remove('pk-panel-collapsed');
         mainLayout.classList.remove('collapsed');
         mainLayout.classList.add('active');
@@ -717,7 +711,6 @@
             }
           }
 
-          // 检测 PK 命中事件
           if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
             const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
             if (winnerMember) {
@@ -754,7 +747,6 @@
         }
       });
 
-      // 轮询检测盲抽启动，触发乱码动画
       setInterval(checkForNewPkGroup, 300);
     };
 
@@ -1064,7 +1056,6 @@
       `;
     }
 
-    // 默认 4 格占位卡片：名字和单号都显示乱码
     function getPlaceholderCardsHtml() {
       const scramblePool = ['??', '##', '¥¥', '**', '××', '？？'];
       const orderPool = ['??', '###', '¥¥', '****', '××××', '？？？'];
@@ -1096,18 +1087,19 @@
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
+      // 不再重置折叠状态，仅渲染数据
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
 
-      // 仅根据折叠状态应用视觉样式，不覆盖 hidden
+      // 如果当前是折叠状态，确保 UI 保持一致
       if (isPkPanelCollapsed) {
-        pkPanel.classList.add('pk-panel-collapsed');
+        pkPanel.style.display = 'none';
         mainLayout.classList.remove('active');
         mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
       } else {
-        pkPanel.classList.remove('pk-panel-collapsed');
+        pkPanel.style.display = '';
         mainLayout.classList.add('active');
         mainLayout.classList.remove('collapsed');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
@@ -1127,7 +1119,7 @@
         if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
-        // 盲抽中大字提示：voting 阶段显示
+        // 盲抽中大字：voting 阶段显示（跑马灯开始时），revealed 后消失
         if (blindIndicator) {
           if (state.pkStage === 'voting') blindIndicator.classList.remove('hidden');
           else blindIndicator.classList.add('hidden');
@@ -1162,7 +1154,6 @@
         });
 
       } else {
-        // 无真实抽组：显示默认 4 格占位卡片（乱码）
         const areaL = document.getElementById('pk-area-left');
         const areaR = document.getElementById('pk-area-right');
         const placeholders = getPlaceholderCardsHtml();
