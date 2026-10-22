@@ -87,6 +87,22 @@
       color: #94a3b8 !important;
       opacity: 0.8;
     }
+
+    /* 新增：中奖名单高亮效果 */
+    .passed-highlight {
+      background-color: #064e3b !important;
+      border-color: #34d399 !important;
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.6), inset 0 0 10px rgba(52, 211, 153, 0.3) !important;
+      transform: scale(1.02);
+      transition: all 0.4s ease;
+    }
+    .passed-highlight .passed-card-name {
+      color: #6ee7b7 !important; /* 更亮的绿色 */
+      text-shadow: 0 0 10px rgba(110, 231, 183, 0.8);
+    }
+    .passed-highlight .passed-card-order {
+      color: #a7f3d0 !important;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -216,7 +232,7 @@
         </div>
       </div>
 
-      <!-- 核心区布局：使用 hidden 属性直接控制渲染，最稳妥 -->
+      <!-- 核心区布局 -->
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
         
         <!-- 左侧：Shopee 直播间盲抽 PK 组 -->
@@ -371,6 +387,7 @@
     };
 
     let __lastPkWinnerPopupKey = '';
+    let __lastClearedPollNumber = 0; // 记录已经清理完毕的 POLL，避免重复覆盖高亮
 
     let __popupTimer = null;
     function showWinnerPopup(eventData, durationSeconds) {
@@ -495,7 +512,7 @@
       }
     }
 
-    // ✅ 折叠/展开：直接使用 hidden 属性控制，彻底杜绝样式被覆盖的问题
+    // 折叠/展开：使用原生 hidden 属性
     function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
@@ -506,13 +523,13 @@
       const toggleBtn = document.getElementById('togglePkPanelBtn');
 
       if (isPkPanelCollapsed) {
-        pkPanel.hidden = true; // 原生 hidden 属性
+        pkPanel.hidden = true;
         mainLayout.classList.remove('active');
         mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
-        pkPanel.hidden = false; // 取消 hidden
+        pkPanel.hidden = false;
         mainLayout.classList.remove('collapsed');
         mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
@@ -745,14 +762,13 @@
       }
     }
 
-    // ✅ 乱码动画：开始时显示“盲抽中…”，乱码结束（3 秒）时一并隐藏大字提示
+    // 乱码动画：开始时显示“盲抽中…”，乱码结束（3 秒）时一并隐藏大字提示
     function startScrambleAnimation() {
       const scramblePool = ['??', '##', '¥¥', '**', '××', '??', '##', '？？'];
       const orderScramblePool = ['??', '###', '¥¥', '****', '××××', '？？？'];
       const ids = (state.activeGroupIds || []).map(id => String(id));
       if (ids.length === 0) return;
 
-      // 显示“盲抽中…”提示
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       if (blindIndicator) blindIndicator.classList.remove('hidden');
 
@@ -768,7 +784,6 @@
           clearInterval(scrambleIntervalId);
           scrambleIntervalId = null;
           scramblingMemberIds.clear();
-          // 乱码结束，同时隐藏“盲抽中…”提示
           if (blindIndicator) blindIndicator.classList.add('hidden');
           renderPublicView();
           return;
@@ -880,7 +895,6 @@
           activeCards.forEach(el => el.classList.remove('marquee-flash'));
           activeCards[currentIndex].classList.add('winner-glow');
           setTimeout(() => {
-            // 隐藏“盲抽中”提示（如果还显示着）
             const blindIndicator = document.getElementById('blindDrawingIndicator');
             if (blindIndicator) blindIndicator.classList.add('hidden');
 
@@ -909,6 +923,7 @@
                   orderNo: winnerOrderNo,
                   triggerNumber: state.triggerNumber
                 }, 5);
+                
                 setTimeout(() => {
                   db.ref('tournament_state').transaction((finalState) => {
                     if (!finalState) return finalState;
@@ -949,14 +964,8 @@
                     if (com2) {
                       state = snap2.val();
                       renderRoundTabs(); renderPublicView(); updateStats();
-                      setTimeout(() => {
-                        db.ref('tournament_state').once('value', (snap) => {
-                          const latest = snap.val();
-                          if (!latest || !latest.activeGroupIds || latest.activeGroupIds.length === 0) return;
-                          latest.activeGroupIds = []; latest.activeGroupMembers = []; latest.pkStage = 'voting'; latest.triggerNumber = null; latest.settled = false;
-                          db.ref('tournament_state').set(latest);
-                        });
-                      }, 3000);
+                      // ✅ 关键修改：不再在此处清空 activeGroupIds 等数据，保留卡片高亮状态。
+                      // 清理工作交由“后台点击清空盲抽组”或“开启新一轮”来做。
                     }
                   });
                 }, 1000);
@@ -1082,7 +1091,7 @@
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
-      // 折叠状态：这里不碰 display 或 hidden，只调整布局类
+      // 折叠状态
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       if (isPkPanelCollapsed) {
@@ -1105,10 +1114,11 @@
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
         
-        if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
+        // 如果已经是 revealed 状态，隐藏揭晓按钮；否则显示
+        if (isAdminUnlocked && state.pkStage !== 'revealed') publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
-        // “盲抽中…”的显隐交给乱码动画管理，这里不再触碰它
+        // “盲抽中…”的显隐交给乱码动画管理
         
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
@@ -1158,7 +1168,7 @@
         if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
       }
 
-      // 晋级名单渲染
+      // 晋级名单渲染（加入高亮判断）
       let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       passedList.sort((a, b) => {
@@ -1170,7 +1180,11 @@
       if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       else passedContainer.innerHTML = passedList.map(c => {
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card">` + folderTabHtml +
+        // 高亮判断：如果这条记录带有 pollLabel 且对应刚刚的 revealed 状态
+        const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
+        const highlightClass = isHighlight ? 'passed-highlight' : '';
+        
+        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + folderTabHtml +
           '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
           '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
         '</div>';
