@@ -41,9 +41,9 @@
     }
     .animate-bar { animation: fillBarLeftToRight 5s linear forwards; }
 
-    /* 电脑端自定义分栏，不抢占手机端 */
+    /* 电脑端 7:3 自适应网格 */
     @media (min-width: 1024px) {
-      .layout-grid {
+      .layout-grid.active {
         display: grid;
         grid-template-columns: 70% calc(30% - 1.5rem);
         gap: 1.5rem;
@@ -54,7 +54,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
 
-  <!-- 遮罩层 -->
   <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
     <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
       <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
@@ -63,7 +62,6 @@
     </div>
   </div>
 
-  <!-- 轮次切换弹窗 -->
   <div id="roundTransitionModal" class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-300" onclick="closeRoundModal()">
     <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
       <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
@@ -83,7 +81,6 @@
     </div>
   </div>
 
-  <!-- 恭喜弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="text-5xl sm:text-7xl mb-2 sm:mb-3 animate-bounce">👑</div>
@@ -97,7 +94,6 @@
     </div>
   </div>
 
-  <!-- 分享按钮 -->
   <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
     <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
       <span>🔗</span><span>分享结果</span>
@@ -127,7 +123,6 @@
           </div>
         </div>
         
-        <!-- 🔥 实时同步图标 -->
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span>云端毫秒级同步中...</span>
@@ -144,7 +139,6 @@
 
   <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full flex flex-col">
     
-    <!-- 终极荣誉汇总榜 -->
     <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden w-full">
       <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
         <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
@@ -167,7 +161,6 @@
       </div>
     </div>
 
-    <!-- 比赛记录控制器 -->
     <div id="processSectionToggleBar" class="hidden mb-4 flex justify-between items-center bg-slate-800/60 p-2.5 rounded-xl border border-slate-700">
       <span class="text-[11px] sm:text-xs text-slate-400 font-bold">📋 抽奖比赛全程选拔细节记录</span>
       <button onclick="toggleProcessArea()" class="text-[11px] sm:text-xs text-amber-400 hover:underline font-bold flex items-center space-x-1">
@@ -175,7 +168,6 @@
       </button>
     </div>
 
-    <!-- 主展示区 -->
     <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300 flex-1 flex flex-col">
       
       <div class="flex flex-col gap-3">
@@ -187,50 +179,41 @@
         </div>
       </div>
 
-      <!-- 🔥 核心区布局：自定义 CSS 电脑 7:3，手机竖排 -->
-      <div class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
+      <!-- 🔥 核心区布局：由 JS 动态切换单列或 7:3 分栏 -->
+      <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
         
-        <!-- 左侧：Shopee 直播间盲抽 PK 组 -->
-        <div id="publicActiveGroupDisplay" class="bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[400px]">
+        <!-- 左侧：Shopee 直播间盲抽 PK 组 (默认隐藏，抽卡后显示) -->
+        <div id="publicActiveGroupDisplay" class="hidden w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
           
-          <!-- 默认空状态 (未抽卡时占位) -->
-          <div id="pk-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
-            <span class="text-5xl mb-3">🎲</span>
-            <p class="text-sm font-bold">等待后台随机抽取盲抽组...</p>
+          <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
+            <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
+              <span class="text-base sm:text-2xl animate-bounce">🔥</span>
+              <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
+            </div>
+            <div class="flex-shrink-0">
+              <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
+            </div>
           </div>
 
-          <!-- 数据渲染区 (默认隐藏) -->
-          <div id="pk-content-area" class="hidden flex-col flex-1 relative z-10 w-full h-full">
-            <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
-              <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
-                <span class="text-base sm:text-2xl animate-bounce">🔥</span>
-                <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
+          <div class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
+            <!-- 左侧/上方卡片区 -->
+            <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
+
+            <!-- 中间票选号区 -->
+            <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
+              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+                <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
+                <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
               </div>
-              <div class="flex-shrink-0">
-                <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
+              <div id="publicRevealButtonBox" class="hidden mt-4">
+                <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+                  <span>🎰</span><span>点击揭晓</span>
+                </button>
               </div>
             </div>
 
-            <div class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
-              <!-- 左侧/上方卡片区 -->
-              <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
-
-              <!-- 中间票选号区 -->
-              <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-                <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-                  <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-                  <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
-                </div>
-                <div id="publicRevealButtonBox" class="hidden mt-4">
-                  <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                    <span>🎰</span><span>点击揭晓</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- 右侧卡片区 (仅电脑端) -->
-              <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
-            </div>
+            <!-- 右侧卡片区 (仅电脑端) -->
+            <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
           </div>
         </div>
 
@@ -865,20 +848,18 @@
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
-      const publicGroupContent = document.getElementById('pk-content-area');
-      const pkEmptyState = document.getElementById('pk-empty-state');
-      const publicPollBadge = document.getElementById('publicPollBadge');
-      const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-      const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-
-      const areaL = document.getElementById('pk-area-left');
-      const areaR = document.getElementById('pk-area-right');
-
+      const mainLayout = document.getElementById('main-layout-grid');
+      
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
-        publicGroupContent.classList.remove('hidden');
-        publicGroupContent.classList.add('flex');
-        pkEmptyState.classList.add('hidden');
+        // 🔥 有 PK 组时：显示出来，变成 7:3 分栏
+        publicGroupContainer.classList.remove('hidden');
+        publicGroupContainer.classList.add('flex');
+        mainLayout.classList.add('active');
 
+        const publicPollBadge = document.getElementById('publicPollBadge');
+        const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
+        const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
+        
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
         
@@ -900,6 +881,8 @@
           }).filter(Boolean);
         }
 
+        const areaL = document.getElementById('pk-area-left');
+        const areaR = document.getElementById('pk-area-right');
         areaL.innerHTML = ''; areaR.innerHTML = '';
 
         activeMembers.forEach((c, idx) => {
@@ -913,10 +896,10 @@
         });
 
       } else {
-        // 显示空状态
-        publicGroupContent.classList.add('hidden');
-        publicGroupContent.classList.remove('flex');
-        pkEmptyState.classList.remove('hidden');
+        // 🔥 无 PK 组时：隐藏 PK 区域，恢复单列铺满
+        publicGroupContainer.classList.add('hidden');
+        publicGroupContainer.classList.remove('flex');
+        mainLayout.classList.remove('active');
       }
 
       let passedList = list.filter(c => c.status === 'pass');
