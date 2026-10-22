@@ -13,9 +13,19 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .folder-tab { position: absolute; top: -15px; left: 0px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 9px; padding: 1px 8px; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); letter-spacing: 0.5px; z-index: 10; }
-    @keyframes ringPulse { 0% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02);} 50% { box-shadow: 0 0 25px #fbbf24, inset 0 0 15px #fbbf24; border-color: #fbbf24; transform: scale(1.05);} 100% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02);} }
+    
+    @keyframes ringPulse { 
+      0% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); } 
+      50% { box-shadow: 0 0 25px #fbbf24, inset 0 0 15px #fbbf24; border-color: #fbbf24; transform: scale(1.05); } 
+      100% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); } 
+    }
     .marquee-flash { animation: ringPulse 0.15s infinite alternate; background-color: rgba(245, 158, 11, 0.2) !important; }
-    @keyframes winnerBlast { 0% { transform: scale(1); box-shadow: 0 0 30px #10b981;} 50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981;} 100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399;} }
+    
+    @keyframes winnerBlast { 
+      0% { transform: scale(1); box-shadow: 0 0 30px #10b981; } 
+      50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981; } 
+      100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399; } 
+    }
     .winner-glow { animation: winnerBlast 1s infinite alternate; border: 4px solid #34d399 !important; background-color: #064e3b !important; }
     
     @keyframes modalPop {
@@ -31,19 +41,46 @@
     }
     .animate-bar { animation: fillBarLeftToRight 5s linear forwards; }
     
-    .grid-center-pk {
+    /* 🔥 完美环岛布局 Grid */
+    .grid-island-pk {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-areas: 
-        "left-top center right-top"
-        "left-bottom center right-bottom";
+      grid-template-columns: 1fr minmax(140px, 200px) 1fr;
+      grid-template-rows: auto auto;
       gap: 1rem;
       align-items: center;
       justify-items: center;
     }
-    @media (max-width: 768px) {
-      .grid-center-pk { grid-template-columns: 1fr; grid-template-areas: "center" "left-top" "right-top" "left-bottom" "right-bottom"; }
-      .area-center { margin-bottom: 1rem; }
+    /* 将卡片区域合并 */
+    .area-cards {
+      grid-column: 1 / 4;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+    }
+    /* 中间控制台，跨越两行并固定在中心 */
+    .area-center-island {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      z-index: 10;
+      background: #0f172a;
+      border-radius: 1rem;
+      padding: 0.5rem;
+    }
+    @media (min-width: 768px) {
+      /* 电脑端：变成真正的左右排布 */
+      .grid-island-pk {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+      }
+      .area-cards {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        max-width: 32%;
+      }
     }
   </style>
 </head>
@@ -170,7 +207,8 @@
         <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
       </div>
 
-           <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden mb-4">
+      <!-- 完美环岛盲抽 PK 组 -->
+      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden mb-4">
         <div class="flex flex-row justify-between items-center mb-6 pb-3 border-b border-amber-500/30 gap-2">
           <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
             <span class="text-base sm:text-2xl animate-bounce">🔥</span>
@@ -181,10 +219,10 @@
           </div>
         </div>
 
-             <!-- 环绕/平铺布局 -->
-        <div class="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-8 w-full max-w-5xl mx-auto relative">
+        <!-- 桌面和手机通用的环绕容器 -->
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-8 w-full max-w-5xl mx-auto">
           
-          <!-- 左侧卡片区 (PC端) / 上方网格 (手机端) -->
+          <!-- 左侧卡片 (PC) / 上方卡片 (手机) -->
           <div id="pk-area-left" class="flex flex-wrap md:flex-col gap-3 sm:gap-4 items-center md:items-end justify-center w-full md:w-[32%] order-2 md:order-1"></div>
 
           <!-- 中间票选号区 -->
@@ -200,7 +238,7 @@
             </div>
           </div>
 
-          <!-- 右侧卡片区 (仅PC端显示) -->
+          <!-- 右侧卡片 (仅PC) -->
           <div id="pk-area-right" class="hidden md:flex flex-col gap-3 sm:gap-4 items-center md:items-start w-full md:w-[32%] order-3"></div>
 
         </div>
@@ -653,14 +691,14 @@
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
       
-      
       if (!state.triggerNumber) {
         alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。");
         return;
       }
 
-      // 修改这里，直接抓取带有 pk-card 类的元素，彻底解决手机端找不到卡片的问题
-      const activeCards = document.querySelectorAll('.pk-card');      if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
+      // 🔥 抓取所有卡片
+      const activeCards = document.querySelectorAll('.pk-card');
+      if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
       const tempMembers = [];
@@ -814,7 +852,8 @@
         }
       }
 
-        return `
+      // 🔥 注意这里增加了 pk-card 类名，让开奖函数能够直接抓取
+      return `
         <div id="pk-card-${idx}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
           <div class="font-bold text-amber-300 text-sm truncate w-full text-center">${escapeHtml(c.name)}</div>
@@ -839,9 +878,8 @@
       const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
       const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
 
-           const areaL = document.getElementById('pk-area-left');
+      const areaL = document.getElementById('pk-area-left');
       const areaR = document.getElementById('pk-area-right');
-      const groupMobile = document.getElementById('publicActiveGroupGrid');
 
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
         publicGroupContainer.classList.remove('hidden');
@@ -866,26 +904,17 @@
           }).filter(Boolean);
         }
 
-                     areaL.innerHTML = ''; areaR.innerHTML = '';
+        areaL.innerHTML = ''; areaR.innerHTML = '';
+
         activeMembers.forEach((c, idx) => {
           const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          // PC端左右交替，手机端全塞左边（即上层）
-          if (idx % 2 === 0 || window.innerWidth <= 768) {
+          // 交替分配左右
+          if (idx % 2 === 0) {
             areaL.innerHTML += cardHtml;
           } else {
             areaR.innerHTML += cardHtml;
           }
         });
-
-              if (window.innerWidth <= 768) {
-          groupMobile.classList.remove('hidden');
-          groupMobile.classList.add('flex');
-          groupMobile.innerHTML = mobileHtml;
-          areaL.innerHTML = ''; areaR.innerHTML = '';
-        } else {
-          groupMobile.classList.add('hidden');
-          groupMobile.classList.remove('flex');
-        }
 
       } else {
         publicGroupContainer.classList.add('hidden');
