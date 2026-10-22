@@ -209,11 +209,11 @@
             <!-- 左侧/上方卡片区 -->
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
 
-            <!-- 中间票选号区 -->
+            <!-- 中间票选号区：字号缩小一号 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-7 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-                <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+                <span id="centerTriggerNumberBox" class="text-4xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
               </div>
               <div id="publicRevealButtonBox" class="hidden mt-4">
                 <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
@@ -880,20 +880,21 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
+    // PK 卡片：名字和 #？ 放大一号（text-sm -> text-base，text-xs -> text-sm）
     function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
       const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
 
-      let header = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>`;
+      let header = `<span class="text-sm font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>`;
       let border = "border-amber-500/50 bg-slate-900";
 
       if (isRevealed && hasNumber) {
         if (isWinner) {
-          header = `<span class="text-xs font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
+          header = `<span class="text-sm font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
           border = "border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-105 z-10 transition-all duration-700 ease-out";
         } else {
-          header = `<span class="text-xs font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
+          header = `<span class="text-sm font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
           border = "border-2 border-slate-700 bg-slate-900/50 opacity-60 transition-all duration-300";
         }
       }
@@ -901,7 +902,7 @@
       return `
         <div id="pk-card-${idx}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
-          <div class="font-bold text-amber-300 text-sm truncate w-full text-center">${escapeHtml(c.name)}</div>
+          <div class="font-bold text-amber-300 text-base truncate w-full text-center">${escapeHtml(c.name)}</div>
           <div class="text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1">${escapeHtml(c.orderNo)}</div>
         </div>
       `;
