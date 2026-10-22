@@ -79,18 +79,6 @@
       animation: borderHighlightFlash 0.5s ease-in-out 4; /* 0.5 * 4 = 2秒 */
     }
 
-    /* 局部骨架屏动画 */
-    @keyframes skeletonShimmer {
-      0% { background-position: -400px 0; }
-      100% { background-position: 400px 0; }
-    }
-    .skeleton-box {
-      background: linear-gradient(90deg, rgba(30,41,59,0.8) 25%, rgba(51,65,85,0.9) 50%, rgba(30,41,59,0.8) 75%);
-      background-size: 800px 100%;
-      animation: skeletonShimmer 1.5s infinite linear;
-      border-radius: 0.75rem;
-    }
-
     /* 电脑端 7:3 自适应网格 */
     @media (min-width: 1024px) {
       .layout-grid.active {
@@ -301,7 +289,7 @@
           </div>
 
           <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
-            <!-- 左侧/上方卡片区（同时作为骨架屏渲染区） -->
+            <!-- 左侧/上方卡片区 -->
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
 
             <!-- 中间票选号区 -->
@@ -445,9 +433,6 @@
     let scrambleIntervalId = null;
     let countdownTimerId = null;
     
-    // 新增：用于控制骨架屏状态
-    let isShowingSkeleton = false;
-
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
       drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false,
@@ -819,8 +804,8 @@
           renderFinalSummaryPanel();
 
           if (prevGroupSig !== newGroupSig && newGroupSig !== '' && state.pkStage === 'voting') {
-            // 检测到新的 PK 组，先显示骨架屏，再进入倒计时
-            showSkeletonThenCountdown();
+            // 检测到新的 PK 组，直接进入倒计时
+            startCountdownThenScramble();
           }
         }
       });
@@ -834,22 +819,11 @@
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          if (!countdownTimerId && scramblingMemberIds.size === 0 && !isShowingSkeleton) {
-            showSkeletonThenCountdown();
+          if (!countdownTimerId && scramblingMemberIds.size === 0) {
+            startCountdownThenScramble();
           }
         }
       }
-    }
-
-    // 显示骨架屏（1.5秒），随后自动进入倒计时
-    function showSkeletonThenCountdown() {
-      isShowingSkeleton = true;
-      renderPublicView();
-      
-      setTimeout(() => {
-        isShowingSkeleton = false;
-        startCountdownThenScramble();
-      }, 1500);
     }
 
     function startCountdownThenScramble() {
@@ -1253,24 +1227,6 @@
 
       const areaL = document.getElementById('pk-area-left');
       const areaR = document.getElementById('pk-area-right');
-
-      if (isShowingSkeleton) {
-        // 如果正在显示骨架屏
-        const skeletonHtml = `
-          <div class="w-32 h-32 sm:w-36 sm:h-36 skeleton-box border-2 border-slate-700/50"></div>
-          <div class="w-32 h-32 sm:w-36 sm:h-36 skeleton-box border-2 border-slate-700/50"></div>
-        `;
-        areaL.innerHTML = skeletonHtml;
-        areaR.innerHTML = skeletonHtml;
-        
-        // 同时把中间区域置灰
-        const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-        const publicPollBadge = document.getElementById('publicPollBadge');
-        if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = `...`;
-        if (publicPollBadge) publicPollBadge.innerText = `POLL #-`;
-        
-        return; // 在骨架屏显示期间直接返回，不渲染其他列表
-      }
 
       if (hasActiveGroup) {
         const publicPollBadge = document.getElementById('publicPollBadge');
