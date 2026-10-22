@@ -87,11 +87,6 @@
       color: #94a3b8 !important;
       opacity: 0.8;
     }
-
-    /* ✅ 强制隐藏类：用 !important 覆盖一切，折叠/展开只靠这个类切换 */
-    .force-hidden {
-      display: none !important;
-    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -221,7 +216,7 @@
         </div>
       </div>
 
-      <!-- 核心区布局 -->
+      <!-- 核心区布局：使用 hidden 属性直接控制渲染，最稳妥 -->
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
         
         <!-- 左侧：Shopee 直播间盲抽 PK 组 -->
@@ -246,7 +241,7 @@
 
             <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              <!-- 盲抽中 提示：显隐完全由乱码动画控制 -->
+              <!-- 盲抽中 提示 -->
               <div id="blindDrawingIndicator" class="hidden mb-3 text-center">
                 <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
               </div>
@@ -500,7 +495,7 @@
       }
     }
 
-    // ✅ 折叠/展开：用 force-hidden 类 + !important 彻底控制，不与渲染冲突
+    // ✅ 折叠/展开：直接使用 hidden 属性控制，彻底杜绝样式被覆盖的问题
     function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
@@ -511,13 +506,13 @@
       const toggleBtn = document.getElementById('togglePkPanelBtn');
 
       if (isPkPanelCollapsed) {
-        pkPanel.classList.add('force-hidden');
+        pkPanel.hidden = true; // 原生 hidden 属性
         mainLayout.classList.remove('active');
         mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
-        pkPanel.classList.remove('force-hidden');
+        pkPanel.hidden = false; // 取消 hidden
         mainLayout.classList.remove('collapsed');
         mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
@@ -1087,7 +1082,7 @@
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
-      // 折叠状态只影响布局类，不触碰 pkPanel 的 display/force-hidden
+      // 折叠状态：这里不碰 display 或 hidden，只调整布局类
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       if (isPkPanelCollapsed) {
@@ -1113,7 +1108,7 @@
         if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
-        // ⚠️ “盲抽中…”的显隐交给乱码动画管理，这里不再触碰它
+        // “盲抽中…”的显隐交给乱码动画管理，这里不再触碰它
         
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
