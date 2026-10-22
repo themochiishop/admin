@@ -127,7 +127,6 @@
 
   <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full flex flex-col">
     
-    <!-- 终极荣誉汇总榜 (大屏展示) -->
     <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden w-full">
       <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
         <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
@@ -150,7 +149,6 @@
       </div>
     </div>
 
-    <!-- 过程折叠控制 -->
     <div id="processSectionToggleBar" class="hidden mb-4 flex justify-between items-center bg-slate-800/60 p-2.5 rounded-xl border border-slate-700">
       <span class="text-[11px] sm:text-xs text-slate-400 font-bold">📋 抽奖比赛全程选拔细节记录</span>
       <button onclick="toggleProcessArea()" class="text-[11px] sm:text-xs text-amber-400 hover:underline font-bold flex items-center space-x-1">
@@ -158,10 +156,8 @@
       </button>
     </div>
 
-    <!-- 比赛过程主体区 -->
     <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300 flex-1 flex flex-col">
       
-      <!-- 轮次与横幅 -->
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
@@ -171,71 +167,71 @@
         </div>
       </div>
 
-      <!-- 🔥 盲抽 PK 组核心区 (占据视觉中心) -->
-      <div id="publicActiveGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-1 flex flex-col justify-center min-h-[300px]">
+      <!-- 🔥 上半部分：70% PK组 + 30% 晋级名单 -->
+      <div class="flex flex-col xl:flex-row gap-4 sm:gap-6 w-full items-stretch">
         
-        <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
-          <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
-            <span class="text-base sm:text-2xl animate-bounce">🔥</span>
-            <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
+        <!-- 左侧 70%：Shopee 直播间盲抽 PK 组 -->
+        <div id="publicActiveGroupDisplay" class="hidden xl:w-[70%] w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[400px]">
+          <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
+            <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
+              <span class="text-base sm:text-2xl animate-bounce">🔥</span>
+              <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
+            </div>
+            <div class="flex-shrink-0">
+              <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
+            </div>
           </div>
-          <div class="flex-shrink-0">
-            <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
+
+          <div class="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 w-full flex-1">
+            <!-- 左侧卡片区 -->
+            <div id="pk-area-left" class="flex flex-wrap md:flex-col gap-3 items-center md:items-end justify-center w-full md:w-[38%] order-2 md:order-1"></div>
+
+            <!-- 中间票选号区 -->
+            <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 md:order-2 my-4 md:my-0">
+              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+                <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
+                <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+              </div>
+              <div id="publicRevealButtonBox" class="hidden mt-4">
+                <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+                  <span>🎰</span><span>点击揭晓</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 右侧卡片区 (电脑端) -->
+            <div id="pk-area-right" class="hidden md:flex flex-col gap-3 items-center md:items-start w-full md:w-[38%] order-3"></div>
           </div>
         </div>
 
-        <!-- 电脑端左右环绕，手机端上下排版 -->
-        <div class="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 w-full max-w-5xl mx-auto py-2">
+        <!-- 右侧 30%：本轮胜出/已晋级名单 -->
+        <div class="xl:w-[30%] w-full flex flex-col gap-4">
+          <!-- 已晋级区 -->
+          <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col">
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="text-lg">🏆</span>
+              <h2 class="text-sm font-bold text-emerald-400">本轮胜出/已晋级名单</h2>
+              <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+            </div>
+            <div id="passedListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
+          </div>
           
-          <!-- 左侧名单 / 手机上方 -->
-          <div id="pk-area-left" class="flex flex-wrap md:flex-col gap-3 sm:gap-4 items-center md:items-end justify-center w-full md:w-[35%] order-2 md:order-1"></div>
-
-          <!-- 中间票选号 (固定) -->
-          <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 md:order-2">
-            <div class="flex flex-col items-center justify-center bg-slate-950/90 px-10 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-              <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-              <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+          <!-- 安慰奖区 -->
+          <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/40 shadow-lg flex-1 flex flex-col">
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="text-lg">🎁</span>
+              <h2 class="text-sm font-bold text-emerald-300">已胜出安慰奖名单</h2>
+              <span id="publicConsolationCountBadge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
             </div>
-            <div id="publicRevealButtonBox" class="hidden mt-4">
-              <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                <span>🎰</span><span>点击揭晓</span>
-              </button>
-            </div>
+            <div id="publicConsolationListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
           </div>
-
-          <!-- 右侧名单 (仅电脑显示) -->
-          <div id="pk-area-right" class="hidden md:flex flex-col gap-3 sm:gap-4 items-center md:items-start w-full md:w-[35%] order-3"></div>
-
         </div>
+
       </div>
 
-      <!-- 中奖名单展示区 (放大) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- 已晋级区 -->
-        <div class="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/30 shadow-lg shadow-emerald-950/20">
-          <div class="flex items-center space-x-2 mb-2">
-            <span class="text-base sm:text-lg">🏆</span>
-            <h2 class="text-xs sm:text-md font-bold text-emerald-400">本轮胜出/已晋级名单</h2>
-            <span id="passedBadgeCount" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
-          </div>
-          <div id="passedListContainer" class="flex flex-wrap gap-2.5 max-h-60 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
-        </div>
+      <!-- 底部统计与淘汰区 -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 opacity-80 mt-2">
         
-        <!-- 安慰奖区 -->
-        <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-emerald-500/40 shadow-lg">
-          <div class="flex items-center space-x-2 mb-2">
-            <span class="text-base sm:text-lg">🎁</span>
-            <h2 class="text-xs sm:text-md font-bold text-emerald-300">已胜出安慰奖名单</h2>
-            <span id="publicConsolationCountBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
-          </div>
-          <div id="publicConsolationListContainer" class="flex flex-wrap gap-2.5 max-h-60 overflow-y-auto no-scrollbar pr-1 pt-2"></div>
-        </div>
-      </div>
-
-      <!-- 底部统计与淘汰区 (弱化，不需要观众仔细看) -->
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 opacity-80 mt-4">
-        
-        <!-- 数据概览 -->
         <div class="lg:col-span-3 flex flex-col justify-end">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
@@ -260,7 +256,6 @@
           </div>
         </div>
 
-        <!-- 淘汰区 -->
         <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-3.5 sm:p-4 border border-slate-800 min-h-[200px] flex flex-col">
           <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-800 pb-2.5 sm:pb-3">
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
@@ -270,6 +265,7 @@
         </div>
 
       </div>
+
     </div>
   </main>
 
@@ -663,7 +659,6 @@
         return;
       }
 
-      // 🔥 抓取当前渲染出来的卡片
       const activeCards = document.querySelectorAll('.pk-card');
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
@@ -875,7 +870,7 @@
         activeMembers.forEach((c, idx) => {
           const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
           // 手机端所有卡片塞左边（上方平铺），电脑端左右交替
-          if (window.innerWidth <= 768 || idx % 2 === 0) {
+          if (window.innerWidth <= 1280 || idx % 2 === 0) {
             areaL.innerHTML += cardHtml;
           } else {
             areaR.innerHTML += cardHtml;
