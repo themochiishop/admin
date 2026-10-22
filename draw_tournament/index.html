@@ -87,6 +87,11 @@
       color: #94a3b8 !important;
       opacity: 0.8;
     }
+
+    /* ✅ 强制隐藏类：用 !important 覆盖一切，折叠/展开只靠这个类切换 */
+    .force-hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -241,7 +246,7 @@
 
             <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              <!-- 盲抽中 提示：字号再小一号，图标换为 🔍 -->
+              <!-- 盲抽中 提示：显隐完全由乱码动画控制 -->
               <div id="blindDrawingIndicator" class="hidden mb-3 text-center">
                 <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
               </div>
@@ -495,7 +500,7 @@
       }
     }
 
-    // 折叠/展开 PK 面板：只改 display，不受 renderPublicView 覆盖
+    // ✅ 折叠/展开：用 force-hidden 类 + !important 彻底控制，不与渲染冲突
     function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
@@ -506,13 +511,13 @@
       const toggleBtn = document.getElementById('togglePkPanelBtn');
 
       if (isPkPanelCollapsed) {
-        pkPanel.style.display = 'none';
+        pkPanel.classList.add('force-hidden');
         mainLayout.classList.remove('active');
         mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
-        pkPanel.style.display = '';
+        pkPanel.classList.remove('force-hidden');
         mainLayout.classList.remove('collapsed');
         mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
@@ -745,11 +750,16 @@
       }
     }
 
+    // ✅ 乱码动画：开始时显示“盲抽中…”，乱码结束（3 秒）时一并隐藏大字提示
     function startScrambleAnimation() {
       const scramblePool = ['??', '##', '¥¥', '**', '××', '??', '##', '？？'];
       const orderScramblePool = ['??', '###', '¥¥', '****', '××××', '？？？'];
       const ids = (state.activeGroupIds || []).map(id => String(id));
       if (ids.length === 0) return;
+
+      // 显示“盲抽中…”提示
+      const blindIndicator = document.getElementById('blindDrawingIndicator');
+      if (blindIndicator) blindIndicator.classList.remove('hidden');
 
       scramblingMemberIds = new Set(ids);
 
@@ -763,6 +773,8 @@
           clearInterval(scrambleIntervalId);
           scrambleIntervalId = null;
           scramblingMemberIds.clear();
+          // 乱码结束，同时隐藏“盲抽中…”提示
+          if (blindIndicator) blindIndicator.classList.add('hidden');
           renderPublicView();
           return;
         }
@@ -872,10 +884,8 @@
         if (speed > 300 && currentIndex === winnerIndex) {
           activeCards.forEach(el => el.classList.remove('marquee-flash'));
           activeCards[currentIndex].classList.add('winner-glow');
-
-          // ⏱️ 中奖卡片停留 2 秒，随后写入 revealed 状态并隐藏“盲抽中”提示
           setTimeout(() => {
-            // 立即在本地隐藏“盲抽中”提示，不等待 Firebase 回写
+            // 隐藏“盲抽中”提示（如果还显示着）
             const blindIndicator = document.getElementById('blindDrawingIndicator');
             if (blindIndicator) blindIndicator.classList.add('hidden');
 
@@ -1077,7 +1087,7 @@
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
-      // 不再覆盖 pkPanel 的 display；仅根据折叠状态调整布局类
+      // 折叠状态只影响布局类，不触碰 pkPanel 的 display/force-hidden
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       if (isPkPanelCollapsed) {
@@ -1096,7 +1106,6 @@
         const publicPollBadge = document.getElementById('publicPollBadge');
         const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
         const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-        const blindIndicator = document.getElementById('blindDrawingIndicator');
         
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
@@ -1104,11 +1113,7 @@
         if (isAdminUnlocked) publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
-        // 盲抽中提示：仅在 voting 阶段显示；revealed 后立即隐藏
-        if (blindIndicator) {
-          if (state.pkStage === 'voting') blindIndicator.classList.remove('hidden');
-          else blindIndicator.classList.add('hidden');
-        }
+        // ⚠️ “盲抽中…”的显隐交给乱码动画管理，这里不再触碰它
         
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
@@ -1156,8 +1161,6 @@
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = `#?`;
         const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
         if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
-        const blindIndicator = document.getElementById('blindDrawingIndicator');
-        if (blindIndicator) blindIndicator.classList.add('hidden');
       }
 
       // 晋级名单渲染
