@@ -50,6 +50,16 @@
         align-items: start;
       }
     }
+
+    /* 前台淘汰区：收窄为更紧凑的侧栏 */
+    .out-panel {
+      max-width: 100%;
+    }
+    .out-card {
+      padding: 6px 8px;
+      font-size: 12px;
+      line-height: 1.3;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -219,7 +229,7 @@
 
         <!-- 右侧：晋级与得奖区 -->
         <div class="w-full flex flex-col gap-4">
-          <!-- 已晋级区 -->
+          <!-- 已晋级区：名字字号放大两号 -->
           <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🏆</span>
@@ -242,10 +252,10 @@
 
       </div>
 
-      <!-- 底部统计与淘汰区 -->
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 opacity-80 mt-2">
+      <!-- 底部统计与淘汰区：淘汰区收窄为固定窄侧栏 -->
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
         
-        <div class="lg:col-span-3 flex flex-col justify-end">
+        <div class="flex flex-col justify-end min-w-0">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
@@ -269,12 +279,13 @@
           </div>
         </div>
 
-        <div class="lg:col-span-1 bg-slate-800/30 rounded-2xl p-3.5 sm:p-4 border border-slate-800 min-h-[200px] flex flex-col">
-          <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-800 pb-2.5 sm:pb-3">
+        <!-- 淘汰区：收窄至 220px，单列紧凑卡片 -->
+        <div class="bg-slate-800/30 rounded-2xl p-2.5 border border-slate-800 min-h-[200px] flex flex-col out-panel">
+          <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
             <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
           </div>
-          <div id="outListContainer" class="space-y-3 sm:space-y-4 flex-1 overflow-y-auto no-scrollbar max-h-[400px] pr-1"></div>
+          <div id="outListContainer" class="space-y-2 flex-1 overflow-y-auto no-scrollbar max-h-[400px] pr-0.5"></div>
         </div>
 
       </div>
@@ -319,6 +330,9 @@
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
+    // 记录已经弹过恭喜弹窗的 PK 中奖者，避免重复弹出
+    let __lastPkWinnerPopupKey = '';
+
     let __popupTimer = null;
     function showWinnerPopup(eventData, durationSeconds) {
       const modal = document.getElementById('congratModal');
@@ -341,6 +355,18 @@
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
             <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
+          </div>
+        `;
+      } else if (eventData.winnerNamesKey === 'pkHit') {
+        // 盲抽 PK 命中弹窗
+        bodyContainer.innerHTML = `
+          <div class="bg-gradient-to-r from-emerald-500/20 via-emerald-400/30 to-emerald-500/20 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400 text-center shadow-lg transform scale-105">
+            <span class="text-xs sm:text-base font-black text-emerald-300 uppercase tracking-widest block mb-0.5 sm:mb-1">🎯 PK 命中 / WINNER</span>
+            <span class="text-xl sm:text-2xl font-black text-emerald-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.winnerName)}</span>
+          </div>
+          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
+            <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
+            <span class="text-xs text-slate-400">${escapeHtml(eventData.orderNo || '')}</span>
           </div>
         `;
       }
@@ -603,6 +629,35 @@
               showWinnerPopup(state.latestEvent, 5);
             }
           }
+
+          // 🎯 检测 PK 命中事件：当状态为 revealed 且存在中奖者时弹出恭喜弹窗
+          if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
+            const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+            if (winnerMember) {
+              const popupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
+              if (popupKey !== __lastPkWinnerPopupKey) {
+                __lastPkWinnerPopupKey = popupKey;
+                // 找到该买家信息
+                const roundIdx = state.drawRoundIndex ?? 0;
+                const round = state.rounds[roundIdx] || {};
+                const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
+                const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
+                const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
+                showWinnerPopup({
+                  winnerNamesKey: 'pkHit',
+                  winnerName: winnerName,
+                  orderNo: winnerOrderNo,
+                  triggerNumber: state.triggerNumber
+                }, 5);
+              }
+            }
+          } else {
+            // 非 revealed 状态时重置 key，以便下一轮可以重新弹出
+            if (state.pkStage === 'voting') {
+              __lastPkWinnerPopupKey = '';
+            }
+          }
+
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
           updatePublicOverlayState();
@@ -700,6 +755,22 @@
             }, (error, committed, snapshot) => {
               if (committed) {
                 state = snapshot.val();
+                // 命中的瞬间立即在前台弹窗（不依赖 Firebase 回调）
+                const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+                if (winnerMember) {
+                  const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
+                  const round = state.rounds[roundIdx] || {};
+                  const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
+                  const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
+                  const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
+                  __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
+                  showWinnerPopup({
+                    winnerNamesKey: 'pkHit',
+                    winnerName: winnerName,
+                    orderNo: winnerOrderNo,
+                    triggerNumber: state.triggerNumber
+                  }, 5);
+                }
                 setTimeout(() => {
                   db.ref('tournament_state').transaction((finalState) => {
                     if (!finalState) return finalState;
@@ -902,6 +973,7 @@
         mainLayout.classList.remove('active');
       }
 
+      // 已晋级名单：名字字号放大两号（text-xs -> text-base / text-sm -> text-lg）
       let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       passedList.sort((a, b) => {
@@ -913,9 +985,10 @@
       if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       else passedContainer.innerHTML = passedList.map(c => {
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5">` + folderTabHtml +
-          '<span class="font-bold text-emerald-300 mt-1">' + escapeHtml(c.name) + '</span>' +
-          '<span class="text-slate-400 font-mono text-[10px] sm:text-[11px] mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+        // 名字使用 text-base（放大两号），订单号使用 text-xs
+        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5">` + folderTabHtml +
+          '<span class="font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
+          '<span class="text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
         '</div>';
       }).join('');
 
@@ -986,16 +1059,17 @@
         outContainer.innerHTML = sortedKeys.map(rIdxKey => {
           const rNum = Number(rIdxKey) + 1;
           const candidatesInGroup = grouped[rIdxKey];
-          const groupCardsHtml = candidatesInGroup.map(c => `
-            <div class="p-1.5 bg-slate-900/80 border border-slate-800 rounded-md opacity-70 hover:opacity-100 transition shadow-sm text-center">
-              <span class="font-bold text-slate-300 text-[11px] sm:text-xs truncate block">${escapeHtml(c.name)}</span>
+          // 收窄后，每个名字一行，更加紧凑
+          const groupRowsHtml = candidatesInGroup.map(c => `
+            <div class="out-card bg-slate-900/80 border border-slate-800 rounded-md truncate">
+              <span class="font-bold text-slate-300 text-[11px] truncate block">${escapeHtml(c.name)}</span>
             </div>`).join('');
-          return `<div class="bg-slate-900/40 p-2 rounded-xl border border-slate-800">
-            <div class="text-[10px] font-bold text-rose-400/90 mb-1.5 border-b border-slate-800 pb-1 flex justify-between items-center">
-              <span>❌ 第 ${rNum} 轮淘汰</span>
-              <span class="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
+          return `<div class="bg-slate-900/40 p-1.5 rounded-lg border border-slate-800">
+            <div class="text-[9px] font-bold text-rose-400/90 mb-1 border-b border-slate-800 pb-0.5 flex justify-between items-center">
+              <span>❌ 第 ${rNum} 轮</span>
+              <span class="text-[8px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
             </div>
-            <div class="grid grid-cols-1 gap-1">${groupCardsHtml}</div>
+            <div class="space-y-0.5">${groupRowsHtml}</div>
           </div>`;
         }).join('');
       }
