@@ -2,139 +2,39 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mochiishop 抽奖实时晋级大屏</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mochiishop 每月抽奖 - 直播控制台（优化版）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .folder-tab { position: absolute; top: -15px; left: 0px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 9px; padding: 1px 8px; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); letter-spacing: 0.5px; z-index: 10; }
-    
-    @keyframes ringPulse { 
-      0% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); } 
-      50% { box-shadow: 0 0 25px #fbbf24, inset 0 0 15px #fbbf24; border-color: #fbbf24; transform: scale(1.05); } 
-      100% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); } 
+    .folder-tab {
+      position: absolute; top: -10px; left: 0px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #0f172a; font-weight: 900; font-size: 9px;
+      padding: 1px 8px;
+      border-top-left-radius: 6px; border-top-right-radius: 6px;
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
+      letter-spacing: 0.5px; z-index: 10;
     }
-    .marquee-flash { animation: ringPulse 0.15s infinite alternate; background-color: rgba(245, 158, 11, 0.2) !important; }
-    
-    @keyframes winnerBlast { 
-      0% { transform: scale(1); box-shadow: 0 0 30px #10b981; } 
-      50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981; } 
-      100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399; } 
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 240px;
+      gap: 16px;
     }
-    .winner-glow { animation: winnerBlast 1s infinite alternate; border: 4px solid #34d399 !important; background-color: #064e3b !important; }
-    
-    @keyframes modalPop {
-      0% { transform: scale(0.8); opacity: 0; }
-      50% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
+    @media (max-width: 1280px) {
+      .main-grid { grid-template-columns: 1fr; }
     }
-    .animate-pop { animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    
-    @keyframes fillBarLeftToRight {
-      from { width: 0%; }
-      to { width: 100%; }
-    }
-    .animate-bar { animation: fillBarLeftToRight 5s linear forwards; }
+    .out-card { padding: 4px 6px; font-size: 11px; }
+    .undo-btn { opacity: 0.5; transition: opacity 0.2s; }
+    .out-card:hover .undo-btn { opacity: 1; }
 
-    @keyframes blindDrawPulse {
-      0%, 100% { opacity: 1; transform: scale(1); text-shadow: 0 0 20px rgba(245,158,11,0.8); }
-      50% { opacity: 0.75; transform: scale(1.06); text-shadow: 0 0 35px rgba(251,191,36,1); }
-    }
-    .blind-drawing-text {
-      animation: blindDrawPulse 1s ease-in-out infinite;
-    }
-
-    @keyframes countdownPop {
-      0% { transform: scale(0.5); opacity: 0; }
-      50% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .animate-countdown {
-      animation: countdownPop 0.5s ease-out forwards;
-    }
-
-    /* 跑马灯上下循环动画（两行错开出现） */
-    @keyframes scrollRow1 {
-      0%, 100% { transform: translateY(0); opacity: 1; }
-      50% { transform: translateY(-10px); opacity: 0.8; }
-    }
-    @keyframes scrollRow2 {
-      0%, 100% { transform: translateY(10px); opacity: 0.8; }
-      50% { transform: translateY(0); opacity: 1; }
-    }
-    .animate-scroll-row1 { animation: scrollRow1 3s ease-in-out infinite; }
-    .animate-scroll-row2 { animation: scrollRow2 3s ease-in-out infinite; }
-
-    /* 中奖卡片外框高亮 2秒 */
-    @keyframes borderHighlightFlash {
-      0%, 100% { border-color: inherit; box-shadow: none; }
-      50% { border-color: #34d399; box-shadow: 0 0 25px #34d399; }
-    }
-    .pk-hit-highlight {
-      animation: borderHighlightFlash 0.5s ease-in-out 4; /* 0.5 * 4 = 2秒 */
-    }
-
-    /* 电脑端 7:3 自适应网格 */
-    @media (min-width: 1024px) {
-      .layout-grid.active {
-        display: grid;
-        grid-template-columns: 70% calc(30% - 1.5rem);
-        gap: 1.5rem;
-        align-items: start;
-      }
-      .layout-grid.collapsed {
-        display: block;
-      }
-    }
-
-    /* 前台淘汰区：收窄为更紧凑的侧栏 */
-    .out-panel {
-      max-width: 100%;
-    }
-    .out-card {
-      padding: 6px 8px;
-      font-size: 12px;
-      line-height: 1.3;
-    }
-
-    /* 晋级名单放大模式（折叠PK后） */
-    .passed-zoom .passed-card-name {
-      font-size: 1.5rem !important;
-    }
-    .passed-zoom .passed-card-order {
-      font-size: 0.875rem !important;
-    }
-
-    /* 乱码字体效果 */
-    .scramble-text {
-      font-family: 'Courier New', monospace;
-      letter-spacing: 2px;
-      color: #94a3b8 !important;
-      opacity: 0.8;
-    }
-
-    /* 新增：中奖名单高亮效果 */
-    .passed-highlight {
-      background-color: #064e3b !important;
-      border-color: #34d399 !important;
-      box-shadow: 0 0 20px rgba(52, 211, 153, 0.6), inset 0 0 10px rgba(52, 211, 153, 0.3) !important;
-      transform: scale(1.02);
-      transition: all 0.4s ease;
-    }
-    .passed-highlight .passed-card-name {
-      color: #6ee7b7 !important;
-      text-shadow: 0 0 10px rgba(110, 231, 183, 0.8);
-    }
-    .passed-highlight .passed-card-order {
-      color: #a7f3d0 !important;
-    }
-
-    /* 锁定状态提示 */
+    /* 票选号按钮锁定样式 */
     .trigger-btn-locked {
       opacity: 0.4;
       cursor: not-allowed !important;
@@ -142,269 +42,280 @@
     }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
-    <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
-      <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
-      <h2 class="text-xl sm:text-2xl font-black text-amber-400 mb-2 leading-snug">网页正在计算与更新中，敬请期待...</h2>
-      <p class="text-xs sm:text-sm text-slate-400 font-medium">系统正在实时同步与整理买家数据，请留意直播间提示</p>
-    </div>
-  </div>
-
-  <div id="roundTransitionModal" class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-300" onclick="closeRoundModal()">
-    <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
-      <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
-      
-      <div class="text-6xl sm:text-7xl mb-6 inline-block animate-bounce">🚀</div>
-      <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 mb-3 tracking-widest drop-shadow-sm">新一轮对决开启</h2>
-      <div id="roundTransitionTitle" class="text-xl sm:text-2xl font-bold text-white mb-6 bg-slate-800/80 py-3 px-6 rounded-2xl border border-slate-700 inline-block">
-        第 2 轮
-      </div>
-      <p class="text-sm sm:text-base text-amber-200/80 mb-8 font-medium">🔥 请各位买家/观众做好准备，激烈的角逐即将开始！</p>
-      
-      <div class="w-full bg-slate-700/50 rounded-full h-2 mb-4 overflow-hidden border border-slate-600/50 flex justify-start">
-        <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-2 rounded-full animate-bar"></div>
-      </div>
-      <p class="text-[10px] text-slate-500 uppercase tracking-widest">Automatically closing in 5 seconds...</p>
-    </div>
-  </div>
-
-  <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
-    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
-      <div class="text-5xl sm:text-7xl mb-2 sm:mb-3 animate-bounce">👑</div>
-      <h2 id="congratBadge" class="text-[10px] sm:text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
-      <h3 id="congratModalTitle" class="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3 sm:mb-4">热烈祝贺！成功获得荣誉！</h3>
-      <div id="congratModalBody" class="my-3 sm:my-5 space-y-2 sm:space-y-3"></div>
-      <div class="inline-flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-full px-4 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs text-slate-300 shadow mt-2">
-        <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-        <span>将在 <span id="congratCountdown" class="text-amber-400 font-extrabold text-sm sm:text-base">5</span> 秒后自动切回大屏榜单...</span>
-      </div>
-    </div>
-  </div>
-
-  <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
-    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
-      <span>🔗</span><span>分享结果</span>
-    </button>
-    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
-      <span>💾</span><span>保存为图片</span>
-    </button>
-  </div>
-
+  <!-- ========= 顶部导航 ========= -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
-    <div class="max-w-[1600px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row justify-between items-center gap-2.5 sm:gap-0">
-      <div class="flex items-center space-x-2.5 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-start">
-        <div class="flex items-center space-x-2">
-          <span class="text-xl sm:text-2xl">🏆</span>
-          <div>
-            <h1 id="publicHeaderTitle" class="text-base sm:text-xl font-bold text-amber-400 leading-tight">Mochiishop 每月抽奖晋级榜</h1>
-            <p class="text-[10px] sm:text-xs text-slate-400">直播实时同步 · 买家公开公示大屏</p>
-          </div>
+    <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🎬</span>
+        <div>
+          <h1 id="adminHeaderTitle" class="text-lg font-bold text-amber-400 leading-tight">Mochiishop 每月抽奖 - 直播控制台</h1>
+          <p class="text-[11px] text-slate-400">香水盲抽 · Shopee直播分组PK控盘系统</p>
         </div>
       </div>
-      <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
-        <div class="relative">
-          <span id="publicModeBadge" onclick="toggleModeTooltip(event)" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-pointer">模式: 加载中</span>
-          <div id="modeTooltipContent" class="hidden absolute right-0 top-full mt-2 w-[85vw] max-w-[320px] p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-50 text-xs">
-            <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-xs sm:text-sm"><span>📋</span><span>当前模式规则与晋级流程</span></div>
-            <div id="modeTooltipBody" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
+      <div class="flex items-center flex-wrap gap-2">
+        <div class="relative group cursor-pointer">
+          <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-lg text-xs shadow-inner hover:border-amber-400/60 transition">
+            <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
+            <button onclick="openConfigModal()" class="text-slate-400 hover:text-amber-400 transition text-base ml-0.5" title="设置抽奖模式与导入规则">⚙️</button>
           </div>
         </div>
-        
-        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-          <span>云端毫秒级同步中...</span>
+        <div class="flex items-center space-x-0.5 bg-slate-900 border border-slate-700 p-0.5 rounded-lg">
+          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px]">ZH</span></button>
+          <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px]">EN</span></button>
+          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[10px]">MS</span></button>
         </div>
-
-        <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded-lg">
-          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px] sm:text-[11px]">ZH</span></button>
-          <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px] sm:text-[11px]">EN</span></button>
-          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[10px] sm:text-[11px]">MS</span></button>
-        </div>
+        <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
+          <span>📄</span><span>Export PDF</span>
+        </button>
+        <button onclick="goToPrevRound()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">🔙 上一轮</button>
+        <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
+          <span>⏩ 锁定晋级并推进</span>
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full flex flex-col">
-    
-    <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden w-full">
-      <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
-        <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
-          <span>🏆</span>
-          <span>全场抽奖比赛 - 终极荣誉汇总榜</span>
-          <span>🏆</span>
-        </h2>
-        <p class="text-[11px] sm:text-xs text-slate-400 mt-1">祝贺所有获奖买家！感谢大家的参与与支持！</p>
-      </div>
-
-      <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end max-w-4xl mx-auto"></div>
-
-      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-xl border border-emerald-500/40 w-full max-w-5xl mx-auto">
-        <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
-          <span class="text-base sm:text-lg">🎁</span>
-          <h3 class="text-xs sm:text-sm font-bold text-emerald-400">安慰奖得主全名单</h3>
-          <span id="consolationTotalBadge" class="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
-        </div>
-        <div id="consolationSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
+  <!-- ========= 弹窗 ========= -->
+  <!-- 推进轮次弹窗 -->
+  <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+      <button onclick="closeAdvanceModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
+      <h3 class="text-lg font-bold text-emerald-400 mb-2 flex items-center space-x-2"><span>⏩</span><span>开启新一轮</span></h3>
+      <p class="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-700">请选择下一轮的赛制模式。当前已选中 <span id="advancePassedCount" class="text-emerald-400 font-bold">0</span> 位晋级者。</p>
+      <div class="space-y-3">
+        <button onclick="executeAdvanceRound('auto')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/50 transition text-left">
+          <div><div class="font-bold text-slate-200 text-sm">🤖 自动判断（推荐）</div><div class="text-[10px] text-slate-400 mt-0.5">系统根据剩余人数自动分配</div></div>
+          <span class="text-emerald-400">→</span>
+        </button>
+        <button onclick="executeAdvanceRound('normal')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-sky-500/50 transition text-left">
+          <div><div class="font-bold text-slate-200 text-sm">🔥 普通轮次（盲抽淘汰）</div><div class="text-[10px] text-slate-400 mt-0.5">继续盲抽 PK，淘汰至指定人数</div></div>
+          <span class="text-sky-400">→</span>
+        </button>
+        <button onclick="executeAdvanceRound('consolation')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500/50 transition text-left">
+          <div><div class="font-bold text-amber-300 text-sm">🎁 安慰奖遴选阶段</div><div class="text-[10px] text-slate-400 mt-0.5">强制开启挑选安慰奖环节</div></div>
+          <span class="text-amber-400">→</span>
+        </button>
+        <button onclick="executeAdvanceRound('final')" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-rose-500/50 transition text-left">
+          <div><div class="font-bold text-rose-300 text-sm">👑 冠亚季终极决战</div><div class="text-[10px] text-slate-400 mt-0.5">直接进入季军/冠军争夺</div></div>
+          <span class="text-rose-400">→</span>
+        </button>
       </div>
     </div>
+  </div>
 
-    <div id="processSectionToggleBar" class="hidden mb-4 flex justify-between items-center bg-slate-800/60 p-2.5 rounded-xl border border-slate-700">
-      <span class="text-[11px] sm:text-xs text-slate-400 font-bold">📋 抽奖比赛全程选拔细节记录</span>
-      <button onclick="toggleProcessArea()" class="text-[11px] sm:text-xs text-amber-400 hover:underline font-bold flex items-center space-x-1">
-        <span id="processToggleBtnText">展开选拔过程 ▼</span>
+  <!-- 独立的盲抽设置弹窗 -->
+  <div id="drawSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+      <button onclick="closeDrawSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
+      <h3 class="text-lg font-bold text-amber-400 mb-2 flex items-center space-x-2"><span>🎲</span><span>盲抽参数设置</span></h3>
+      <p class="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-700">快速调整抽奖参数，保存后实时生效。</p>
+      
+      <div class="space-y-4 text-xs">
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-2">
+          <label class="block text-slate-200 font-bold mb-1">⏱️ 盲抽倒计时时长 (秒)</label>
+          <input type="number" id="drawCountdownInput" value="5" min="3" max="30" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-center font-bold text-amber-400 focus:outline-none focus:border-amber-500">
+          <p class="text-[10px] text-slate-400">前台点击开始后倒数此秒数再开跑</p>
+        </div>
+
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-2">
+          <label class="flex items-center space-x-2 cursor-pointer mb-2">
+            <input type="checkbox" id="drawUseDefaultPickCount" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
+            <span class="font-bold text-amber-300">启用默认盲抽数量</span>
+          </label>
+          <div class="flex items-center space-x-2 pl-6">
+            <span class="text-slate-400">每次默认抽取:</span>
+            <input type="number" id="drawDefaultPickCount" value="4" min="1" max="20" class="w-20 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold text-amber-400 focus:outline-none">
+            <span class="text-slate-400">人</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/60 p-3 rounded-xl border-2 border-sky-500/40 space-y-2">
+          <label class="flex items-start space-x-2 cursor-pointer">
+            <input type="checkbox" id="drawMixedMode" class="mt-1 w-4 h-4 text-sky-500 rounded focus:ring-0">
+            <div>
+              <div class="font-bold text-sky-300 text-sm">🎲 启用混合模式</div>
+              <div class="text-[10px] text-slate-400 mt-1">打勾时该模式下所有阶段都支持抽组PK；不打勾时只能手动点晋级。</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-700 flex space-x-2">
+        <button onclick="saveDrawSettings()" class="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm transition shadow-lg">💾 保存盲抽参数</button>
+        <button onclick="closeDrawSettingsModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm transition shadow">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全局配置弹窗 -->
+  <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden" style="height: 80vh; max-height: 600px;">
+      <div class="w-full md:w-56 bg-slate-900/50 border-r border-slate-700 flex flex-col p-4 shrink-0">
+        <h3 class="text-sm font-bold text-amber-400 mb-4 flex items-center space-x-2"><span>⚙️</span><span>系统配置</span></h3>
+        <div class="space-y-1 text-xs flex-1">
+          <button onclick="switchConfigTab('tabTitle')" id="nav-tabTitle" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition bg-slate-800 text-amber-300 border border-slate-700">✏️ 标题显示配置</button>
+          <button onclick="switchConfigTab('tabImport')" id="nav-tabImport" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent">📥 名单导入配置</button>
+          <button onclick="switchConfigTab('tabDraw')" id="nav-tabDraw" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent">🎮 抽奖模式规则</button>
+          <button onclick="switchConfigTab('tabPdf')" id="nav-tabPdf" class="w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent">📄 PDF 报告设置</button>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-700">
+          <button onclick="saveConfigModal()" class="w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm transition shadow-lg">💾 保存全部设置</button>
+          <button onclick="closeConfigModal()" class="w-full mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm transition shadow">取消关闭</button>
+        </div>
+      </div>
+      <div class="flex-1 flex flex-col bg-slate-800 relative">
+        <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg z-10">✕</button>
+        <div class="flex-1 overflow-y-auto p-6 pt-8 text-xs">
+          <div id="tabTitle" class="config-tab-panel space-y-4">
+            <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">系统标题与显示配置</h4>
+            <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
+              <input type="checkbox" id="publicVisibleCheckbox" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
+              <span class="font-bold text-slate-200">🌐 开启前台网页对外公开显示</span>
+            </label>
+            <div><label class="block text-slate-400 mb-1">后台控制台标题:</label><input type="text" id="adminTitleInput" placeholder="Mochiishop 每月抽奖 - 直播控制台" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-slate-400 mb-1">前台公示大屏标题:</label><input type="text" id="publicTitleInput" placeholder="留空则跟随语言自动切换" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
+          </div>
+          <div id="tabImport" class="config-tab-panel hidden space-y-4">
+            <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">买家名单导入模式配置</h4>
+            <div class="bg-slate-900/60 rounded-xl border border-slate-700 p-4 space-y-3">
+              <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="importMode" value="default" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0"><span class="text-slate-200 font-bold">默认链接导入 (Google Sheets 预设)</span></label>
+              <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="importMode" value="customUrl" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0"><span class="text-slate-200 font-bold">修改链接导入 (自定义表格 CSV URL)</span></label>
+              <div id="customUrlInputArea" class="pl-6 hidden"><input type="url" id="customSheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../gviz/tq?tqx=out:csv" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-xs text-amber-300 focus:outline-none focus:border-amber-500"></div>
+              <label class="flex items-center space-x-2 cursor-pointer"><input type="radio" name="importMode" value="fileUpload" onchange="toggleImportModeUI()" class="text-amber-500 focus:ring-0"><span class="text-slate-200 font-bold">导入本地名单文件 (.csv / .txt)</span></label>
+              <div id="fileUploadArea" class="pl-6 hidden space-y-1.5"><input type="file" id="localFileInput" accept=".csv, .txt" class="text-xs text-slate-300 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400"></div>
+            </div>
+          </div>
+          <div id="tabDraw" class="config-tab-panel hidden space-y-4">
+            <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">抽奖规则与玩法模式</h4>
+            <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
+              <input type="checkbox" id="enableModeCheckbox" onchange="toggleModeEnable()" class="w-4 h-4 text-amber-500 rounded focus:ring-0">
+              <span class="font-bold text-slate-200">启用模式规则 (关闭后仅手动自由控盘)</span>
+            </label>
+            <div id="modeRadioGroup" class="space-y-3 opacity-50 pointer-events-none transition-all">
+              <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 cursor-pointer transition">
+                <input type="radio" name="drawMode" value="mode1" class="mt-1">
+                <div><div class="font-bold text-amber-300 text-sm">模式 1：冠亚季排位模式</div><div class="text-[11px] text-slate-400 mt-1">剩3人时点击设为【季军】，剩2人点击设为【冠军】。</div></div>
+              </label>
+              <label class="flex items-start space-x-2 p-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 cursor-pointer transition">
+                <input type="radio" name="drawMode" value="mode2" class="mt-1">
+                <div class="flex-1"><div class="font-bold text-emerald-300 text-sm">模式 2：冠亚季 + 安慰奖模式</div><div class="text-[11px] text-slate-400 mt-1 mb-2">晋级区需至少包含 (N + 3) 人才能开启。</div>
+                  <div class="flex items-center space-x-2 bg-slate-800 p-2.5 rounded-lg border border-slate-700">
+                    <span class="text-slate-300">安慰奖名额:</span>
+                    <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center font-bold text-emerald-400 focus:outline-none">
+                    <span class="text-slate-400">人</span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div id="tabPdf" class="config-tab-panel hidden space-y-4">
+            <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">PDF 报告导出内容与模板设置</h4>
+            <div><label class="block text-slate-400 mb-1">Main Title 1 (主标题 1):</label><input type="text" id="pdfTitleInput" placeholder="MOCHIISHOP OFFICIAL DRAW" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-slate-400 mb-1">Main Title 2 (主标题 2):</label><input type="text" id="pdfTitle2Input" placeholder="OCTOBER FINAL WINNER REPORT" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-amber-300 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-slate-400 mb-1">Sub Title (副标题):</label><input type="text" id="pdfSubTitleInput" placeholder="Shopee Live Monthly Event Official Certificate" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-slate-300 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-slate-400 mb-1">Footer Text (页脚说明):</label><input type="text" id="pdfFooterInput" placeholder="© Mochiishop Official Live Tournament System. Verified Result." class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-slate-400 focus:outline-none focus:border-amber-500"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= 主体 ========= -->
+  <main class="max-w-[1600px] mx-auto px-4 py-3 flex-1 w-full flex flex-col">
+
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+      <div id="roundTabsContainer" class="flex flex-wrap gap-1.5 overflow-x-auto"></div>
+      <button onclick="resetRounds()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/50 text-[11px] font-bold rounded-lg transition shadow flex items-center space-x-1">
+        <span>⚠️</span><span>重置所有轮次</span>
       </button>
     </div>
 
-    <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300 flex-1 flex flex-col">
-      
-      <div class="flex flex-col gap-3">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
-        </div>
-        <div id="winnerAnnouncementBanner" class="hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
-          <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
-        </div>
-      </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
+      <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-xl font-black text-blue-400">0</span></div>
+      <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮晋级/胜出</span><span id="statPassedCount" class="text-xl font-black text-emerald-400">0</span></div>
+      <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮待PK</span><span id="statPendingCount" class="text-xl font-black text-amber-400">0</span></div>
+      <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮已淘汰</span><span id="statOutCount" class="text-xl font-black text-slate-400">0</span></div>
+    </div>
 
-      <!-- 核心区布局 -->
-      <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
-        
-        <!-- 左侧：Shopee 直播间盲抽 PK 组 -->
-        <div id="publicActiveGroupDisplay" class="w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
-          
-          <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
-            <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
-              <span class="text-base sm:text-2xl animate-bounce">🔥</span>
-              <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
+    <div class="main-grid">
+      <div class="flex flex-col gap-4 min-w-0">
+        <!-- 晋级区 + 操作 -->
+        <div class="bg-slate-800/90 rounded-xl p-3 border border-emerald-500/30 shadow-lg">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-lg">🏆</span>
+              <h2 id="passedTitleText" class="text-sm font-bold text-emerald-400">本轮晋级区</h2>
+              <span id="passedBadgeCount" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">0</span>
             </div>
-            <div class="flex items-center space-x-2 flex-shrink-0">
-              <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #-</span>
-              <button type="button" id="togglePkPanelBtn" onclick="togglePkPanel()" class="hidden text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold transition">
-                ◀ 折叠
+            <div class="flex items-center gap-2">
+              <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
+              <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
+              
+              <!-- 独立的盲抽设置齿轮按钮 -->
+              <button onclick="openDrawSettingsModal()" class="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-amber-400 border border-slate-600 rounded-lg transition shadow flex items-center justify-center" title="盲抽参数设置">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
               </button>
             </div>
           </div>
-
-          <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
-            <!-- 左侧/上方卡片区 -->
-            <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
-
-            <!-- 中间票选号区 -->
-            <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              
-              <!-- 状态提示区 -->
-              <div class="mb-3 text-center min-h-[40px] flex flex-col items-center justify-center">
-                <!-- 盲抽中 提示 -->
-                <div id="blindDrawingIndicator" class="hidden">
-                  <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
-                </div>
-                <!-- 倒计时 提示 -->
-                <div id="countdownIndicator" class="hidden flex flex-col items-center justify-center">
-                  <span class="text-xs sm:text-sm text-amber-300 font-bold mb-1">盲抽即将在 <span id="countdownNum" class="text-2xl sm:text-3xl text-amber-400 mx-1">5</span> 秒后开始</span>
-                  <div class="flex space-x-1">
-                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.2s;"></span>
-                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.4s;"></span>
-                  </div>
-                </div>
-                <!-- 恭喜中奖 与 新一轮盲抽即将开始 上下滚动提示 -->
-                <div id="nextRoundHint" class="hidden flex flex-col items-center justify-center">
-                  <span class="animate-scroll-row1 text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
-                  <span class="animate-scroll-row2 text-sm sm:text-base font-bold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
-                </div>
-              </div>
-
-              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-7 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-                <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-                <span id="centerTriggerNumberBox" class="text-4xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
-              </div>
-              <div id="publicRevealButtonBox" class="hidden mt-4">
-                <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                  <span>🎰</span><span>点击揭晓</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- 右侧卡片区 (仅电脑端) -->
-            <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
-          </div>
+          <div id="passedListContainer" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar pr-1 pt-1.5 mt-1"></div>
         </div>
 
-        <!-- 右侧：晋级与得奖区 -->
-        <div id="rightPassedPanel" class="w-full flex flex-col gap-4 transition-all duration-300">
-          <!-- 已晋级区 -->
-          <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
-            <div class="flex items-center space-x-2 mb-3">
-              <span class="text-lg">🏆</span>
-              <h2 class="text-sm font-bold text-emerald-400">本轮胜出/已晋级名单</h2>
-              <span id="passedBadgeCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+        <!-- 抽组PK展示区 -->
+        <div id="activeGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-xl p-3 shadow-xl">
+          <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-amber-500/30 gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-lg">🔥</span>
+              <h3 class="text-xs font-bold text-amber-400">当前直播盲抽 PK 组</h3>
+              <span id="adminPollBadge" class="text-[10px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded shadow">POLL #1</span>
+              <span id="triggerStatusTag" class="text-[10px] bg-slate-900 border border-amber-400 text-amber-300 px-2 py-0.5 rounded font-bold">🎯 等待设定票选号...</span>
             </div>
-            <div id="passedListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
-          </div>
-          
-          <!-- 安慰奖区 -->
-          <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/40 shadow-lg flex-1 flex flex-col min-h-[200px]">
-            <div class="flex items-center space-x-2 mb-3">
-              <span class="text-lg">🎁</span>
-              <h2 class="text-sm font-bold text-emerald-300">已胜出安慰奖名单</h2>
-              <span id="publicConsolationCountBadge" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+            <div class="flex items-center flex-wrap gap-1.5">
+              <span class="text-[10px] text-slate-300 font-bold">票选号:</span>
+              <div id="triggerButtonsContainer" class="flex items-center space-x-1"></div>
+              <button onclick="revealPKWinner()" id="adminRevealBtn" class="px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-[11px] rounded-lg transition shadow-lg animate-pulse">🎰 揭晓开奖</button>
+              <span id="adminLockedHint" class="hidden text-[9px] text-rose-400 font-bold">🚫 前台已登入管理员</span>
             </div>
-            <div id="publicConsolationListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
           </div>
+          <div id="activeGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
         </div>
 
+        <!-- 特殊阶段横幅 -->
+        <div id="specialRoundBanner" class="hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-xl p-2.5 text-center animate-pulse">
+          <h3 id="specialRoundBannerTitle" class="text-sm font-black text-amber-300"></h3>
+          <p id="specialRoundBannerSub" class="text-[11px] text-amber-200/90 mt-0.5"></p>
+        </div>
+
+        <!-- 待 PK 买家名单池 -->
+        <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700 flex-1 flex flex-col min-h-[200px]">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+            <h2 class="text-sm font-bold text-amber-400">待 PK 买家名单池</h2>
+            <div class="flex items-center gap-2">
+              <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-40 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
+              <button id="refreshSheetsBtn" onclick="fetchGoogleSheetsData(true)" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition text-[11px] shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700">🔄 刷新 / 导入名单</button>
+            </div>
+          </div>
+          <div id="adminViewContainer" class="flex-1 overflow-y-auto pr-0.5"></div>
+        </div>
       </div>
 
-      <!-- 底部统计与淘汰区 -->
-      <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
-        
-        <div class="flex flex-col justify-end min-w-0">
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">待PK</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已淘汰</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
-          </div>
-          
-          <div class="bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 flex-1">
-            <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
-              <div class="flex items-center space-x-2">
-                <span class="text-base sm:text-lg">⚡</span>
-                <h2 class="text-xs sm:text-md font-bold text-amber-400">本轮待定买家池</h2>
-                <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> 人</span>
-              </div>
-              <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
-                <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
-                <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
-              </div>
-            </div>
-            <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
-          </div>
+      <!-- 右侧列：淘汰区 -->
+      <div class="bg-slate-800/30 rounded-xl p-2 border border-slate-800 flex flex-col min-h-[300px]">
+        <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
+          <div class="flex items-center space-x-1.5"><span class="text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
+          <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
         </div>
-
-        <div class="bg-slate-800/30 rounded-2xl p-2.5 border border-slate-800 min-h-[200px] flex flex-col out-panel">
-          <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
-            <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
-            <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
-          </div>
-          <div id="outListContainer" class="space-y-2 flex-1 overflow-y-auto no-scrollbar max-h-[400px] pr-0.5"></div>
-        </div>
-
+        <div id="adminOutListContainer" class="space-y-1.5 flex-1 overflow-y-auto no-scrollbar max-h-[600px] pr-0.5"></div>
       </div>
-
     </div>
   </main>
 
-  <footer class="bg-slate-950 border-t border-slate-800/80 py-3 text-center text-[10px] sm:text-xs text-slate-500">
-    <div class="max-w-[1600px] mx-auto px-4 flex justify-between items-center">
-      <span>© Mochiishop Shopee Monthly Event. All rights reserved.</span>
-      <button id="adminUnlockToggleBtn" onclick="toggleAdminUnlock()" class="text-slate-600 hover:text-amber-400 transition text-[11px] underline focus:outline-none">
-        <span id="adminUnlockText">🔑 管理员</span>
-      </button>
-    </div>
+  <footer class="bg-slate-950 border-t border-slate-800 py-2 text-center text-[10px] text-slate-500">
+    © Mochiishop Shopee Monthly Event. All rights reserved.
   </footer>
 
   <script>
@@ -420,332 +331,33 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
-    const ADMIN_PASSWORD = "023457";
 
+    const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfngCgWRlCl4c1z1EgJPSDWhN1PLqq8isbfzw_0nP2nctAS4QZSQj4Vw6MZchvqdNmVYc7BZZwtzlJ/pub?gid=322881163&single=true&output=csv";
+
+    let currentLang = localStorage.getItem('mochii_lang') || 'zh';
     let currentRoundIndex = 0;
-    let userManuallySelectedRound = false;
-    let isAdminUnlocked = false;
-    let isProcessAreaCollapsed = false;
-    let __roundModalTimer = null;
+    let activeGroup4Ids = [];
+    let publicAdminActive = false;
 
-    let isPkPanelCollapsed = false;
-    let scramblingMemberIds = new Set();
-    let scrambleIntervalId = null;
-    let countdownTimerId = null;
-    
     let state = {
-      customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
-      drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false, isDrawingScramble: false,
-      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true, drawCountdownSeconds: 5 },
+      customAdminTitle: '', customPublicTitle: '', isPublicVisible: true, pollCount: 0, currentPollNumber: 0,
+      pkStage: 'voting', triggerNumber: null, drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [],
+      passHistory: [], settled: false, isDrawingScramble: false,
+      pdfConfig: { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' },
+      modeConfig: { 
+        enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, 
+        useDefaultPickCount: true, defaultPickCount: 4, 
+        importMode: 'default', customSheetUrl: '',
+        mixedModeEnabled: true,
+        drawCountdownSeconds: 5
+      },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
-    let __lastPkWinnerPopupKey = '';
-
-    let __popupTimer = null;
-    function showWinnerPopup(eventData, durationSeconds) {
-      const modal = document.getElementById('congratModal');
-      const bodyContainer = document.getElementById('congratModalBody');
-      if (!modal || !bodyContainer) return;
-
-      if (eventData.winnerNamesKey === 'third') {
-        bodyContainer.innerHTML = `
-          <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
-            <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
-          </div>
-        `;
-      } else if (eventData.winnerNamesKey === 'final') {
-        bodyContainer.innerHTML = `
-          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
-            <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
-          </div>
-          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
-            <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
-            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
-          </div>
-        `;
-      } else if (eventData.winnerNamesKey === 'pkHit') {
-        bodyContainer.innerHTML = `
-          <div class="bg-gradient-to-r from-emerald-500/20 via-emerald-400/30 to-emerald-500/20 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400 text-center shadow-lg transform scale-105">
-            <span class="text-xs sm:text-base font-black text-emerald-300 uppercase tracking-widest block mb-0.5 sm:mb-1">🎯 PK 命中 / WINNER</span>
-            <span class="text-xl sm:text-2xl font-black text-emerald-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.winnerName)}</span>
-          </div>
-          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
-            <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
-            <span class="text-xs text-slate-400">${escapeHtml(eventData.orderNo || '')}</span>
-          </div>
-        `;
-      }
-
-      modal.classList.remove('hidden');
-
-      let timeLeft = durationSeconds;
-      const countdown = document.getElementById('congratCountdown');
-      if (countdown) countdown.innerText = timeLeft;
-      if (__popupTimer) clearInterval(__popupTimer);
-
-      __popupTimer = setInterval(() => {
-        timeLeft--;
-        if (countdown) countdown.innerText = timeLeft;
-        if (timeLeft <= 0) {
-          clearInterval(__popupTimer);
-          modal.classList.add('hidden');
-        }
-      }, 1000);
-    }
-
-    function queueRoundTransition(roundTitle, delayMs) {
-      const modal = document.getElementById('roundTransitionModal');
-      const titleEl = document.getElementById('roundTransitionTitle');
-      if (!modal || !titleEl) return;
-      
-      if (__roundModalTimer) clearTimeout(__roundModalTimer);
-      modal.classList.add('hidden');
-      
-      __roundModalTimer = setTimeout(() => {
-        titleEl.innerText = roundTitle;
-        modal.classList.remove('hidden');
-        __roundModalTimer = setTimeout(() => {
-          closeRoundModal();
-        }, 5000);
-      }, delayMs);
-    }
-
-    function closeRoundModal() {
-      const modal = document.getElementById('roundTransitionModal');
-      if (modal) modal.classList.add('hidden');
-      if (__roundModalTimer) clearTimeout(__roundModalTimer);
-    }
-
-    async function shareSummaryImage() {
-      const panel = document.getElementById('finalTournamentSummaryPanel');
-      if (!panel) return;
-      try {
-        const canvas = await html2canvas(panel, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
-        const imgData = canvas.toDataURL('image/png');
-        if (navigator.share) {
-          const blob = await (await fetch(imgData)).blob();
-          const file = new File([blob], 'Mochiishop_Winners.png', { type: 'image/png' });
-          await navigator.share({ title: '全场抽奖比赛荣誉汇总', text: '祝贺所有获奖买家！', files: [file] });
-        } else {
-          alert("⚠️ 您的浏览器不支持一键分享，请使用【保存为图片】");
-        }
-      } catch (err) {
-        alert("❌ 分享失败，请重试！");
-      }
-    }
-
-    async function saveSummaryAsImage() {
-      const panel = document.getElementById('finalTournamentSummaryPanel');
-      if (!panel) return;
-      try {
-        const canvas = await html2canvas(panel, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
-        const link = document.createElement('a');
-        link.download = 'Mochiishop_Winners.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } catch (err) {
-        alert("❌ 生成图片失败，请重试！");
-      }
-    }
-
-    function toggleProcessArea() {
-      const collapsibleSection = document.getElementById('collapsibleProcessSection');
-      const toggleBtnText = document.getElementById('processToggleBtnText');
-      if (collapsibleSection.classList.contains('hidden')) {
-        collapsibleSection.classList.remove('hidden');
-        toggleBtnText.innerText = "折叠选拔过程 ▲";
-        isProcessAreaCollapsed = true;
-      } else {
-        collapsibleSection.classList.add('hidden');
-        toggleBtnText.innerText = "展开选拔过程 ▼";
-        isProcessAreaCollapsed = false;
-      }
-    }
-
-    // 折叠/展开：只修改 style.display
-    function togglePkPanel() {
-      if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
-      isPkPanelCollapsed = !isPkPanelCollapsed;
-
-      const pkPanel = document.getElementById('publicActiveGroupDisplay');
-      const mainLayout = document.getElementById('main-layout-grid');
-      const rightPanel = document.getElementById('rightPassedPanel');
-      const toggleBtn = document.getElementById('togglePkPanelBtn');
-
-      if (isPkPanelCollapsed) {
-        pkPanel.style.display = 'none'; // 强制隐藏
-        mainLayout.classList.remove('active');
-        mainLayout.classList.add('collapsed');
-        if (rightPanel) rightPanel.classList.add('passed-zoom');
-        if (toggleBtn) toggleBtn.innerText = '▶ 展开';
-      } else {
-        pkPanel.style.display = ''; // 恢复显示
-        mainLayout.classList.remove('collapsed');
-        mainLayout.classList.add('active');
-        if (rightPanel) rightPanel.classList.remove('passed-zoom');
-        if (toggleBtn) toggleBtn.innerText = '◀ 折叠';
-      }
-    }
-
-    function renderFinalSummaryPanel() {
-      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
-      const toggleBar = document.getElementById('processSectionToggleBar');
-      const collapsibleSection = document.getElementById('collapsibleProcessSection');
-      const floatingBtns = document.getElementById('floatingActionButtons');
-      const podiumGrid = document.getElementById('podiumSummaryGrid');
-      const consolationBox = document.getElementById('consolationSummaryBox');
-      const consolationGrid = document.getElementById('consolationSummaryGrid');
-      const consolationBadge = document.getElementById('consolationTotalBadge');
-
-      let champion = null, runnerUp = null, thirdPlace = null, consolations = [];
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
-          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
-          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
-          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
-        });
-      });
-
-      if (!champion) {
-        summaryPanel.classList.add('hidden');
-        toggleBar.classList.add('hidden');
-        if (floatingBtns) floatingBtns.classList.add('hidden');
-        collapsibleSection.classList.remove('hidden');
-        return;
-      }
-
-      summaryPanel.classList.remove('hidden');
-      toggleBar.classList.remove('hidden');
-      if (floatingBtns) floatingBtns.classList.remove('hidden');
-      
-      if (!isProcessAreaCollapsed) {
-        collapsibleSection.classList.add('hidden');
-        document.getElementById('processToggleBtnText').innerText = "展开选拔过程 ▼";
-      }
-
-      document.getElementById('winnerAnnouncementBanner').classList.add('hidden');
-
-      podiumGrid.innerHTML = `
-        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
-          <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
-          <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / 亚军</span>
-          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || '无订单号') : '-'}</div>
-        </div>
-        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
-          <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
-          <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
-          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
-          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || '无订单号')}</div>
-        </div>
-        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
-          <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
-          <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
-          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || '无订单号') : '-'}</div>
-        </div>
-      `;
-
-      if (consolations.length > 0) {
-        consolationBox.classList.remove('hidden');
-        consolationBadge.innerText = consolations.length;
-        consolationGrid.innerHTML = consolations.map((c, i) => `
-          <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
-            <div>
-              <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}安慰奖</span>
-              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
-            </div>
-            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(c.orderNo || '无订单号')}</div>
-          </div>
-        `).join('');
-      } else {
-        consolationBox.classList.add('hidden');
-      }
-    }
-
-    function updateWinnerBannerUI() {
-      const banner = document.getElementById('winnerAnnouncementBanner');
-      const content = document.getElementById('winnerBannerContent');
-      if (!banner || !content) return;
-
-      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
-      if (summaryPanel && !summaryPanel.classList.contains('hidden')) {
-        banner.classList.add('hidden');
-        return;
-      }
-
-      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
-      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
-      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
-      const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
-
-      let thirdPlaceName = "";
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlaceName = c.name;
-        });
-      });
-
-      if (thirdPlaceName) {
-        banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
-        return;
-      }
-
-      const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
-      if (isConsolationStage) {
-        const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
-        banner.classList.remove('hidden');
-        content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主 🎁</span>`;
-        return;
-      }
-
-      const roundTotal = (activeRound.candidates || []).length;
-      if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
-        banner.classList.remove('hidden');
-        content.innerHTML = `<span class="text-amber-300 font-bold">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
-        return;
-      }
-
-      if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
-        banner.classList.remove('hidden');
-        content.innerHTML = `<span class="text-amber-300 font-bold">🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！</span>`;
-        return;
-      }
-
-      banner.classList.add('hidden');
-    }
-
-    function toggleModeTooltip(e) {
-      if(e) e.stopPropagation();
-      document.getElementById('modeTooltipContent').classList.toggle('hidden');
-    }
-    document.addEventListener('click', function(e) {
-      const tooltip = document.getElementById('modeTooltipContent');
-      const badge = document.getElementById('publicModeBadge');
-      if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(e.target) && !badge.contains(e.target)) tooltip.classList.add('hidden');
-    });
-
     window.onload = function() {
-      if (localStorage.getItem('mochii_admin_unlocked') === 'true') {
-        isAdminUnlocked = true;
-        db.ref('tournament_state/publicAdminActive').set(true);
-        setTimeout(() => {
-          const txt = document.getElementById('adminUnlockText');
-          if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
-          const toggleBtn = document.getElementById('togglePkPanelBtn');
-          if (toggleBtn) toggleBtn.classList.remove('hidden');
-          renderPublicView();
-        }, 100);
-      }
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
-          const prevGroupSig = (state.activeGroupIds || []).join(',');
           state = val;
           (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
           if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
@@ -755,549 +367,760 @@
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
-          
-          const newGroupSig = (state.activeGroupIds || []).join(',');
-          
-          if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
-            window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
-            queueRoundTransition(state.latestRoundEvent.roundTitle, state.latestRoundEvent.delay || 0);
-          }
-
-          if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
-            window.__lastSeenEventTime = state.latestEvent.timestamp;
-            if (state.latestEvent.type === 'finalCongrat') {
-              showWinnerPopup(state.latestEvent, 5);
-            }
-          }
-
-          if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
-            const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
-            if (winnerMember) {
-              const popupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
-              if (popupKey !== __lastPkWinnerPopupKey) {
-                __lastPkWinnerPopupKey = popupKey;
-                const roundIdx = state.drawRoundIndex ?? 0;
-                const round = state.rounds[roundIdx] || {};
-                const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
-                const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                showWinnerPopup({
-                  winnerNamesKey: 'pkHit',
-                  winnerName: winnerName,
-                  orderNo: winnerOrderNo,
-                  triggerNumber: state.triggerNumber
-                }, 5);
-              }
-            }
-          } else {
-            if (state.pkStage === 'voting') {
-              __lastPkWinnerPopupKey = '';
-            }
-          }
-
-          localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-          if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
-          updatePublicOverlayState();
-          updateModeBadge();
+          if (state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
+          else activeGroup4Ids = [];
           renderRoundTabs();
-          renderPublicView();
+          renderAdminView();
           updateStats();
-          renderFinalSummaryPanel();
-
-          if (prevGroupSig !== newGroupSig && newGroupSig !== '' && state.pkStage === 'voting') {
-            // 检测到新的 PK 组，直接进入倒计时
-            startCountdownThenScramble();
-          }
+          syncModalUIWithState();
+          updateHeaderTitle();
+          updateModeBadgeUI();
+          checkAndTogglePdfExportBtn();
+          updatePickRandomBtnState();
+          updateRefreshBtnState();
         }
       });
-
-      setInterval(checkForNewPkGroup, 300);
+      db.ref('tournament_state/publicAdminActive').on('value', (snap) => {
+        publicAdminActive = !!snap.val();
+        updateAdminRevealButtonLock();
+      });
     };
 
-    let __lastPkGroupSignature = '';
-    function checkForNewPkGroup() {
-      const sig = (state.activeGroupIds || []).join(',') + '|' + (state.pkStage || '');
-      if (sig && sig !== __lastPkGroupSignature) {
-        __lastPkGroupSignature = sig;
-        if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          if (!countdownTimerId && scramblingMemberIds.size === 0) {
-            startCountdownThenScramble();
-          }
-        }
-      }
+    // ================= 快速盲抽设置弹窗逻辑 =================
+    function openDrawSettingsModal() {
+      document.getElementById('drawCountdownInput').value = state.modeConfig.drawCountdownSeconds || 5;
+      document.getElementById('drawUseDefaultPickCount').checked = state.modeConfig.useDefaultPickCount !== false;
+      document.getElementById('drawDefaultPickCount').value = state.modeConfig.defaultPickCount || 4;
+      document.getElementById('drawMixedMode').checked = state.modeConfig.mixedModeEnabled !== false;
+      document.getElementById('drawSettingsModal').classList.remove('hidden');
     }
-
-    function startCountdownThenScramble() {
-      const countdownIndicator = document.getElementById('countdownIndicator');
-      const countdownNum = document.getElementById('countdownNum');
-      const blindIndicator = document.getElementById('blindDrawingIndicator');
-      const nextRoundHint = document.getElementById('nextRoundHint');
-      
-      if (countdownTimerId) clearInterval(countdownTimerId);
-      
-      const totalSec = state.modeConfig.drawCountdownSeconds || 5;
-      let timeLeft = totalSec;
-      
-      if (countdownNum) countdownNum.innerText = timeLeft;
-      
-      if (blindIndicator) blindIndicator.classList.add('hidden');
-      if (nextRoundHint) nextRoundHint.classList.add('hidden');
-      if (countdownIndicator) countdownIndicator.classList.remove('hidden');
-      
-      countdownTimerId = setInterval(() => {
-        timeLeft--;
-        if (countdownNum) {
-          countdownNum.innerText = timeLeft > 0 ? timeLeft : 0;
-          countdownNum.classList.remove('animate-countdown');
-          void countdownNum.offsetWidth;
-          countdownNum.classList.add('animate-countdown');
-        }
-        
-        if (timeLeft <= 0) {
-          clearInterval(countdownTimerId);
-          countdownTimerId = null;
-          if (countdownIndicator) countdownIndicator.classList.add('hidden');
-          startScrambleAnimation();
-        }
-      }, 1000);
+    function closeDrawSettingsModal() {
+      document.getElementById('drawSettingsModal').classList.add('hidden');
     }
+    function saveDrawSettings() {
+      const countdown = parseInt(document.getElementById('drawCountdownInput').value, 10) || 5;
+      const useDefault = document.getElementById('drawUseDefaultPickCount').checked;
+      const defaultCount = parseInt(document.getElementById('drawDefaultPickCount').value, 10) || 4;
+      const mixed = document.getElementById('drawMixedMode').checked;
 
-    function startScrambleAnimation() {
-      const scramblePool = ['??', '##', '¥¥', '**', '××', '??', '##', '？？'];
-      const orderScramblePool = ['??', '###', '¥¥', '****', '××××', '？？？'];
-      const ids = (state.activeGroupIds || []).map(id => String(id));
-      if (ids.length === 0) return;
+      state.modeConfig.drawCountdownSeconds = countdown;
+      state.modeConfig.useDefaultPickCount = useDefault;
+      state.modeConfig.defaultPickCount = defaultCount;
+      state.modeConfig.mixedModeEnabled = mixed;
 
-      const blindIndicator = document.getElementById('blindDrawingIndicator');
-      const countdownIndicator = document.getElementById('countdownIndicator');
-      const nextRoundHint = document.getElementById('nextRoundHint');
-      
-      if (countdownIndicator) countdownIndicator.classList.add('hidden');
-      if (nextRoundHint) nextRoundHint.classList.add('hidden');
-      if (blindIndicator) blindIndicator.classList.remove('hidden');
-
-      scramblingMemberIds = new Set(ids);
-      if (scrambleIntervalId) clearInterval(scrambleIntervalId);
-
-      const scrambleStart = Date.now();
-      const scrambleDuration = 3000;
-
-      scrambleIntervalId = setInterval(() => {
-        if (Date.now() - scrambleStart > scrambleDuration) {
-          clearInterval(scrambleIntervalId);
-          scrambleIntervalId = null;
-          scramblingMemberIds.clear();
-          if (blindIndicator) blindIndicator.classList.add('hidden');
-          renderPublicView();
-          // 触发 2秒高亮效果
-          triggerPkHitHighlight();
-          return;
-        }
-        document.querySelectorAll('.pk-card').forEach(cardEl => {
-          const memberId = cardEl.dataset.memberId;
-          if (!memberId || !scramblingMemberIds.has(String(memberId))) return;
-          const nameEl = cardEl.querySelector('.pk-card-name');
-          const orderEl = cardEl.querySelector('.pk-card-order');
-          if (nameEl) {
-            nameEl.innerText = scramblePool[Math.floor(Math.random() * scramblePool.length)];
-            nameEl.classList.add('scramble-text');
-          }
-          if (orderEl) {
-            orderEl.innerText = orderScramblePool[Math.floor(Math.random() * orderScramblePool.length)];
-            orderEl.classList.add('scramble-text');
-          }
-        });
-      }, 120);
+      saveState();
+      updatePickRandomBtnState();
+      closeDrawSettingsModal();
+      alert("✅ 盲抽参数已更新并生效！");
     }
+    // =======================================================
 
-    // 新增：乱码结束后让 PK 卡片外框高亮闪烁 2 秒
-    function triggerPkHitHighlight() {
-      document.querySelectorAll('.pk-card').forEach(cardEl => {
-        cardEl.classList.add('pk-hit-highlight');
-        setTimeout(() => {
-          cardEl.classList.remove('pk-hit-highlight');
-        }, 2100); // 确保 2 秒动画播完
+    function switchConfigTab(tabId) {
+      document.querySelectorAll('.config-tab-panel').forEach(el => el.classList.add('hidden'));
+      document.getElementById(tabId).classList.remove('hidden');
+      
+      const navs = ['tabTitle', 'tabImport', 'tabDraw', 'tabPdf'];
+      navs.forEach(id => {
+        const btn = document.getElementById('nav-' + id);
+        if (id === tabId) {
+          btn.className = "w-full text-left px-3 py-2.5 rounded-lg font-bold transition bg-slate-800 text-amber-300 border border-slate-700";
+        } else {
+          btn.className = "w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent";
+        }
       });
     }
 
-    function updateModeBadge() {
-      const badge = document.getElementById('publicModeBadge');
-      const tooltip = document.getElementById('modeTooltipBody');
+    function updatePickRandomBtnState() {
+      const btn = document.getElementById('pickRandomGroupBtn');
+      if (!btn) return;
+      if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
+        btn.disabled = true;
+        btn.title = "当前模式已关闭【混合模式】，不可使用盲抽";
+      } else {
+        btn.disabled = false;
+        btn.title = "";
+      }
+    }
+
+    function updateRefreshBtnState() {
+      const btn = document.getElementById('refreshSheetsBtn');
+      if (!btn) return;
+      
+      let hasPassed = false;
+      (state.rounds || []).forEach(r => {
+        if ((r.candidates || []).some(c => c.status === 'pass')) hasPassed = true;
+      });
+      const isStarted = state.rounds.length > 1 || hasPassed;
+
+      if (isStarted) {
+        btn.disabled = true;
+        btn.title = "比赛已经开始，名单已锁定，不可重新导入";
+      } else {
+        btn.disabled = false;
+        btn.title = "点击刷新或导入买家名单";
+      }
+    }
+
+    function updateAdminRevealButtonLock() {
+      const btn = document.getElementById('adminRevealBtn');
+      const hint = document.getElementById('adminLockedHint');
+      if (!btn) return;
+      if (publicAdminActive) {
+        btn.classList.add('opacity-80');
+        if (hint) hint.classList.remove('hidden');
+      } else {
+        btn.classList.remove('opacity-80');
+        if (hint) hint.classList.add('hidden');
+      }
+    }
+
+    function openConfigModal() { 
+      document.getElementById('configModal').classList.remove('hidden'); 
+      switchConfigTab('tabTitle');
+    }
+    function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+    
+    function toggleImportModeUI() {
+      const selected = document.querySelector('input[name="importMode"]:checked')?.value || 'default';
+      const customArea = document.getElementById('customUrlInputArea');
+      const fileArea = document.getElementById('fileUploadArea');
+      customArea.classList.add('hidden'); fileArea.classList.add('hidden');
+      if (selected === 'customUrl') customArea.classList.remove('hidden');
+      if (selected === 'fileUpload') fileArea.classList.remove('hidden');
+    }
+    function toggleModeEnable() {
+      const isChecked = document.getElementById('enableModeCheckbox').checked;
+      const group = document.getElementById('modeRadioGroup');
+      if (isChecked) group.classList.remove('opacity-50', 'pointer-events-none');
+      else group.classList.add('opacity-50', 'pointer-events-none');
+    }
+    
+    function saveConfigModal() {
+      state.isPublicVisible = document.getElementById('publicVisibleCheckbox').checked;
+      state.customAdminTitle = document.getElementById('adminTitleInput').value.trim();
+      state.customPublicTitle = document.getElementById('publicTitleInput').value.trim();
+      if (!state.pdfConfig) state.pdfConfig = {};
+      state.pdfConfig.title = document.getElementById('pdfTitleInput').value.trim() || 'MOCHIISHOP OFFICIAL DRAW';
+      state.pdfConfig.title2 = document.getElementById('pdfTitle2Input').value.trim() || 'OCTOBER FINAL WINNER REPORT';
+      state.pdfConfig.subTitle = document.getElementById('pdfSubTitleInput').value.trim() || 'Shopee Live Monthly Event Official Certificate';
+      state.pdfConfig.footer = document.getElementById('pdfFooterInput').value.trim() || '© Mochiishop Official Live Tournament System. Verified Result.';
+      
+      const isEnabled = document.getElementById('enableModeCheckbox').checked;
+      const radios = document.getElementsByName('drawMode');
+      let selectedMode = 'mode1';
+      for (let r of radios) { if (r.checked) selectedMode = r.value; }
+      
+      const mode2Cons = parseInt(document.getElementById('mode2ConsolationCount').value, 10) || 10;
+      const importMode = document.querySelector('input[name="importMode"]:checked')?.value || 'default';
+      const customSheetUrl = document.getElementById('customSheetUrlInput').value.trim();
+      
+      if (!state.modeConfig) state.modeConfig = {};
+      state.modeConfig.enabled = isEnabled;
+      state.modeConfig.selectedMode = selectedMode;
+      state.modeConfig.mode2ConsolationCount = mode2Cons;
+      state.modeConfig.importMode = importMode;
+      state.modeConfig.customSheetUrl = customSheetUrl;
+      
+      saveState();
+      updateHeaderTitle();
+      updateModeBadgeUI();
+      updatePickRandomBtnState();
+      closeConfigModal();
+      
+      if (importMode === 'fileUpload') {
+        const fileInput = document.getElementById('localFileInput');
+        if (fileInput && fileInput.files.length > 0) readLocalFileAndParse(fileInput.files[0]);
+        else alert("✅ 设置已保存！\n但您还未选择文件，请点击【🔄 刷新 / 导入名单】旁边的按钮上传本地文件。");
+        return;
+      }
+      fetchGoogleSheetsData(true);
+    }
+    
+    function syncModalUIWithState() {
+      document.getElementById('publicVisibleCheckbox').checked = state.isPublicVisible !== false;
+      document.getElementById('adminTitleInput').value = state.customAdminTitle || '';
+      document.getElementById('publicTitleInput').value = state.customPublicTitle || '';
+      if (!state.pdfConfig) state.pdfConfig = { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' };
+      document.getElementById('pdfTitleInput').value = state.pdfConfig.title || '';
+      document.getElementById('pdfTitle2Input').value = state.pdfConfig.title2 || '';
+      document.getElementById('pdfSubTitleInput').value = state.pdfConfig.subTitle || '';
+      document.getElementById('pdfFooterInput').value = state.pdfConfig.footer || '';
+      
+      if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, importMode: 'default', customSheetUrl: '', mixedModeEnabled: true, drawCountdownSeconds: 5 };
+      document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
+      toggleModeEnable();
+      
+      const radios = document.getElementsByName('drawMode');
+      for (let r of radios) { if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true; }
+      document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
+      
+      const importRadios = document.getElementsByName('importMode');
+      for (let r of importRadios) { if (r.value === (state.modeConfig.importMode || 'default')) r.checked = true; }
+      document.getElementById('customSheetUrlInput').value = state.modeConfig.customSheetUrl || '';
+      toggleImportModeUI();
+      
+      updateModeBadgeUI();
+      updatePickRandomBtnState();
+      updateRefreshBtnState();
+    }
+    
+    function updateModeBadgeUI() {
+      const badge = document.getElementById('currentModeBadge');
       if (!badge) return;
       if (!state.modeConfig || !state.modeConfig.enabled) {
-        badge.innerText = "模式: 未启用规则";
-        if (tooltip) tooltip.innerHTML = "当前未启用任何模式规则，后台手动控盘。";
-        return;
+        badge.innerText = "模式: 未启用规则"; badge.className = "text-slate-400 font-bold"; return;
       }
       const m = state.modeConfig.selectedMode || 'mode1';
-      const N = state.modeConfig.mode2ConsolationCount || 10;
       const mixed = state.modeConfig.mixedModeEnabled !== false;
-
-      if (m === 'mode1') {
-        badge.innerText = "模式: 冠亚季模式";
-        if (tooltip) tooltip.innerHTML = mixed
-          ? "🥇 <b>模式1：冠亚季排位 · 混合模式</b><br>• 每轮手动点晋级 或 抽组PK 均可<br>• 剩 3 人时点 1 人晋级 → 季军<br>• 剩 2 人时点 1 人晋级 → 冠军<br>• 另一人自动为亚军"
-          : "🥇 <b>模式1：冠亚季排位 · 仅手动</b><br>• 禁止抽组PK<br>• 每轮手动点晋级<br>• 剩 3 人 → 季军，剩 2 人 → 冠军";
-      } else if (m === 'mode2') {
-        badge.innerText = "模式: 3+安慰奖模式";
-        if (tooltip) tooltip.innerHTML = mixed
-          ? `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 混合模式</b><br>• 手动点晋级 或 抽组PK 均可<br>• 先选出 ${N} 名安慰奖（任意方式）<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`
-          : `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 仅手动</b><br>• 禁止抽组PK<br>• 手动点晋级选出 ${N} 名安慰奖<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`;
-      }
+      const mixedTag = mixed ? " · 🎲混合" : " · ✋仅手动";
+      if (m === 'mode1') { badge.innerText = `模式: 冠亚季模式${mixedTag}`; badge.className = "text-amber-400 font-bold"; }
+      else if (m === 'mode2') { badge.innerText = `模式: 3+安慰奖模式(${state.modeConfig.mode2ConsolationCount || 10}名)${mixedTag}`; badge.className = "text-emerald-400 font-bold"; }
     }
-
-    function toggleAdminUnlock() {
-      if (!isAdminUnlocked) {
-        const pin = prompt("🔐 请输入管理员解锁口令密码:", "");
-        if (pin === ADMIN_PASSWORD) {
-          isAdminUnlocked = true;
-          localStorage.setItem('mochii_admin_unlocked', 'true');
-          db.ref('tournament_state/publicAdminActive').set(true);
-          alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。");
-        } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
-        else return;
-      } else {
-        if (!confirm("确认退出管理员控盘模式？")) return;
-        isAdminUnlocked = false;
-        localStorage.removeItem('mochii_admin_unlocked');
-        db.ref('tournament_state/publicAdminActive').set(false);
+    
+    function fetchGoogleSheetsData(isManual) {
+      if (currentRoundIndex !== 0) { if (isManual) alert("仅限在第 1 轮刷新/导入数据！"); return; }
+      if (state.rounds[0] && state.rounds[0].candidates && state.rounds[0].candidates.length > 0) {
+        if (isManual) alert("⚠️ 名单已导入且已锁定，如要覆盖请点击右上角【重置所有轮次数据】。");
+        return;
       }
-      const txt = document.getElementById('adminUnlockText');
-      if (isAdminUnlocked) { if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; } }
-      else { if (txt) { txt.innerText = "🔑 管理员"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; } }
-
-      const toggleBtn = document.getElementById('togglePkPanelBtn');
-      if (toggleBtn) {
-        if (isAdminUnlocked) toggleBtn.classList.remove('hidden');
-        else toggleBtn.classList.add('hidden');
-      }
-
-      renderPublicView();
-    }
-
-    function revealPKWinnerFromPublic() {
-      if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
-      if (state.settled) { alert("正在开奖中..."); return; }
       
-      if (!state.triggerNumber) {
-        alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。");
+      const cfg = state.modeConfig || {};
+      const importMode = cfg.importMode || 'default';
+      if (importMode === 'fileUpload') {
+        const fileInput = document.getElementById('localFileInput');
+        if (fileInput && fileInput.files.length > 0) { readLocalFileAndParse(fileInput.files[0]); return; }
+        else if (isManual) { alert("⚠️ 请先在设置弹窗中选择并上传本地 .csv 或 .txt 文件！"); openConfigModal(); return; }
+      }
+      let fetchUrl = DEFAULT_SHEET_CSV_URL;
+      if (importMode === 'customUrl' && cfg.customSheetUrl) fetchUrl = cfg.customSheetUrl;
+      
+      fetch(fetchUrl)
+        .then(response => response.text())
+        .then(csvText => { 
+          parseCSVToFirstRound(csvText); 
+          if (isManual) alert("✅ 已成功导入买家名单！"); 
+        })
+        .catch(err => { alert("❌ 导入失败，请检查链接格式或网络连接！"); });
+    }
+    
+    function readLocalFileAndParse(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) { 
+        parseCSVToFirstRound(e.target.result); 
+        alert(`✅ 已成功从本地文件【${file.name}】导入买家名单！`); 
+      };
+      reader.readAsText(file);
+    }
+    
+    function parseCSVToFirstRound(csvText) {
+      const lines = csvText.split('\n'); const candidates = [];
+      lines.forEach((line, idx) => {
+        if (!line.trim()) return;
+        const parts = line.replace(/"/g, '').split(',');
+        if (parts[0] && parts[0].trim() !== '买家姓名' && parts[0].trim() !== 'Name') {
+          const nameStr = parts[0].trim(); const orderStr = parts[1] ? parts[1].trim() : '';
+          candidates.push({ id: `${nameStr}_${orderStr}_${idx}`, name: nameStr, orderNo: orderStr, status: 'pending' });
+        }
+      });
+      state.rounds[0].candidates = candidates;
+      state.passHistory = [];
+      saveState(); renderRoundTabs();
+    }
+
+    // 🎲 抽组PK
+    function pickRandomGroup() {
+      if (publicAdminActive) {
+         console.log("提示：前台管理员已接管开奖，后台盲抽仅作测试准备。");
+      }
+      
+      if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
+        alert("⚠️ 当前模式已关闭【混合模式】，所有阶段均不支持抽组PK。\n如需抽组PK，请在设置里重新勾选【🎲 启用混合模式】。");
+        return;
+      }
+      
+      const activeRound = state.rounds[currentRoundIndex];
+      const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
+      if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
+
+      const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
+      const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+      const isConsolation = isMode2 && activeRound.isConsolationStage;
+      
+      let targetCount = 4;
+      const defaultVal = state.modeConfig && state.modeConfig.defaultPickCount ? state.modeConfig.defaultPickCount : 4;
+      
+      let promptMsg = "请输入本次要随机盲抽的买家数量:";
+      
+      if (isConsolation) {
+        const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
+        const remainN = N - picked;
+        promptMsg = `🎁 安慰奖遴选阶段。\n还需选出 ${remainN} 名安慰奖，当前池子有 ${pendingList.length} 人。\n\n请输入本次盲抽人数:`;
+      }
+
+      const s = prompt(promptMsg, defaultVal.toString());
+      if (s === null) return;
+      targetCount = parseInt(s, 10);
+      if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
+
+      if (isConsolation) {
+        const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
+        const remainN = N - picked;
+        if (targetCount > pendingList.length) {
+           alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`);
+           return;
+        }
+        if (targetCount > remainN + 3) {
+           alert(`⚠️ 规则限制：当前还需选 ${remainN} 名安慰奖，且必须保留 3 名头部奖。\n单次最多只能抽取 ${remainN + 3} 人！`);
+           return;
+        }
+      }
+      
+      state.pollCount = (state.pollCount || 0) + 1;
+      state.currentPollNumber = state.pollCount;
+      state.pkStage = 'voting'; state.triggerNumber = null;
+      state.drawRoundIndex = currentRoundIndex; state.settled = false;
+      state.isDrawingScramble = true; // 🌟 核心：开启乱码遮盖
+      
+      const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
+      activeGroup4Ids = selected.map(c => String(c.id));
+      state.activeGroupIds = activeGroup4Ids;
+      state.activeGroupMembers = selected.map(c => ({ id: String(c.id), displayNumber: null, name: c.name, orderNo: c.orderNo }));
+      saveState(); renderActiveGroupUI(); renderAdminView();
+    }
+    
+    function setTriggerNumber(num) {
+      if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
+      // 状态锁：命中或已分配号码后不可修改
+      if (state.settled || state.pkStage === 'revealed') {
+        alert("⚠️ 开奖已确认，禁止修改票选号！");
+        return;
+      }
+      // 撤回选择逻辑：如果点的是同一个号码，则取消选择
+      if (state.triggerNumber === num) {
+        state.triggerNumber = null;
+        state.pkStage = 'voting';
+      } else {
+        if (num < 1 || num > activeGroup4Ids.length) { alert("票选号超出当前组人数范围！"); return; }
+        state.triggerNumber = num; state.pkStage = 'triggered';
+      }
+      saveState(); renderActiveGroupUI();
+    }
+    
+    function revealPKWinner() {
+      if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
+      if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
+      if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
+      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); return; }
+      
+      state.pkStage = 'revealed'; state.settled = true; saveState();
+      setTimeout(() => {
+        const total = state.activeGroupMembers.length;
+        const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+        state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
+        const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+        if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
+        state.isDrawingScramble = false; // 🌟 核心：关闭乱码遮盖，显示真实名字
+        saveState();
+      }, 2200);
+    }
+    
+    function clearCurrentActiveGroup() {
+      activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
+      delete state.currentPollNumber; state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+      state.isDrawingScramble = false;
+      saveState(); document.getElementById('activeGroupDisplay').classList.add('hidden'); renderAdminView();
+    }
+    
+    function passWinnerAndEliminateOthers(winnerId) {
+      const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
+      if (!activeRound) return;
+      const winnerMember = (state.activeGroupMembers || []).find(m => String(m.id) === String(winnerId));
+      const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerMember ? winnerMember.displayNumber : '?'})`;
+      if (!state.passHistory) state.passHistory = [];
+      const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(winnerId));
+      if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerId))) {
+        state.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: state.drawRoundIndex ?? currentRoundIndex });
+      }
+      
+      const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
+      
+      activeGroup4Ids.forEach(id => {
+        const target = activeRound.candidates.find(c => String(c.id) === String(id));
+        if (target) {
+          if (String(id) === String(winnerId)) { 
+            target.status = 'pass'; 
+            target.pollLabel = pollLabel; 
+          } else { 
+            if (isMode2 && activeRound.isConsolationStage) {
+              target.status = 'pending';
+            } else {
+              target.status = 'out'; 
+              target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; 
+            }
+          }
+        }
+      });
+
+      if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === true) {
+        const winnerTarget = activeRound.candidates.find(c => String(c.id) === String(winnerId));
+        if (winnerTarget) advanceModeLogic(activeRound, winnerTarget);
+      }
+
+      activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
+      state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+      saveState(); renderActiveGroupUI();
+    }
+    
+    function renderActiveGroupUI() {
+      const displayContainer = document.getElementById('activeGroupDisplay');
+      const grid = document.getElementById('activeGroupGrid');
+      const pollBadge = document.getElementById('adminPollBadge');
+      const triggerStatusTag = document.getElementById('triggerStatusTag');
+      const triggerButtonsContainer = document.getElementById('triggerButtonsContainer');
+      if (state.activeGroupIds && state.activeGroupIds.length > 0 && activeGroup4Ids.length === 0) activeGroup4Ids = [...state.activeGroupIds];
+      if (!activeGroup4Ids || activeGroup4Ids.length === 0) { displayContainer.classList.add('hidden'); return; }
+      displayContainer.classList.remove('hidden');
+      if (pollBadge && state.currentPollNumber) pollBadge.innerText = `POLL #${state.currentPollNumber}`;
+      if (triggerStatusTag) {
+        if (state.triggerNumber) {
+          triggerStatusTag.innerText = `🎯 设定票选号：#${state.triggerNumber}`;
+          triggerStatusTag.className = "text-xs bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded shadow animate-bounce";
+        } else {
+          triggerStatusTag.innerText = `🎯 等待设定票选号...`;
+          triggerStatusTag.className = "text-xs bg-slate-900 border border-amber-400 text-amber-300 px-2 py-0.5 rounded font-bold";
+        }
+      }
+      if (triggerButtonsContainer) {
+        const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
+        // 关键逻辑：只有在 voting/triggered 阶段且未 settled 时才能点击
+        const isLocked = (state.pkStage !== 'voting' && state.pkStage !== 'triggered') || state.settled;
+        triggerButtonsContainer.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(num => {
+          const isSelected = (state.triggerNumber === num);
+          let btnClass = isSelected ? "bg-amber-500 text-slate-950 font-black scale-110 shadow-lg border-2 border-white" : "bg-slate-800 text-amber-300 border border-amber-500/50 hover:bg-amber-500 hover:text-slate-950";
+          if (isLocked) btnClass += " trigger-btn-locked";
+          return `<button onclick="setTriggerNumber(${num})" class="w-7 h-7 rounded-lg text-xs transition transform font-black ${btnClass}">#${num}</button>`;
+        }).join('');
+      }
+      const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
+      let members = (state.activeGroupMembers || []).map(m => {
+        const c = (activeRound.candidates || []).find(x => String(x.id) === String(m.id));
+        return c ? { ...c, displayNumber: m.displayNumber } : null;
+      }).filter(Boolean);
+      const isRevealed = (state.pkStage === 'revealed');
+      grid.innerHTML = members.map((c) => {
+        const realNum = c.displayNumber;
+        const hasNumber = realNum !== null && realNum !== undefined;
+        const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
+        let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
+        let cardBorder = "border-amber-500/40 bg-slate-900/90";
+        // 🌟 核心：如果 isDrawingScramble 开启，强制显示乱码，不显示真实名字
+        const displayName = state.isDrawingScramble ? '??' : escapeHtml(c.name);
+        const displayOrder = state.isDrawingScramble ? '###' : escapeHtml(c.orderNo || '无订单号');
+
+        if (isRevealed && hasNumber) {
+          if (isWinner) {
+            cardHeaderTag = `<span class="text-xs font-black bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
+            cardBorder = "border-2 border-emerald-400 bg-emerald-950/40 shadow-emerald-500/20 shadow-2xl scale-105";
+          } else {
+            cardHeaderTag = `<span class="text-xs font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
+            cardBorder = "border-slate-800 bg-slate-900/50 opacity-60";
+          }
+        }
+        return `<div class="${cardBorder} rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
+          <div>
+            <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
+            <div class="font-bold text-amber-300 text-sm truncate mt-1 ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayName}</div>
+            <div class="text-[11px] text-slate-400 font-mono truncate ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayOrder}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    
+    function undoEliminatedCandidate(id) {
+      let foundCandidate = null;
+      let sourceRoundIndex = -1;
+      (state.rounds || []).forEach((r, rIdx) => {
+        const target = (r.candidates || []).find(c => String(c.id) === String(id));
+        if (target) { foundCandidate = target; sourceRoundIndex = rIdx; }
+      });
+      if (!foundCandidate) return;
+
+      (state.rounds || []).forEach(r => {
+        r.candidates = (r.candidates || []).filter(c => String(c.id) !== String(id));
+      });
+      if (state.passHistory) state.passHistory = state.passHistory.filter(c => String(c.id) !== String(id));
+
+      const currentRound = state.rounds[currentRoundIndex];
+      currentRound.candidates.push({
+        id: foundCandidate.id,
+        name: foundCandidate.name,
+        orderNo: foundCandidate.orderNo,
+        status: 'pending'
+      });
+
+      saveState();
+      renderRoundTabs();
+      renderAdminView();
+      updateStats();
+      alert(`↩️ 买家【${foundCandidate.name}】已撤回，并重新回到当前轮次待PK名单池！`);
+    }
+
+    function changeStatus(id, newStatus) {
+      if (newStatus === 'pending') { undoEliminatedCandidate(id); return; }
+      const activeRound = state.rounds[currentRoundIndex];
+      const target = activeRound.candidates.find(c => String(c.id) === String(id));
+      if (!target) return;
+      target.status = newStatus;
+      if (newStatus === 'out') target.eliminatedRoundIndex = currentRoundIndex;
+      if (newStatus === 'pass') advanceModeLogic(activeRound, target);
+      saveState(); renderRoundTabs(); renderAdminView(); updateStats();
+    }
+
+    function advanceModeLogic(activeRound, justPassed) {
+      if (!state.modeConfig || !state.modeConfig.enabled) return;
+      const mode = state.modeConfig.selectedMode || 'mode1';
+      const total = activeRound.candidates || [];
+      const N = state.modeConfig.mode2ConsolationCount || 10;
+
+      if (mode === 'mode2' && activeRound.isConsolationStage) {
+        if (!justPassed.rankKey) {
+          justPassed.rankTitle = "🎁 安慰奖";
+          justPassed.rankKey = "rankConsolation";
+        }
+        const picked = total.filter(c => c.status === 'pass').length;
+        if (picked >= N) {
+          const remain = total.filter(c => c.status === 'pending');
+          if (remain.length !== 3) {
+            alert(`⚠️ 安慰奖已选满 ${N} 名，但剩余 ${remain.length} 人（应为3人）。请检查本轮名单是否正好 ${N + 3} 人！`);
+            return;
+          }
+          
+          const label = "🏆 冠亚季争夺战 (剩3人)";
+          const podium = remain.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+          
+          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
+          currentRoundIndex = state.rounds.length - 1;
+          state.passHistory = [];
+          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+          
+          saveState(); renderRoundTabs();
+          
+          setTimeout(() => alert(`🎁 已选满 ${N} 名安慰奖！\n自动进入【${label}】阶段。`), 100);
+        }
         return;
       }
 
-      const activeCards = Array.from(document.querySelectorAll('.pk-card'));
-      if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
-      const total = activeCards.length;
-      const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+      if (total.length === 3 && !activeRound.isConsolationStage) {
+        justPassed.rankTitle = "🥉 季军"; justPassed.rankKey = "rankThird";
+        const two = total.filter(c => String(c.id) !== String(justPassed.id));
+        
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
+        
+        saveState(); 
+        renderRoundTabs();
 
-      const cardMembers = activeCards.map(cardEl => {
-        return { id: String(cardEl.dataset.memberId), displayNumber: null };
-      });
-      cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
-
-      let winnerIndex = -1;
-      cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
-      if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
-      const winnerMemberId = cardMembers[winnerIndex].id;
-
-      let currentIndex = 0, speed = 80, iterations = 0;
-      const maxFastIterations = 15;
-      
-      function runMarquee() {
-        activeCards.forEach(el => el.classList.remove('marquee-flash'));
-        activeCards[currentIndex].classList.add('marquee-flash');
-        if (iterations >= maxFastIterations) speed += 30;
-        if (speed > 300 && currentIndex === winnerIndex) {
-          activeCards.forEach(el => el.classList.remove('marquee-flash'));
-          activeCards[currentIndex].classList.add('winner-glow');
-          setTimeout(() => {
-            const blindIndicator = document.getElementById('blindDrawingIndicator');
-            if (blindIndicator) blindIndicator.classList.add('hidden');
-
-            db.ref('tournament_state').transaction((latestState) => {
-              if (!latestState) return latestState;
-              const numMap = {};
-              cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
-              latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
-                const nid = String(m.id);
-                return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
-              });
-              latestState.pkStage = 'revealed';
-              latestState.isDrawingScramble = false;
-              return latestState;
-            }, (error, committed, snapshot) => {
-              if (committed) {
-                state = snapshot.val();
-                const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
-                const round = state.rounds[roundIdx] || {};
-                const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
-                const winnerName = cand ? cand.name : '幸运买家';
-                const winnerOrderNo = cand ? cand.orderNo : '';
-                __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
-                showWinnerPopup({
-                  winnerNamesKey: 'pkHit',
-                  winnerName: winnerName,
-                  orderNo: winnerOrderNo,
-                  triggerNumber: state.triggerNumber
-                }, 5);
-                
-                setTimeout(() => {
-                  db.ref('tournament_state').transaction((finalState) => {
-                    if (!finalState) return finalState;
-                    const roundIdx = finalState.drawRoundIndex ?? currentRoundIndex;
-                    const activeRound = finalState.rounds[roundIdx];
-                    if (activeRound) {
-                      const triggerNum = finalState.triggerNumber;
-                      const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
-                      if (winnerMember) {
-                        const winnerId = String(winnerMember.id);
-                        const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                        if (!finalState.passHistory) finalState.passHistory = [];
-                        const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
-                        if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
-                          finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx });
-                        }
-                        
-                        const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
-                        finalState.activeGroupIds.forEach(id => {
-                          const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-                          if (target) {
-                            if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
-                            else { 
-                              if (isMode2 && activeRound.isConsolationStage) {
-                                target.status = 'pending';
-                              } else {
-                                target.status = 'out'; 
-                                target.eliminatedRoundIndex = roundIdx; 
-                              }
-                            }
-                          }
-                        });
-                      }
-                    }
-                    finalState.settled = true;
-                    return finalState;
-                  }, (err2, com2, snap2) => {
-                    if (com2) {
-                      state = snap2.val();
-                      renderRoundTabs(); renderPublicView(); updateStats();
-                    }
-                  });
-                }, 1000);
-              }
-            });
-          }, 2000);
-          return;
-        }
-        currentIndex = (currentIndex + 1) % total;
-        iterations++;
-        setTimeout(runMarquee, speed);
+        setTimeout(() => {
+          const label = "👑 冠亚军终极决战 (2选1)";
+          const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+          
+          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
+          currentRoundIndex = state.rounds.length - 1;
+          state.passHistory = [];
+          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+          
+          saveState(); 
+          renderRoundTabs();
+          
+          setTimeout(() => alert(`🥉 【${justPassed.name}】锁定季军！\n已自动进入【${label}】。`), 100);
+        }, 5000);
+        
+        return;
       }
-      runMarquee();
+
+      if (total.length === 2 && !activeRound.isConsolationStage) {
+        justPassed.rankTitle = "👑 冠军"; justPassed.rankKey = "rankChampion";
+        const ru = total.find(c => String(c.id) !== String(justPassed.id));
+        let ruName = "未知买家";
+        if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ruName = ru.name; }
+        
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
+        
+        saveState(); 
+        renderRoundTabs();
+      }
     }
 
-    function updatePublicOverlayState() {
-      const mask = document.getElementById('publicOverlayMask');
-      if (!mask) return;
-      if (state.isPublicVisible === false) mask.classList.remove('hidden');
-      else mask.classList.add('hidden');
+    function setLanguage(lang) { currentLang = lang; localStorage.setItem('mochii_lang', lang); renderRoundTabs(); renderAdminView(); updateStats(); updateModeBadgeUI(); updateHeaderTitle(); }
+    function updateHeaderTitle() { document.getElementById('adminHeaderTitle').innerText = state.customAdminTitle || 'Mochiishop 每月抽奖 - 直播控制台'; }
+    function getRoundTitle(idx) { const r = state.rounds[idx]; if(!r) return `第 ${idx+1} 轮`; return r.isConsolationStage ? `🎁 安慰奖遴选阶段` : (r.stageName && r.stageName.includes("冠亚军") ? `👑 冠亚军终极决战` : (r.stageName && r.stageName.includes("冠亚季") ? `🏆 冠亚季争夺战` : `第 ${idx + 1} 轮`)); }
+    function goToPrevRound() {
+      if (currentRoundIndex === 0) return;
+      if (confirm("确认返回上一轮？")) {
+        if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) state.rounds.pop();
+        currentRoundIndex = Math.max(0, currentRoundIndex - 1);
+        saveState(); renderRoundTabs();
+      }
     }
-    function getRoundTitle(idx) {
-      const r = state.rounds[idx];
-      if (!r) return `第 ${idx + 1} 轮`;
-      if (r.isConsolationStage) return `🎁 安慰奖遴选阶段`;
-      else if (r.stageName && r.stageName.includes("冠亚军")) return `👑 冠亚军终极决战`;
-      else if (r.stageName && r.stageName.includes("冠亚季")) return `🏆 冠亚季争夺战`;
-      return `第 ${idx + 1} 轮`;
+
+    function createNewRound() {
+      const cur = state.rounds[currentRoundIndex];
+      let passed = (cur.candidates || []).filter(c => c.status === 'pass');
+      const total = cur.candidates || [];
+
+      if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
+      if (passed.length === total.length) { alert("⚠️ 全员晋级，无人淘汰！"); return; }
+
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+      if (isModeEnabled && selectedMode === 'mode1' && passed.length < 3) {
+        alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passed.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
+        return;
+      }
+
+      document.getElementById('advancePassedCount').innerText = passed.length;
+      document.getElementById('advanceModal').classList.remove('hidden');
     }
+
+    function closeAdvanceModal() {
+      document.getElementById('advanceModal').classList.add('hidden');
+    }
+
+    function executeAdvanceRound(modeType) {
+      closeAdvanceModal();
+
+      const cur = state.rounds[currentRoundIndex];
+      let passed = (cur.candidates || []).filter(c => c.status === 'pass');
+      const pending = (cur.candidates || []).filter(c => c.status === 'pending');
+      const total = cur.candidates || [];
+
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+      const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+
+      if (modeType === 'auto' && cur.isConsolationStage && passed.length === N && pending.length === 3) {
+         pending.forEach(p => {
+            p.status = 'pass';
+            p.rankTitle = "🏆 冠亚季候选";
+            p.rankKey = "rankPodiumCandidate";
+         });
+         passed = (cur.candidates || []).filter(c => c.status === 'pass');
+      }
+
+      cur.candidates.forEach(c => {
+        if (c.status !== 'pass') { c.status = 'out'; if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex; }
+      });
+
+      const isMode2 = isModeEnabled && selectedMode === 'mode2';
+      const nextC = passed.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+
+      let label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
+      let isConsNext = false;
+
+      if (modeType === 'consolation') {
+        label = `🎁 安慰奖遴选阶段 (${passed.length}人)`;
+        isConsNext = true;
+      } 
+      else if (modeType === 'final') {
+        if (passed.length === 3) label = "🏆 冠亚季争夺战 (剩3人)";
+        else if (passed.length === 2) label = "👑 冠亚军终极决战 (2选1)";
+        else label = `👑 终极决战 (${passed.length}人)`;
+      }
+      else if (modeType === 'normal') {
+        label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
+      }
+      else {
+        if (isMode2 && cur.isConsolationStage) {
+          label = "🏆 冠亚季争夺战";
+        } else if (isMode2 && passed.length === N + 3) {
+          label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; 
+          isConsNext = true; 
+        } else if (!cur.isConsolationStage && passed.length === 3) {
+          label = "🏆 冠亚季争夺战 (剩3人)";
+        } else if (!cur.isConsolationStage && passed.length === 2) {
+          label = "👑 冠亚军终极决战 (2选1)";
+        }
+      }
+
+      state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isConsNext, candidates: nextC });
+      currentRoundIndex = state.rounds.length - 1;
+      
+      activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
+      state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+      state.passHistory = []; 
+      
+      state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+      
+      saveState(); renderRoundTabs();
+      alert(`🎉 已开启【${label}】！`);
+    }
+
     function renderRoundTabs() {
       const container = document.getElementById('roundTabsContainer');
       if (!container) return;
       container.innerHTML = state.rounds.map((r, idx) => {
-        const isActive = (idx === currentRoundIndex);
-        const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
-        const passedCount = (r.candidates || []).filter(c => c.status === 'pass').length;
-        return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">${escapeHtml(getRoundTitle(idx))} (${passedCount})</button>`;
+        const activeClass = (idx === currentRoundIndex) ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+        return `<button onclick="switchRound(${idx})" class="px-3 py-1 rounded-lg text-xs border transition ${activeClass} whitespace-nowrap">${escapeHtml(getRoundTitle(idx))}</button>`;
       }).join('');
     }
     function switchRound(idx) {
       currentRoundIndex = idx;
-      userManuallySelectedRound = true;
-      renderRoundTabs(); renderPublicView(); updateStats();
-      updateWinnerBannerUI();
+      if (state.drawRoundIndex === idx && state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
+      else if (state.activeGroupIds && state.activeGroupIds.length > 0 && state.pkStage !== 'voting') activeGroup4Ids = [...state.activeGroupIds];
+      else activeGroup4Ids = [];
+      renderRoundTabs(); renderAdminView(); updateStats();
     }
-    function setLanguage(lang) { renderRoundTabs(); renderPublicView(); updateStats(); }
+    
+    function saveState() {
+      localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
+      db.ref('tournament_state').set(state);
+      updateStats(); renderAdminView(); checkAndTogglePdfExportBtn(); updateRefreshBtnState();
+    }
+    
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
       let passedCount = candidates.filter(c => c.status === 'pass').length;
       if (state.passHistory) passedCount = Math.max(passedCount, state.passHistory.filter(h => h.roundIndex === currentRoundIndex).length);
-      let totalOutCount = 0;
-      (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
       document.getElementById('statTotalCandidates').innerText = candidates.length;
       document.getElementById('statPassedCount').innerText = passedCount;
       document.getElementById('statPendingCount').innerText = candidates.filter(c => c.status === 'pending').length;
+      let totalOutCount = 0;
+      (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
       document.getElementById('statOutCount').innerText = totalOutCount;
-      document.getElementById('pendingNumberYellow').innerText = candidates.filter(c => c.status === 'pending').length;
-      document.getElementById('passedBadgeCount').innerText = passedCount;
     }
+    
+    function renderAdminView() {
+      renderActiveGroupUI();
+      const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
+      const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      let list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
-    function getCardHtml(c, idx, isRevealed) {
-      const realNum = c.displayNumber;
-      const hasNumber = realNum !== null && realNum !== undefined;
-      const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+      const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
+      const isMode1ThreeLeft = isModeEnabled && activeRound.candidates.length === 3;
+      const isMode1TwoLeft = isModeEnabled && activeRound.candidates.length === 2;
+      const banner = document.getElementById('specialRoundBanner');
+      const bannerTitle = document.getElementById('specialRoundBannerTitle');
+      const bannerSub = document.getElementById('specialRoundBannerSub');
+      if (isConsolationStage) {
+        const pickedCount = activeRound.candidates.filter(c => c.status === 'pass').length;
+        const totalTarget = state.modeConfig.mode2ConsolationCount || 10;
+        banner.classList.remove('hidden');
+        bannerTitle.innerText = `🎁【安慰奖遴选阶段】！请挑选 ${totalTarget - pickedCount} 位安慰奖得主 (已选 ${pickedCount}/${totalTarget} 人)`;
+        bannerSub.innerText = `选满 ${totalTarget} 位安慰奖后，系统将自动将余下的 3 人推进至【冠亚季争夺战】！`;
+      } else if (isMode1ThreeLeft) {
+        banner.classList.remove('hidden');
+        bannerTitle.innerText = `🔥 当前本轮仅剩 3 人角逐！请点击下方【🥉 设为季军】按钮选择季军得主`;
+        bannerSub.innerText = `选出季军后，系统将自动将余下 2 人推进至【👑 冠亚军决战】！`;
+      } else if (isMode1TwoLeft) {
+        banner.classList.remove('hidden');
+        bannerTitle.innerText = `👑【冠亚军终极决战 (2选1)】！请点击选出冠军`;
+        bannerSub.innerText = `点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】！`;
+      } else { banner.classList.add('hidden'); }
 
-      let header = `<span class="text-sm font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>`;
-      let border = "border-amber-500/50 bg-slate-900";
-
-      if (isRevealed && hasNumber) {
-        if (isWinner) {
-          header = `<span class="text-sm font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
-          border = "border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-105 z-10 transition-all duration-700 ease-out";
-        } else {
-          header = `<span class="text-sm font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
-          border = "border-2 border-slate-700 bg-slate-900/50 opacity-60 transition-all duration-300";
-        }
-      }
-
-      // 仅当乱码状态开启时，显示乱码
-      const isScrambling = scramblingMemberIds.has(String(c.id));
-      const displayName = isScrambling ? '??' : escapeHtml(c.name);
-      const displayOrder = isScrambling ? '###' : escapeHtml(c.orderNo || '');
-      const nameClass = isScrambling ? 'scramble-text' : '';
-      const orderClass = isScrambling ? 'scramble-text' : '';
-
-      return `
-        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
-          <div class="mb-2">${header}</div>
-          <div class="pk-card-name font-bold text-amber-300 text-base truncate w-full text-center ${nameClass}">${displayName}</div>
-          <div class="pk-card-order text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1 ${orderClass}">${displayOrder}</div>
-        </div>
-      `;
-    }
-
-    function getPlaceholderCardsHtml() {
-      const scramblePool = ['??', '##', '¥¥', '**', '××', '？？'];
-      const orderPool = ['??', '###', '¥¥', '****', '××××', '？？？'];
-      const html = [];
-      for (let i = 0; i < 4; i++) {
-        const nameTxt = scramblePool[i % scramblePool.length];
-        const orderTxt = orderPool[i % orderPool.length];
-        html.push(`
-          <div class="pk-card-placeholder relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 border-amber-500/30 bg-slate-900/60 overflow-hidden shadow-lg flex flex-col justify-center items-center p-3">
-            <div class="mb-2">
-              <span class="text-sm font-black bg-amber-500/60 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>
-            </div>
-            <div class="font-bold text-amber-300/60 text-base truncate w-full text-center scramble-text">${nameTxt}</div>
-            <div class="text-[11px] text-slate-500 font-mono truncate w-full text-center mt-1 scramble-text">${orderTxt}</div>
-          </div>
-        `);
-      }
-      return html;
-    }
-
-    function renderPublicView() {
-      let activeRound = { candidates: [] };
-      if (state.rounds && state.rounds.length > 0) {
-        if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
-        if (currentRoundIndex < 0) currentRoundIndex = 0;
-        activeRound = state.rounds[currentRoundIndex];
-      }
-      const searchEl = document.getElementById('searchInput');
-      const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
-      const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
-
-      const mainLayout = document.getElementById('main-layout-grid');
-      const rightPanel = document.getElementById('rightPassedPanel');
-      if (isPkPanelCollapsed) {
-        mainLayout.classList.remove('active');
-        mainLayout.classList.add('collapsed');
-        if (rightPanel) rightPanel.classList.add('passed-zoom');
-      } else {
-        mainLayout.classList.add('active');
-        mainLayout.classList.remove('collapsed');
-        if (rightPanel) rightPanel.classList.remove('passed-zoom');
-      }
-
-      const hasActiveGroup = state.activeGroupIds && state.activeGroupIds.length > 0;
-
-      const blindIndicator = document.getElementById('blindDrawingIndicator');
-      const countdownIndicator = document.getElementById('countdownIndicator');
-      const nextRoundHint = document.getElementById('nextRoundHint');
-      
-      if (blindIndicator) blindIndicator.classList.add('hidden');
-      if (countdownIndicator) countdownIndicator.classList.add('hidden');
-      if (nextRoundHint) nextRoundHint.classList.add('hidden');
-
-      const areaL = document.getElementById('pk-area-left');
-      const areaR = document.getElementById('pk-area-right');
-
-      if (hasActiveGroup) {
-        const publicPollBadge = document.getElementById('publicPollBadge');
-        const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-        const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-        
-        if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
-        if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-        
-        if (isAdminUnlocked && state.pkStage !== 'revealed') publicRevealButtonBox.classList.remove('hidden');
-        else publicRevealButtonBox.classList.add('hidden');
-
-        // 仅当状态为 revealed 时才显示滚动恭喜提示
-        if (state.pkStage === 'revealed') {
-          if (nextRoundHint) nextRoundHint.classList.remove('hidden');
-        } else if (state.pkStage === 'voting') {
-          // 等待倒计时或乱码
-          if (countdownIndicator && !countdownIndicator.classList.contains('hidden')) {
-             // 倒计时中
-          } else if (blindIndicator && !blindIndicator.classList.contains('hidden')) {
-             // 乱码中
-          }
-        }
-
-        const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
-        const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
-        let activeMembers;
-        if (state.activeGroupMembers && state.activeGroupMembers.length > 0) {
-          activeMembers = state.activeGroupMembers.map(m => {
-            const c = (drawRound.candidates || []).find(x => String(x.id) === String(m.id));
-            return c ? { ...c, displayNumber: m.displayNumber } : null;
-          }).filter(Boolean);
-        } else {
-          activeMembers = state.activeGroupIds.map((id) => {
-            const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
-            return c ? { ...c, displayNumber: null } : null;
-          }).filter(Boolean);
-        }
-
-        areaL.innerHTML = ''; areaR.innerHTML = '';
-
-        activeMembers.forEach((c, idx) => {
-          const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          if (window.innerWidth < 1024 || idx % 2 === 0) {
-            areaL.innerHTML += cardHtml;
-          } else {
-            areaR.innerHTML += cardHtml;
-          }
-        });
-
-      } else {
-        const placeholders = getPlaceholderCardsHtml();
-        if (window.innerWidth < 1024) {
-          areaL.innerHTML = placeholders.join('');
-          areaR.innerHTML = '';
-        } else {
-          areaL.innerHTML = placeholders[0] + placeholders[2];
-          areaR.innerHTML = placeholders[1] + placeholders[3];
-        }
-
-        const publicPollBadge = document.getElementById('publicPollBadge');
-        const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-        if (publicPollBadge) publicPollBadge.innerText = `POLL #-`;
-        if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = `#?`;
-        const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-        if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
-      }
-
+      const passedContainer = document.getElementById('passedListContainer');
       let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       passedList.sort((a, b) => {
@@ -1305,64 +1128,53 @@
         const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
         return numA - numB;
       });
-      const passedContainer = document.getElementById('passedListContainer');
-      if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
-      else passedContainer.innerHTML = passedList.map(c => {
+      passedContainer.innerHTML = passedList.length === 0 ? `<span class="text-xs text-slate-500 italic">本轮暂无胜出买家...</span>` : passedList.map(c => {
+        const rankText = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] ml-1">${c.rankTitle}</span>` : '';
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
-        const highlightClass = isHighlight ? 'passed-highlight' : '';
-        
-        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + folderTabHtml +
-          '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
-          '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+        return `<div class="relative px-2.5 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-1.5 text-xs shadow-sm mt-1.5">` + folderTabHtml +
+          '<span class="font-bold text-emerald-300 mt-0.5">' + escapeHtml(c.name) + '</span>' +
+          '<span class="text-slate-400 font-mono text-[10px] mt-0.5">' + escapeHtml(c.orderNo || '无订单号') + '</span>' + rankText +
+          '<button onclick="undoEliminatedCandidate(\'' + c.id + '\')" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-0.5 rounded mt-0.5">✕</button>' +
         '</div>';
       }).join('');
 
-      const cPanel = document.getElementById('publicConsolationWinnerPanel');
-      const cList = document.getElementById('publicConsolationListContainer');
-      const cBadge = document.getElementById('publicConsolationCountBadge');
-      if (cPanel && cList && cBadge) {
-        const cons = [];
-        (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => {
-          if (c.rankKey === 'rankConsolation' || c.rankTitle === '🎁 安慰奖') cons.push(c);
-        }));
-        if (cons.length > 0) {
-          cPanel.classList.remove('hidden');
-          cBadge.innerText = cons.length;
-          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(c.orderNo || '无订单号')}</span></div>`).join('');
-        } else {
-          cPanel.classList.add('hidden');
-        }
-      }
-
-      const pendingContainer = document.getElementById('pendingGridContainer');
+      const container = document.getElementById('adminViewContainer');
       const pendingList = list.filter(c => c.status === 'pending');
-      if (!activeRound.candidates || activeRound.candidates.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-3xl mb-2">📋</p><p class="text-xs">本轮抽奖名单同步中，请关注直播间...</p></div>`;
-      } else if (pendingList.length === 0) {
-        pendingContainer.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-2xl mb-2">🎉</p><p class="text-xs">本轮全员判定完毕</p></div>`;
+      if (pendingList.length === 0) {
+        container.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-2xl mb-1">🎉</p><p class="text-xs">本轮选拔已完成！</p></div>`;
       } else {
-        let cardsHtml = '';
-        pendingList.forEach((c, index) => {
-          let extraStyle = 'border-slate-700 bg-slate-800/80';
-          let pkBadge = '';
-          if (state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id))) {
-            extraStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
-            pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
+        const cardsHtml = pendingList.map((c, index) => {
+          let borderStyle = 'border-slate-700 bg-slate-800';
+          let statusBadge = '';
+          if (activeGroup4Ids.includes(String(c.id))) {
+            borderStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500 text-slate-950 font-black">🔥 PK中</span>`;
           }
+          let passBtnLabel = '🏆 晋级';
+          let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
+          if (isConsolationStage) { passBtnLabel = '🎁 安慰奖'; passBtnClass = "bg-emerald-600 text-white font-bold hover:bg-emerald-500"; }
+          else if (isMode1ThreeLeft) { passBtnLabel = '🥉 季军'; passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce"; }
+          else if (isMode1TwoLeft) { passBtnLabel = '👑 冠军'; passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse"; }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-          cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` + folderTabHtml +
+          return `<div class="relative p-2 rounded-lg border ${borderStyle} flex flex-col justify-between shadow transition min-w-0 mt-1.5">` + folderTabHtml +
             '<div>' +
-              '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+              '<div class="flex justify-between items-center mb-0.5"><span class="text-[9px] font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
+              '<div class="font-bold text-slate-100 text-sm truncate mt-0.5">' + escapeHtml(c.name) + '</div>' +
+              '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+            '</div>' +
+            '<div class="mt-1.5 pt-1 border-t border-slate-700/60 flex space-x-1">' +
+              `<button onclick="changeStatus('${c.id}', 'pass')" class="flex-1 py-0.5 text-[10px] rounded font-bold transition ${passBtnClass}">${passBtnLabel}</button>` +
+              `<button onclick="changeStatus('${c.id}', 'out')" class="px-1.5 py-0.5 text-[10px] rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">❌</button>` +
             '</div>' +
           '</div>';
-        });
-        pendingContainer.innerHTML = '<div class="flex flex-wrap gap-2.5 sm:gap-3">' + cardsHtml + '</div>';
+        }).join('');
+        container.innerHTML = '<div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">' + cardsHtml + '</div>';
       }
-
-      const outContainer = document.getElementById('outListContainer');
+      renderAdminOutList(search);
+    }
+    
+    function renderAdminOutList(search) {
+      const outContainer = document.getElementById('adminOutListContainer');
       let allOutCandidates = [];
       (state.rounds || []).forEach((r, rIdx) => {
         (r.candidates || []).forEach(c => {
@@ -1376,30 +1188,144 @@
         });
       });
       document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
-      if (allOutCandidates.length === 0) {
-        outContainer.innerHTML = `<p class="text-[11px] text-slate-600 text-center py-6 italic">暂无淘汰人员</p>`;
-      } else {
-        const grouped = {};
-        allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
-        const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
-        outContainer.innerHTML = sortedKeys.map(rIdxKey => {
-          const rNum = Number(rIdxKey) + 1;
-          const candidatesInGroup = grouped[rIdxKey];
-          const groupRowsHtml = candidatesInGroup.map(c => `
-            <div class="out-card bg-slate-900/80 border border-slate-800 rounded-md truncate">
-              <span class="font-bold text-slate-300 text-[11px] truncate block">${escapeHtml(c.name)}</span>
-            </div>`).join('');
-          return `<div class="bg-slate-900/40 p-1.5 rounded-lg border border-slate-800">
-            <div class="text-[9px] font-bold text-rose-400/90 mb-1 border-b border-slate-800 pb-0.5 flex justify-between items-center">
-              <span>❌ 第 ${rNum} 轮</span>
-              <span class="text-[8px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
-            </div>
-            <div class="space-y-0.5">${groupRowsHtml}</div>
-          </div>`;
-        }).join('');
-      }
+      if (allOutCandidates.length === 0) { outContainer.innerHTML = `<p class="text-[10px] text-slate-600 text-center py-4 italic">暂无淘汰人员</p>`; return; }
 
-      updateWinnerBannerUI();
+      const grouped = {};
+      allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
+      const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
+
+      outContainer.innerHTML = sortedKeys.map(rIdxKey => {
+        const rNum = Number(rIdxKey) + 1;
+        const candidatesInGroup = grouped[rIdxKey];
+        const rowsHtml = candidatesInGroup.map(c => `
+          <div class="out-card flex items-center justify-between gap-1 bg-slate-900/60 border border-slate-800 rounded-md px-1.5 py-1 mt-0.5">
+            <span class="font-bold text-slate-300 text-[10px] truncate flex-1">${escapeHtml(c.name)}</span>
+            <button onclick="undoEliminatedCandidate('${c.id}')" 
+                    class="undo-btn text-rose-400 hover:text-rose-300 text-[11px] font-black px-1 rounded hover:bg-rose-900/30 transition" 
+                    title="撤回至当前待PK池">✕</button>
+          </div>
+        `).join('');
+
+        return `<div class="bg-slate-900/30 p-1.5 rounded-lg border border-slate-800">
+          <div class="text-[9px] font-bold text-rose-400/90 mb-1 border-b border-slate-800 pb-0.5 flex justify-between items-center">
+            <span>❌ 第 ${rNum} 轮淘汰</span>
+            <span class="text-[8px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
+          </div>
+          <div class="space-y-0.5">${rowsHtml}</div>
+        </div>`;
+      }).join('');
+    }
+    
+    function resetRounds() {
+      if (confirm("⚠️ 确认重置所有数据？\n这将同时清除后台和前台的所有名单并自动重新导入！")) {
+        db.ref('tournament_state').transaction((currentData) => {
+          return {
+            customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
+            isPublicVisible: true, pollCount: 0, currentPollNumber: 0, pkStage: 'voting', triggerNumber: null,
+            drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false,
+            pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
+            rounds: [{ roundName: "第 1 轮", candidates: [] }], publicAdminActive: false
+          };
+        }, (error) => {
+          if (!error) {
+          currentRoundIndex = 0; activeGroup4Ids = [];
+          fetchGoogleSheetsData(false);
+          } else {
+            alert("❌ 重置失败，请重试");
+          }
+        });
+      }
+    }
+
+    function checkAndTogglePdfExportBtn() {
+      const pdfBtn = document.getElementById('exportPdfBtn');
+      if (!pdfBtn) return;
+      let hasChampion = false;
+      (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => {
+        if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") hasChampion = true;
+      }));
+      if (hasChampion) pdfBtn.classList.remove('hidden'); else pdfBtn.classList.add('hidden');
+    }
+    
+    async function exportResultsToPDF() {
+      let champion=null, runnerUp=null, thirdPlace=null, consolations=[];
+      (state.rounds||[]).forEach(r => (r.candidates||[]).forEach(c => {
+        if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
+        if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
+        if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
+        if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
+      }));
+      const pdfCfg = state.pdfConfig || {};
+      const pdfTitle1 = pdfCfg.title || 'MOCHIISHOP OFFICIAL DRAW';
+      const pdfTitle2 = pdfCfg.title2 || 'OCTOBER FINAL WINNER REPORT';
+      const pdfSubTitle = pdfCfg.subTitle || 'Shopee Live Monthly Event Official Certificate';
+      const pdfFooter = pdfCfg.footer || '© Mochiishop Official Live Tournament System. Verified Result.';
+      const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+      const container = document.createElement('div');
+      container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '0';
+      container.style.width = '794px'; container.style.backgroundColor = '#ffffff'; container.style.zIndex = '999999';
+      container.style.padding = '36px'; container.style.boxSizing = 'border-box';
+      container.style.fontFamily = "Arial, 'Helvetica Neue', Helvetica, sans-serif";
+      container.innerHTML = `
+        <div style="border:3px double #d97706;border-radius:12px;padding:30px;background:#fff;box-sizing:border-box;width:100%;">
+          <div style="height:6px;background:linear-gradient(90deg,#b45309 0%,#f59e0b 50%,#b45309 100%);margin-bottom:24px;border-radius:3px;"></div>
+          <div style="text-align:center;margin-bottom:26px;border-bottom:1.5px solid #f1f5f9;padding-bottom:18px;">
+            <div style="font-size:26px;font-weight:900;color:#92400e;text-transform:uppercase;letter-spacing:1px;">${escapeHtml(pdfTitle1)}</div>
+            ${pdfTitle2 ? `<div style="font-size:18px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:0.8px;margin-top:6px;">${escapeHtml(pdfTitle2)}</div>` : ''}
+            <div style="font-size:12px;color:#64748b;margin-top:8px;font-weight:500;">${escapeHtml(pdfSubTitle)}</div>
+            <div style="display:inline-block;background-color:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:4px 14px;border-radius:12px;margin-top:10px;font-family:monospace;">ISSUED DATE: ${todayStr}</div>
+          </div>
+          <div style="margin-bottom:26px;">
+            <div style="font-size:14px;font-weight:800;color:#1e293b;border-left:5px solid #d97706;padding-left:10px;margin-bottom:12px;text-transform:uppercase;">👑 Official Podium Winners</div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+              <thead><tr style="background-color:#fef3c7;color:#78350f;font-weight:800;font-size:12px;text-transform:uppercase;">
+                <th style="padding:12px 16px;border-bottom:2px solid #fde68a;">Rank / Title</th>
+                <th style="padding:12px 16px;border-bottom:2px solid #fde68a;">Winner Name</th>
+                <th style="padding:12px 16px;border-bottom:2px solid #fde68a;">Order Number</th>
+              </tr></thead>
+              <tbody>
+                <tr style="background-color:#fffbeb;border-bottom:1px solid #fef3c7;">
+                  <td style="padding:14px 16px;font-weight:900;color:#b45309;">👑 CHAMPION</td>
+                  <td style="padding:14px 16px;font-weight:900;color:#78350f;">${champion ? escapeHtml(champion.name) : 'N/A'}</td>
+                  <td style="padding:14px 16px;font-family:monospace;font-weight:700;color:#b45309;">${champion ? escapeHtml(champion.orderNo) : '-'}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:12px 16px;font-weight:800;color:#475569;">🥈 RUNNER-UP</td>
+                  <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</td>
+                  <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${runnerUp ? escapeHtml(runnerUp.orderNo) : '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;font-weight:800;color:#b45309;">🥉 3RD PLACE</td>
+                  <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</td>
+                  <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${thirdPlace ? escapeHtml(thirdPlace.orderNo) : '-'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ${consolations.length > 0 ? `
+          <div style="margin-bottom:26px;">
+            <div style="font-size:14px;font-weight:800;color:#1e293b;border-left:5px solid #10b981;padding-left:10px;margin-bottom:12px;text-transform:uppercase;">🎁 Consolation Prize Winners (${consolations.length})</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12px;">
+              ${consolations.map((c, i) => `<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;"><div><span style="font-weight:800;color:#166534;font-size:11px;margin-right:8px;background:#dcfce7;padding:2px 6px;border-radius:4px;">#${i+1}</span><span style="font-weight:700;color:#065f46;font-size:13px;">${escapeHtml(c.name)}</span></div><span style="color:#64748b;font-family:monospace;font-size:11px;">${escapeHtml(c.orderNo || '-')}</span></div>`).join('')}
+            </div>
+          </div>` : ''}
+          <div style="border-top:1px solid #e2e8f0;padding-top:14px;margin-top:20px;font-size:10px;color:#94a3b8;text-align:center;"><p style="margin:0;">${escapeHtml(pdfFooter)}</p></div>
+        </div>`;
+      document.body.appendChild(container);
+      try {
+        const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+        document.body.removeChild(container);
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Mochiishop_Tournament_Results_${todayStr}.pdf`);
+      } catch (err) {
+        if (document.body.contains(container)) document.body.removeChild(container);
+        alert("❌ 生成 PDF 失败，请重新点击导出！");
+      }
     }
 
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
