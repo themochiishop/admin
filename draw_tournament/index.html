@@ -358,7 +358,6 @@
           </div>
         `;
       } else if (eventData.winnerNamesKey === 'pkHit') {
-        // 盲抽 PK 命中弹窗
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r from-emerald-500/20 via-emerald-400/30 to-emerald-500/20 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400 text-center shadow-lg transform scale-105">
             <span class="text-xs sm:text-base font-black text-emerald-300 uppercase tracking-widest block mb-0.5 sm:mb-1">🎯 PK 命中 / WINNER</span>
@@ -727,16 +726,25 @@
         return;
       }
 
-      const activeCards = document.querySelectorAll('.pk-card');
+      // ✅ 用 data-member-id 来精确匹配卡片与成员，避免 DOM 顺序与 activeGroupMembers 顺序不一致
+      const activeCards = Array.from(document.querySelectorAll('.pk-card'));
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
-      // 重要：将号码与 activeGroupMembers 中的 id 绑定
-      const tempMembers = [];
-      activeCards.forEach((cardEl, idx) => tempMembers.push({ id: state.activeGroupMembers[idx].id, displayNumber: nums[idx] }));
+
+      // 建立 卡片 index -> memberId 映射（用 data-member-id）
+      const cardMembers = activeCards.map(cardEl => {
+        return { id: String(cardEl.dataset.memberId), displayNumber: null };
+      });
+
+      // 按卡片顺序分配号码
+      cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
+
       let winnerIndex = -1;
-      tempMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
+      cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
+      const winnerMemberId = cardMembers[winnerIndex].id;
+
       let currentIndex = 0, speed = 80, iterations = 0;
       const maxFastIterations = 15;
       
@@ -750,28 +758,31 @@
           setTimeout(() => {
             db.ref('tournament_state').transaction((latestState) => {
               if (!latestState) return latestState;
-              latestState.activeGroupMembers = latestState.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
+              // 用 memberId 映射号码，保证和 activeGroupMembers 顺序对齐
+              const numMap = {};
+              cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
+              latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
+                const nid = String(m.id);
+                return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
+              });
               latestState.pkStage = 'revealed';
               return latestState;
             }, (error, committed, snapshot) => {
               if (committed) {
                 state = snapshot.val();
-                // 修复：严格使用 tempMembers 中与票选号匹配的成员 id 来查找名字
-                const winnerMember = tempMembers.find(m => m.displayNumber === state.triggerNumber);
-                if (winnerMember) {
-                  const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
-                  const round = state.rounds[roundIdx] || {};
-                  const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                  const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
-                  const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                  __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
-                  showWinnerPopup({
-                    winnerNamesKey: 'pkHit',
-                    winnerName: winnerName,
-                    orderNo: winnerOrderNo,
-                    triggerNumber: state.triggerNumber
-                  }, 5);
-                }
+                // ✅ 使用 winnerMemberId 精确查找中奖者
+                const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
+                const round = state.rounds[roundIdx] || {};
+                const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
+                const winnerName = cand ? cand.name : '幸运买家';
+                const winnerOrderNo = cand ? cand.orderNo : '';
+                __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
+                showWinnerPopup({
+                  winnerNamesKey: 'pkHit',
+                  winnerName: winnerName,
+                  orderNo: winnerOrderNo,
+                  triggerNumber: state.triggerNumber
+                }, 5);
                 setTimeout(() => {
                   db.ref('tournament_state').transaction((finalState) => {
                     if (!finalState) return finalState;
@@ -881,7 +892,7 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-    // PK 卡片：名字和 #？ 放大一号（text-sm -> text-base，text-xs -> text-sm）
+    // ✅ PK 卡片加上 data-member-id，便于精确匹配中奖者
     function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
@@ -901,7 +912,7 @@
       }
 
       return `
-        <div id="pk-card-${idx}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
+        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
           <div class="font-bold text-amber-300 text-base truncate w-full text-center">${escapeHtml(c.name)}</div>
           <div class="text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1">${escapeHtml(c.orderNo)}</div>
@@ -924,7 +935,6 @@
       const mainLayout = document.getElementById('main-layout-grid');
       
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
-        // 🔥 有 PK 组时：显示出来，变成 7:3 分栏
         publicGroupContainer.classList.remove('hidden');
         publicGroupContainer.classList.add('flex');
         mainLayout.classList.add('active');
@@ -960,7 +970,6 @@
 
         activeMembers.forEach((c, idx) => {
           const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          // 手机/平板所有卡片塞左边（上方平铺），大电脑端左右交替
           if (window.innerWidth < 1024 || idx % 2 === 0) {
             areaL.innerHTML += cardHtml;
           } else {
@@ -969,13 +978,11 @@
         });
 
       } else {
-        // 🔥 无 PK 组时：隐藏 PK 区域，恢复单列铺满
         publicGroupContainer.classList.add('hidden');
         publicGroupContainer.classList.remove('flex');
         mainLayout.classList.remove('active');
       }
 
-      // 已晋级名单：名字字号放大两号（text-xs -> text-base / text-sm -> text-lg）
       let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       passedList.sort((a, b) => {
@@ -987,7 +994,6 @@
       if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       else passedContainer.innerHTML = passedList.map(c => {
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        // 名字使用 text-base（放大两号），订单号使用 text-xs
         return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5">` + folderTabHtml +
           '<span class="font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
           '<span class="text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
@@ -1061,7 +1067,6 @@
         outContainer.innerHTML = sortedKeys.map(rIdxKey => {
           const rNum = Number(rIdxKey) + 1;
           const candidatesInGroup = grouped[rIdxKey];
-          // 收窄后，每个名字一行，更加紧凑
           const groupRowsHtml = candidatesInGroup.map(c => `
             <div class="out-card bg-slate-900/80 border border-slate-800 rounded-md truncate">
               <span class="font-bold text-slate-300 text-[11px] truncate block">${escapeHtml(c.name)}</span>
@@ -1076,7 +1081,7 @@
         }).join('');
       }
 
-      updateWinnerBannerUI();   // 函数最后无条件调用
+      updateWinnerBannerUI();
     }
 
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
