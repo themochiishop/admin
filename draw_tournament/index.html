@@ -904,18 +904,23 @@
           }).filter(Boolean);
         }
 
-        areaL.innerHTML = ''; areaR.innerHTML = '';
+              areaL.innerHTML = ''; areaR.innerHTML = '';
 
         activeMembers.forEach((c, idx) => {
           const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          // 交替分配左右
-          if (idx % 2 === 0) {
+          
+          // 手机端（屏幕宽度 <= 768）把所有卡片都塞进上方容器平铺
+          if (window.innerWidth <= 768) {
             areaL.innerHTML += cardHtml;
           } else {
-            areaR.innerHTML += cardHtml;
+            // 电脑端交替左右
+            if (idx % 2 === 0) {
+              areaL.innerHTML += cardHtml;
+            } else {
+              areaR.innerHTML += cardHtml;
+            }
           }
         });
-
       } else {
         publicGroupContainer.classList.add('hidden');
       }
