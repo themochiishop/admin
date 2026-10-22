@@ -1022,7 +1022,7 @@
                 return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
               });
               latestState.pkStage = 'revealed';
-              latestState.isDrawingScramble = false;
+              latestState.isDrawingScramble = false; // 🌟 核心：开奖后关闭乱码遮盖
               return latestState;
             }, (error, committed, snapshot) => {
               if (committed) {
@@ -1159,8 +1159,8 @@
         }
       }
 
-      // 仅当乱码状态开启时，显示乱码
-      const isScrambling = scramblingMemberIds.has(String(c.id));
+      // 🌟 核心：如果 isDrawingScramble 开启，强制显示乱码
+      const isScrambling = state.isDrawingScramble || scramblingMemberIds.has(String(c.id));
       const displayName = isScrambling ? '??' : escapeHtml(c.name);
       const displayOrder = isScrambling ? '###' : escapeHtml(c.orderNo || '');
       const nameClass = isScrambling ? 'scramble-text' : '';
