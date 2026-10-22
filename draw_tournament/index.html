@@ -658,7 +658,7 @@
         return;
       }
 
-      const activeCards = document.querySelectorAll('#pk-area-left-top > div, #pk-area-right-top > div, #pk-area-left-bottom > div, #pk-area-right-bottom > div, #publicActiveGroupGrid > div');
+      const activeCards = document.querySelectorAll('#pk-area-left > div, #pk-area-right > div, #publicActiveGroupGrid > div');
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
