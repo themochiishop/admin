@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8"> 
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 抽奖实时晋级大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -47,6 +47,15 @@
     }
     .blind-drawing-text {
       animation: blindDrawPulse 1s ease-in-out infinite;
+    }
+
+    @keyframes countdownPop {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-countdown {
+      animation: countdownPop 0.5s ease-out forwards;
     }
 
     /* 电脑端 7:3 自适应网格 */
@@ -97,7 +106,7 @@
       transition: all 0.4s ease;
     }
     .passed-highlight .passed-card-name {
-      color: #6ee7b7 !important; /* 更亮的绿色 */
+      color: #6ee7b7 !important;
       text-shadow: 0 0 10px rgba(110, 231, 183, 0.8);
     }
     .passed-highlight .passed-card-order {
@@ -257,10 +266,29 @@
 
             <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              <!-- 盲抽中 提示 -->
-              <div id="blindDrawingIndicator" class="hidden mb-3 text-center">
-                <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
+              
+              <!-- 状态提示区：盲抽中 / 倒计时 / 新一轮即将开始 -->
+              <div class="mb-3 text-center min-h-[40px] flex items-center justify-center">
+                <!-- 盲抽中 提示 -->
+                <div id="blindDrawingIndicator" class="hidden">
+                  <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
+                </div>
+                <!-- 倒计时 提示 -->
+                <div id="countdownIndicator" class="hidden flex flex-col items-center justify-center">
+                  <span class="text-xs sm:text-sm text-amber-300 font-bold mb-1">盲抽即将在 <span id="countdownNum" class="text-2xl sm:text-3xl text-amber-400 mx-1">5</span> 秒后开始</span>
+                  <!-- 进度的视觉展示，可选 -->
+                  <div class="flex space-x-1">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.2s;"></span>
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.4s;"></span>
+                  </div>
+                </div>
+                <!-- 新一轮即将开始 提示 -->
+                <div id="nextRoundHint" class="hidden">
+                  <span class="text-sm sm:text-base font-bold text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
+                </div>
               </div>
+
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-7 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
                 <span id="centerTriggerNumberBox" class="text-4xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
@@ -378,16 +406,19 @@
     // 乱码状态管理
     let scramblingMemberIds = new Set();
     let scrambleIntervalId = null;
-
+    
+    // 倒计时状态
+    let countdownTimerId = null;
+    let countdownTargetTimestamp = 0;
+    
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
       drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false,
-      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true },
+      modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true, drawCountdownSeconds: 5 },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
     let __lastPkWinnerPopupKey = '';
-    let __lastClearedPollNumber = 0; // 记录已经清理完毕的 POLL，避免重复覆盖高亮
 
     let __popupTimer = null;
     function showWinnerPopup(eventData, durationSeconds) {
@@ -699,6 +730,7 @@
           if (!state.passHistory) state.passHistory = [];
           if (!state.modeConfig) state.modeConfig = {};
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
+          if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           
           if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
             window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
@@ -757,9 +789,49 @@
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          startScrambleAnimation();
+          // 当有新的 activeGroupIds 且状态为 voting 时，触发倒计时（如果是被重置的，也会触发）
+          startCountdownThenScramble();
         }
       }
+    }
+
+    // 倒计时逻辑
+    function startCountdownThenScramble() {
+      const countdownIndicator = document.getElementById('countdownIndicator');
+      const countdownNum = document.getElementById('countdownNum');
+      const blindIndicator = document.getElementById('blindDrawingIndicator');
+      
+      if (countdownTimerId) clearInterval(countdownTimerId);
+      
+      // 获取后台设置的秒数
+      const totalSec = state.modeConfig.drawCountdownSeconds || 5;
+      let timeLeft = totalSec;
+      
+      if (countdownNum) countdownNum.innerText = timeLeft;
+      if (countdownIndicator) countdownIndicator.classList.remove('hidden');
+      if (blindIndicator) blindIndicator.classList.add('hidden');
+      
+      // 强制刷新UI显示倒计时
+      renderPublicView();
+      
+      countdownTimerId = setInterval(() => {
+        timeLeft--;
+        if (countdownNum) {
+          countdownNum.innerText = timeLeft > 0 ? timeLeft : 0;
+          // 重新触发动画
+          countdownNum.classList.remove('animate-countdown');
+          void countdownNum.offsetWidth;
+          countdownNum.classList.add('animate-countdown');
+        }
+        
+        if (timeLeft <= 0) {
+          clearInterval(countdownTimerId);
+          countdownTimerId = null;
+          if (countdownIndicator) countdownIndicator.classList.add('hidden');
+          // 倒计时结束，正式开始乱码与跑马灯
+          startScrambleAnimation();
+        }
+      }, 1000);
     }
 
     // 乱码动画：开始时显示“盲抽中…”，乱码结束（3 秒）时一并隐藏大字提示
@@ -770,6 +842,8 @@
       if (ids.length === 0) return;
 
       const blindIndicator = document.getElementById('blindDrawingIndicator');
+      const countdownIndicator = document.getElementById('countdownIndicator');
+      if (countdownIndicator) countdownIndicator.classList.add('hidden');
       if (blindIndicator) blindIndicator.classList.remove('hidden');
 
       scramblingMemberIds = new Set(ids);
@@ -964,8 +1038,6 @@
                     if (com2) {
                       state = snap2.val();
                       renderRoundTabs(); renderPublicView(); updateStats();
-                      // ✅ 关键修改：不再在此处清空 activeGroupIds 等数据，保留卡片高亮状态。
-                      // 清理工作交由“后台点击清空盲抽组”或“开启新一轮”来做。
                     }
                   });
                 }, 1000);
@@ -1106,6 +1178,16 @@
 
       const hasActiveGroup = state.activeGroupIds && state.activeGroupIds.length > 0;
 
+      // 提示文字的显示逻辑
+      const blindIndicator = document.getElementById('blindDrawingIndicator');
+      const countdownIndicator = document.getElementById('countdownIndicator');
+      const nextRoundHint = document.getElementById('nextRoundHint');
+      
+      // 默认全部隐藏
+      if (blindIndicator) blindIndicator.classList.add('hidden');
+      if (countdownIndicator) countdownIndicator.classList.add('hidden');
+      if (nextRoundHint) nextRoundHint.classList.add('hidden');
+
       if (hasActiveGroup) {
         const publicPollBadge = document.getElementById('publicPollBadge');
         const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
@@ -1114,12 +1196,27 @@
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
         
-        // 如果已经是 revealed 状态，隐藏揭晓按钮；否则显示
         if (isAdminUnlocked && state.pkStage !== 'revealed') publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
-        // “盲抽中…”的显隐交给乱码动画管理
-        
+        // 显示状态文字
+        if (state.pkStage === 'voting') {
+          // 如果正在倒计时，显示倒计时；否则显示"新一轮即将开始"（但实际上这个提示是给用户留出准备时间的）
+          // 由于前端没有倒计时状态，我们在 checkForNewPkGroup 触发后会加上倒计时。
+          // 为了首屏也能显示，如果刚切到这个状态且还没开始跑马灯，显示"新一轮盲抽即将开始"
+          if (blindIndicator && !blindIndicator.classList.contains('hidden')) {
+             // 已经在乱码中了
+          } else if (countdownIndicator && !countdownIndicator.classList.contains('hidden')) {
+             // 正在倒计时
+          } else {
+             // 既没在跑，也没在倒计时，说明刚抽出来或者结果页还没清理。此时显示“新一轮盲抽即将开始”
+             if (nextRoundHint) nextRoundHint.classList.remove('hidden');
+          }
+        } else if (state.pkStage === 'revealed') {
+          // 已经开奖了，保留结果页面，显示“新一轮盲抽即将开始”
+          if (nextRoundHint) nextRoundHint.classList.remove('hidden');
+        }
+
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
         let activeMembers;
@@ -1180,7 +1277,7 @@
       if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       else passedContainer.innerHTML = passedList.map(c => {
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        // 高亮判断：如果这条记录带有 pollLabel 且对应刚刚的 revealed 状态
+        // 高亮判断
         const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
         const highlightClass = isHighlight ? 'passed-highlight' : '';
         
