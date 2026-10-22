@@ -181,14 +181,14 @@
           </div>
         </div>
 
-        <!-- 左右对称环绕布局 -->
-        <div class="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-8 w-full max-w-5xl mx-auto">
+             <!-- 环绕/平铺布局 -->
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-8 w-full max-w-5xl mx-auto relative">
           
-          <!-- 左侧卡片区 (由 JS 动态分配) -->
-          <div id="pk-area-left" class="flex flex-col gap-3 sm:gap-4 items-center md:items-end w-full md:w-[32%]"></div>
+          <!-- 左侧卡片区 (PC端) / 上方网格 (手机端) -->
+          <div id="pk-area-left" class="flex flex-wrap md:flex-col gap-3 sm:gap-4 items-center md:items-end justify-center w-full md:w-[32%] order-2 md:order-1"></div>
 
-          <!-- 中间票选号区 (固定居中) -->
-          <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 my-4 md:my-0">
+          <!-- 中间票选号区 -->
+          <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 md:order-2 my-4 md:my-0">
             <div class="flex flex-col items-center justify-center bg-slate-950/90 px-10 py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
               <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
               <span id="centerTriggerNumberBox" class="text-5xl sm:text-6xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
@@ -200,8 +200,8 @@
             </div>
           </div>
 
-          <!-- 右侧卡片区 (由 JS 动态分配) -->
-          <div id="pk-area-right" class="flex flex-col gap-3 sm:gap-4 items-center md:items-start w-full md:w-[32%]"></div>
+          <!-- 右侧卡片区 (仅PC端显示) -->
+          <div id="pk-area-right" class="hidden md:flex flex-col gap-3 sm:gap-4 items-center md:items-start w-full md:w-[32%] order-3"></div>
 
         </div>
         
@@ -653,13 +653,14 @@
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
       
+      
       if (!state.triggerNumber) {
         alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。");
         return;
       }
 
-      const activeCards = document.querySelectorAll('#pk-area-left > div, #pk-area-right > div, #publicActiveGroupGrid > div');
-      if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
+      // 修改这里，直接抓取带有 pk-card 类的元素，彻底解决手机端找不到卡片的问题
+      const activeCards = document.querySelectorAll('.pk-card');      if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
       const tempMembers = [];
@@ -813,8 +814,8 @@
         }
       }
 
-      return `
-        <div id="pk-card-${idx}" class="relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
+        return `
+        <div id="pk-card-${idx}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
           <div class="font-bold text-amber-300 text-sm truncate w-full text-center">${escapeHtml(c.name)}</div>
           <div class="text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1">${escapeHtml(c.orderNo)}</div>
@@ -865,15 +866,11 @@
           }).filter(Boolean);
         }
 
-        areaL.innerHTML = ''; areaR.innerHTML = '';
-        let mobileHtml = '';
-
+                     areaL.innerHTML = ''; areaR.innerHTML = '';
         activeMembers.forEach((c, idx) => {
           const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          mobileHtml += cardHtml;
-
-          // 左右交替分配
-          if (idx % 2 === 0) {
+          // PC端左右交替，手机端全塞左边（即上层）
+          if (idx % 2 === 0 || window.innerWidth <= 768) {
             areaL.innerHTML += cardHtml;
           } else {
             areaR.innerHTML += cardHtml;
