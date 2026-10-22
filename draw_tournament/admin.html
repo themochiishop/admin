@@ -22,11 +22,11 @@
       box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
       letter-spacing: 0.5px; z-index: 10;
     }
-    /* 三栏布局的自定义高度 */
+    /* 三栏布局：主内容 + 右侧窄淘汰栏 */
     .main-grid {
       display: grid;
-      grid-template-columns: 1fr 360px;
-      gap: 20px;
+      grid-template-columns: 1fr 240px; /* 淘汰区收窄至 240px */
+      gap: 16px;
     }
     @media (max-width: 1280px) {
       .main-grid {
@@ -39,6 +39,19 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 12px;
+    }
+    /* 淘汰区卡片更紧凑 */
+    .out-card {
+      padding: 4px 6px;
+      font-size: 11px;
+    }
+    /* 撤回按钮 */
+    .undo-btn {
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    .out-card:hover .undo-btn {
+      opacity: 1;
     }
   </style>
 </head>
@@ -77,7 +90,7 @@
     </div>
   </header>
 
-  <!-- ========= 弹窗（保持不变，只做少量样式微调） ========= -->
+  <!-- ========= 弹窗（保持不变） ========= -->
   <!-- 推进轮次弹窗 -->
   <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
@@ -105,7 +118,7 @@
     </div>
   </div>
 
-  <!-- 配置弹窗 -->
+  <!-- 配置弹窗（保持不变） -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden" style="height: 80vh; max-height: 600px;">
       <div class="w-full md:w-56 bg-slate-900/50 border-r border-slate-700 flex flex-col p-4 shrink-0">
@@ -124,7 +137,6 @@
       <div class="flex-1 flex flex-col bg-slate-800 relative">
         <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg z-10">✕</button>
         <div class="flex-1 overflow-y-auto p-6 pt-8 text-xs">
-          <!-- 四个 tab 内容保持原样，没有改动结构，只保证 ID 一致 -->
           <div id="tabTitle" class="config-tab-panel space-y-4">
             <h4 class="text-base font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">系统标题与显示配置</h4>
             <label class="flex items-center space-x-2 bg-slate-900/80 p-3 rounded-xl border border-amber-500/30 cursor-pointer">
@@ -210,7 +222,7 @@
       <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮已淘汰</span><span id="statOutCount" class="text-xl font-black text-slate-400">0</span></div>
     </div>
 
-    <!-- ===== 两栏布局：左侧主要操作 + 右侧淘汰栏 ===== -->
+    <!-- ===== 两栏布局：左侧主要操作 + 右侧窄淘汰栏 ===== -->
     <div class="main-grid">
       <!-- 左侧列 -->
       <div class="flex flex-col gap-4 min-w-0">
@@ -223,14 +235,12 @@
               <h2 id="passedTitleText" class="text-sm font-bold text-emerald-400">本轮晋级区</h2>
               <span id="passedBadgeCount" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">0</span>
             </div>
-            <!-- 搜索框移到此处，更顺手 -->
             <div class="flex items-center gap-2">
               <input type="search" id="searchInput" oninput="renderAdminView()" placeholder="🔍 名字或订单号..." class="w-36 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400 shadow-inner">
               <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
               <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
             </div>
           </div>
-          <!-- 晋级列表 -->
           <div id="passedListContainer" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar pr-1 pt-1.5 mt-1"></div>
         </div>
 
@@ -259,7 +269,7 @@
           <p id="specialRoundBannerSub" class="text-[11px] text-amber-200/90 mt-0.5"></p>
         </div>
 
-        <!-- 待 PK 买家名单池（主力操作区） -->
+        <!-- 待 PK 买家名单池 -->
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700 flex-1 flex flex-col min-h-[200px]">
           <div class="flex justify-between items-center mb-2">
             <h2 class="text-sm font-bold text-amber-400">待 PK 买家名单池</h2>
@@ -270,13 +280,13 @@
 
       </div>
 
-      <!-- 右侧列：淘汰区 -->
-      <div class="bg-slate-800/30 rounded-xl p-3 border border-slate-800 flex flex-col min-h-[300px]">
+      <!-- 右侧列：淘汰区（收窄，带撤回功能） -->
+      <div class="bg-slate-800/30 rounded-xl p-2 border border-slate-800 flex flex-col min-h-[300px]">
         <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
-          <div class="flex items-center space-x-1.5"><span class="text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区 (新至旧)</h3></div>
+          <div class="flex items-center space-x-1.5"><span class="text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
         </div>
-        <div id="adminOutListContainer" class="space-y-2 flex-1 overflow-y-auto no-scrollbar max-h-[600px] pr-0.5"></div>
+        <div id="adminOutListContainer" class="space-y-1.5 flex-1 overflow-y-auto no-scrollbar max-h-[600px] pr-0.5"></div>
       </div>
     </div>
   </main>
@@ -285,7 +295,7 @@
     © Mochiishop Shopee Monthly Event. All rights reserved.
   </footer>
 
-  <!-- ========= 所有 JavaScript 保持原样，除了一个小改动：原本 searchInput 在 header 下方，现在移到了晋级区，不影响功能 ========= -->
+  <!-- ========= JavaScript ========= -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
@@ -760,23 +770,37 @@
       }).join('');
     }
     
+    // 撤回功能：将淘汰的买家重新放回当前轮的待PK池
     function undoEliminatedCandidate(id) {
       let foundCandidate = null;
-      (state.rounds || []).forEach(r => { const target = (r.candidates || []).find(c => String(c.id) === String(id)); if (target) foundCandidate = target; });
-      if (!foundCandidate) return;
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (String(c.id) === String(id)) {
-            c.status = 'pending'; delete c.eliminatedRoundIndex; delete c.rankTitle; delete c.rankKey; delete c.pollLabel;
-          }
-        });
+      let sourceRoundIndex = -1;
+      (state.rounds || []).forEach((r, rIdx) => {
+        const target = (r.candidates || []).find(c => String(c.id) === String(id));
+        if (target) { foundCandidate = target; sourceRoundIndex = rIdx; }
       });
+      if (!foundCandidate) return;
+
+      // 从所有轮次中移除该候选人
+      (state.rounds || []).forEach(r => {
+        r.candidates = (r.candidates || []).filter(c => String(c.id) !== String(id));
+      });
+      // 从 passHistory 中移除
       if (state.passHistory) state.passHistory = state.passHistory.filter(c => String(c.id) !== String(id));
+
+      // 重新添加到当前轮次的待PK列表
       const currentRound = state.rounds[currentRoundIndex];
-      const existsInCurrent = (currentRound.candidates || []).some(c => String(c.id) === String(id));
-      if (!existsInCurrent) currentRound.candidates.push({ id: foundCandidate.id, name: foundCandidate.name, orderNo: foundCandidate.orderNo, status: 'pending' });
+      currentRound.candidates.push({
+        id: foundCandidate.id,
+        name: foundCandidate.name,
+        orderNo: foundCandidate.orderNo,
+        status: 'pending'
+      });
+
       saveState();
-      alert(`↩️ 买家【${foundCandidate.name}】已撤回并重新回到当前轮次名单池！`);
+      renderRoundTabs();
+      renderAdminView();
+      updateStats();
+      alert(`↩️ 买家【${foundCandidate.name}】已撤回，并重新回到当前轮次待PK名单池！`);
     }
 
     function changeStatus(id, newStatus) {
@@ -1088,6 +1112,7 @@
       renderAdminOutList(search);
     }
     
+    // 淘汰区列表渲染（每个名字旁有撤回 ✕ 按钮）
     function renderAdminOutList(search) {
       const outContainer = document.getElementById('adminOutListContainer');
       let allOutCandidates = [];
@@ -1104,23 +1129,31 @@
       });
       document.getElementById('outBadgeCount').innerText = allOutCandidates.length;
       if (allOutCandidates.length === 0) { outContainer.innerHTML = `<p class="text-[10px] text-slate-600 text-center py-4 italic">暂无淘汰人员</p>`; return; }
+
+      // 按轮次分组，新淘汰的在前
       const grouped = {};
       allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
       const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
+
       outContainer.innerHTML = sortedKeys.map(rIdxKey => {
         const rNum = Number(rIdxKey) + 1;
         const candidatesInGroup = grouped[rIdxKey];
-        const groupCardsHtml = candidatesInGroup.map(c => `
-          <div class="p-1 bg-slate-900/80 border border-slate-800 rounded-md opacity-70 hover:opacity-100 transition shadow-sm text-center">
-            <span class="font-bold text-slate-300 text-[10px] truncate block">${escapeHtml(c.name)}</span>
+        // 每个淘汰者一行：姓名 + 撤回按钮
+        const rowsHtml = candidatesInGroup.map(c => `
+          <div class="out-card flex items-center justify-between gap-1 bg-slate-900/60 border border-slate-800 rounded-md px-1.5 py-1 mt-0.5">
+            <span class="font-bold text-slate-300 text-[10px] truncate flex-1">${escapeHtml(c.name)}</span>
+            <button onclick="undoEliminatedCandidate('${c.id}')" 
+                    class="undo-btn text-rose-400 hover:text-rose-300 text-[11px] font-black px-1 rounded hover:bg-rose-900/30 transition" 
+                    title="撤回至当前待PK池">✕</button>
           </div>
         `).join('');
-        return `<div class="bg-slate-900/40 p-1.5 rounded-lg border border-slate-800">
+
+        return `<div class="bg-slate-900/30 p-1.5 rounded-lg border border-slate-800">
           <div class="text-[9px] font-bold text-rose-400/90 mb-1 border-b border-slate-800 pb-0.5 flex justify-between items-center">
             <span>❌ 第 ${rNum} 轮淘汰</span>
             <span class="text-[8px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>
           </div>
-          <div class="grid grid-cols-1 gap-0.5">${groupCardsHtml}</div>
+          <div class="space-y-0.5">${rowsHtml}</div>
         </div>`;
       }).join('');
     }
