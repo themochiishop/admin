@@ -409,6 +409,8 @@
 
     let isPkPanelCollapsed = false;
     let scramblingMemberIds = new Set();
+    let localScrambleActive = false;        // ★ 本地乱码动画是否进行中
+    let localScrambleDoneGroupSig = '';     // ★ 已播完乱码的 PK 组签名
     let scrambleIntervalId = null;
     let countdownTimerId = null;
     
@@ -793,12 +795,15 @@
 
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
-      const sig = (state.activeGroupIds || []).join(',') + '|' + (state.pkStage || '');
+      const sig = (state.activeGroupIds || []).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          if (!countdownTimerId && scramblingMemberIds.size === 0) {
-            startCountdownThenScramble();
+          if (!countdownTimerId && scramblingMemberIds.size === 0 && !localScrambleActive) {
+            const groupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+            if (groupSig !== localScrambleDoneGroupSig) {
+              startCountdownThenScramble();
+            }
           }
         }
       }
@@ -845,6 +850,9 @@
       const ids = (state.activeGroupIds || []).map(id => String(id));
       if (ids.length === 0) return;
 
+      const groupSig = ids.join(',') + '|' + (state.currentPollNumber || 0);
+      localScrambleActive = true;
+
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       const countdownIndicator = document.getElementById('countdownIndicator');
       const nextRoundHint = document.getElementById('nextRoundHint');
@@ -864,8 +872,8 @@
           clearInterval(scrambleIntervalId);
           scrambleIntervalId = null;
           scramblingMemberIds.clear();
-          // ★ 修复：乱码动画结束，本地立即关闭 isDrawingScramble 再渲染，避免渲染出 ??
-          state.isDrawingScramble = false;
+          localScrambleActive = false;
+          localScrambleDoneGroupSig = groupSig;
           if (blindIndicator) blindIndicator.classList.add('hidden');
           renderPublicView();
           triggerPkHitHighlight();
@@ -1004,7 +1012,6 @@
             }, (error, committed, snapshot) => {
               if (committed) {
                 state = snapshot.val();
-                // ★ 修复：事务提交后立即用最新 state 重新渲染，清除残留乱码
                 renderPublicView();
                 const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
                 const round = state.rounds[roundIdx] || {};
@@ -1120,7 +1127,6 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-    // ★ 核心修复：getCardHtml 增加 revealed 阶段强制显示真实名字的兜底
     function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
@@ -1139,8 +1145,8 @@
         }
       }
 
-      // ★ 修复：已揭晓阶段绝不显示乱码；乱码集合为空时也显示真实名字
-      const isScrambling = (state.isDrawingScramble || scramblingMemberIds.has(String(c.id))) && !isRevealed;
+      // ★ 关键：只看本地乱码状态，不依赖云端 isDrawingScramble
+      const isScrambling = (localScrambleActive || scramblingMemberIds.has(String(c.id))) && !isRevealed;
       const displayName = isScrambling ? '??' : escapeHtml(c.name);
       const displayOrder = isScrambling ? '###' : escapeHtml(c.orderNo || '');
       const nameClass = isScrambling ? 'scramble-text' : '';
@@ -1224,10 +1230,6 @@
 
         if (state.pkStage === 'revealed') {
           if (nextRoundHint) nextRoundHint.classList.remove('hidden');
-        } else if (state.pkStage === 'voting') {
-          if (countdownIndicator && !countdownIndicator.classList.contains('hidden')) {
-          } else if (blindIndicator && !blindIndicator.classList.contains('hidden')) {
-          }
         }
 
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
