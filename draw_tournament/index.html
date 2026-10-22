@@ -267,7 +267,7 @@
             <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
               
-              <!-- 状态提示区：盲抽中 / 倒计时 / 新一轮即将开始 -->
+              <!-- 状态提示区 -->
               <div class="mb-3 text-center min-h-[40px] flex items-center justify-center">
                 <!-- 盲抽中 提示 -->
                 <div id="blindDrawingIndicator" class="hidden">
@@ -276,7 +276,6 @@
                 <!-- 倒计时 提示 -->
                 <div id="countdownIndicator" class="hidden flex flex-col items-center justify-center">
                   <span class="text-xs sm:text-sm text-amber-300 font-bold mb-1">盲抽即将在 <span id="countdownNum" class="text-2xl sm:text-3xl text-amber-400 mx-1">5</span> 秒后开始</span>
-                  <!-- 进度的视觉展示，可选 -->
                   <div class="flex space-x-1">
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.2s;"></span>
@@ -409,7 +408,6 @@
     
     // 倒计时状态
     let countdownTimerId = null;
-    let countdownTargetTimestamp = 0;
     
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
@@ -723,6 +721,7 @@
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
+          const prevGroupSig = (state.activeGroupIds || []).join(',');
           state = val;
           (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
           if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
@@ -731,6 +730,8 @@
           if (!state.modeConfig) state.modeConfig = {};
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
+          
+          const newGroupSig = (state.activeGroupIds || []).join(',');
           
           if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
             window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
@@ -777,9 +778,15 @@
           renderPublicView();
           updateStats();
           renderFinalSummaryPanel();
+
+          // 如果检测到 activeGroupIds 发生变化且有新的 PK 组，且状态为 voting，触发倒计时
+          if (prevGroupSig !== newGroupSig && newGroupSig !== '' && state.pkStage === 'voting') {
+            startCountdownThenScramble();
+          }
         }
       });
 
+      // 轮询检测盲抽启动（保险机制）
       setInterval(checkForNewPkGroup, 300);
     };
 
@@ -789,8 +796,10 @@
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          // 当有新的 activeGroupIds 且状态为 voting 时，触发倒计时（如果是被重置的，也会触发）
-          startCountdownThenScramble();
+          // 如果倒计时没在跑，且乱码没在跑，触发倒计时
+          if (!countdownTimerId && scramblingMemberIds.size === 0) {
+            startCountdownThenScramble();
+          }
         }
       }
     }
@@ -800,6 +809,7 @@
       const countdownIndicator = document.getElementById('countdownIndicator');
       const countdownNum = document.getElementById('countdownNum');
       const blindIndicator = document.getElementById('blindDrawingIndicator');
+      const nextRoundHint = document.getElementById('nextRoundHint');
       
       if (countdownTimerId) clearInterval(countdownTimerId);
       
@@ -808,11 +818,13 @@
       let timeLeft = totalSec;
       
       if (countdownNum) countdownNum.innerText = timeLeft;
-      if (countdownIndicator) countdownIndicator.classList.remove('hidden');
-      if (blindIndicator) blindIndicator.classList.add('hidden');
       
-      // 强制刷新UI显示倒计时
-      renderPublicView();
+      // 隐藏其他提示
+      if (blindIndicator) blindIndicator.classList.add('hidden');
+      if (nextRoundHint) nextRoundHint.classList.add('hidden');
+      
+      // 显示倒计时
+      if (countdownIndicator) countdownIndicator.classList.remove('hidden');
       
       countdownTimerId = setInterval(() => {
         timeLeft--;
@@ -834,7 +846,7 @@
       }, 1000);
     }
 
-    // 乱码动画：开始时显示“盲抽中…”，乱码结束（3 秒）时一并隐藏大字提示
+    // 乱码动画
     function startScrambleAnimation() {
       const scramblePool = ['??', '##', '¥¥', '**', '××', '??', '##', '？？'];
       const orderScramblePool = ['??', '###', '¥¥', '****', '××××', '？？？'];
@@ -843,7 +855,10 @@
 
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       const countdownIndicator = document.getElementById('countdownIndicator');
+      const nextRoundHint = document.getElementById('nextRoundHint');
+      
       if (countdownIndicator) countdownIndicator.classList.add('hidden');
+      if (nextRoundHint) nextRoundHint.classList.add('hidden');
       if (blindIndicator) blindIndicator.classList.remove('hidden');
 
       scramblingMemberIds = new Set(ids);
@@ -1201,9 +1216,6 @@
 
         // 显示状态文字
         if (state.pkStage === 'voting') {
-          // 如果正在倒计时，显示倒计时；否则显示"新一轮即将开始"（但实际上这个提示是给用户留出准备时间的）
-          // 由于前端没有倒计时状态，我们在 checkForNewPkGroup 触发后会加上倒计时。
-          // 为了首屏也能显示，如果刚切到这个状态且还没开始跑马灯，显示"新一轮盲抽即将开始"
           if (blindIndicator && !blindIndicator.classList.contains('hidden')) {
              // 已经在乱码中了
           } else if (countdownIndicator && !countdownIndicator.classList.contains('hidden')) {
@@ -1213,7 +1225,6 @@
              if (nextRoundHint) nextRoundHint.classList.remove('hidden');
           }
         } else if (state.pkStage === 'revealed') {
-          // 已经开奖了，保留结果页面，显示“新一轮盲抽即将开始”
           if (nextRoundHint) nextRoundHint.classList.remove('hidden');
         }
 
