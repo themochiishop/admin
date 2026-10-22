@@ -49,6 +49,9 @@
         gap: 1.5rem;
         align-items: start;
       }
+      .layout-grid.collapsed {
+        display: block;
+      }
     }
 
     /* 前台淘汰区：收窄为更紧凑的侧栏 */
@@ -59,6 +62,22 @@
       padding: 6px 8px;
       font-size: 12px;
       line-height: 1.3;
+    }
+
+    /* 晋级名单放大模式（折叠PK后） */
+    .passed-zoom .passed-card-name {
+      font-size: 1.5rem !important;
+    }
+    .passed-zoom .passed-card-order {
+      font-size: 0.875rem !important;
+    }
+
+    /* 乱码字体效果 */
+    .scramble-text {
+      font-family: 'Courier New', monospace;
+      letter-spacing: 2px;
+      color: #94a3b8 !important;
+      opacity: 0.8;
     }
   </style>
 </head>
@@ -189,27 +208,30 @@
         </div>
       </div>
 
-      <!-- 🔥 核心区布局：由 JS 动态切换单列或 7:3 分栏 -->
+      <!-- 核心区布局 -->
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
         
-        <!-- 左侧：Shopee 直播间盲抽 PK 组 (默认隐藏，抽卡后显示) -->
-        <div id="publicActiveGroupDisplay" class="hidden w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
+        <!-- 左侧：Shopee 直播间盲抽 PK 组（默认开启） -->
+        <div id="publicActiveGroupDisplay" class="w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
           
           <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
             <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
               <span class="text-base sm:text-2xl animate-bounce">🔥</span>
               <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
             </div>
-            <div class="flex-shrink-0">
+            <div class="flex items-center space-x-2 flex-shrink-0">
               <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #1</span>
+              <button id="togglePkPanelBtn" onclick="togglePkPanel()" class="hidden text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold transition">
+                ◀ 折叠
+              </button>
             </div>
           </div>
 
-          <div class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
+          <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
             <!-- 左侧/上方卡片区 -->
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
 
-            <!-- 中间票选号区：字号缩小一号 -->
+            <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-7 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
@@ -228,8 +250,8 @@
         </div>
 
         <!-- 右侧：晋级与得奖区 -->
-        <div class="w-full flex flex-col gap-4">
-          <!-- 已晋级区：名字字号放大两号 -->
+        <div id="rightPassedPanel" class="w-full flex flex-col gap-4 transition-all duration-300">
+          <!-- 已晋级区 -->
           <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🏆</span>
@@ -252,7 +274,7 @@
 
       </div>
 
-      <!-- 底部统计与淘汰区：淘汰区收窄为固定窄侧栏 -->
+      <!-- 底部统计与淘汰区 -->
       <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
         
         <div class="flex flex-col justify-end min-w-0">
@@ -279,7 +301,6 @@
           </div>
         </div>
 
-        <!-- 淘汰区：收窄至 220px，单列紧凑卡片 -->
         <div class="bg-slate-800/30 rounded-2xl p-2.5 border border-slate-800 min-h-[200px] flex flex-col out-panel">
           <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
@@ -323,6 +344,13 @@
     let isProcessAreaCollapsed = false;
     let __roundModalTimer = null;
 
+    // PK 面板折叠状态
+    let isPkPanelCollapsed = false;
+
+    // 乱码状态管理：记录正在乱码的 memberId 集合
+    let scramblingMemberIds = new Set();
+    let scrambleIntervalId = null;
+
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
       drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false,
@@ -330,7 +358,6 @@
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
-    // 记录已经弹过恭喜弹窗的 PK 中奖者，避免重复弹出
     let __lastPkWinnerPopupKey = '';
 
     let __popupTimer = null;
@@ -453,6 +480,45 @@
         collapsibleSection.classList.add('hidden');
         toggleBtnText.innerText = "展开选拔过程 ▼";
         isProcessAreaCollapsed = false;
+      }
+    }
+
+    // 折叠/展开 PK 面板
+    function togglePkPanel() {
+      if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
+      isPkPanelCollapsed = !isPkPanelCollapsed;
+      applyPkPanelState();
+    }
+
+    function applyPkPanelState() {
+      const pkPanel = document.getElementById('publicActiveGroupDisplay');
+      const pkBody = document.getElementById('pkPanelBody');
+      const mainLayout = document.getElementById('main-layout-grid');
+      const rightPanel = document.getElementById('rightPassedPanel');
+      const toggleBtn = document.getElementById('togglePkPanelBtn');
+
+      if (isPkPanelCollapsed) {
+        // 折叠：隐藏 PK 面板主体，让晋级名单占满主区域
+        pkBody.style.display = 'none';
+        pkPanel.classList.add('min-h-0');
+        pkPanel.classList.remove('min-h-[400px]');
+        mainLayout.classList.remove('active');
+        mainLayout.classList.add('collapsed');
+        rightPanel.classList.add('passed-zoom');
+        if (toggleBtn) toggleBtn.innerText = '▶ 展开';
+      } else {
+        // 展开：恢复 PK 面板主体和 7:3 分栏
+        pkBody.style.display = '';
+        pkPanel.classList.remove('min-h-0');
+        pkPanel.classList.add('min-h-[400px]');
+        mainLayout.classList.remove('collapsed');
+        if (rightPanel) rightPanel.classList.remove('passed-zoom');
+        if (toggleBtn) toggleBtn.innerText = '◀ 折叠';
+        if (state.activeGroupIds && state.activeGroupIds.length > 0) {
+          mainLayout.classList.add('active');
+        } else {
+          mainLayout.classList.remove('active');
+        }
       }
     }
 
@@ -603,6 +669,8 @@
         setTimeout(() => {
           const txt = document.getElementById('adminUnlockText');
           if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
+          const toggleBtn = document.getElementById('togglePkPanelBtn');
+          if (toggleBtn) toggleBtn.classList.remove('hidden');
           renderPublicView();
         }, 100);
       }
@@ -665,7 +733,62 @@
           renderFinalSummaryPanel();
         }
       });
+
+      // 轮询检测盲抽启动，触发乱码动画
+      setInterval(checkForNewPkGroup, 300);
     };
+
+    // 监测新 PK 组出现时启动乱码动画
+    let __lastPkGroupSignature = '';
+    function checkForNewPkGroup() {
+      const sig = (state.activeGroupIds || []).join(',') + '|' + (state.pkStage || '');
+      if (sig && sig !== __lastPkGroupSignature) {
+        __lastPkGroupSignature = sig;
+        if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
+          startScrambleAnimation();
+        }
+      }
+    }
+
+    // 启动乱码动画（几秒后自动结束）
+    function startScrambleAnimation() {
+      const scramblePool = ['??', '##', '¥¥', '**', '××', '??', '##', '？？'];
+      const orderScramblePool = ['??', '###', '¥¥', '****', '××××', '？？？'];
+      const ids = (state.activeGroupIds || []).map(id => String(id));
+      if (ids.length === 0) return;
+
+      scramblingMemberIds = new Set(ids);
+
+      if (scrambleIntervalId) clearInterval(scrambleIntervalId);
+
+      const scrambleStart = Date.now();
+      const scrambleDuration = 3000; // 乱码持续 3 秒
+
+      scrambleIntervalId = setInterval(() => {
+        if (Date.now() - scrambleStart > scrambleDuration) {
+          clearInterval(scrambleIntervalId);
+          scrambleIntervalId = null;
+          scramblingMemberIds.clear();
+          renderPublicView();
+          return;
+        }
+        // 更新所有卡片内的乱码文本
+        document.querySelectorAll('.pk-card').forEach(cardEl => {
+          const memberId = cardEl.dataset.memberId;
+          if (!memberId || !scramblingMemberIds.has(String(memberId))) return;
+          const nameEl = cardEl.querySelector('.pk-card-name');
+          const orderEl = cardEl.querySelector('.pk-card-order');
+          if (nameEl) {
+            nameEl.innerText = scramblePool[Math.floor(Math.random() * scramblePool.length)];
+            nameEl.classList.add('scramble-text');
+          }
+          if (orderEl) {
+            orderEl.innerText = orderScramblePool[Math.floor(Math.random() * orderScramblePool.length)];
+            orderEl.classList.add('scramble-text');
+          }
+        });
+      }, 120);
+    }
 
     function updateModeBadge() {
       const badge = document.getElementById('publicModeBadge');
@@ -712,6 +835,14 @@
       const txt = document.getElementById('adminUnlockText');
       if (isAdminUnlocked) { if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; } }
       else { if (txt) { txt.innerText = "🔑 管理员"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; } }
+
+      // 显示/隐藏折叠按钮
+      const toggleBtn = document.getElementById('togglePkPanelBtn');
+      if (toggleBtn) {
+        if (isAdminUnlocked) toggleBtn.classList.remove('hidden');
+        else toggleBtn.classList.add('hidden');
+      }
+
       renderPublicView();
     }
 
@@ -729,7 +860,6 @@
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
 
-      // 建立卡片 -> memberId 映射
       const cardMembers = activeCards.map(cardEl => {
         return { id: String(cardEl.dataset.memberId), displayNumber: null };
       });
@@ -750,7 +880,7 @@
         if (speed > 300 && currentIndex === winnerIndex) {
           activeCards.forEach(el => el.classList.remove('marquee-flash'));
           activeCards[currentIndex].classList.add('winner-glow');
-          // 🕒 中奖者卡片停留 2 秒，再执行后续号码分配与弹窗
+          // 中奖卡片停留 2 秒
           setTimeout(() => {
             db.ref('tournament_state').transaction((latestState) => {
               if (!latestState) return latestState;
@@ -830,7 +960,7 @@
                 }, 1000);
               }
             });
-          }, 2000); // 👈 关键：中奖卡片停留 2000ms（2 秒）
+          }, 2000); // 中奖卡片停留 2 秒
           return;
         }
         currentIndex = (currentIndex + 1) % total;
@@ -886,6 +1016,7 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
+    // PK 卡片：默认名字显示 ??，如果该 memberId 处于乱码状态则显示乱码
     function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
@@ -904,11 +1035,18 @@
         }
       }
 
+      // 决定姓名与订单号显示：如果该 memberId 正在乱码，则显示乱码占位
+      const isScrambling = scramblingMemberIds.has(String(c.id));
+      const displayName = isScrambling ? '??' : escapeHtml(c.name);
+      const displayOrder = isScrambling ? '###' : escapeHtml(c.orderNo || '');
+      const nameClass = isScrambling ? 'scramble-text' : '';
+      const orderClass = isScrambling ? 'scramble-text' : '';
+
       return `
         <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
-          <div class="font-bold text-amber-300 text-base truncate w-full text-center">${escapeHtml(c.name)}</div>
-          <div class="text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1">${escapeHtml(c.orderNo)}</div>
+          <div class="pk-card-name font-bold text-amber-300 text-base truncate w-full text-center ${nameClass}">${displayName}</div>
+          <div class="pk-card-order text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1 ${orderClass}">${displayOrder}</div>
         </div>
       `;
     }
@@ -926,11 +1064,24 @@
 
       const publicGroupContainer = document.getElementById('publicActiveGroupDisplay');
       const mainLayout = document.getElementById('main-layout-grid');
-      
+      const rightPanel = document.getElementById('rightPassedPanel');
+
+      // PK 面板默认开启；折叠时隐藏主体
+      const pkBody = document.getElementById('pkPanelBody');
+      if (isPkPanelCollapsed) {
+        if (pkBody) pkBody.style.display = 'none';
+      } else {
+        if (pkBody) pkBody.style.display = '';
+      }
+
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
         publicGroupContainer.classList.remove('hidden');
         publicGroupContainer.classList.add('flex');
-        mainLayout.classList.add('active');
+        if (!isPkPanelCollapsed) {
+          mainLayout.classList.add('active');
+          mainLayout.classList.remove('collapsed');
+          if (rightPanel) rightPanel.classList.remove('passed-zoom');
+        }
 
         const publicPollBadge = document.getElementById('publicPollBadge');
         const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
@@ -971,11 +1122,27 @@
         });
 
       } else {
-        publicGroupContainer.classList.add('hidden');
-        publicGroupContainer.classList.remove('flex');
+        // 无 PK 组：显示占位但保持 PK 面板可见（默认开启）；折叠时隐藏主体
+        if (!isPkPanelCollapsed) {
+          const areaL = document.getElementById('pk-area-left');
+          const areaR = document.getElementById('pk-area-right');
+          areaL.innerHTML = `<div class="text-slate-500 text-xs italic p-4">等待后台抽取盲抽 PK 组...</div>`;
+          areaR.innerHTML = '';
+          const publicPollBadge = document.getElementById('publicPollBadge');
+          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
+          if (publicPollBadge) publicPollBadge.innerText = `POLL #-`;
+          if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = `#?`;
+          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
+          if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
+        }
         mainLayout.classList.remove('active');
+        if (!isPkPanelCollapsed) {
+          mainLayout.classList.remove('collapsed');
+          if (rightPanel) rightPanel.classList.remove('passed-zoom');
+        }
       }
 
+      // 晋级名单渲染
       let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       passedList.sort((a, b) => {
@@ -987,9 +1154,9 @@
       if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       else passedContainer.innerHTML = passedList.map(c => {
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5">` + folderTabHtml +
-          '<span class="font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
-          '<span class="text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card">` + folderTabHtml +
+          '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
+          '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
         '</div>';
       }).join('');
 
