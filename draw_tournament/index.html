@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN"> 
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -56,6 +56,17 @@
     }
     .animate-countdown {
       animation: countdownPop 0.5s ease-out forwards;
+    }
+
+    /* 新增：跑马灯上下循环动画 */
+    @keyframes scrollUpDown {
+      0% { transform: translateY(10px); opacity: 0; }
+      20% { transform: translateY(0); opacity: 1; }
+      80% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-10px); opacity: 0; }
+    }
+    .animate-scroll-loop {
+      animation: scrollUpDown 4s ease-in-out infinite;
     }
 
     /* 电脑端 7:3 自适应网格 */
@@ -268,7 +279,7 @@
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
               
               <!-- 状态提示区 -->
-              <div class="mb-3 text-center min-h-[40px] flex items-center justify-center">
+              <div class="mb-3 text-center min-h-[40px] flex flex-col items-center justify-center">
                 <!-- 盲抽中 提示 -->
                 <div id="blindDrawingIndicator" class="hidden">
                   <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
@@ -282,9 +293,10 @@
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.4s;"></span>
                   </div>
                 </div>
-                <!-- 新一轮即将开始 提示 -->
-                <div id="nextRoundHint" class="hidden">
-                  <span class="text-sm sm:text-base font-bold text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
+                <!-- 恭喜中奖 与 新一轮盲抽即将开始 上下滚动提示 -->
+                <div id="nextRoundHint" class="hidden flex flex-col items-center justify-center animate-scroll-loop">
+                  <span class="text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
+                  <span class="text-sm sm:text-base font-bold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
                 </div>
               </div>
 
@@ -399,14 +411,9 @@
     let isProcessAreaCollapsed = false;
     let __roundModalTimer = null;
 
-    // PK 面板折叠状态
     let isPkPanelCollapsed = false;
-
-    // 乱码状态管理
     let scramblingMemberIds = new Set();
     let scrambleIntervalId = null;
-    
-    // 倒计时状态
     let countdownTimerId = null;
     
     let state = {
@@ -541,7 +548,6 @@
       }
     }
 
-    // 折叠/展开：使用原生 hidden 属性
     function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
@@ -779,14 +785,12 @@
           updateStats();
           renderFinalSummaryPanel();
 
-          // 如果检测到 activeGroupIds 发生变化且有新的 PK 组，且状态为 voting，触发倒计时
           if (prevGroupSig !== newGroupSig && newGroupSig !== '' && state.pkStage === 'voting') {
             startCountdownThenScramble();
           }
         }
       });
 
-      // 轮询检测盲抽启动（保险机制）
       setInterval(checkForNewPkGroup, 300);
     };
 
@@ -796,7 +800,6 @@
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          // 如果倒计时没在跑，且乱码没在跑，触发倒计时
           if (!countdownTimerId && scramblingMemberIds.size === 0) {
             startCountdownThenScramble();
           }
@@ -804,7 +807,6 @@
       }
     }
 
-    // 倒计时逻辑
     function startCountdownThenScramble() {
       const countdownIndicator = document.getElementById('countdownIndicator');
       const countdownNum = document.getElementById('countdownNum');
@@ -813,24 +815,19 @@
       
       if (countdownTimerId) clearInterval(countdownTimerId);
       
-      // 获取后台设置的秒数
       const totalSec = state.modeConfig.drawCountdownSeconds || 5;
       let timeLeft = totalSec;
       
       if (countdownNum) countdownNum.innerText = timeLeft;
       
-      // 隐藏其他提示
       if (blindIndicator) blindIndicator.classList.add('hidden');
       if (nextRoundHint) nextRoundHint.classList.add('hidden');
-      
-      // 显示倒计时
       if (countdownIndicator) countdownIndicator.classList.remove('hidden');
       
       countdownTimerId = setInterval(() => {
         timeLeft--;
         if (countdownNum) {
           countdownNum.innerText = timeLeft > 0 ? timeLeft : 0;
-          // 重新触发动画
           countdownNum.classList.remove('animate-countdown');
           void countdownNum.offsetWidth;
           countdownNum.classList.add('animate-countdown');
@@ -840,13 +837,11 @@
           clearInterval(countdownTimerId);
           countdownTimerId = null;
           if (countdownIndicator) countdownIndicator.classList.add('hidden');
-          // 倒计时结束，正式开始乱码与跑马灯
           startScrambleAnimation();
         }
       }, 1000);
     }
 
-    // 乱码动画
     function startScrambleAnimation() {
       const scramblePool = ['??', '##', '¥¥', '**', '××', '??', '##', '？？'];
       const orderScramblePool = ['??', '###', '¥¥', '****', '××××', '？？？'];
@@ -862,7 +857,6 @@
       if (blindIndicator) blindIndicator.classList.remove('hidden');
 
       scramblingMemberIds = new Set(ids);
-
       if (scrambleIntervalId) clearInterval(scrambleIntervalId);
 
       const scrambleStart = Date.now();
@@ -1178,7 +1172,6 @@
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
 
-      // 折叠状态
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       if (isPkPanelCollapsed) {
@@ -1193,12 +1186,10 @@
 
       const hasActiveGroup = state.activeGroupIds && state.activeGroupIds.length > 0;
 
-      // 提示文字的显示逻辑
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       const countdownIndicator = document.getElementById('countdownIndicator');
       const nextRoundHint = document.getElementById('nextRoundHint');
       
-      // 默认全部隐藏
       if (blindIndicator) blindIndicator.classList.add('hidden');
       if (countdownIndicator) countdownIndicator.classList.add('hidden');
       if (nextRoundHint) nextRoundHint.classList.add('hidden');
@@ -1214,18 +1205,16 @@
         if (isAdminUnlocked && state.pkStage !== 'revealed') publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
-        // 显示状态文字
-        if (state.pkStage === 'voting') {
-          if (blindIndicator && !blindIndicator.classList.contains('hidden')) {
-             // 已经在乱码中了
-          } else if (countdownIndicator && !countdownIndicator.classList.contains('hidden')) {
-             // 正在倒计时
-          } else {
-             // 既没在跑，也没在倒计时，说明刚抽出来或者结果页还没清理。此时显示“新一轮盲抽即将开始”
-             if (nextRoundHint) nextRoundHint.classList.remove('hidden');
-          }
-        } else if (state.pkStage === 'revealed') {
+        // 仅当状态为 revealed 时才显示滚动恭喜提示
+        if (state.pkStage === 'revealed') {
           if (nextRoundHint) nextRoundHint.classList.remove('hidden');
+        } else if (state.pkStage === 'voting') {
+          // 等待倒计时或乱码
+          if (countdownIndicator && !countdownIndicator.classList.contains('hidden')) {
+             // 倒计时中
+          } else if (blindIndicator && !blindIndicator.classList.contains('hidden')) {
+             // 乱码中
+          }
         }
 
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
@@ -1276,7 +1265,6 @@
         if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
       }
 
-      // 晋级名单渲染（加入高亮判断）
       let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       passedList.sort((a, b) => {
@@ -1288,7 +1276,6 @@
       if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       else passedContainer.innerHTML = passedList.map(c => {
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        // 高亮判断
         const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
         const highlightClass = isHighlight ? 'passed-highlight' : '';
         
