@@ -34,7 +34,6 @@
     .undo-btn { opacity: 0.5; transition: opacity 0.2s; }
     .out-card:hover .undo-btn { opacity: 1; }
 
-    /* 票选号按钮锁定样式 */
     .trigger-btn-locked {
       opacity: 0.4;
       cursor: not-allowed !important;
@@ -44,7 +43,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <!-- ========= 顶部导航 ========= -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center space-x-3">
@@ -77,8 +75,6 @@
     </div>
   </header>
 
-  <!-- ========= 弹窗 ========= -->
-  <!-- 推进轮次弹窗 -->
   <div id="advanceModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
       <button onclick="closeAdvanceModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -105,7 +101,6 @@
     </div>
   </div>
 
-  <!-- 独立的盲抽设置弹窗 -->
   <div id="drawSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
       <button onclick="closeDrawSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
@@ -149,7 +144,6 @@
     </div>
   </div>
 
-  <!-- 全局配置弹窗 -->
   <div id="configModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl shadow-2xl relative flex flex-col md:flex-row overflow-hidden" style="height: 80vh; max-height: 600px;">
       <div class="w-full md:w-56 bg-slate-900/50 border-r border-slate-700 flex flex-col p-4 shrink-0">
@@ -222,7 +216,6 @@
     </div>
   </div>
 
-  <!-- ========= 主体 ========= -->
   <main class="max-w-[1600px] mx-auto px-4 py-3 flex-1 w-full flex flex-col">
 
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
@@ -241,7 +234,6 @@
 
     <div class="main-grid">
       <div class="flex flex-col gap-4 min-w-0">
-        <!-- 晋级区 + 操作 -->
         <div class="bg-slate-800/90 rounded-xl p-3 border border-emerald-500/30 shadow-lg">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center space-x-2">
@@ -253,7 +245,6 @@
               <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
               <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
               
-              <!-- 独立的盲抽设置齿轮按钮 -->
               <button onclick="openDrawSettingsModal()" class="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-amber-400 border border-slate-600 rounded-lg transition shadow flex items-center justify-center" title="盲抽参数设置">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -265,7 +256,6 @@
           <div id="passedListContainer" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar pr-1 pt-1.5 mt-1"></div>
         </div>
 
-        <!-- 抽组PK展示区 -->
         <div id="activeGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-xl p-3 shadow-xl">
           <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-amber-500/30 gap-2">
             <div class="flex items-center space-x-2">
@@ -284,13 +274,11 @@
           <div id="activeGroupGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
         </div>
 
-        <!-- 特殊阶段横幅 -->
         <div id="specialRoundBanner" class="hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-xl p-2.5 text-center animate-pulse">
           <h3 id="specialRoundBannerTitle" class="text-sm font-black text-amber-300"></h3>
           <p id="specialRoundBannerSub" class="text-[11px] text-amber-200/90 mt-0.5"></p>
         </div>
 
-        <!-- 待 PK 买家名单池 -->
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700 flex-1 flex flex-col min-h-[200px]">
           <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
             <h2 class="text-sm font-bold text-amber-400">待 PK 买家名单池</h2>
@@ -303,7 +291,6 @@
         </div>
       </div>
 
-      <!-- 右侧列：淘汰区 -->
       <div class="bg-slate-800/30 rounded-xl p-2 border border-slate-800 flex flex-col min-h-[300px]">
         <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-1.5"><span class="text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
@@ -386,7 +373,6 @@
       });
     };
 
-    // ================= 快速盲抽设置弹窗逻辑 =================
     function openDrawSettingsModal() {
       document.getElementById('drawCountdownInput').value = state.modeConfig.drawCountdownSeconds || 5;
       document.getElementById('drawUseDefaultPickCount').checked = state.modeConfig.useDefaultPickCount !== false;
@@ -413,7 +399,6 @@
       closeDrawSettingsModal();
       alert("✅ 盲抽参数已更新并生效！");
     }
-    // =======================================================
 
     function switchConfigTab(tabId) {
       document.querySelectorAll('.config-tab-panel').forEach(el => el.classList.add('hidden'));
@@ -627,7 +612,6 @@
       saveState(); renderRoundTabs();
     }
 
-    // 🎲 抽组PK
     function pickRandomGroup() {
       if (publicAdminActive) {
          console.log("提示：前台管理员已接管开奖，后台盲抽仅作测试准备。");
@@ -679,7 +663,7 @@
       state.currentPollNumber = state.pollCount;
       state.pkStage = 'voting'; state.triggerNumber = null;
       state.drawRoundIndex = currentRoundIndex; state.settled = false;
-      state.isDrawingScramble = true; // 🌟 核心：开启乱码遮盖
+      state.isDrawingScramble = true;
       
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
@@ -691,12 +675,10 @@
     
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
-      // 状态锁：命中或已分配号码后不可修改
       if (state.settled || state.pkStage === 'revealed') {
         alert("⚠️ 开奖已确认，禁止修改票选号！");
         return;
       }
-      // 撤回选择逻辑：如果点的是同一个号码，则取消选择
       if (state.triggerNumber === num) {
         state.triggerNumber = null;
         state.pkStage = 'voting';
@@ -707,20 +689,23 @@
       saveState(); renderActiveGroupUI();
     }
     
+    // ★ 修复：先关闭乱码，再 saveState，避免时序覆盖
     function revealPKWinner() {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
       if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); return; }
       
-      state.pkStage = 'revealed'; state.settled = true; saveState();
+      state.pkStage = 'revealed'; state.settled = true;
+      state.isDrawingScramble = false;   // ★ 关键：先关闭乱码
+      saveState();
+
       setTimeout(() => {
         const total = state.activeGroupMembers.length;
         const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
         const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
         if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
-        state.isDrawingScramble = false; // 🌟 核心：关闭乱码遮盖，显示真实名字
         saveState();
       }, 2200);
     }
@@ -772,6 +757,7 @@
       saveState(); renderActiveGroupUI();
     }
     
+    // ★ 修复：revealed 阶段强制显示真实名字，不再被 isDrawingScramble 卡住
     function renderActiveGroupUI() {
       const displayContainer = document.getElementById('activeGroupDisplay');
       const grid = document.getElementById('activeGroupGrid');
@@ -793,7 +779,6 @@
       }
       if (triggerButtonsContainer) {
         const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
-        // 关键逻辑：只有在 voting/triggered 阶段且未 settled 时才能点击
         const isLocked = (state.pkStage !== 'voting' && state.pkStage !== 'triggered') || state.settled;
         triggerButtonsContainer.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(num => {
           const isSelected = (state.triggerNumber === num);
@@ -814,9 +799,10 @@
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
-        // 🌟 核心：如果 isDrawingScramble 开启，强制显示乱码，不显示真实名字
-        const displayName = state.isDrawingScramble ? '??' : escapeHtml(c.name);
-        const displayOrder = state.isDrawingScramble ? '###' : escapeHtml(c.orderNo || '无订单号');
+        // ★ 修复：revealed 阶段强制显示真实名字
+        const isScramblingNow = state.isDrawingScramble && !isRevealed;
+        const displayName = isScramblingNow ? '??' : escapeHtml(c.name);
+        const displayOrder = isScramblingNow ? '###' : escapeHtml(c.orderNo || '无订单号');
 
         if (isRevealed && hasNumber) {
           if (isWinner) {
@@ -830,8 +816,8 @@
         return `<div class="${cardBorder} rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
-            <div class="font-bold text-amber-300 text-sm truncate mt-1 ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayName}</div>
-            <div class="text-[11px] text-slate-400 font-mono truncate ${state.isDrawingScramble ? 'scramble-text' : ''}">${displayOrder}</div>
+            <div class="font-bold text-amber-300 text-sm truncate mt-1 ${isScramblingNow ? 'scramble-text' : ''}">${displayName}</div>
+            <div class="text-[11px] text-slate-400 font-mono truncate ${isScramblingNow ? 'scramble-text' : ''}">${displayOrder}</div>
           </div>
         </div>`;
       }).join('');
