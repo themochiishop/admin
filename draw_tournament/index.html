@@ -70,14 +70,13 @@
     .animate-scroll-row1 { animation: scrollRow1 3s ease-in-out infinite; }
     .animate-scroll-row2 { animation: scrollRow2 3s ease-in-out infinite; }
 
-    /* 中奖名字高亮效果 2秒 */
-    @keyframes highlightFlash {
-      0%, 100% { background-color: inherit; box-shadow: none; }
-      50% { background-color: rgba(52, 211, 153, 0.4); box-shadow: 0 0 20px #34d399; }
+    /* 中奖卡片外框高亮 2秒 */
+    @keyframes borderHighlightFlash {
+      0%, 100% { border-color: inherit; box-shadow: none; }
+      50% { border-color: #34d399; box-shadow: 0 0 25px #34d399; }
     }
     .pk-hit-highlight {
-      animation: highlightFlash 0.5s ease-in-out 4; /* 0.5 * 4 = 2秒 */
-      border-color: #34d399 !important;
+      animation: borderHighlightFlash 0.5s ease-in-out 4; /* 0.5 * 4 = 2秒 */
     }
 
     /* 电脑端 7:3 自适应网格 */
@@ -153,14 +152,14 @@
     </div>
   </div>
 
-  <!-- 新增：更新过渡遮罩层 -->
-  <div id="updateTransitionMask" class="fixed inset-0 z-[45] bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center transition-all duration-500">
+  <!-- 更新过渡遮罩层（只在 PK 面板内部显示） -->
+  <div id="updateTransitionMask" class="absolute inset-0 z-[45] bg-slate-950/90 backdrop-blur-sm hidden flex-col items-center justify-center rounded-2xl transition-all duration-500">
     <div class="flex flex-col items-center justify-center animate-pulse">
-      <div class="text-6xl sm:text-8xl mb-6 animate-spin" style="animation-duration: 2s;">🔄</div>
-      <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 tracking-widest drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
-        ✨ 数据更新中 ✨
+      <div class="text-5xl sm:text-7xl mb-4 animate-spin" style="animation-duration: 2s;">🔄</div>
+      <h2 class="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 tracking-widest drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+        ✨ 更新数据中 ✨
       </h2>
-      <p class="text-sm sm:text-base text-amber-200/70 mt-4 font-medium tracking-wide">系统正在拉取最新盲抽名单...</p>
+      <p class="text-sm sm:text-base text-amber-200/70 mt-2 font-medium tracking-wide">系统正在拉取最新盲抽名单...</p>
     </div>
   </div>
 
@@ -287,6 +286,17 @@
         <!-- 左侧：Shopee 直播间盲抽 PK 组 -->
         <div id="publicActiveGroupDisplay" class="w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
           
+          <!-- 内部过渡遮罩 -->
+          <div id="updateTransitionMask" class="absolute inset-0 z-[45] bg-slate-950/90 backdrop-blur-sm hidden flex-col items-center justify-center rounded-2xl transition-all duration-500">
+            <div class="flex flex-col items-center justify-center animate-pulse">
+              <div class="text-5xl sm:text-7xl mb-4 animate-spin" style="animation-duration: 2s;">🔄</div>
+              <h2 class="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 tracking-widest drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+                ✨ 更新数据中 ✨
+              </h2>
+              <p class="text-sm sm:text-base text-amber-200/70 mt-2 font-medium tracking-wide">系统正在拉取最新盲抽名单...</p>
+            </div>
+          </div>
+
           <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
             <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
               <span class="text-base sm:text-2xl animate-bounce">🔥</span>
@@ -933,7 +943,7 @@
       }, 120);
     }
 
-    // 新增：乱码结束后让 PK 卡片高亮闪烁 2 秒
+    // 新增：乱码结束后让 PK 卡片外框高亮闪烁 2 秒
     function triggerPkHitHighlight() {
       document.querySelectorAll('.pk-card').forEach(cardEl => {
         cardEl.classList.add('pk-hit-highlight');
