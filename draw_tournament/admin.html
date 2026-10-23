@@ -602,7 +602,10 @@
         alert("⚠️ 当前模式已关闭【混合模式】，所有阶段均不支持抽组PK。\n如需抽组PK，请在设置里重新勾选【🎲 启用混合模式】。");
         return;
       }
-      const activeRound = state.rounds[currentRoundIndex];
+      
+      const activeRound = state.rounds && state.rounds[currentRoundIndex];
+      if (!activeRound) { alert("⚠️ 当前轮次不存在！"); return; }
+
       const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
       if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
 
@@ -611,8 +614,6 @@
       const isConsolation = isMode2 && activeRound.isConsolationStage;
 
       // ★ 判断依据改为 currentPollFinished：
-      //   - 已开奖完成 → 开新 POLL（pollCount++）
-      //   - 否则（未开奖，或已清空但未开奖）→ 覆盖当前 POLL
       const isCurrentPollFinished = state.currentPollFinished === true;
       const hasStartedPoll = (state.currentPollNumber || 0) > 0;
       const isOverwriteCurrentGroup = hasStartedPoll && !isCurrentPollFinished;
@@ -786,7 +787,7 @@
           return `<button onclick="setTriggerNumber(${num})" class="w-7 h-7 rounded-lg text-xs transition transform font-black ${btnClass}">#${num}</button>`;
         }).join('');
       }
-      const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
+      const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex] || { candidates: [] };
       let members = (state.activeGroupMembers || []).map(m => {
         const c = (activeRound.candidates || []).find(x => String(x.id) === String(m.id));
         return c ? { ...c, displayNumber: m.displayNumber } : null;
