@@ -10,6 +10,74 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <style>
+    /* ===== POLL 切换过渡动画 ===== */
+    @keyframes shuffleOverlayFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes shuffleCardBurst {
+      0% { transform: scale(1) rotate(0deg); opacity: 1; }
+      40% { transform: scale(0.85) rotate(-4deg); opacity: 0.6; }
+      100% { transform: scale(0.4) rotate(8deg); opacity: 0; }
+    }
+    @keyframes shuffleSpin {
+      0% { transform: rotate(0deg) scale(0.6); opacity: 0; }
+      40% { opacity: 1; }
+      100% { transform: rotate(360deg) scale(1.1); opacity: 1; }
+    }
+    @keyframes shuffleTextPulse {
+      0%, 100% { opacity: 0.7; letter-spacing: 2px; }
+      50% { opacity: 1; letter-spacing: 5px; }
+    }
+
+    #pkShuffleOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: radial-gradient(circle at center, rgba(245,158,11,0.18) 0%, rgba(15,23,42,0.92) 70%);
+      backdrop-filter: blur(2px);
+      border-radius: 1rem;
+      pointer-events: none;
+    }
+    #pkShuffleOverlay.active {
+      display: flex;
+      animation: shuffleOverlayFadeIn 0.25s ease-out forwards;
+    }
+    #pkShuffleOverlay .shuffle-spinner {
+      width: 56px;
+      height: 56px;
+      border: 4px solid rgba(245,158,11,0.25);
+      border-top-color: #fbbf24;
+      border-radius: 50%;
+      animation: shuffleSpin 0.9s linear infinite;
+      box-shadow: 0 0 30px rgba(245,158,11,0.5);
+    }
+    #pkShuffleOverlay .shuffle-text {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #fbbf24;
+      text-shadow: 0 0 16px rgba(245,158,11,0.9);
+      animation: shuffleTextPulse 1s ease-in-out infinite;
+      letter-spacing: 2px;
+    }
+    #pkShuffleOverlay .shuffle-sub {
+      font-size: 0.7rem;
+      color: #cbd5e1;
+      letter-spacing: 1px;
+      opacity: 0.75;
+    }
+
+    .pk-card.pk-shuffle-out {
+      animation: shuffleCardBurst 0.55s ease-in forwards !important;
+      pointer-events: none;
+    }
+
+    /* ===== 原样式 ===== */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .folder-tab { position: absolute; top: -15px; left: 0px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 9px; padding: 1px 8px; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); letter-spacing: 0.5px; z-index: 10; }
@@ -267,6 +335,13 @@
             </div>
             <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
           </div>
+
+          <!-- ★ POLL 切换刷新遮罩（放在 #publicActiveGroupDisplay 内末尾） -->
+          <div id="pkShuffleOverlay">
+            <div class="shuffle-spinner"></div>
+            <div class="shuffle-text">正在刷新名单…</div>
+            <div class="shuffle-sub">LOADING NEXT POLL GROUP</div>
+          </div>
         </div>
 
         <div id="rightPassedPanel" class="w-full flex flex-col gap-4 transition-all duration-300">
@@ -360,8 +435,9 @@
     let localNamesRevealedGroupSig = '';
     let scrambleIntervalId = null;
     let countdownTimerId = null;
-    let isMarqueeRunning = false;   // ★ 跑马灯进行中标志，期间禁止重绘 PK 卡片
-    let marqueeSafetyTimer = null;  // ★ 兜底定时器，防止 isMarqueeRunning 卡死
+    let isMarqueeRunning = false;
+    let isTransitionPlaying = false;
+    let marqueeSafetyTimer = null;
     
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
@@ -702,12 +778,48 @@
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          if (!countdownTimerId && scramblingMemberIds.size === 0 && !localScrambleActive) {
+          if (!countdownTimerId && scramblingMemberIds.size === 0 && !localScrambleActive && !isTransitionPlaying && !isMarqueeRunning) {
             const groupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
-            if (groupSig !== localScrambleDoneGroupSig) startCountdownThenScramble();
+            if (groupSig !== localScrambleDoneGroupSig) {
+              const hasPreviousRevealed = localNamesRevealedGroupSig !== '' || localScrambleDoneGroupSig !== '';
+              if (hasPreviousRevealed) {
+                playPkShuffleTransition(() => {
+                  renderPublicView();
+                  startCountdownThenScramble();
+                });
+              } else {
+                startCountdownThenScramble();
+              }
+            }
           }
         }
       }
+    }
+
+    function playPkShuffleTransition(onComplete) {
+      if (isTransitionPlaying) return;
+      isTransitionPlaying = true;
+
+      const overlay = document.getElementById('pkShuffleOverlay');
+      const cards = document.querySelectorAll('#pk-area-left .pk-card, #pk-area-right .pk-card');
+
+      cards.forEach((el, i) => {
+        el.style.animationDelay = (i * 0.04) + 's';
+        el.classList.add('pk-shuffle-out');
+      });
+
+      if (overlay) overlay.classList.add('active');
+
+      const totalDuration = 1600;
+      setTimeout(() => {
+        cards.forEach(el => {
+          el.classList.remove('pk-shuffle-out');
+          el.style.animationDelay = '';
+        });
+        if (overlay) overlay.classList.remove('active');
+        isTransitionPlaying = false;
+        if (typeof onComplete === 'function') onComplete();
+      }, totalDuration);
     }
 
     function startCountdownThenScramble() {
@@ -869,7 +981,6 @@
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
       const winnerMemberId = cardMembers[winnerIndex].id;
 
-      // ★ 标记跑马灯开始：期间 renderPublicView 不重绘 PK 卡片，避免破坏动画 DOM
       isMarqueeRunning = true;
       if (marqueeSafetyTimer) clearTimeout(marqueeSafetyTimer);
       marqueeSafetyTimer = setTimeout(() => {
@@ -877,7 +988,6 @@
         renderPublicView();
       }, 8000);
 
-      // ★ 立即锁定云端，防止后台在跑马灯期间改票选号
       db.ref('tournament_state').transaction((latestState) => {
         if (!latestState) return latestState;
         latestState.pkLocked = true;
@@ -888,7 +998,6 @@
       const maxFastIterations = 15;
 
       function runMarquee() {
-        // 如果标志被兜底关掉，说明异常退出，停止跑马灯
         if (!isMarqueeRunning) return;
         activeCards.forEach(el => el.classList.remove('marquee-flash'));
         activeCards[currentIndex].classList.add('marquee-flash');
@@ -916,7 +1025,7 @@
                 state = snapshot.val();
                 const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
                 localNamesRevealedGroupSig = curGroupSig;
-                isMarqueeRunning = false;   // ★ 跑马灯结束，恢复重绘
+                isMarqueeRunning = false;
                 if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
                 renderPublicView();
                 const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
@@ -966,7 +1075,6 @@
                   });
                 }, 1000);
               } else {
-                // ★ 失败兜底：恢复渲染
                 isMarqueeRunning = false;
                 if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
                 renderPublicView();
@@ -1108,13 +1216,19 @@
       const areaR = document.getElementById('pk-area-right');
 
       if (hasActiveGroup) {
-        // ★ 跑马灯进行中：不重绘 PK 卡片区，避免破坏跑马灯动画的 DOM 引用
         if (isMarqueeRunning) {
           const publicPollBadge = document.getElementById('publicPollBadge');
           const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
           const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
           if (publicPollBadge && state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
           if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
+          if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
+        } else if (isTransitionPlaying) {
+          const publicPollBadge = document.getElementById('publicPollBadge');
+          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
+          if (publicPollBadge && state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
+          if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
+          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
           if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
         } else {
           const publicPollBadge = document.getElementById('publicPollBadge');
@@ -1201,7 +1315,6 @@
       } else if (pendingList.length === 0) {
         pendingContainer.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-2xl mb-2">🎉</p><p class="text-xs">本轮全员判定完毕</p></div>`;
       } else {
-        // ★ 只有当前 PK 组名单已揭晓（乱码播完）后，才允许在待定池里高亮/显示 PK 徽章
         const currentGroupSigForPending = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
         const namesRevealedForPending = (currentGroupSigForPending === localNamesRevealedGroupSig) && (state.pkStage === 'revealed' || localScrambleDoneGroupSig === currentGroupSigForPending);
 
