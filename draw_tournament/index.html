@@ -39,7 +39,6 @@
       align-items: center;
       justify-content: center;
       gap: 16px;
-      /* ★ 背景：改为偏暖色调、更通透的渐变，保留微弱的玻璃质感 */
       background: radial-gradient(circle at center, rgba(245, 158, 11, 0.25) 0%, rgba(15, 23, 42, 0.75) 60%, rgba(15, 23, 42, 0.95) 100%);
       backdrop-filter: blur(4px);
       border-radius: 1rem;
@@ -52,25 +51,25 @@
     #pkShuffleOverlay .shuffle-spinner {
       width: 64px;
       height: 64px;
-      border: 4px solid rgba(245, 158, 11, 0.2); /* 底圈：暗黄色 */
-      border-top-color: #fef08a; /* ★ 亮黄色：高对比度 */
+      border: 4px solid rgba(245, 158, 11, 0.2);
+      border-top-color: #fef08a;
       border-right-color: #fbbf24;
       border-radius: 50%;
       animation: shuffleSpin 0.8s linear infinite;
       box-shadow: 0 0 40px rgba(251, 191, 36, 0.6), inset 0 0 15px rgba(251, 191, 36, 0.3);
     }
     #pkShuffleOverlay .shuffle-text {
-      font-size: 1.5rem; /* ★ 放大字号 */
+      font-size: 1.5rem;
       font-weight: 900;
-      color: #fef08a; /* ★ 亮黄色 */
-      text-shadow: 0 0 20px rgba(245, 158, 11, 1), 0 0 5px #fff; /* ★ 强发光 */
+      color: #fef08a;
+      text-shadow: 0 0 20px rgba(245, 158, 11, 1), 0 0 5px #fff;
       animation: shuffleTextPulse 1.2s ease-in-out infinite;
       letter-spacing: 2px;
     }
     #pkShuffleOverlay .shuffle-sub {
       font-size: 0.8rem;
       font-weight: 700;
-      color: #e2e8f0; /* ★ 亮灰色/白色 */
+      color: #e2e8f0;
       text-shadow: 0 0 10px rgba(255,255,255,0.3);
       letter-spacing: 1.5px;
       opacity: 0.9;
@@ -86,13 +85,14 @@
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .folder-tab { position: absolute; top: -15px; left: 0px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 9px; padding: 1px 8px; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); letter-spacing: 0.5px; z-index: 10; }
     
+    /* 优化后的跑马灯闪烁动画 */
     @keyframes ringPulse { 
-      0% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); } 
-      50% { box-shadow: 0 0 25px #fbbf24, inset 0 0 15px #fbbf24; border-color: #fbbf24; transform: scale(1.05); } 
-      100% { box-shadow: 0 0 10px #f59e0b, inset 0 0 10px #f59e0b; border-color: #f59e0b; transform: scale(1.02); } 
+      0% { background-color: rgba(245, 158, 11, 0.4); transform: scale(1.02); } 
+      50% { background-color: rgba(251, 191, 36, 0.6); transform: scale(1.05); } 
+      100% { background-color: rgba(245, 158, 11, 0.4); transform: scale(1.02); } 
     }
-    .marquee-flash { animation: ringPulse 0.15s infinite alternate; background-color: rgba(245, 158, 11, 0.2) !important; }
-    
+    .marquee-flash { animation: ringPulse 0.15s infinite alternate; }
+
     @keyframes winnerBlast { 
       0% { transform: scale(1); box-shadow: 0 0 30px #10b981; } 
       50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981; } 
@@ -307,8 +307,7 @@
             </div>
           </div>
 
-                             <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6 w-full h-full py-2">
-            
+          <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6 w-full h-full py-2">
             <!-- 左侧卡片区 (电脑端为左，手机端为下) -->
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center justify-center lg:justify-end w-full lg:w-[35%] order-2 lg:order-1 mt-2 lg:mt-0"></div>
 
@@ -316,7 +315,6 @@
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 relative w-full lg:w-auto">
               
               <!-- 状态文字区：占据固定高度但居中，不会把票选号顶偏 -->
-                           <!-- 状态文字区：占据固定高度但居中，不会把票选号顶偏 -->
               <div class="h-[60px] sm:h-[70px] w-full flex flex-col items-center justify-center mb-1 relative z-30">
                 
                 <div id="blindDrawingIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
@@ -342,7 +340,7 @@
               <!-- 中间的票选号框 -->
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-4 sm:px-10 sm:py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)] z-20">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-               <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+                <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
               </div>
               
               <!-- 前台揭晓按钮 -->
@@ -1016,100 +1014,119 @@
         return latestState;
       });
 
-      let currentIndex = 0, speed = 80, iterations = 0;
+      let lastFrameTime = 0;
+      let currentIndex = 0;
+      let speed = 80;
+      let iterations = 0;
       const maxFastIterations = 15;
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) speed = 120;
 
-      function runMarquee() {
+      function runMarquee(timestamp) {
         if (!isMarqueeRunning) return;
-        activeCards.forEach(el => el.classList.remove('marquee-flash'));
-        activeCards[currentIndex].classList.add('marquee-flash');
-        if (iterations >= maxFastIterations) speed += 30;
-        if (speed > 300 && currentIndex === winnerIndex) {
-          activeCards.forEach(el => el.classList.remove('marquee-flash'));
-          activeCards[currentIndex].classList.add('winner-glow');
-          setTimeout(() => {
-            const blindIndicator = document.getElementById('blindDrawingIndicator');
-            if (blindIndicator) blindIndicator.classList.add('hidden');
-            db.ref('tournament_state').transaction((latestState) => {
-              if (!latestState) return latestState;
-              const numMap = {};
-              cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
-              latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
-                const nid = String(m.id);
-                return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
-              });
-              latestState.pkStage = 'revealed';
-              latestState.isDrawingScramble = false;
-              latestState.pkLocked = true;
-              return latestState;
-            }, (error, committed, snapshot) => {
-              if (committed) {
-                state = snapshot.val();
-                const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
-                localNamesRevealedGroupSig = curGroupSig;
-                isMarqueeRunning = false;
-                if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
-                renderPublicView();
-                const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
-                const round = state.rounds[roundIdx] || {};
-                const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
-                const winnerName = cand ? cand.name : '幸运买家';
-                const winnerOrderNo = cand ? cand.orderNo : '';
-                __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
-                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+        
+        if (!lastFrameTime) lastFrameTime = timestamp;
+        const progress = timestamp - lastFrameTime;
 
-                setTimeout(() => {
-                  db.ref('tournament_state').transaction((finalState) => {
-                    if (!finalState) return finalState;
-                    const roundIdx2 = finalState.drawRoundIndex ?? currentRoundIndex;
-                    const activeRound = finalState.rounds[roundIdx2];
-                    if (activeRound) {
-                      const triggerNum = finalState.triggerNumber;
-                      const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
-                      if (winnerMember) {
-                        const winnerId = String(winnerMember.id);
-                        const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                        if (!finalState.passHistory) finalState.passHistory = [];
-                        const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
-                        if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
-                          finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2 });
-                        }
-                        const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
-                        finalState.activeGroupIds.forEach(id => {
-                          const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-                          if (target) {
-                            if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
-                            else {
-                              if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
-                              else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
-                            }
+        if (progress >= speed) {
+          lastFrameTime = timestamp;
+          
+          activeCards.forEach(el => el.classList.remove('marquee-flash'));
+          activeCards[currentIndex].classList.add('marquee-flash');
+          
+          if (iterations >= maxFastIterations) speed += (isMobile ? 20 : 30);
+          
+          if (speed > 300 && currentIndex === winnerIndex) {
+            activeCards.forEach(el => el.classList.remove('marquee-flash'));
+            activeCards[currentIndex].classList.add('winner-glow');
+            
+            setTimeout(() => {
+              const blindIndicator = document.getElementById('blindDrawingIndicator');
+              if (blindIndicator) blindIndicator.classList.add('hidden');
+              db.ref('tournament_state').transaction((latestState) => {
+                if (!latestState) return latestState;
+                const numMap = {};
+                cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
+                latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
+                  const nid = String(m.id);
+                  return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
+                });
+                latestState.pkStage = 'revealed';
+                latestState.isDrawingScramble = false;
+                latestState.pkLocked = true;
+                return latestState;
+              }, (error, committed, snapshot) => {
+                if (committed) {
+                  state = snapshot.val();
+                  const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+                  localNamesRevealedGroupSig = curGroupSig;
+                  isMarqueeRunning = false;
+                  if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
+                  renderPublicView();
+                  const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
+                  const round = state.rounds[roundIdx] || {};
+                  const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
+                  const winnerName = cand ? cand.name : '幸运买家';
+                  const winnerOrderNo = cand ? cand.orderNo : '';
+                  __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
+                  showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+
+                  setTimeout(() => {
+                    db.ref('tournament_state').transaction((finalState) => {
+                      if (!finalState) return finalState;
+                      const roundIdx2 = finalState.drawRoundIndex ?? currentRoundIndex;
+                      const activeRound = finalState.rounds[roundIdx2];
+                      if (activeRound) {
+                        const triggerNum = finalState.triggerNumber;
+                        const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
+                        if (winnerMember) {
+                          const winnerId = String(winnerMember.id);
+                          const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
+                          if (!finalState.passHistory) finalState.passHistory = [];
+                          const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
+                          if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
+                            finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2 });
                           }
-                        });
+                          const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
+                          finalState.activeGroupIds.forEach(id => {
+                            const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
+                            if (target) {
+                              if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
+                              else {
+                                if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
+                                else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
+                              }
+                            }
+                          });
+                        }
                       }
-                    }
-                    finalState.settled = true;
-                    return finalState;
-                  }, (err2, com2, snap2) => {
-                    if (com2) {
-                      state = snap2.val();
-                      renderRoundTabs(); renderPublicView(); updateStats();
-                    }
-                  });
-                }, 1000);
-              } else {
-                isMarqueeRunning = false;
-                if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
-                renderPublicView();
-              }
-            });
-          }, 2000);
-          return;
+                      finalState.settled = true;
+                      return finalState;
+                    }, (err2, com2, snap2) => {
+                      if (com2) {
+                        state = snap2.val();
+                        renderRoundTabs(); renderPublicView(); updateStats();
+                      }
+                    });
+                  }, 1000);
+                } else {
+                  isMarqueeRunning = false;
+                  if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
+                  renderPublicView();
+                }
+              });
+            }, 2000);
+            return;
+          }
+          
+          currentIndex = (currentIndex + 1) % total;
+          iterations++;
         }
-        currentIndex = (currentIndex + 1) % total;
-        iterations++;
-        setTimeout(runMarquee, speed);
+        
+        requestAnimationFrame(runMarquee);
       }
-      runMarquee();
+      
+      requestAnimationFrame(runMarquee);
     }
 
     function updatePublicOverlayState() {
