@@ -316,22 +316,27 @@
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 relative w-full lg:w-auto">
               
               <!-- 状态文字区：占据固定高度但居中，不会把票选号顶偏 -->
-              <div class="h-[60px] sm:h-[70px] w-full flex flex-col items-center justify-center mb-1 relative">
+                           <!-- 状态文字区：占据固定高度但居中，不会把票选号顶偏 -->
+              <div class="h-[60px] sm:h-[70px] w-full flex flex-col items-center justify-center mb-1 relative z-30">
+                
                 <div id="blindDrawingIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
+                  <span class="blind-drawing-text whitespace-nowrap text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
                 </div>
+                
                 <div id="countdownIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="text-xs sm:text-sm text-amber-300 font-bold mb-1">盲抽即将在 <span id="countdownNum" class="text-2xl sm:text-3xl text-amber-400 mx-1">5</span> 秒后开始</span>
+                  <span class="whitespace-nowrap text-xs sm:text-sm text-amber-300 font-bold mb-1">盲抽即将在 <span id="countdownNum" class="text-2xl sm:text-3xl text-amber-400 mx-1">5</span> 秒后开始</span>
                   <div class="flex space-x-1">
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.2s;"></span>
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.4s;"></span>
                   </div>
                 </div>
+                
                 <div id="nextRoundHint" class="hidden absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="animate-scroll-row1 text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
-                  <span class="animate-scroll-row2 text-sm sm:text-base font-bold text-emerald-300 mt-0.5 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
+                  <span class="animate-scroll-row1 whitespace-nowrap text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
+                  <span class="animate-scroll-row2 whitespace-nowrap text-sm sm:text-base font-bold text-emerald-300 mt-0.5 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
                 </div>
+                
               </div>
 
               <!-- 中间的票选号框 -->
