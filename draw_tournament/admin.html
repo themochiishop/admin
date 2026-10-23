@@ -220,6 +220,12 @@
       </button>
     </div>
 
+    <!-- ★ 新增：流程状态指示条 -->
+    <div id="workflowStatusBar" class="mb-3 hidden rounded-xl p-3 border-2 shadow-lg flex items-center justify-center space-x-2 transition-all duration-300">
+      <span id="workflowIcon" class="text-xl sm:text-2xl animate-bounce">🎲</span>
+      <span id="workflowText" class="text-sm sm:text-base font-black tracking-widest drop-shadow-md">等待操作...</span>
+    </div>
+
     <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
       <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-xl font-black text-blue-400">0</span></div>
       <div class="bg-slate-800/80 rounded-lg p-2.5 border border-slate-700"><span class="text-[10px] text-slate-400 block">本轮晋级/胜出</span><span id="statPassedCount" class="text-xl font-black text-emerald-400">0</span></div>
@@ -372,6 +378,56 @@
         updateAdminRevealButtonLock();
       });
     };
+
+    // ★ 新增：渲染后台流程状态指示条
+    function renderWorkflowStatus() {
+      const bar = document.getElementById('workflowStatusBar');
+      const icon = document.getElementById('workflowIcon');
+      const text = document.getElementById('workflowText');
+      if (!bar || !icon || !text) return;
+
+      const hasActiveGroup = state.activeGroupIds && state.activeGroupIds.length > 0;
+
+      // 1. 无 PK 组
+      if (!hasActiveGroup) {
+        bar.classList.add('hidden');
+        return;
+      }
+      
+      bar.classList.remove('hidden');
+
+      // 2. 前台已经开奖（命中）
+      if (state.pkStage === 'revealed') {
+        bar.className = "mb-3 rounded-xl p-3 border-2 border-emerald-400 bg-emerald-950/40 shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center justify-center space-x-2 transition-all duration-300";
+        icon.innerText = "🎉";
+        text.innerHTML = `<span class="text-emerald-400">POLL #${state.currentPollNumber} 已揭晓命中！</span><span class="text-xs text-slate-300 ml-2 font-normal">请点击下方【清空盲抽组】或直接进行下一组抽取。</span>`;
+        return;
+      }
+
+      // 3. 前台已点击揭晓（跑马灯中，锁定状态）
+      if (state.pkLocked === true || state.settled === true) {
+        bar.className = "mb-3 rounded-xl p-3 border-2 border-amber-400 bg-amber-950/40 shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center justify-center space-x-2 transition-all duration-300 animate-pulse";
+        icon.innerText = "🎰";
+        text.innerHTML = `<span class="text-amber-400">选取中奖者中…</span><span class="text-xs text-slate-300 ml-2 font-normal">前台正在跑马灯或开奖中，请稍候...</span>`;
+        return;
+      }
+
+      // 4. 已选择票选号（等待前台揭晓）
+      if (state.triggerNumber) {
+        bar.className = "mb-3 rounded-xl p-3 border-2 border-sky-400 bg-sky-950/40 shadow-[0_0_20px_rgba(56,189,248,0.3)] flex items-center justify-center space-x-2 transition-all duration-300 animate-pulse";
+        icon.innerText = "⏳";
+        text.innerHTML = `<span class="text-sky-400">已选票选号 #${state.triggerNumber}</span><span class="text-xs text-slate-300 ml-2 font-normal">等待前台点击【揭晓】按钮...</span>`;
+        return;
+      }
+
+      // 5. 已生成盲抽组（等待选择票选号）
+      if (hasActiveGroup && !state.triggerNumber) {
+        bar.className = "mb-3 rounded-xl p-3 border-2 border-rose-500 bg-rose-950/40 shadow-[0_0_20px_rgba(244,63,94,0.3)] flex items-center justify-center space-x-2 transition-all duration-300 animate-pulse";
+        icon.innerText = "🎯";
+        text.innerHTML = `<span class="text-rose-400">请在上方选择票选号！</span><span class="text-xs text-slate-300 ml-2 font-normal">盲抽组已生成，请点击号码设定。</span>`;
+        return;
+      }
+    }
 
     // ★ 动态按钮文案：依据 currentPollFinished
     function updatePickRandomBtnLabel() {
@@ -765,7 +821,7 @@
       const triggerStatusTag = document.getElementById('triggerStatusTag');
       const triggerButtonsContainer = document.getElementById('triggerButtonsContainer');
       if (state.activeGroupIds && state.activeGroupIds.length > 0 && activeGroup4Ids.length === 0) activeGroup4Ids = [...state.activeGroupIds];
-      if (!activeGroup4Ids || activeGroup4Ids.length === 0) { displayContainer.classList.add('hidden'); updatePickRandomBtnLabel(); return; }
+      if (!activeGroup4Ids || activeGroup4Ids.length === 0) { displayContainer.classList.add('hidden'); updatePickRandomBtnLabel(); renderWorkflowStatus(); return; }
       displayContainer.classList.remove('hidden');
       if (pollBadge && state.currentPollNumber) pollBadge.innerText = `POLL #${state.currentPollNumber}`;
       if (triggerStatusTag) {
@@ -819,6 +875,7 @@
         </div>`;
       }).join('');
       updatePickRandomBtnLabel();
+      renderWorkflowStatus(); // ★ 新增
     }
     
     function undoEliminatedCandidate(id) {
@@ -1013,6 +1070,7 @@
       let totalOutCount = 0;
       (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
       document.getElementById('statOutCount').innerText = totalOutCount;
+      renderWorkflowStatus(); // ★ 新增
     }
     
     function renderAdminView() {
