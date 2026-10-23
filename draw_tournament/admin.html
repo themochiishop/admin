@@ -33,12 +33,7 @@
     .out-card { padding: 4px 6px; font-size: 11px; }
     .undo-btn { opacity: 0.5; transition: opacity 0.2s; }
     .out-card:hover .undo-btn { opacity: 1; }
-
-    .trigger-btn-locked {
-      opacity: 0.4;
-      cursor: not-allowed !important;
-      pointer-events: none;
-    }
+    .trigger-btn-locked { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
@@ -244,7 +239,6 @@
             <div class="flex items-center gap-2">
               <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
               <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
-              
               <button onclick="openDrawSettingsModal()" class="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-amber-400 border border-slate-600 rounded-lg transition shadow flex items-center justify-center" title="盲抽参数设置">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -329,7 +323,7 @@
     let state = {
       customAdminTitle: '', customPublicTitle: '', isPublicVisible: true, pollCount: 0, currentPollNumber: 0,
       pkStage: 'voting', triggerNumber: null, drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [],
-      passHistory: [], settled: false, isDrawingScramble: false,
+      passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
       pdfConfig: { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' },
       modeConfig: { 
         enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, 
@@ -354,6 +348,7 @@
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
+          if (state.pkLocked === undefined) state.pkLocked = false;
           if (state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
           else activeGroup4Ids = [];
           renderRoundTabs();
@@ -380,20 +375,16 @@
       document.getElementById('drawMixedMode').checked = state.modeConfig.mixedModeEnabled !== false;
       document.getElementById('drawSettingsModal').classList.remove('hidden');
     }
-    function closeDrawSettingsModal() {
-      document.getElementById('drawSettingsModal').classList.add('hidden');
-    }
+    function closeDrawSettingsModal() { document.getElementById('drawSettingsModal').classList.add('hidden'); }
     function saveDrawSettings() {
       const countdown = parseInt(document.getElementById('drawCountdownInput').value, 10) || 5;
       const useDefault = document.getElementById('drawUseDefaultPickCount').checked;
       const defaultCount = parseInt(document.getElementById('drawDefaultPickCount').value, 10) || 4;
       const mixed = document.getElementById('drawMixedMode').checked;
-
       state.modeConfig.drawCountdownSeconds = countdown;
       state.modeConfig.useDefaultPickCount = useDefault;
       state.modeConfig.defaultPickCount = defaultCount;
       state.modeConfig.mixedModeEnabled = mixed;
-
       saveState();
       updatePickRandomBtnState();
       closeDrawSettingsModal();
@@ -403,15 +394,11 @@
     function switchConfigTab(tabId) {
       document.querySelectorAll('.config-tab-panel').forEach(el => el.classList.add('hidden'));
       document.getElementById(tabId).classList.remove('hidden');
-      
       const navs = ['tabTitle', 'tabImport', 'tabDraw', 'tabPdf'];
       navs.forEach(id => {
         const btn = document.getElementById('nav-' + id);
-        if (id === tabId) {
-          btn.className = "w-full text-left px-3 py-2.5 rounded-lg font-bold transition bg-slate-800 text-amber-300 border border-slate-700";
-        } else {
-          btn.className = "w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent";
-        }
+        if (id === tabId) btn.className = "w-full text-left px-3 py-2.5 rounded-lg font-bold transition bg-slate-800 text-amber-300 border border-slate-700";
+        else btn.className = "w-full text-left px-3 py-2.5 rounded-lg font-bold transition text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent";
       });
     }
 
@@ -419,50 +406,29 @@
       const btn = document.getElementById('pickRandomGroupBtn');
       if (!btn) return;
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
-        btn.disabled = true;
-        btn.title = "当前模式已关闭【混合模式】，不可使用盲抽";
-      } else {
-        btn.disabled = false;
-        btn.title = "";
-      }
+        btn.disabled = true; btn.title = "当前模式已关闭【混合模式】，不可使用盲抽";
+      } else { btn.disabled = false; btn.title = ""; }
     }
 
     function updateRefreshBtnState() {
       const btn = document.getElementById('refreshSheetsBtn');
       if (!btn) return;
-      
       let hasPassed = false;
-      (state.rounds || []).forEach(r => {
-        if ((r.candidates || []).some(c => c.status === 'pass')) hasPassed = true;
-      });
+      (state.rounds || []).forEach(r => { if ((r.candidates || []).some(c => c.status === 'pass')) hasPassed = true; });
       const isStarted = state.rounds.length > 1 || hasPassed;
-
-      if (isStarted) {
-        btn.disabled = true;
-        btn.title = "比赛已经开始，名单已锁定，不可重新导入";
-      } else {
-        btn.disabled = false;
-        btn.title = "点击刷新或导入买家名单";
-      }
+      if (isStarted) { btn.disabled = true; btn.title = "比赛已经开始，名单已锁定，不可重新导入"; }
+      else { btn.disabled = false; btn.title = "点击刷新或导入买家名单"; }
     }
 
     function updateAdminRevealButtonLock() {
       const btn = document.getElementById('adminRevealBtn');
       const hint = document.getElementById('adminLockedHint');
       if (!btn) return;
-      if (publicAdminActive) {
-        btn.classList.add('opacity-80');
-        if (hint) hint.classList.remove('hidden');
-      } else {
-        btn.classList.remove('opacity-80');
-        if (hint) hint.classList.add('hidden');
-      }
+      if (publicAdminActive) { btn.classList.add('opacity-80'); if (hint) hint.classList.remove('hidden'); }
+      else { btn.classList.remove('opacity-80'); if (hint) hint.classList.add('hidden'); }
     }
 
-    function openConfigModal() { 
-      document.getElementById('configModal').classList.remove('hidden'); 
-      switchConfigTab('tabTitle');
-    }
+    function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); switchConfigTab('tabTitle'); }
     function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
     
     function toggleImportModeUI() {
@@ -489,29 +455,24 @@
       state.pdfConfig.title2 = document.getElementById('pdfTitle2Input').value.trim() || 'OCTOBER FINAL WINNER REPORT';
       state.pdfConfig.subTitle = document.getElementById('pdfSubTitleInput').value.trim() || 'Shopee Live Monthly Event Official Certificate';
       state.pdfConfig.footer = document.getElementById('pdfFooterInput').value.trim() || '© Mochiishop Official Live Tournament System. Verified Result.';
-      
       const isEnabled = document.getElementById('enableModeCheckbox').checked;
       const radios = document.getElementsByName('drawMode');
       let selectedMode = 'mode1';
       for (let r of radios) { if (r.checked) selectedMode = r.value; }
-      
       const mode2Cons = parseInt(document.getElementById('mode2ConsolationCount').value, 10) || 10;
       const importMode = document.querySelector('input[name="importMode"]:checked')?.value || 'default';
       const customSheetUrl = document.getElementById('customSheetUrlInput').value.trim();
-      
       if (!state.modeConfig) state.modeConfig = {};
       state.modeConfig.enabled = isEnabled;
       state.modeConfig.selectedMode = selectedMode;
       state.modeConfig.mode2ConsolationCount = mode2Cons;
       state.modeConfig.importMode = importMode;
       state.modeConfig.customSheetUrl = customSheetUrl;
-      
       saveState();
       updateHeaderTitle();
       updateModeBadgeUI();
       updatePickRandomBtnState();
       closeConfigModal();
-      
       if (importMode === 'fileUpload') {
         const fileInput = document.getElementById('localFileInput');
         if (fileInput && fileInput.files.length > 0) readLocalFileAndParse(fileInput.files[0]);
@@ -530,20 +491,16 @@
       document.getElementById('pdfTitle2Input').value = state.pdfConfig.title2 || '';
       document.getElementById('pdfSubTitleInput').value = state.pdfConfig.subTitle || '';
       document.getElementById('pdfFooterInput').value = state.pdfConfig.footer || '';
-      
       if (!state.modeConfig) state.modeConfig = { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, importMode: 'default', customSheetUrl: '', mixedModeEnabled: true, drawCountdownSeconds: 5 };
       document.getElementById('enableModeCheckbox').checked = state.modeConfig.enabled !== false;
       toggleModeEnable();
-      
       const radios = document.getElementsByName('drawMode');
       for (let r of radios) { if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true; }
       document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
-      
       const importRadios = document.getElementsByName('importMode');
       for (let r of importRadios) { if (r.value === (state.modeConfig.importMode || 'default')) r.checked = true; }
       document.getElementById('customSheetUrlInput').value = state.modeConfig.customSheetUrl || '';
       toggleImportModeUI();
-      
       updateModeBadgeUI();
       updatePickRandomBtnState();
       updateRefreshBtnState();
@@ -568,7 +525,6 @@
         if (isManual) alert("⚠️ 名单已导入且已锁定，如要覆盖请点击右上角【重置所有轮次数据】。");
         return;
       }
-      
       const cfg = state.modeConfig || {};
       const importMode = cfg.importMode || 'default';
       if (importMode === 'fileUpload') {
@@ -578,22 +534,15 @@
       }
       let fetchUrl = DEFAULT_SHEET_CSV_URL;
       if (importMode === 'customUrl' && cfg.customSheetUrl) fetchUrl = cfg.customSheetUrl;
-      
       fetch(fetchUrl)
         .then(response => response.text())
-        .then(csvText => { 
-          parseCSVToFirstRound(csvText); 
-          if (isManual) alert("✅ 已成功导入买家名单！"); 
-        })
+        .then(csvText => { parseCSVToFirstRound(csvText); if (isManual) alert("✅ 已成功导入买家名单！"); })
         .catch(err => { alert("❌ 导入失败，请检查链接格式或网络连接！"); });
     }
     
     function readLocalFileAndParse(file) {
       const reader = new FileReader();
-      reader.onload = function(e) { 
-        parseCSVToFirstRound(e.target.result); 
-        alert(`✅ 已成功从本地文件【${file.name}】导入买家名单！`); 
-      };
+      reader.onload = function(e) { parseCSVToFirstRound(e.target.result); alert(`✅ 已成功从本地文件【${file.name}】导入买家名单！`); };
       reader.readAsText(file);
     }
     
@@ -613,15 +562,11 @@
     }
 
     function pickRandomGroup() {
-      if (publicAdminActive) {
-         console.log("提示：前台管理员已接管开奖，后台盲抽仅作测试准备。");
-      }
-      
+      if (publicAdminActive) { console.log("提示：前台管理员已接管开奖，后台盲抽仅作测试准备。"); }
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
         alert("⚠️ 当前模式已关闭【混合模式】，所有阶段均不支持抽组PK。\n如需抽组PK，请在设置里重新勾选【🎲 启用混合模式】。");
         return;
       }
-      
       const activeRound = state.rounds[currentRoundIndex];
       const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
       if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
@@ -632,31 +577,21 @@
       
       let targetCount = 4;
       const defaultVal = state.modeConfig && state.modeConfig.defaultPickCount ? state.modeConfig.defaultPickCount : 4;
-      
       let promptMsg = "请输入本次要随机盲抽的买家数量:";
-      
       if (isConsolation) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         const remainN = N - picked;
         promptMsg = `🎁 安慰奖遴选阶段。\n还需选出 ${remainN} 名安慰奖，当前池子有 ${pendingList.length} 人。\n\n请输入本次盲抽人数:`;
       }
-
       const s = prompt(promptMsg, defaultVal.toString());
       if (s === null) return;
       targetCount = parseInt(s, 10);
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
-
       if (isConsolation) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         const remainN = N - picked;
-        if (targetCount > pendingList.length) {
-           alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`);
-           return;
-        }
-        if (targetCount > remainN + 3) {
-           alert(`⚠️ 规则限制：当前还需选 ${remainN} 名安慰奖，且必须保留 3 名头部奖。\n单次最多只能抽取 ${remainN + 3} 人！`);
-           return;
-        }
+        if (targetCount > pendingList.length) { alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`); return; }
+        if (targetCount > remainN + 3) { alert(`⚠️ 规则限制：当前还需选 ${remainN} 名安慰奖，且必须保留 3 名头部奖。\n单次最多只能抽取 ${remainN + 3} 人！`); return; }
       }
       
       state.pollCount = (state.pollCount || 0) + 1;
@@ -664,6 +599,7 @@
       state.pkStage = 'voting'; state.triggerNumber = null;
       state.drawRoundIndex = currentRoundIndex; state.settled = false;
       state.isDrawingScramble = true;
+      state.pkLocked = false;
       
       const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
@@ -675,6 +611,10 @@
     
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
+      if (state.pkLocked === true) {
+        alert("⚠️ 前台已点击揭晓，票选号已锁定，禁止修改！");
+        return;
+      }
       if (state.settled || state.pkStage === 'revealed') {
         alert("⚠️ 开奖已确认，禁止修改票选号！");
         return;
@@ -691,12 +631,14 @@
     
     function revealPKWinner() {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
-      if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
+      if (state.triggerNumber) {} else { alert("⚠️ 请先设定票选号！"); return; }
+      if (state.pkLocked === true) { alert("⚠️ 前台已点击揭晓，票选号已锁定！"); return; }
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
       if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); return; }
       
       state.pkStage = 'revealed'; state.settled = true;
       state.isDrawingScramble = false;
+      state.pkLocked = true;
       saveState();
 
       setTimeout(() => {
@@ -713,6 +655,7 @@
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       delete state.currentPollNumber; state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
       state.isDrawingScramble = false;
+      state.pkLocked = false;
       saveState(); document.getElementById('activeGroupDisplay').classList.add('hidden'); renderAdminView();
     }
     
@@ -726,31 +669,21 @@
       if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerId))) {
         state.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: state.drawRoundIndex ?? currentRoundIndex });
       }
-      
       const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
-      
       activeGroup4Ids.forEach(id => {
         const target = activeRound.candidates.find(c => String(c.id) === String(id));
         if (target) {
-          if (String(id) === String(winnerId)) { 
-            target.status = 'pass'; 
-            target.pollLabel = pollLabel; 
-          } else { 
-            if (isMode2 && activeRound.isConsolationStage) {
-              target.status = 'pending';
-            } else {
-              target.status = 'out'; 
-              target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; 
-            }
+          if (String(id) === String(winnerId)) { target.status = 'pass'; target.pollLabel = pollLabel; }
+          else { 
+            if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
+            else { target.status = 'out'; target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; }
           }
         }
       });
-
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === true) {
         const winnerTarget = activeRound.candidates.find(c => String(c.id) === String(winnerId));
         if (winnerTarget) advanceModeLogic(activeRound, winnerTarget);
       }
-
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
       saveState(); renderActiveGroupUI();
@@ -777,7 +710,7 @@
       }
       if (triggerButtonsContainer) {
         const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
-        const isLocked = (state.pkStage !== 'voting' && state.pkStage !== 'triggered') || state.settled;
+        const isLocked = state.pkLocked === true || (state.pkStage !== 'voting' && state.pkStage !== 'triggered') || state.settled;
         triggerButtonsContainer.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(num => {
           const isSelected = (state.triggerNumber === num);
           let btnClass = isSelected ? "bg-amber-500 text-slate-950 font-black scale-110 shadow-lg border-2 border-white" : "bg-slate-800 text-amber-300 border border-amber-500/50 hover:bg-amber-500 hover:text-slate-950";
@@ -797,10 +730,8 @@
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
-        // ★ 后台永远显示真实名字，绝不显示 ??
         const displayName = escapeHtml(c.name);
         const displayOrder = escapeHtml(c.orderNo || '无订单号');
-
         if (isRevealed && hasNumber) {
           if (isWinner) {
             cardHeaderTag = `<span class="text-xs font-black bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
@@ -822,30 +753,16 @@
     
     function undoEliminatedCandidate(id) {
       let foundCandidate = null;
-      let sourceRoundIndex = -1;
-      (state.rounds || []).forEach((r, rIdx) => {
+      (state.rounds || []).forEach((r) => {
         const target = (r.candidates || []).find(c => String(c.id) === String(id));
-        if (target) { foundCandidate = target; sourceRoundIndex = rIdx; }
+        if (target) foundCandidate = target;
       });
       if (!foundCandidate) return;
-
-      (state.rounds || []).forEach(r => {
-        r.candidates = (r.candidates || []).filter(c => String(c.id) !== String(id));
-      });
+      (state.rounds || []).forEach(r => { r.candidates = (r.candidates || []).filter(c => String(c.id) !== String(id)); });
       if (state.passHistory) state.passHistory = state.passHistory.filter(c => String(c.id) !== String(id));
-
       const currentRound = state.rounds[currentRoundIndex];
-      currentRound.candidates.push({
-        id: foundCandidate.id,
-        name: foundCandidate.name,
-        orderNo: foundCandidate.orderNo,
-        status: 'pending'
-      });
-
-      saveState();
-      renderRoundTabs();
-      renderAdminView();
-      updateStats();
+      currentRound.candidates.push({ id: foundCandidate.id, name: foundCandidate.name, orderNo: foundCandidate.orderNo, status: 'pending' });
+      saveState(); renderRoundTabs(); renderAdminView(); updateStats();
       alert(`↩️ 买家【${foundCandidate.name}】已撤回，并重新回到当前轮次待PK名单池！`);
     }
 
@@ -867,10 +784,7 @@
       const N = state.modeConfig.mode2ConsolationCount || 10;
 
       if (mode === 'mode2' && activeRound.isConsolationStage) {
-        if (!justPassed.rankKey) {
-          justPassed.rankTitle = "🎁 安慰奖";
-          justPassed.rankKey = "rankConsolation";
-        }
+        if (!justPassed.rankKey) { justPassed.rankTitle = "🎁 安慰奖"; justPassed.rankKey = "rankConsolation"; }
         const picked = total.filter(c => c.status === 'pass').length;
         if (picked >= N) {
           const remain = total.filter(c => c.status === 'pending');
@@ -878,17 +792,13 @@
             alert(`⚠️ 安慰奖已选满 ${N} 名，但剩余 ${remain.length} 人（应为3人）。请检查本轮名单是否正好 ${N + 3} 人！`);
             return;
           }
-          
           const label = "🏆 冠亚季争夺战 (剩3人)";
           const podium = remain.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-          
           state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: podium });
           currentRoundIndex = state.rounds.length - 1;
           state.passHistory = [];
           state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-          
           saveState(); renderRoundTabs();
-          
           setTimeout(() => alert(`🎁 已选满 ${N} 名安慰奖！\n自动进入【${label}】阶段。`), 100);
         }
         return;
@@ -897,27 +807,18 @@
       if (total.length === 3 && !activeRound.isConsolationStage) {
         justPassed.rankTitle = "🥉 季军"; justPassed.rankKey = "rankThird";
         const two = total.filter(c => String(c.id) !== String(justPassed.id));
-        
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
-        
-        saveState(); 
-        renderRoundTabs();
-
+        saveState(); renderRoundTabs();
         setTimeout(() => {
           const label = "👑 冠亚军终极决战 (2选1)";
           const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-          
           state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
           currentRoundIndex = state.rounds.length - 1;
           state.passHistory = [];
           state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-          
-          saveState(); 
-          renderRoundTabs();
-          
+          saveState(); renderRoundTabs();
           setTimeout(() => alert(`🥉 【${justPassed.name}】锁定季军！\n已自动进入【${label}】。`), 100);
         }, 5000);
-        
         return;
       }
 
@@ -926,11 +827,8 @@
         const ru = total.find(c => String(c.id) !== String(justPassed.id));
         let ruName = "未知买家";
         if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ruName = ru.name; }
-        
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
-        
-        saveState(); 
-        renderRoundTabs();
+        saveState(); renderRoundTabs();
       }
     }
 
@@ -950,90 +848,60 @@
       const cur = state.rounds[currentRoundIndex];
       let passed = (cur.candidates || []).filter(c => c.status === 'pass');
       const total = cur.candidates || [];
-
       if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
       if (passed.length === total.length) { alert("⚠️ 全员晋级，无人淘汰！"); return; }
-
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
       if (isModeEnabled && selectedMode === 'mode1' && passed.length < 3) {
         alert(`⚠️ 【模式 1 规则限制】\n\n开启冠亚季模式时，下一轮必须拥有至少 3 人才能进行【季军争夺战】与【冠亚军决战】！\n\n当前仅选择了 ${passed.length} 位晋级买家，请至少选满 3 位胜出买家后再点击推进。`);
         return;
       }
-
       document.getElementById('advancePassedCount').innerText = passed.length;
       document.getElementById('advanceModal').classList.remove('hidden');
     }
 
-    function closeAdvanceModal() {
-      document.getElementById('advanceModal').classList.add('hidden');
-    }
+    function closeAdvanceModal() { document.getElementById('advanceModal').classList.add('hidden'); }
 
     function executeAdvanceRound(modeType) {
       closeAdvanceModal();
-
       const cur = state.rounds[currentRoundIndex];
       let passed = (cur.candidates || []).filter(c => c.status === 'pass');
       const pending = (cur.candidates || []).filter(c => c.status === 'pending');
-      const total = cur.candidates || [];
-
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
 
       if (modeType === 'auto' && cur.isConsolationStage && passed.length === N && pending.length === 3) {
-         pending.forEach(p => {
-            p.status = 'pass';
-            p.rankTitle = "🏆 冠亚季候选";
-            p.rankKey = "rankPodiumCandidate";
-         });
+         pending.forEach(p => { p.status = 'pass'; p.rankTitle = "🏆 冠亚季候选"; p.rankKey = "rankPodiumCandidate"; });
          passed = (cur.candidates || []).filter(c => c.status === 'pass');
       }
-
-      cur.candidates.forEach(c => {
-        if (c.status !== 'pass') { c.status = 'out'; if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex; }
-      });
+      cur.candidates.forEach(c => { if (c.status !== 'pass') { c.status = 'out'; if (c.eliminatedRoundIndex === undefined) c.eliminatedRoundIndex = currentRoundIndex; } });
 
       const isMode2 = isModeEnabled && selectedMode === 'mode2';
       const nextC = passed.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-
       let label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
       let isConsNext = false;
-
-      if (modeType === 'consolation') {
-        label = `🎁 安慰奖遴选阶段 (${passed.length}人)`;
-        isConsNext = true;
-      } 
+      if (modeType === 'consolation') { label = `🎁 安慰奖遴选阶段 (${passed.length}人)`; isConsNext = true; }
       else if (modeType === 'final') {
         if (passed.length === 3) label = "🏆 冠亚季争夺战 (剩3人)";
         else if (passed.length === 2) label = "👑 冠亚军终极决战 (2选1)";
         else label = `👑 终极决战 (${passed.length}人)`;
       }
-      else if (modeType === 'normal') {
-        label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
-      }
+      else if (modeType === 'normal') label = `第 ${state.rounds.length + 1} 轮 (${passed.length}人角逐)`;
       else {
-        if (isMode2 && cur.isConsolationStage) {
-          label = "🏆 冠亚季争夺战";
-        } else if (isMode2 && passed.length === N + 3) {
-          label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; 
-          isConsNext = true; 
-        } else if (!cur.isConsolationStage && passed.length === 3) {
-          label = "🏆 冠亚季争夺战 (剩3人)";
-        } else if (!cur.isConsolationStage && passed.length === 2) {
-          label = "👑 冠亚军终极决战 (2选1)";
-        }
+        if (isMode2 && cur.isConsolationStage) label = "🏆 冠亚季争夺战";
+        else if (isMode2 && passed.length === N + 3) { label = `🎁 安慰奖遴选阶段 (${passed.length}人，先选${N}名安慰奖)`; isConsNext = true; }
+        else if (!cur.isConsolationStage && passed.length === 3) label = "🏆 冠亚季争夺战 (剩3人)";
+        else if (!cur.isConsolationStage && passed.length === 2) label = "👑 冠亚军终极决战 (2选1)";
       }
 
       state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isConsNext, candidates: nextC });
       currentRoundIndex = state.rounds.length - 1;
-      
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
+      state.pkLocked = false;
       state.passHistory = []; 
-      
       state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-      
       saveState(); renderRoundTabs();
       alert(`🎉 已开启【${label}】！`);
     }
@@ -1176,19 +1044,14 @@
       const grouped = {};
       allOutCandidates.forEach(c => { const key = c.roundIndex; if (!grouped[key]) grouped[key] = []; grouped[key].push(c); });
       const sortedKeys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
-
       outContainer.innerHTML = sortedKeys.map(rIdxKey => {
         const rNum = Number(rIdxKey) + 1;
         const candidatesInGroup = grouped[rIdxKey];
         const rowsHtml = candidatesInGroup.map(c => `
           <div class="out-card flex items-center justify-between gap-1 bg-slate-900/60 border border-slate-800 rounded-md px-1.5 py-1 mt-0.5">
             <span class="font-bold text-slate-300 text-[10px] truncate flex-1">${escapeHtml(c.name)}</span>
-            <button onclick="undoEliminatedCandidate('${c.id}')" 
-                    class="undo-btn text-rose-400 hover:text-rose-300 text-[11px] font-black px-1 rounded hover:bg-rose-900/30 transition" 
-                    title="撤回至当前待PK池">✕</button>
-          </div>
-        `).join('');
-
+            <button onclick="undoEliminatedCandidate('${c.id}')" class="undo-btn text-rose-400 hover:text-rose-300 text-[11px] font-black px-1 rounded hover:bg-rose-900/30 transition" title="撤回至当前待PK池">✕</button>
+          </div>`).join('');
         return `<div class="bg-slate-900/30 p-1.5 rounded-lg border border-slate-800">
           <div class="text-[9px] font-bold text-rose-400/90 mb-1 border-b border-slate-800 pb-0.5 flex justify-between items-center">
             <span>❌ 第 ${rNum} 轮淘汰</span>
@@ -1205,17 +1068,13 @@
           return {
             customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
             isPublicVisible: true, pollCount: 0, currentPollNumber: 0, pkStage: 'voting', triggerNumber: null,
-            drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false,
+            drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
             pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
             rounds: [{ roundName: "第 1 轮", candidates: [] }], publicAdminActive: false
           };
         }, (error) => {
-          if (!error) {
-          currentRoundIndex = 0; activeGroup4Ids = [];
-          fetchGoogleSheetsData(false);
-          } else {
-            alert("❌ 重置失败，请重试");
-          }
+          if (!error) { currentRoundIndex = 0; activeGroup4Ids = []; fetchGoogleSheetsData(false); }
+          else alert("❌ 重置失败，请重试");
         });
       }
     }
