@@ -89,28 +89,11 @@
       }
     }
 
-    .out-panel {
-      max-width: 100%;
-    }
-    .out-card {
-      padding: 6px 8px;
-      font-size: 12px;
-      line-height: 1.3;
-    }
-
-    .passed-zoom .passed-card-name {
-      font-size: 1.5rem !important;
-    }
-    .passed-zoom .passed-card-order {
-      font-size: 0.875rem !important;
-    }
-
-    .scramble-text {
-      font-family: 'Courier New', monospace;
-      letter-spacing: 2px;
-      color: #94a3b8 !important;
-      opacity: 0.8;
-    }
+    .out-panel { max-width: 100%; }
+    .out-card { padding: 6px 8px; font-size: 12px; line-height: 1.3; }
+    .passed-zoom .passed-card-name { font-size: 1.5rem !important; }
+    .passed-zoom .passed-card-order { font-size: 0.875rem !important; }
+    .scramble-text { font-family: 'Courier New', monospace; letter-spacing: 2px; color: #94a3b8 !important; opacity: 0.8; }
 
     .passed-highlight {
       background-color: #064e3b !important;
@@ -119,19 +102,9 @@
       transform: scale(1.02);
       transition: all 0.4s ease;
     }
-    .passed-highlight .passed-card-name {
-      color: #6ee7b7 !important;
-      text-shadow: 0 0 10px rgba(110, 231, 183, 0.8);
-    }
-    .passed-highlight .passed-card-order {
-      color: #a7f3d0 !important;
-    }
-
-    .trigger-btn-locked {
-      opacity: 0.4;
-      cursor: not-allowed !important;
-      pointer-events: none;
-    }
+    .passed-highlight .passed-card-name { color: #6ee7b7 !important; text-shadow: 0 0 10px rgba(110, 231, 183, 0.8); }
+    .passed-highlight .passed-card-order { color: #a7f3d0 !important; }
+    .trigger-btn-locked { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -148,14 +121,10 @@
     <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
       <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
-      
       <div class="text-6xl sm:text-7xl mb-6 inline-block animate-bounce">🚀</div>
       <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 mb-3 tracking-widest drop-shadow-sm">新一轮对决开启</h2>
-      <div id="roundTransitionTitle" class="text-xl sm:text-2xl font-bold text-white mb-6 bg-slate-800/80 py-3 px-6 rounded-2xl border border-slate-700 inline-block">
-        第 2 轮
-      </div>
+      <div id="roundTransitionTitle" class="text-xl sm:text-2xl font-bold text-white mb-6 bg-slate-800/80 py-3 px-6 rounded-2xl border border-slate-700 inline-block">第 2 轮</div>
       <p class="text-sm sm:text-base text-amber-200/80 mb-8 font-medium">🔥 请各位买家/观众做好准备，激烈的角逐即将开始！</p>
-      
       <div class="w-full bg-slate-700/50 rounded-full h-2 mb-4 overflow-hidden border border-slate-600/50 flex justify-start">
         <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-2 rounded-full animate-bar"></div>
       </div>
@@ -204,12 +173,10 @@
             <div id="modeTooltipBody" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
           </div>
         </div>
-        
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span>云端毫秒级同步中...</span>
         </div>
-
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded-lg">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px] sm:text-[11px]">ZH</span></button>
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px] sm:text-[11px]">EN</span></button>
@@ -220,19 +187,14 @@
   </header>
 
   <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full flex flex-col">
-    
     <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden w-full">
       <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
         <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
-          <span>🏆</span>
-          <span>全场抽奖比赛 - 终极荣誉汇总榜</span>
-          <span>🏆</span>
+          <span>🏆</span><span>全场抽奖比赛 - 终极荣誉汇总榜</span><span>🏆</span>
         </h2>
         <p class="text-[11px] sm:text-xs text-slate-400 mt-1">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
-
       <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end max-w-4xl mx-auto"></div>
-
       <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-xl border border-emerald-500/40 w-full max-w-5xl mx-auto">
         <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
           <span class="text-base sm:text-lg">🎁</span>
@@ -251,7 +213,6 @@
     </div>
 
     <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300 flex-1 flex flex-col">
-      
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
@@ -262,9 +223,7 @@
       </div>
 
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
-        
         <div id="publicActiveGroupDisplay" class="w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
-          
           <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
             <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
               <span class="text-base sm:text-2xl animate-bounce">🔥</span>
@@ -272,17 +231,13 @@
             </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
               <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #-</span>
-              <button type="button" id="togglePkPanelBtn" onclick="togglePkPanel()" class="hidden text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold transition">
-                ◀ 折叠
-              </button>
+              <button type="button" id="togglePkPanelBtn" onclick="togglePkPanel()" class="hidden text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold transition">◀ 折叠</button>
             </div>
           </div>
 
           <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
-
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
-              
               <div class="mb-3 text-center min-h-[40px] flex flex-col items-center justify-center">
                 <div id="blindDrawingIndicator" class="hidden">
                   <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
@@ -300,7 +255,6 @@
                   <span class="animate-scroll-row2 text-sm sm:text-base font-bold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
                 </div>
               </div>
-
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-7 py-4 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
                 <span id="centerTriggerNumberBox" class="text-4xl sm:text-5xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
@@ -311,7 +265,6 @@
                 </button>
               </div>
             </div>
-
             <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
           </div>
         </div>
@@ -325,7 +278,6 @@
             </div>
             <div id="passedListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
           </div>
-          
           <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/40 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🎁</span>
@@ -335,11 +287,9 @@
             <div id="publicConsolationListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
           </div>
         </div>
-
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
-        
         <div class="flex flex-col justify-end min-w-0">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
@@ -347,7 +297,6 @@
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">待PK</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已淘汰</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
           </div>
-          
           <div class="bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 flex-1">
             <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
               <div class="flex items-center space-x-2">
@@ -363,7 +312,6 @@
             <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
           </div>
         </div>
-
         <div class="bg-slate-800/30 rounded-2xl p-2.5 border border-slate-800 min-h-[200px] flex flex-col out-panel">
           <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
@@ -371,9 +319,7 @@
           </div>
           <div id="outListContainer" class="space-y-2 flex-1 overflow-y-auto no-scrollbar max-h-[400px] pr-0.5"></div>
         </div>
-
       </div>
-
     </div>
   </main>
 
@@ -409,8 +355,9 @@
 
     let isPkPanelCollapsed = false;
     let scramblingMemberIds = new Set();
-    let localScrambleActive = false;        // ★ 本地乱码动画是否进行中
-    let localScrambleDoneGroupSig = '';     // ★ 已播完乱码的 PK 组签名
+    let localScrambleActive = false;
+    let localScrambleDoneGroupSig = '';
+    let localNamesRevealedGroupSig = '';
     let scrambleIntervalId = null;
     let countdownTimerId = null;
     
@@ -434,8 +381,7 @@
           <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
             <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
             <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
-          </div>
-        `;
+          </div>`;
       } else if (eventData.winnerNamesKey === 'final') {
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
@@ -445,8 +391,7 @@
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
             <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
-          </div>
-        `;
+          </div>`;
       } else if (eventData.winnerNamesKey === 'pkHit') {
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r from-emerald-500/20 via-emerald-400/30 to-emerald-500/20 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400 text-center shadow-lg transform scale-105">
@@ -456,17 +401,14 @@
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
             <span class="text-xs text-slate-400">${escapeHtml(eventData.orderNo || '')}</span>
-          </div>
-        `;
+          </div>`;
       }
 
       modal.classList.remove('hidden');
-
       let timeLeft = durationSeconds;
       const countdown = document.getElementById('congratCountdown');
       if (countdown) countdown.innerText = timeLeft;
       if (__popupTimer) clearInterval(__popupTimer);
-
       __popupTimer = setInterval(() => {
         timeLeft--;
         if (countdown) countdown.innerText = timeLeft;
@@ -481,16 +423,12 @@
       const modal = document.getElementById('roundTransitionModal');
       const titleEl = document.getElementById('roundTransitionTitle');
       if (!modal || !titleEl) return;
-      
       if (__roundModalTimer) clearTimeout(__roundModalTimer);
       modal.classList.add('hidden');
-      
       __roundModalTimer = setTimeout(() => {
         titleEl.innerText = roundTitle;
         modal.classList.remove('hidden');
-        __roundModalTimer = setTimeout(() => {
-          closeRoundModal();
-        }, 5000);
+        __roundModalTimer = setTimeout(() => { closeRoundModal(); }, 5000);
       }, delayMs);
     }
 
@@ -513,9 +451,7 @@
         } else {
           alert("⚠️ 您的浏览器不支持一键分享，请使用【保存为图片】");
         }
-      } catch (err) {
-        alert("❌ 分享失败，请重试！");
-      }
+      } catch (err) { alert("❌ 分享失败，请重试！"); }
     }
 
     async function saveSummaryAsImage() {
@@ -527,9 +463,7 @@
         link.download = 'Mochiishop_Winners.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
-      } catch (err) {
-        alert("❌ 生成图片失败，请重试！");
-      }
+      } catch (err) { alert("❌ 生成图片失败，请重试！"); }
     }
 
     function toggleProcessArea() {
@@ -549,22 +483,18 @@
     function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
-
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       const toggleBtn = document.getElementById('togglePkPanelBtn');
-
       if (isPkPanelCollapsed) {
         pkPanel.style.display = 'none';
-        mainLayout.classList.remove('active');
-        mainLayout.classList.add('collapsed');
+        mainLayout.classList.remove('active'); mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
         pkPanel.style.display = '';
-        mainLayout.classList.remove('collapsed');
-        mainLayout.classList.add('active');
+        mainLayout.classList.remove('collapsed'); mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '◀ 折叠';
       }
@@ -601,12 +531,10 @@
       summaryPanel.classList.remove('hidden');
       toggleBar.classList.remove('hidden');
       if (floatingBtns) floatingBtns.classList.remove('hidden');
-      
       if (!isProcessAreaCollapsed) {
         collapsibleSection.classList.add('hidden');
         document.getElementById('processToggleBtnText').innerText = "展开选拔过程 ▼";
       }
-
       document.getElementById('winnerAnnouncementBanner').classList.add('hidden');
 
       podiumGrid.innerHTML = `
@@ -627,8 +555,7 @@
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
           <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
           <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || '无订单号') : '-'}</div>
-        </div>
-      `;
+        </div>`;
 
       if (consolations.length > 0) {
         consolationBox.classList.remove('hidden');
@@ -640,8 +567,7 @@
               <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
             </div>
             <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(c.orderNo || '无订单号')}</div>
-          </div>
-        `).join('');
+          </div>`).join('');
       } else {
         consolationBox.classList.add('hidden');
       }
@@ -651,12 +577,8 @@
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
       if (!banner || !content) return;
-
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
-      if (summaryPanel && !summaryPanel.classList.contains('hidden')) {
-        banner.classList.add('hidden');
-        return;
-      }
+      if (summaryPanel && !summaryPanel.classList.contains('hidden')) { banner.classList.add('hidden'); return; }
 
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
@@ -675,7 +597,6 @@
         content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
         return;
       }
-
       const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
       if (isConsolationStage) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
@@ -683,20 +604,17 @@
         content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主 🎁</span>`;
         return;
       }
-
       const roundTotal = (activeRound.candidates || []).length;
       if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
         banner.classList.remove('hidden');
         content.innerHTML = `<span class="text-amber-300 font-bold">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
         return;
       }
-
       if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
         banner.classList.remove('hidden');
         content.innerHTML = `<span class="text-amber-300 font-bold">🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！</span>`;
         return;
       }
-
       banner.classList.add('hidden');
     }
 
@@ -725,7 +643,6 @@
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
-          const prevGroupSig = (state.activeGroupIds || []).join(',');
           state = val;
           (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
           if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
@@ -735,21 +652,15 @@
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
-          
-          const newGroupSig = (state.activeGroupIds || []).join(',');
-          
+
           if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
             window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
             queueRoundTransition(state.latestRoundEvent.roundTitle, state.latestRoundEvent.delay || 0);
           }
-
           if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
             window.__lastSeenEventTime = state.latestEvent.timestamp;
-            if (state.latestEvent.type === 'finalCongrat') {
-              showWinnerPopup(state.latestEvent, 5);
-            }
+            if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
           }
-
           if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
             const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
             if (winnerMember) {
@@ -761,18 +672,11 @@
                 const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
                 const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
                 const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                showWinnerPopup({
-                  winnerNamesKey: 'pkHit',
-                  winnerName: winnerName,
-                  orderNo: winnerOrderNo,
-                  triggerNumber: state.triggerNumber
-                }, 5);
+                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
               }
             }
           } else {
-            if (state.pkStage === 'voting') {
-              __lastPkWinnerPopupKey = '';
-            }
+            if (state.pkStage === 'voting') __lastPkWinnerPopupKey = '';
           }
 
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
@@ -783,27 +687,20 @@
           renderPublicView();
           updateStats();
           renderFinalSummaryPanel();
-
-          if (prevGroupSig !== newGroupSig && newGroupSig !== '' && state.pkStage === 'voting') {
-            startCountdownThenScramble();
-          }
         }
       });
-
       setInterval(checkForNewPkGroup, 300);
     };
 
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
-      const sig = (state.activeGroupIds || []).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
+      const sig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
           if (!countdownTimerId && scramblingMemberIds.size === 0 && !localScrambleActive) {
             const groupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
-            if (groupSig !== localScrambleDoneGroupSig) {
-              startCountdownThenScramble();
-            }
+            if (groupSig !== localScrambleDoneGroupSig) startCountdownThenScramble();
           }
         }
       }
@@ -814,18 +711,13 @@
       const countdownNum = document.getElementById('countdownNum');
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       const nextRoundHint = document.getElementById('nextRoundHint');
-      
       if (countdownTimerId) clearInterval(countdownTimerId);
-      
       const totalSec = state.modeConfig.drawCountdownSeconds || 5;
       let timeLeft = totalSec;
-      
       if (countdownNum) countdownNum.innerText = timeLeft;
-      
       if (blindIndicator) blindIndicator.classList.add('hidden');
       if (nextRoundHint) nextRoundHint.classList.add('hidden');
       if (countdownIndicator) countdownIndicator.classList.remove('hidden');
-      
       countdownTimerId = setInterval(() => {
         timeLeft--;
         if (countdownNum) {
@@ -834,7 +726,6 @@
           void countdownNum.offsetWidth;
           countdownNum.classList.add('animate-countdown');
         }
-        
         if (timeLeft <= 0) {
           clearInterval(countdownTimerId);
           countdownTimerId = null;
@@ -852,18 +743,17 @@
 
       const groupSig = ids.join(',') + '|' + (state.currentPollNumber || 0);
       localScrambleActive = true;
+      localNamesRevealedGroupSig = '';
 
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       const countdownIndicator = document.getElementById('countdownIndicator');
       const nextRoundHint = document.getElementById('nextRoundHint');
-      
       if (countdownIndicator) countdownIndicator.classList.add('hidden');
       if (nextRoundHint) nextRoundHint.classList.add('hidden');
       if (blindIndicator) blindIndicator.classList.remove('hidden');
 
       scramblingMemberIds = new Set(ids);
       if (scrambleIntervalId) clearInterval(scrambleIntervalId);
-
       const scrambleStart = Date.now();
       const scrambleDuration = 3000;
 
@@ -874,6 +764,7 @@
           scramblingMemberIds.clear();
           localScrambleActive = false;
           localScrambleDoneGroupSig = groupSig;
+          localNamesRevealedGroupSig = groupSig;
           if (blindIndicator) blindIndicator.classList.add('hidden');
           renderPublicView();
           triggerPkHitHighlight();
@@ -899,9 +790,7 @@
     function triggerPkHitHighlight() {
       document.querySelectorAll('.pk-card').forEach(cardEl => {
         cardEl.classList.add('pk-hit-highlight');
-        setTimeout(() => {
-          cardEl.classList.remove('pk-hit-highlight');
-        }, 2100);
+        setTimeout(() => { cardEl.classList.remove('pk-hit-highlight'); }, 2100);
       });
     }
 
@@ -917,7 +806,6 @@
       const m = state.modeConfig.selectedMode || 'mode1';
       const N = state.modeConfig.mode2ConsolationCount || 10;
       const mixed = state.modeConfig.mixedModeEnabled !== false;
-
       if (m === 'mode1') {
         badge.innerText = "模式: 冠亚季模式";
         if (tooltip) tooltip.innerHTML = mixed
@@ -950,35 +838,27 @@
       const txt = document.getElementById('adminUnlockText');
       if (isAdminUnlocked) { if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; } }
       else { if (txt) { txt.innerText = "🔑 管理员"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; } }
-
       const toggleBtn = document.getElementById('togglePkPanelBtn');
       if (toggleBtn) {
         if (isAdminUnlocked) toggleBtn.classList.remove('hidden');
         else toggleBtn.classList.add('hidden');
       }
-
       renderPublicView();
     }
 
     function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
-      
       if (!state.triggerNumber) {
         alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。");
         return;
       }
-
       const activeCards = Array.from(document.querySelectorAll('.pk-card'));
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
-
-      const cardMembers = activeCards.map(cardEl => {
-        return { id: String(cardEl.dataset.memberId), displayNumber: null };
-      });
+      const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
       cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
-
       let winnerIndex = -1;
       cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
@@ -986,7 +866,7 @@
 
       let currentIndex = 0, speed = 80, iterations = 0;
       const maxFastIterations = 15;
-      
+
       function runMarquee() {
         activeCards.forEach(el => el.classList.remove('marquee-flash'));
         activeCards[currentIndex].classList.add('marquee-flash');
@@ -997,7 +877,6 @@
           setTimeout(() => {
             const blindIndicator = document.getElementById('blindDrawingIndicator');
             if (blindIndicator) blindIndicator.classList.add('hidden');
-
             db.ref('tournament_state').transaction((latestState) => {
               if (!latestState) return latestState;
               const numMap = {};
@@ -1012,6 +891,8 @@
             }, (error, committed, snapshot) => {
               if (committed) {
                 state = snapshot.val();
+                const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+                localNamesRevealedGroupSig = curGroupSig;
                 renderPublicView();
                 const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
                 const round = state.rounds[roundIdx] || {};
@@ -1019,18 +900,13 @@
                 const winnerName = cand ? cand.name : '幸运买家';
                 const winnerOrderNo = cand ? cand.orderNo : '';
                 __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
-                showWinnerPopup({
-                  winnerNamesKey: 'pkHit',
-                  winnerName: winnerName,
-                  orderNo: winnerOrderNo,
-                  triggerNumber: state.triggerNumber
-                }, 5);
-                
+                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+
                 setTimeout(() => {
                   db.ref('tournament_state').transaction((finalState) => {
                     if (!finalState) return finalState;
-                    const roundIdx = finalState.drawRoundIndex ?? currentRoundIndex;
-                    const activeRound = finalState.rounds[roundIdx];
+                    const roundIdx2 = finalState.drawRoundIndex ?? currentRoundIndex;
+                    const activeRound = finalState.rounds[roundIdx2];
                     if (activeRound) {
                       const triggerNum = finalState.triggerNumber;
                       const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
@@ -1040,21 +916,16 @@
                         if (!finalState.passHistory) finalState.passHistory = [];
                         const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
                         if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
-                          finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx });
+                          finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2 });
                         }
-                        
                         const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
                         finalState.activeGroupIds.forEach(id => {
                           const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
                           if (target) {
                             if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
-                            else { 
-                              if (isMode2 && activeRound.isConsolationStage) {
-                                target.status = 'pending';
-                              } else {
-                                target.status = 'out'; 
-                                target.eliminatedRoundIndex = roundIdx; 
-                              }
+                            else {
+                              if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
+                              else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
                             }
                           }
                         });
@@ -1131,10 +1002,8 @@
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
       const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
-
       let header = `<span class="text-sm font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>`;
       let border = "border-amber-500/50 bg-slate-900";
-
       if (isRevealed && hasNumber) {
         if (isWinner) {
           header = `<span class="text-sm font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
@@ -1144,21 +1013,19 @@
           border = "border-2 border-slate-700 bg-slate-900/50 opacity-60 transition-all duration-300";
         }
       }
-
-      // ★ 关键：只看本地乱码状态，不依赖云端 isDrawingScramble
-      const isScrambling = (localScrambleActive || scramblingMemberIds.has(String(c.id))) && !isRevealed;
+      const currentGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+      const namesRevealed = (currentGroupSig === localNamesRevealedGroupSig);
+      const isScrambling = !isRevealed && (!namesRevealed || localScrambleActive || scramblingMemberIds.has(String(c.id)));
       const displayName = isScrambling ? '??' : escapeHtml(c.name);
       const displayOrder = isScrambling ? '###' : escapeHtml(c.orderNo || '');
       const nameClass = isScrambling ? 'scramble-text' : '';
       const orderClass = isScrambling ? 'scramble-text' : '';
-
       return `
         <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
           <div class="pk-card-name font-bold text-amber-300 text-base truncate w-full text-center ${nameClass}">${displayName}</div>
           <div class="pk-card-order text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1 ${orderClass}">${displayOrder}</div>
-        </div>
-      `;
+        </div>`;
     }
 
     function getPlaceholderCardsHtml() {
@@ -1170,13 +1037,10 @@
         const orderTxt = orderPool[i % orderPool.length];
         html.push(`
           <div class="pk-card-placeholder relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 border-amber-500/30 bg-slate-900/60 overflow-hidden shadow-lg flex flex-col justify-center items-center p-3">
-            <div class="mb-2">
-              <span class="text-sm font-black bg-amber-500/60 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>
-            </div>
+            <div class="mb-2"><span class="text-sm font-black bg-amber-500/60 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span></div>
             <div class="font-bold text-amber-300/60 text-base truncate w-full text-center scramble-text">${nameTxt}</div>
             <div class="text-[11px] text-slate-500 font-mono truncate w-full text-center mt-1 scramble-text">${orderTxt}</div>
-          </div>
-        `);
+          </div>`);
       }
       return html;
     }
@@ -1195,21 +1059,17 @@
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       if (isPkPanelCollapsed) {
-        mainLayout.classList.remove('active');
-        mainLayout.classList.add('collapsed');
+        mainLayout.classList.remove('active'); mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
       } else {
-        mainLayout.classList.add('active');
-        mainLayout.classList.remove('collapsed');
+        mainLayout.classList.add('active'); mainLayout.classList.remove('collapsed');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
       }
 
       const hasActiveGroup = state.activeGroupIds && state.activeGroupIds.length > 0;
-
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       const countdownIndicator = document.getElementById('countdownIndicator');
       const nextRoundHint = document.getElementById('nextRoundHint');
-      
       if (blindIndicator) blindIndicator.classList.add('hidden');
       if (countdownIndicator) countdownIndicator.classList.add('hidden');
       if (nextRoundHint) nextRoundHint.classList.add('hidden');
@@ -1221,16 +1081,11 @@
         const publicPollBadge = document.getElementById('publicPollBadge');
         const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
         const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-        
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-        
         if (isAdminUnlocked && state.pkStage !== 'revealed') publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
-
-        if (state.pkStage === 'revealed') {
-          if (nextRoundHint) nextRoundHint.classList.remove('hidden');
-        }
+        if (state.pkStage === 'revealed') { if (nextRoundHint) nextRoundHint.classList.remove('hidden'); }
 
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
         const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
@@ -1248,26 +1103,15 @@
         }
 
         areaL.innerHTML = ''; areaR.innerHTML = '';
-
         activeMembers.forEach((c, idx) => {
           const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          if (window.innerWidth < 1024 || idx % 2 === 0) {
-            areaL.innerHTML += cardHtml;
-          } else {
-            areaR.innerHTML += cardHtml;
-          }
+          if (window.innerWidth < 1024 || idx % 2 === 0) areaL.innerHTML += cardHtml;
+          else areaR.innerHTML += cardHtml;
         });
-
       } else {
         const placeholders = getPlaceholderCardsHtml();
-        if (window.innerWidth < 1024) {
-          areaL.innerHTML = placeholders.join('');
-          areaR.innerHTML = '';
-        } else {
-          areaL.innerHTML = placeholders[0] + placeholders[2];
-          areaR.innerHTML = placeholders[1] + placeholders[3];
-        }
-
+        if (window.innerWidth < 1024) { areaL.innerHTML = placeholders.join(''); areaR.innerHTML = ''; }
+        else { areaL.innerHTML = placeholders[0] + placeholders[2]; areaR.innerHTML = placeholders[1] + placeholders[3]; }
         const publicPollBadge = document.getElementById('publicPollBadge');
         const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
         if (publicPollBadge) publicPollBadge.innerText = `POLL #-`;
@@ -1289,7 +1133,6 @@
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
         const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
         const highlightClass = isHighlight ? 'passed-highlight' : '';
-        
         return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + folderTabHtml +
           '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
           '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
@@ -1308,9 +1151,7 @@
           cPanel.classList.remove('hidden');
           cBadge.innerText = cons.length;
           cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(c.orderNo || '无订单号')}</span></div>`).join('');
-        } else {
-          cPanel.classList.add('hidden');
-        }
+        } else cPanel.classList.add('hidden');
       }
 
       const pendingContainer = document.getElementById('pendingGridContainer');
@@ -1376,7 +1217,6 @@
           </div>`;
         }).join('');
       }
-
       updateWinnerBannerUI();
     }
 
