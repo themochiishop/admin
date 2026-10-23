@@ -58,7 +58,6 @@
       animation: countdownPop 0.5s ease-out forwards;
     }
 
-    /* 跑马灯上下循环动画（两行错开出现） */
     @keyframes scrollRow1 {
       0%, 100% { transform: translateY(0); opacity: 1; }
       50% { transform: translateY(-10px); opacity: 0.8; }
@@ -70,17 +69,14 @@
     .animate-scroll-row1 { animation: scrollRow1 3s ease-in-out infinite; }
     .animate-scroll-row2 { animation: scrollRow2 3s ease-in-out infinite; }
 
-    /* 中奖名字高亮效果 2秒 */
-    @keyframes highlightFlash {
-      0%, 100% { background-color: inherit; box-shadow: none; }
-      50% { background-color: rgba(52, 211, 153, 0.4); box-shadow: 0 0 20px #34d399; }
+    @keyframes borderHighlightFlash {
+      0%, 100% { border-color: inherit; box-shadow: none; }
+      50% { border-color: #34d399; box-shadow: 0 0 25px #34d399; }
     }
     .pk-hit-highlight {
-      animation: highlightFlash 0.5s ease-in-out 4; /* 0.5 * 4 = 2秒 */
-      border-color: #34d399 !important;
+      animation: borderHighlightFlash 0.5s ease-in-out 4;
     }
 
-    /* 电脑端 7:3 自适应网格 */
     @media (min-width: 1024px) {
       .layout-grid.active {
         display: grid;
@@ -93,7 +89,6 @@
       }
     }
 
-    /* 前台淘汰区：收窄为更紧凑的侧栏 */
     .out-panel {
       max-width: 100%;
     }
@@ -103,7 +98,6 @@
       line-height: 1.3;
     }
 
-    /* 晋级名单放大模式（折叠PK后） */
     .passed-zoom .passed-card-name {
       font-size: 1.5rem !important;
     }
@@ -111,7 +105,6 @@
       font-size: 0.875rem !important;
     }
 
-    /* 乱码字体效果 */
     .scramble-text {
       font-family: 'Courier New', monospace;
       letter-spacing: 2px;
@@ -119,7 +112,6 @@
       opacity: 0.8;
     }
 
-    /* 新增：中奖名单高亮效果 */
     .passed-highlight {
       background-color: #064e3b !important;
       border-color: #34d399 !important;
@@ -135,7 +127,6 @@
       color: #a7f3d0 !important;
     }
 
-    /* 锁定状态提示 */
     .trigger-btn-locked {
       opacity: 0.4;
       cursor: not-allowed !important;
@@ -150,17 +141,6 @@
       <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
       <h2 class="text-xl sm:text-2xl font-black text-amber-400 mb-2 leading-snug">网页正在计算与更新中，敬请期待...</h2>
       <p class="text-xs sm:text-sm text-slate-400 font-medium">系统正在实时同步与整理买家数据，请留意直播间提示</p>
-    </div>
-  </div>
-
-  <!-- 新增：更新过渡遮罩层 -->
-  <div id="updateTransitionMask" class="fixed inset-0 z-[45] bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center transition-all duration-500">
-    <div class="flex flex-col items-center justify-center animate-pulse">
-      <div class="text-6xl sm:text-8xl mb-6 animate-spin" style="animation-duration: 2s;">🔄</div>
-      <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 tracking-widest drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
-        ✨ 数据更新中 ✨
-      </h2>
-      <p class="text-sm sm:text-base text-amber-200/70 mt-4 font-medium tracking-wide">系统正在拉取最新盲抽名单...</p>
     </div>
   </div>
 
@@ -281,10 +261,8 @@
         </div>
       </div>
 
-      <!-- 核心区布局 -->
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
         
-        <!-- 左侧：Shopee 直播间盲抽 PK 组 -->
         <div id="publicActiveGroupDisplay" class="w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
           
           <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
@@ -301,19 +279,14 @@
           </div>
 
           <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 w-full h-full">
-            <!-- 左侧/上方卡片区 -->
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center lg:items-end justify-center w-full lg:w-[35%] order-2 lg:order-1"></div>
 
-            <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 my-4 lg:my-0">
               
-              <!-- 状态提示区 -->
               <div class="mb-3 text-center min-h-[40px] flex flex-col items-center justify-center">
-                <!-- 盲抽中 提示 -->
                 <div id="blindDrawingIndicator" class="hidden">
                   <span class="blind-drawing-text text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
                 </div>
-                <!-- 倒计时 提示 -->
                 <div id="countdownIndicator" class="hidden flex flex-col items-center justify-center">
                   <span class="text-xs sm:text-sm text-amber-300 font-bold mb-1">盲抽即将在 <span id="countdownNum" class="text-2xl sm:text-3xl text-amber-400 mx-1">5</span> 秒后开始</span>
                   <div class="flex space-x-1">
@@ -322,7 +295,6 @@
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.4s;"></span>
                   </div>
                 </div>
-                <!-- 恭喜中奖 与 新一轮盲抽即将开始 上下滚动提示 -->
                 <div id="nextRoundHint" class="hidden flex flex-col items-center justify-center">
                   <span class="animate-scroll-row1 text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
                   <span class="animate-scroll-row2 text-sm sm:text-base font-bold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
@@ -340,14 +312,11 @@
               </div>
             </div>
 
-            <!-- 右侧卡片区 (仅电脑端) -->
             <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center lg:items-start w-full lg:w-[35%] order-3"></div>
           </div>
         </div>
 
-        <!-- 右侧：晋级与得奖区 -->
         <div id="rightPassedPanel" class="w-full flex flex-col gap-4 transition-all duration-300">
-          <!-- 已晋级区 -->
           <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🏆</span>
@@ -357,7 +326,6 @@
             <div id="passedListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
           </div>
           
-          <!-- 安慰奖区 -->
           <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/40 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🎁</span>
@@ -370,7 +338,6 @@
 
       </div>
 
-      <!-- 底部统计与淘汰区 -->
       <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
         
         <div class="flex flex-col justify-end min-w-0">
@@ -442,12 +409,14 @@
 
     let isPkPanelCollapsed = false;
     let scramblingMemberIds = new Set();
+    let localScrambleActive = false;        // ★ 本地乱码动画是否进行中
+    let localScrambleDoneGroupSig = '';     // ★ 已播完乱码的 PK 组签名
     let scrambleIntervalId = null;
     let countdownTimerId = null;
     
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
-      drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false,
+      drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false, isDrawingScramble: false,
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true, drawCountdownSeconds: 5 },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
@@ -577,7 +546,6 @@
       }
     }
 
-    // 折叠/展开：只修改 style.display
     function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
@@ -588,13 +556,13 @@
       const toggleBtn = document.getElementById('togglePkPanelBtn');
 
       if (isPkPanelCollapsed) {
-        pkPanel.style.display = 'none'; // 强制隐藏
+        pkPanel.style.display = 'none';
         mainLayout.classList.remove('active');
         mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
-        pkPanel.style.display = ''; // 恢复显示
+        pkPanel.style.display = '';
         mainLayout.classList.remove('collapsed');
         mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
@@ -766,6 +734,7 @@
           if (!state.modeConfig) state.modeConfig = {};
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
+          if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
           
           const newGroupSig = (state.activeGroupIds || []).join(',');
           
@@ -816,8 +785,7 @@
           renderFinalSummaryPanel();
 
           if (prevGroupSig !== newGroupSig && newGroupSig !== '' && state.pkStage === 'voting') {
-            // 检测到新的 PK 组，先显示更新过渡效果，再进入倒计时
-            showUpdateTransitionThenCountdown();
+            startCountdownThenScramble();
           }
         }
       });
@@ -827,27 +795,18 @@
 
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
-      const sig = (state.activeGroupIds || []).join(',') + '|' + (state.pkStage || '');
+      const sig = (state.activeGroupIds || []).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
         if (state.pkStage === 'voting' && state.activeGroupIds && state.activeGroupIds.length > 0) {
-          if (!countdownTimerId && scramblingMemberIds.size === 0) {
-            showUpdateTransitionThenCountdown();
+          if (!countdownTimerId && scramblingMemberIds.size === 0 && !localScrambleActive) {
+            const groupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+            if (groupSig !== localScrambleDoneGroupSig) {
+              startCountdownThenScramble();
+            }
           }
         }
       }
-    }
-
-    // 显示更新过渡效果（1.5秒），随后自动进入倒计时
-    function showUpdateTransitionThenCountdown() {
-      const mask = document.getElementById('updateTransitionMask');
-      if (mask) mask.classList.remove('hidden');
-      
-      // 过渡 1.5 秒后，进入倒计时
-      setTimeout(() => {
-        if (mask) mask.classList.add('hidden');
-        startCountdownThenScramble();
-      }, 1500);
     }
 
     function startCountdownThenScramble() {
@@ -891,6 +850,9 @@
       const ids = (state.activeGroupIds || []).map(id => String(id));
       if (ids.length === 0) return;
 
+      const groupSig = ids.join(',') + '|' + (state.currentPollNumber || 0);
+      localScrambleActive = true;
+
       const blindIndicator = document.getElementById('blindDrawingIndicator');
       const countdownIndicator = document.getElementById('countdownIndicator');
       const nextRoundHint = document.getElementById('nextRoundHint');
@@ -910,9 +872,10 @@
           clearInterval(scrambleIntervalId);
           scrambleIntervalId = null;
           scramblingMemberIds.clear();
+          localScrambleActive = false;
+          localScrambleDoneGroupSig = groupSig;
           if (blindIndicator) blindIndicator.classList.add('hidden');
           renderPublicView();
-          // 触发 2秒高亮效果
           triggerPkHitHighlight();
           return;
         }
@@ -933,13 +896,12 @@
       }, 120);
     }
 
-    // 新增：乱码结束后让 PK 卡片高亮闪烁 2 秒
     function triggerPkHitHighlight() {
       document.querySelectorAll('.pk-card').forEach(cardEl => {
         cardEl.classList.add('pk-hit-highlight');
         setTimeout(() => {
           cardEl.classList.remove('pk-hit-highlight');
-        }, 2100); // 确保 2 秒动画播完
+        }, 2100);
       });
     }
 
@@ -1045,10 +1007,12 @@
                 return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
               });
               latestState.pkStage = 'revealed';
+              latestState.isDrawingScramble = false;
               return latestState;
             }, (error, committed, snapshot) => {
               if (committed) {
                 state = snapshot.val();
+                renderPublicView();
                 const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
                 const round = state.rounds[roundIdx] || {};
                 const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
@@ -1181,7 +1145,8 @@
         }
       }
 
-      const isScrambling = scramblingMemberIds.has(String(c.id));
+      // ★ 关键：只看本地乱码状态，不依赖云端 isDrawingScramble
+      const isScrambling = (localScrambleActive || scramblingMemberIds.has(String(c.id))) && !isRevealed;
       const displayName = isScrambling ? '??' : escapeHtml(c.name);
       const displayOrder = isScrambling ? '###' : escapeHtml(c.orderNo || '');
       const nameClass = isScrambling ? 'scramble-text' : '';
@@ -1249,6 +1214,9 @@
       if (countdownIndicator) countdownIndicator.classList.add('hidden');
       if (nextRoundHint) nextRoundHint.classList.add('hidden');
 
+      const areaL = document.getElementById('pk-area-left');
+      const areaR = document.getElementById('pk-area-right');
+
       if (hasActiveGroup) {
         const publicPollBadge = document.getElementById('publicPollBadge');
         const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
@@ -1260,16 +1228,8 @@
         if (isAdminUnlocked && state.pkStage !== 'revealed') publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
 
-        // 仅当状态为 revealed 时才显示滚动恭喜提示
         if (state.pkStage === 'revealed') {
           if (nextRoundHint) nextRoundHint.classList.remove('hidden');
-        } else if (state.pkStage === 'voting') {
-          // 等待倒计时或乱码
-          if (countdownIndicator && !countdownIndicator.classList.contains('hidden')) {
-             // 倒计时中
-          } else if (blindIndicator && !blindIndicator.classList.contains('hidden')) {
-             // 乱码中
-          }
         }
 
         const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
@@ -1287,8 +1247,6 @@
           }).filter(Boolean);
         }
 
-        const areaL = document.getElementById('pk-area-left');
-        const areaR = document.getElementById('pk-area-right');
         areaL.innerHTML = ''; areaR.innerHTML = '';
 
         activeMembers.forEach((c, idx) => {
@@ -1301,8 +1259,6 @@
         });
 
       } else {
-        const areaL = document.getElementById('pk-area-left');
-        const areaR = document.getElementById('pk-area-right');
         const placeholders = getPlaceholderCardsHtml();
         if (window.innerWidth < 1024) {
           areaL.innerHTML = placeholders.join('');
