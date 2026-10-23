@@ -364,6 +364,7 @@
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
       drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false, isDrawingScramble: false,
+      pkLocked: false,
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true, drawCountdownSeconds: 5 },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
@@ -652,6 +653,7 @@
           if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
+          if (state.pkLocked === undefined) state.pkLocked = false;
 
           if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
             window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
@@ -849,6 +851,7 @@
     function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
+      if (state.pkLocked === true) { alert("⚠️ 开奖已在进行中，请稍候..."); return; }
       if (!state.triggerNumber) {
         alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。");
         return;
@@ -863,6 +866,13 @@
       cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
       const winnerMemberId = cardMembers[winnerIndex].id;
+
+      // ★ 立即锁定云端，防止后台在跑马灯期间修改票选号
+      db.ref('tournament_state').transaction((latestState) => {
+        if (!latestState) return latestState;
+        latestState.pkLocked = true;
+        return latestState;
+      });
 
       let currentIndex = 0, speed = 80, iterations = 0;
       const maxFastIterations = 15;
@@ -887,6 +897,7 @@
               });
               latestState.pkStage = 'revealed';
               latestState.isDrawingScramble = false;
+              latestState.pkLocked = true;
               return latestState;
             }, (error, committed, snapshot) => {
               if (committed) {
@@ -1083,7 +1094,7 @@
         const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
         if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
         if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-        if (isAdminUnlocked && state.pkStage !== 'revealed') publicRevealButtonBox.classList.remove('hidden');
+        if (isAdminUnlocked && state.pkStage !== 'revealed' && state.pkLocked !== true) publicRevealButtonBox.classList.remove('hidden');
         else publicRevealButtonBox.classList.add('hidden');
         if (state.pkStage === 'revealed') { if (nextRoundHint) nextRoundHint.classList.remove('hidden'); }
 
@@ -1161,11 +1172,16 @@
       } else if (pendingList.length === 0) {
         pendingContainer.innerHTML = `<div class="text-center py-6 text-slate-500"><p class="text-2xl mb-2">🎉</p><p class="text-xs">本轮全员判定完毕</p></div>`;
       } else {
+        // ★ 只有当前 PK 组名单已揭晓（乱码播完）后，才允许在待定池里高亮/显示 PK 徽章
+        const currentGroupSigForPending = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+        const namesRevealedForPending = (currentGroupSigForPending === localNamesRevealedGroupSig) && (state.pkStage === 'revealed' || localScrambleDoneGroupSig === currentGroupSigForPending);
+
         let cardsHtml = '';
         pendingList.forEach((c, index) => {
           let extraStyle = 'border-slate-700 bg-slate-800/80';
           let pkBadge = '';
-          if (state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id))) {
+          const isInActiveGroup = state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
+          if (isInActiveGroup && namesRevealedForPending) {
             extraStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
