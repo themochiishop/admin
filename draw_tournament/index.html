@@ -85,13 +85,13 @@
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .folder-tab { position: absolute; top: -15px; left: 0px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 9px; padding: 1px 8px; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); letter-spacing: 0.5px; z-index: 10; }
     
-    /* 优化后的跑马灯闪烁动画 */
+    /* ★ 修复：去掉了重复的 ringPulse，只保留纯硬件加速版本 */
     @keyframes ringPulse { 
-      0% { background-color: rgba(245, 158, 11, 0.4); transform: scale(1.02); } 
-      50% { background-color: rgba(251, 191, 36, 0.6); transform: scale(1.05); } 
-      100% { background-color: rgba(245, 158, 11, 0.4); transform: scale(1.02); } 
+      0% { transform: scale(0.98) rotate(-2deg); background-color: rgba(245, 158, 11, 0.3); } 
+      50% { transform: scale(1.05) rotate(2deg); background-color: rgba(251, 191, 36, 0.7); } 
+      100% { transform: scale(0.98) rotate(-2deg); background-color: rgba(245, 158, 11, 0.3); } 
     }
-    .marquee-flash { animation: ringPulse 0.15s infinite alternate; }
+    .marquee-flash { animation: ringPulse 0.15s infinite alternate; border-color: #fbbf24 !important; }
 
     @keyframes winnerBlast { 
       0% { transform: scale(1); box-shadow: 0 0 30px #10b981; } 
@@ -1007,6 +1007,7 @@
         renderPublicView();
       }, 8000);
 
+      // 锁定云端
       db.ref('tournament_state').transaction((latestState) => {
         if (!latestState) return latestState;
         latestState.pkLocked = true;
@@ -1014,119 +1015,139 @@
         return latestState;
       });
 
-      let lastFrameTime = 0;
+      // === 开始跑马灯动画 ===
       let currentIndex = 0;
-      let speed = 80;
-      let iterations = 0;
-      const maxFastIterations = 15;
+      let tickCount = 0;
+      // 手机端故意放慢闪烁速度，确保至少能肉眼看到 6-8 次闪烁（总耗时约 2.5 秒）
       const isMobile = window.innerWidth < 768;
-      if (isMobile) speed = 120;
-
-      function runMarquee(timestamp) {
+      const baseDelay = isMobile ? 200 : 80; 
+      
+      // 停止跑马灯并出结果的函数
+      function finishMarquee() {
         if (!isMarqueeRunning) return;
+        activeCards.forEach(el => {
+          el.classList.remove('marquee-flash');
+          el.classList.remove('winner-glow');
+        });
         
-        if (!lastFrameTime) lastFrameTime = timestamp;
-        const progress = timestamp - lastFrameTime;
+        const blindIndicator = document.getElementById('blindDrawingIndicator');
+        if (blindIndicator) blindIndicator.classList.add('hidden');
 
-        if (progress >= speed) {
-          lastFrameTime = timestamp;
-          
-          activeCards.forEach(el => el.classList.remove('marquee-flash'));
-          activeCards[currentIndex].classList.add('marquee-flash');
-          
-          if (iterations >= maxFastIterations) speed += (isMobile ? 20 : 30);
-          
-          if (speed > 300 && currentIndex === winnerIndex) {
-            activeCards.forEach(el => el.classList.remove('marquee-flash'));
-            activeCards[currentIndex].classList.add('winner-glow');
+        // 将结果写入 Firebase
+        db.ref('tournament_state').transaction((latestState) => {
+          if (!latestState) return latestState;
+          const numMap = {};
+          cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
+          latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
+            const nid = String(m.id);
+            return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
+          });
+          latestState.pkStage = 'revealed';
+          latestState.isDrawingScramble = false;
+          latestState.pkLocked = true;
+          return latestState;
+        }, (error, committed, snapshot) => {
+          if (committed) {
+            state = snapshot.val();
+            const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+            localNamesRevealedGroupSig = curGroupSig;
+            isMarqueeRunning = false;
+            if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
             
-            setTimeout(() => {
-              const blindIndicator = document.getElementById('blindDrawingIndicator');
-              if (blindIndicator) blindIndicator.classList.add('hidden');
-              db.ref('tournament_state').transaction((latestState) => {
-                if (!latestState) return latestState;
-                const numMap = {};
-                cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
-                latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
-                  const nid = String(m.id);
-                  return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
-                });
-                latestState.pkStage = 'revealed';
-                latestState.isDrawingScramble = false;
-                latestState.pkLocked = true;
-                return latestState;
-              }, (error, committed, snapshot) => {
-                if (committed) {
-                  state = snapshot.val();
-                  const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
-                  localNamesRevealedGroupSig = curGroupSig;
-                  isMarqueeRunning = false;
-                  if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
-                  renderPublicView();
-                  const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
-                  const round = state.rounds[roundIdx] || {};
-                  const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
-                  const winnerName = cand ? cand.name : '幸运买家';
-                  const winnerOrderNo = cand ? cand.orderNo : '';
-                  __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
-                  showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+            renderPublicView();
+            
+            const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
+            const round = state.rounds[roundIdx] || {};
+            const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
+            const winnerName = cand ? cand.name : '幸运买家';
+            const winnerOrderNo = cand ? cand.orderNo : '';
+            __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
+            showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
 
-                  setTimeout(() => {
-                    db.ref('tournament_state').transaction((finalState) => {
-                      if (!finalState) return finalState;
-                      const roundIdx2 = finalState.drawRoundIndex ?? currentRoundIndex;
-                      const activeRound = finalState.rounds[roundIdx2];
-                      if (activeRound) {
-                        const triggerNum = finalState.triggerNumber;
-                        const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
-                        if (winnerMember) {
-                          const winnerId = String(winnerMember.id);
-                          const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                          if (!finalState.passHistory) finalState.passHistory = [];
-                          const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
-                          if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
-                            finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2 });
-                          }
-                          const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
-                          finalState.activeGroupIds.forEach(id => {
-                            const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-                            if (target) {
-                              if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
-                              else {
-                                if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
-                                else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
-                              }
-                            }
-                          });
+            setTimeout(() => {
+              db.ref('tournament_state').transaction((finalState) => {
+                if (!finalState) return finalState;
+                const roundIdx2 = finalState.drawRoundIndex ?? currentRoundIndex;
+                const activeRound = finalState.rounds[roundIdx2];
+                if (activeRound) {
+                  const triggerNum = finalState.triggerNumber;
+                  const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
+                  if (winnerMember) {
+                    const winnerId = String(winnerMember.id);
+                    const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
+                    if (!finalState.passHistory) finalState.passHistory = [];
+                    const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
+                    if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
+                      finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2 });
+                    }
+                    const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
+                    finalState.activeGroupIds.forEach(id => {
+                      const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
+                      if (target) {
+                        if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
+                        else {
+                          if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
+                          else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
                         }
                       }
-                      finalState.settled = true;
-                      return finalState;
-                    }, (err2, com2, snap2) => {
-                      if (com2) {
-                        state = snap2.val();
-                        renderRoundTabs(); renderPublicView(); updateStats();
-                      }
                     });
-                  }, 1000);
-                } else {
-                  isMarqueeRunning = false;
-                  if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
-                  renderPublicView();
+                  }
+                }
+                finalState.settled = true;
+                return finalState;
+              }, (err2, com2, snap2) => {
+                if (com2) {
+                  state = snap2.val();
+                  renderRoundTabs(); renderPublicView(); updateStats();
                 }
               });
-            }, 2000);
-            return;
+            }, 1000);
+          } else {
+            isMarqueeRunning = false;
+            if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
+            renderPublicView();
           }
-          
-          currentIndex = (currentIndex + 1) % total;
-          iterations++;
-        }
-        
-        requestAnimationFrame(runMarquee);
+        });
       }
-      
-      requestAnimationFrame(runMarquee);
+
+      // 跑马灯主循环
+      function runMarquee() {
+        if (!isMarqueeRunning) return;
+
+        // 清除旧高亮
+        activeCards.forEach(el => el.classList.remove('marquee-flash'));
+
+        // 选中当前卡片
+        const card = activeCards[currentIndex];
+        card.classList.add('marquee-flash');
+
+        // 判断是否达到中奖位置（确保至少跑 8 次才可能停）
+        const isEnding = (tickCount >= 8) && (currentIndex === winnerIndex) && (isMobile || tickCount > 12);
+
+        if (isEnding) {
+          card.classList.remove('marquee-flash');
+          card.classList.add('winner-glow');
+          // 手机端强制留出 800ms 让玩家看到绿色的中奖发光效果
+          setTimeout(finishMarquee, isMobile ? 800 : 2000);
+          return;
+        }
+
+        // 移动索引
+        currentIndex = (currentIndex + 1) % total;
+        tickCount++;
+
+        // 动态计算下一次移动的速度（越到后面越慢）
+        let nextDelay = baseDelay;
+        if (tickCount > 5) nextDelay += 30;
+        if (tickCount > 10) nextDelay += 50;
+        
+        // 如果已经跑了很多次，且马上就要停在终点，再放慢一点
+        if (currentIndex === winnerIndex && tickCount > 10) nextDelay += 150;
+
+        setTimeout(runMarquee, nextDelay);
+      }
+
+      runMarquee();
     }
 
     function updatePublicOverlayState() {
