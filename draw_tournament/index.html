@@ -360,6 +360,8 @@
     let localNamesRevealedGroupSig = '';
     let scrambleIntervalId = null;
     let countdownTimerId = null;
+    let isMarqueeRunning = false;   // ★ 跑马灯进行中标志，期间禁止重绘 PK 卡片
+    let marqueeSafetyTimer = null;  // ★ 兜底定时器，防止 isMarqueeRunning 卡死
     
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
@@ -867,7 +869,15 @@
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
       const winnerMemberId = cardMembers[winnerIndex].id;
 
-      // ★ 立即锁定云端，防止后台在跑马灯期间修改票选号
+      // ★ 标记跑马灯开始：期间 renderPublicView 不重绘 PK 卡片，避免破坏动画 DOM
+      isMarqueeRunning = true;
+      if (marqueeSafetyTimer) clearTimeout(marqueeSafetyTimer);
+      marqueeSafetyTimer = setTimeout(() => {
+        isMarqueeRunning = false;
+        renderPublicView();
+      }, 8000);
+
+      // ★ 立即锁定云端，防止后台在跑马灯期间改票选号
       db.ref('tournament_state').transaction((latestState) => {
         if (!latestState) return latestState;
         latestState.pkLocked = true;
@@ -878,6 +888,8 @@
       const maxFastIterations = 15;
 
       function runMarquee() {
+        // 如果标志被兜底关掉，说明异常退出，停止跑马灯
+        if (!isMarqueeRunning) return;
         activeCards.forEach(el => el.classList.remove('marquee-flash'));
         activeCards[currentIndex].classList.add('marquee-flash');
         if (iterations >= maxFastIterations) speed += 30;
@@ -904,6 +916,8 @@
                 state = snapshot.val();
                 const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
                 localNamesRevealedGroupSig = curGroupSig;
+                isMarqueeRunning = false;   // ★ 跑马灯结束，恢复重绘
+                if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
                 renderPublicView();
                 const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
                 const round = state.rounds[roundIdx] || {};
@@ -951,6 +965,11 @@
                     }
                   });
                 }, 1000);
+              } else {
+                // ★ 失败兜底：恢复渲染
+                isMarqueeRunning = false;
+                if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
+                renderPublicView();
               }
             });
           }, 2000);
@@ -1089,36 +1108,46 @@
       const areaR = document.getElementById('pk-area-right');
 
       if (hasActiveGroup) {
-        const publicPollBadge = document.getElementById('publicPollBadge');
-        const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-        const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-        if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
-        if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-        if (isAdminUnlocked && state.pkStage !== 'revealed' && state.pkLocked !== true) publicRevealButtonBox.classList.remove('hidden');
-        else publicRevealButtonBox.classList.add('hidden');
-        if (state.pkStage === 'revealed') { if (nextRoundHint) nextRoundHint.classList.remove('hidden'); }
-
-        const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
-        const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
-        let activeMembers;
-        if (state.activeGroupMembers && state.activeGroupMembers.length > 0) {
-          activeMembers = state.activeGroupMembers.map(m => {
-            const c = (drawRound.candidates || []).find(x => String(x.id) === String(m.id));
-            return c ? { ...c, displayNumber: m.displayNumber } : null;
-          }).filter(Boolean);
+        // ★ 跑马灯进行中：不重绘 PK 卡片区，避免破坏跑马灯动画的 DOM 引用
+        if (isMarqueeRunning) {
+          const publicPollBadge = document.getElementById('publicPollBadge');
+          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
+          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
+          if (publicPollBadge && state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
+          if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
+          if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
         } else {
-          activeMembers = state.activeGroupIds.map((id) => {
-            const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
-            return c ? { ...c, displayNumber: null } : null;
-          }).filter(Boolean);
-        }
+          const publicPollBadge = document.getElementById('publicPollBadge');
+          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
+          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
+          if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
+          if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
+          if (isAdminUnlocked && state.pkStage !== 'revealed' && state.pkLocked !== true) publicRevealButtonBox.classList.remove('hidden');
+          else publicRevealButtonBox.classList.add('hidden');
+          if (state.pkStage === 'revealed') { if (nextRoundHint) nextRoundHint.classList.remove('hidden'); }
 
-        areaL.innerHTML = ''; areaR.innerHTML = '';
-        activeMembers.forEach((c, idx) => {
-          const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
-          if (window.innerWidth < 1024 || idx % 2 === 0) areaL.innerHTML += cardHtml;
-          else areaR.innerHTML += cardHtml;
-        });
+          const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
+          const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
+          let activeMembers;
+          if (state.activeGroupMembers && state.activeGroupMembers.length > 0) {
+            activeMembers = state.activeGroupMembers.map(m => {
+              const c = (drawRound.candidates || []).find(x => String(x.id) === String(m.id));
+              return c ? { ...c, displayNumber: m.displayNumber } : null;
+            }).filter(Boolean);
+          } else {
+            activeMembers = state.activeGroupIds.map((id) => {
+              const c = (drawRound.candidates || []).find(x => String(x.id) === String(id));
+              return c ? { ...c, displayNumber: null } : null;
+            }).filter(Boolean);
+          }
+
+          areaL.innerHTML = ''; areaR.innerHTML = '';
+          activeMembers.forEach((c, idx) => {
+            const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
+            if (window.innerWidth < 1024 || idx % 2 === 0) areaL.innerHTML += cardHtml;
+            else areaR.innerHTML += cardHtml;
+          });
+        }
       } else {
         const placeholders = getPlaceholderCardsHtml();
         if (window.innerWidth < 1024) { areaL.innerHTML = placeholders.join(''); areaR.innerHTML = ''; }
