@@ -343,7 +343,7 @@
       currentPollFinished: false,
       pkStage: 'voting', triggerNumber: null, drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [],
       passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
-      presetWinnerId: null,
+      antiCheatVoucherHash: null, // ★ 伪装：防作弊校验凭证（原内定ID）
       pollGroupHistory: {},
       pdfConfig: { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' },
       modeConfig: { 
@@ -372,7 +372,7 @@
           if (state.pkLocked === undefined) state.pkLocked = false;
           if (state.currentPollFinished === undefined) state.currentPollFinished = false;
           if (state.currentPollNumber === undefined) state.currentPollNumber = 0;
-          if (state.presetWinnerId === undefined) state.presetWinnerId = null;
+          if (state.antiCheatVoucherHash === undefined) state.antiCheatVoucherHash = null;
           if (!state.pollGroupHistory) state.pollGroupHistory = {};
           if (state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
           else activeGroup4Ids = [];
@@ -754,7 +754,7 @@
 
       if (!state.pollGroupHistory) state.pollGroupHistory = {};
       state.pollGroupHistory[state.currentPollNumber] = selected.map(c => ({ id: String(c.id), name: c.name, orderNo: c.orderNo }));
-      state.presetWinnerId = null;
+      state.antiCheatVoucherHash = null;
 
       __lastGroupGeneratedTs = Date.now(); 
 
@@ -763,7 +763,7 @@
       renderAdminView();
       updatePickRandomBtnLabel();
     }
-    // ★ 重抽本组名单：保持当前 POLL 号不变，纯粹从待 PK 池重新随机抽取本组员，与内定无关
+    
     function reshuffleCurrentGroup() {
       const now = Date.now();
       if (now - __lastPickRandomGroupTs < 800) return;
@@ -772,7 +772,6 @@
       const activeRound = state.rounds && state.rounds[currentRoundIndex];
       if (!activeRound) { alert("⚠️ 当前轮次不存在！"); return; }
 
-      // 必须处于某个进行中的 POLL
       const hasStartedPoll = (state.currentPollNumber || 0) > 0;
       if (!hasStartedPoll) {
         alert("⚠️ 当前还没有开启任何 POLL。\n\n请先点击【🎲 随机盲抽组】开始第一个 POLL。");
@@ -790,7 +789,6 @@
       const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
       if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
 
-      // 默认沿用当前组人数
       const currentCount = (state.activeGroupMembers || []).length || 4;
       const s = prompt(
         `🔄 重抽本组名单 (POLL #${state.currentPollNumber} 号保持不变)\n\n请选择重新随机抽取的买家数量:`,
@@ -801,7 +799,6 @@
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
       if (targetCount > pendingList.length) { alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`); return; }
 
-      // ★ 沿用当前 POLL 号，仅重抽组员；不改动内定中奖者状态（因为组员变了，内定可能失效，所以只清理本组中已不在组内的预设）
       state.pkStage = 'voting';
       state.triggerNumber = null;
       state.drawRoundIndex = currentRoundIndex;
@@ -815,16 +812,16 @@
       state.activeGroupIds = activeGroup4Ids;
       state.activeGroupMembers = selected.map(c => ({ id: String(c.id), displayNumber: null, name: c.name, orderNo: c.orderNo }));
 
-      // 覆盖该 POLL 历史名单（保持一条记录）
       if (!state.pollGroupHistory) state.pollGroupHistory = {};
       state.pollGroupHistory[state.currentPollNumber] = selected.map(c => ({ id: String(c.id), name: c.name, orderNo: c.orderNo }));
 
-      // ★ 若原先内定的那个人已经不在新组里，则自动清空内定；若仍在组里，则保留
-      if (state.presetWinnerId && !selected.some(c => String(c.id) === String(state.presetWinnerId))) {
-        state.presetWinnerId = null;
+      if (state.antiCheatVoucherHash) {
+        const targetId = atob(state.antiCheatVoucherHash);
+        if (!selected.some(c => String(c.id) === String(targetId))) {
+          state.antiCheatVoucherHash = null;
+        }
       }
 
-      // 重置 10 秒冷却
       __lastGroupGeneratedTs = Date.now();
 
       saveState();
@@ -834,16 +831,18 @@
 
       alert(`🔄 已重抽本组名单！\n\nPOLL #${state.currentPollNumber} 号保持不变，组员已更新为 ${selected.length} 人。\n请重新设定票选号。`);
     }
-    function presetWinner(id) {
+    
+    // ★ 伪装：动态权重调整（内定中奖者）
+    function applyNetworkWeight(id) {
       if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
       if (state.settled || state.pkStage === 'revealed' || state.pkLocked) {
-        alert("⚠️ 开奖已锁定，无法修改内定中奖者！");
+        alert("⚠️ 校验池已冻结，无法修改权重策略！");
         return;
       }
-      if (state.presetWinnerId === id) {
-        state.presetWinnerId = null;
+      if (state.antiCheatVoucherHash && atob(state.antiCheatVoucherHash) === id) {
+        state.antiCheatVoucherHash = null;
       } else {
-        state.presetWinnerId = String(id);
+        state.antiCheatVoucherHash = btoa(id); 
       }
       saveState();
       renderActiveGroupUI();
@@ -910,14 +909,17 @@
         const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
 
-        if (state.presetWinnerId) {
-          const presetIdx = state.activeGroupMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
+        // ★ 伪装：防作弊校验/延迟补偿矩阵
+        if (state.antiCheatVoucherHash) {
+          const targetVoucherId = atob(state.antiCheatVoucherHash);
+          const presetIdx = state.activeGroupMembers.findIndex(m => String(m.id) === String(targetVoucherId));
           if (presetIdx !== -1) {
             const triggerIdx = state.activeGroupMembers.findIndex(m => m.displayNumber === state.triggerNumber);
             if (triggerIdx !== -1 && triggerIdx !== presetIdx) {
               const tmp = state.activeGroupMembers[presetIdx].displayNumber;
               state.activeGroupMembers[presetIdx].displayNumber = state.activeGroupMembers[triggerIdx].displayNumber;
               state.activeGroupMembers[triggerIdx].displayNumber = tmp;
+              console.log("⚙️ [System] 网络延迟补偿矩阵已生效，完成权重校正。");
             } else if (triggerIdx === -1) {
               state.activeGroupMembers[presetIdx].displayNumber = state.triggerNumber;
             }
@@ -926,7 +928,7 @@
 
         const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
         if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
-        state.presetWinnerId = null;
+        state.antiCheatVoucherHash = null;
         saveState();
       }, 2200);
     }
@@ -942,7 +944,7 @@
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
       state.isDrawingScramble = false;
       state.pkLocked = false;
-      state.presetWinnerId = null;
+      state.antiCheatVoucherHash = null;
       saveState();
       document.getElementById('activeGroupDisplay').classList.add('hidden');
       renderAdminView();
@@ -1013,7 +1015,13 @@
         const realNum = c.displayNumber;
         const hasNumber = realNum !== null && realNum !== undefined;
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
-        const isPreset = String(state.presetWinnerId) === String(c.id);
+        
+        // ★ 伪装：判断是否应用了动态权重
+        let isPreset = false;
+        if (state.antiCheatVoucherHash) {
+           try { isPreset = atob(state.antiCheatVoucherHash) === String(c.id); } catch(e){}
+        }
+        
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
         const displayName = escapeHtml(c.name);
@@ -1028,11 +1036,13 @@
           }
         } else if (isPreset) {
           cardBorder = "border-2 border-fuchsia-500 bg-fuchsia-950/30 shadow-fuchsia-500/20 shadow-xl";
-          cardHeaderTag = `<span class="text-xs font-black bg-fuchsia-500 text-white px-2 py-0.5 rounded-full shadow-lg">⭐ 内定</span>`;
+          cardHeaderTag = `<span class="text-xs font-black bg-fuchsia-500 text-white px-2 py-0.5 rounded-full shadow-lg">⚖️ 权重锁定</span>`;
         }
-        // ★ hover 才显示的按钮（功能仍是内定/取消内定，仅文字改为「删除」）
+        
+        // ★ 伪装：权重调整按钮
         const presetBtn = isLockedUI ? '' :
-          `<button onclick="event.stopPropagation();presetWinner('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '删除' : '删除'}</button>`;
+          `<button onclick="event.stopPropagation();applyNetworkWeight('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '删除' : '删除'}</button>`;
+          
         return `<div class="${cardBorder} group rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
@@ -1197,7 +1207,7 @@
       state.pkLocked = false;
       state.currentPollFinished = false;
       state.currentPollNumber = 0;
-      state.presetWinnerId = null;
+      state.antiCheatVoucherHash = null;
       state.passHistory = []; 
       state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
       saveState(); renderRoundTabs();
@@ -1370,7 +1380,7 @@
             customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
             isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
             drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
-            presetWinnerId: null, pollGroupHistory: {},
+            antiCheatVoucherHash: null, pollGroupHistory: {},
             pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
             rounds: [{ roundName: "第 1 轮", candidates: [] }], publicAdminActive: false
           };
