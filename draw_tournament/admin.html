@@ -238,7 +238,8 @@
               <span id="passedBadgeCount" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">0</span>
             </div>
             <div class="flex items-center gap-2">
-              <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
+                            <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
+              <button id="reshuffleCurrentGroupBtn" onclick="reshuffleCurrentGroup()" class="px-2.5 py-1.5 bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/50 text-[11px] rounded-lg transition font-bold flex items-center space-x-1" title="保持当前 POLL 号不变，重新从待 PK 池随机抽取本组名单">🔄 重抽本组名单</button>
               <button onclick="clearCurrentActiveGroup()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] rounded-lg transition font-bold">清空盲抽组</button>
               <button onclick="openDrawSettingsModal()" class="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-amber-400 border border-slate-600 rounded-lg transition shadow flex items-center justify-center" title="盲抽参数设置">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -755,7 +756,77 @@
       renderAdminView();
       updatePickRandomBtnLabel();
     }
+    // ★ 重抽本组名单：保持当前 POLL 号不变，纯粹从待 PK 池重新随机抽取本组员，与内定无关
+    function reshuffleCurrentGroup() {
+      const now = Date.now();
+      if (now - __lastPickRandomGroupTs < 800) return;
+      __lastPickRandomGroupTs = now;
 
+      const activeRound = state.rounds && state.rounds[currentRoundIndex];
+      if (!activeRound) { alert("⚠️ 当前轮次不存在！"); return; }
+
+      // 必须处于某个进行中的 POLL
+      const hasStartedPoll = (state.currentPollNumber || 0) > 0;
+      if (!hasStartedPoll) {
+        alert("⚠️ 当前还没有开启任何 POLL。\n\n请先点击【🎲 随机盲抽组】开始第一个 POLL。");
+        return;
+      }
+      if (state.currentPollFinished === true) {
+        alert("⚠️ 当前 POLL 已开奖完成，无法重抽。\n\n请点击【🎲 随机盲抽下一组】开启新的 POLL。");
+        return;
+      }
+      if (state.pkLocked === true || state.settled === true || state.pkStage === 'revealed') {
+        alert("⚠️ 当前 POLL 正在开奖或已锁定，无法重抽名单！");
+        return;
+      }
+
+      const pendingList = (activeRound.candidates || []).filter(c => c.status === 'pending');
+      if (pendingList.length === 0) { alert("⚠️ 当前没有待 PK 的买家！"); return; }
+
+      // 默认沿用当前组人数
+      const currentCount = (state.activeGroupMembers || []).length || 4;
+      const s = prompt(
+        `🔄 重抽本组名单 (POLL #${state.currentPollNumber} 号保持不变)\n\n请选择重新随机抽取的买家数量:`,
+        currentCount.toString()
+      );
+      if (s === null) return;
+      const targetCount = parseInt(s, 10);
+      if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
+      if (targetCount > pendingList.length) { alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`); return; }
+
+      // ★ 沿用当前 POLL 号，仅重抽组员；不改动内定中奖者状态（因为组员变了，内定可能失效，所以只清理本组中已不在组内的预设）
+      state.pkStage = 'voting';
+      state.triggerNumber = null;
+      state.drawRoundIndex = currentRoundIndex;
+      state.settled = false;
+      state.isDrawingScramble = true;
+      state.pkLocked = false;
+
+      const shuffled = [...pendingList].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
+      activeGroup4Ids = selected.map(c => String(c.id));
+      state.activeGroupIds = activeGroup4Ids;
+      state.activeGroupMembers = selected.map(c => ({ id: String(c.id), displayNumber: null, name: c.name, orderNo: c.orderNo }));
+
+      // 覆盖该 POLL 历史名单（保持一条记录）
+      if (!state.pollGroupHistory) state.pollGroupHistory = {};
+      state.pollGroupHistory[state.currentPollNumber] = selected.map(c => ({ id: String(c.id), name: c.name, orderNo: c.orderNo }));
+
+      // ★ 若原先内定的那个人已经不在新组里，则自动清空内定；若仍在组里，则保留
+      if (state.presetWinnerId && !selected.some(c => String(c.id) === String(state.presetWinnerId))) {
+        state.presetWinnerId = null;
+      }
+
+      // 重置 10 秒冷却
+      __lastGroupGeneratedTs = Date.now();
+
+      saveState();
+      renderActiveGroupUI();
+      renderAdminView();
+      updatePickRandomBtnLabel();
+
+      alert(`🔄 已重抽本组名单！\n\nPOLL #${state.currentPollNumber} 号保持不变，组员已更新为 ${selected.length} 人。\n请重新设定票选号。`);
+    }
     function presetWinner(id) {
       if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
       if (state.settled || state.pkStage === 'revealed' || state.pkLocked) {
@@ -912,7 +983,7 @@
       }).filter(Boolean);
       const isRevealed = (state.pkStage === 'revealed');
       const isLockedUI = state.pkLocked === true || state.settled || isRevealed;
-      grid.innerHTML = members.map((c) => {
+           grid.innerHTML = members.map((c) => {
         const realNum = c.displayNumber;
         const hasNumber = realNum !== null && realNum !== undefined;
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
@@ -933,9 +1004,10 @@
           cardBorder = "border-2 border-fuchsia-500 bg-fuchsia-950/30 shadow-fuchsia-500/20 shadow-xl";
           cardHeaderTag = `<span class="text-xs font-black bg-fuchsia-500 text-white px-2 py-0.5 rounded-full shadow-lg">⭐ 内定</span>`;
         }
+        // ★ hover 才显示的「定中奖」按钮
         const presetBtn = isLockedUI ? '' :
-          `<button onclick="presetWinner('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'} transition">${isPreset ? '取消内定' : '⭐ 定中奖'}</button>`;
-        return `<div class="${cardBorder} rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
+          `<button onclick="event.stopPropagation();presetWinner('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '取消内定' : '⭐ 定中奖'}</button>`;
+        return `<div class="${cardBorder} group rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
             <div class="font-bold text-amber-300 text-sm truncate mt-1">${displayName}</div>
