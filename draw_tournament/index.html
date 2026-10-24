@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 抽奖实时晋级大屏</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -385,7 +382,6 @@
     let scrambleIntervalId = null;
     let countdownTimerId = null;
     let isMarqueeRunning = false;
-    let __isInterceptingFromAdmin = false; // ★ 锁：用于拦截后台结算，强制播完动画
     let isTransitionPlaying = false;
     let marqueeSafetyTimer = null;
     
@@ -674,127 +670,62 @@
           renderPublicView();
         }, 100);
       }
-
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
-        if (!val) return;
-        state = val;
-        
-        (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
-        if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
-        if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
-        if (!state.passHistory) state.passHistory = [];
-        if (!state.modeConfig) state.modeConfig = {};
-        if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
-        if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
-        if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
-        if (state.pkLocked === undefined) state.pkLocked = false;
-        if (state.presetWinnerId === undefined) state.presetWinnerId = null;
+        if (val) {
+          state = val;
+          (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
+          if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
+          if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
+          if (!state.passHistory) state.passHistory = [];
+          if (!state.modeConfig) state.modeConfig = {};
+          if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
+          if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
+          if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
+          if (state.pkLocked === undefined) state.pkLocked = false;
+          if (state.presetWinnerId === undefined) state.presetWinnerId = null;
 
-        if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
-          window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
-          queueRoundTransition(state.latestRoundEvent.roundTitle, state.latestRoundEvent.delay || 0);
-        }
-        if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
-          window.__lastSeenEventTime = state.latestEvent.timestamp;
-          if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
-        }
-
-        // ★ 核心拦截：当前台发现最终结果，且没在播动画时，强行接管画面
-        if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
-          const popupKey = `pk_${state.currentPollNumber || 0}_${state.triggerNumber}`;
-          
-          if (popupKey !== __lastPkWinnerPopupKey && !__isInterceptingFromAdmin) {
-            __lastPkWinnerPopupKey = popupKey;
-            __isInterceptingFromAdmin = true; // 🔒 上锁：冻结所有渲染
-
-            // 清理杂项
-            localScrambleActive = false;
-            scramblingMemberIds.clear();
-            localNamesRevealedGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
-            if (document.getElementById('blindDrawingIndicator')) document.getElementById('blindDrawingIndicator').classList.add('hidden');
-            if (document.getElementById('countdownIndicator')) document.getElementById('countdownIndicator').classList.add('hidden');
-
-            // 获取屏幕上的原始卡片 DOM
-            const activeCards = Array.from(document.querySelectorAll('.pk-card'));
-            let winnerIndex = -1;
-            activeCards.forEach((cardEl, idx) => {
-              const mid = String(cardEl.dataset.memberId);
-              const member = state.activeGroupMembers.find(m => String(m.id) === mid);
-              if (member && member.displayNumber === state.triggerNumber) winnerIndex = idx;
-            });
-
-            if (winnerIndex !== -1 && activeCards.length > 0) {
-              isMarqueeRunning = true;
-              let currentIndex = 0;
-              let tickCount = 0;
-              const isMobile = window.innerWidth < 768;
-              const baseDelay = isMobile ? 280 : 160;
-
-              const runMarquee = () => {
-                if (!isMarqueeRunning) return;
-                activeCards.forEach(el => el.classList.remove('marquee-flash'));
-                activeCards[currentIndex].classList.add('marquee-flash');
-                
-                const isEnding = (tickCount >= 8) && (currentIndex === winnerIndex) && (isMobile || tickCount > 12);
-                if (isEnding) {
-                  activeCards[currentIndex].classList.remove('marquee-flash');
-                  activeCards[currentIndex].classList.add('winner-glow');
-                  
-                  setTimeout(() => {
-                    isMarqueeRunning = false;
-                    __isInterceptingFromAdmin = false; // 🔓 解锁，允许渲染最终结果
-                    renderPublicView();
-                    
-                    const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
-                    if (winnerMember) {
-                      const roundIdx = state.drawRoundIndex ?? 0;
-                      const round = state.rounds[roundIdx] || {};
-                      const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                      showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName: cand ? cand.name : '幸运买家', orderNo: cand ? cand.orderNo : '', triggerNumber: state.triggerNumber }, 5);
-                    }
-                  }, isMobile ? 800 : 2000);
-                  return;
-                }
-                
-                currentIndex = (currentIndex + 1) % activeCards.length;
-                tickCount++;
-                let nextDelay = baseDelay;
-                if (tickCount > 5) nextDelay += 30;
-                if (tickCount > 10) nextDelay += 50;
-                if (currentIndex === winnerIndex && tickCount > 10) nextDelay += 150;
-                setTimeout(runMarquee, nextDelay);
-              };
-              setTimeout(runMarquee, 500); 
-            } else {
-              __isInterceptingFromAdmin = false;
-              renderPublicView();
-            }
+          if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
+            window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
+            queueRoundTransition(state.latestRoundEvent.roundTitle, state.latestRoundEvent.delay || 0);
           }
-        } else if (state.pkStage === 'voting') {
-          __lastPkWinnerPopupKey = '';
-          __isInterceptingFromAdmin = false;
-        }
+          if (state.latestEvent && state.latestEvent.timestamp > (window.__lastSeenEventTime || 0)) {
+            window.__lastSeenEventTime = state.latestEvent.timestamp;
+            if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
+          }
+          if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
+            const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+            if (winnerMember) {
+              const popupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
+              if (popupKey !== __lastPkWinnerPopupKey) {
+                __lastPkWinnerPopupKey = popupKey;
+                const roundIdx = state.drawRoundIndex ?? 0;
+                const round = state.rounds[roundIdx] || {};
+                const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
+                const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
+                const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
+                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+              }
+            }
+          } else {
+            if (state.pkStage === 'voting') __lastPkWinnerPopupKey = '';
+          }
 
-        localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-        if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
-        updatePublicOverlayState();
-        updateModeBadge();
-        renderRoundTabs();
-        
-        // 注意：这里的 renderPublicView 会被 __isInterceptingFromAdmin 锁住，所以不会覆盖动画
-        renderPublicView(); 
-        updateStats();
-        renderFinalSummaryPanel();
+          localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
+          if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
+          updatePublicOverlayState();
+          updateModeBadge();
+          renderRoundTabs();
+          renderPublicView();
+          updateStats();
+          renderFinalSummaryPanel();
+        }
       });
       setInterval(checkForNewPkGroup, 300);
     };
 
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
-      // ★ 加上这把锁：如果在跑后台动画，定时器禁止干扰
-      if (__isInterceptingFromAdmin) return; 
-
       const sig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
@@ -1246,10 +1177,7 @@
       return html;
     }
 
-  function renderPublicView() {
-      // ★ 如果正在播放后台发来的结算动画，拒绝任何重绘，防止 DOM 被覆盖
-      if (__isInterceptingFromAdmin) return;
-
+    function renderPublicView() {
       let activeRound = { candidates: [] };
       if (state.rounds && state.rounds.length > 0) {
         if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
