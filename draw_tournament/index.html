@@ -134,13 +134,12 @@
     .mt-tag-elim { background: #7f1d1d; color: #fecaca; }
     .mt-tag-pass { background: #064e3b; color: #a7f3d0; }
     .mt-tag-final { background: #78350f; color: #fde68a; }
+    
     @keyframes spinSlow {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
     .animate-spin-slow { animation: spinSlow 1s linear infinite; }
-
-    
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -408,7 +407,6 @@
     let __roundModalTimer = null;
 
     let isPkPanelCollapsed = false;
-        let lastTriggerNumber = null;
     let triggerLoadingTimer = null;
     let scramblingMemberIds = new Set();
     let localScrambleActive = false;
@@ -764,7 +762,7 @@
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
           }
           
-                    // ★ 拦截冠亚季决战的普通弹窗，交由 latestEvent 处理
+          // ★ 拦截冠亚季决战的普通弹窗，交由 latestEvent 处理
           const isCurrentRoundFinal = state.rounds && state.rounds[state.drawRoundIndex ?? 0] && 
             (state.rounds[state.drawRoundIndex ?? 0].candidates || []).length <= 3 &&
             !state.rounds[state.drawRoundIndex ?? 0].isConsolationStage;
@@ -789,50 +787,61 @@
           }
 
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-                  if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
+          if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
           
-          // ★ 新增：监听票选号变动，控制揭晓按钮的 Loading 状态
-          const btnBox = document.getElementById('publicRevealButtonBox');
-          if (btnBox && isAdminUnlocked && state.pkStage !== 'revealed' && state.pkLocked !== true) {
-            
-            // 当后台选择了票选号，并且和上一次不一样，或者刚刚进入 triggered 状态
-            if (state.triggerNumber && (lastTriggerNumber !== state.triggerNumber || state.pkStage === 'triggered')) {
+          // ★ 核心控制：大屏中央数字框的 Loading 与 揭晓按钮 联动
+          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
+          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
+          
+          if (centerTriggerNumberBox && publicRevealButtonBox) {
+            // 情况 A：如果是刚触发、或者票选号改变了，并且还没揭晓
+            if (state.triggerNumber && state.pkStage !== 'revealed' && state.pkLocked !== true) {
               
-              // 如果已经在转圈了，且号没变，不要重新打断转圈
-              if (lastTriggerNumber === state.triggerNumber && btnBox.innerHTML.includes('LOADING')) return; 
+              // 如果大屏幕中央当前显示的不是 "锁定中"，并且不是这个号码，才触发转圈
+              if (centerTriggerNumberBox.innerHTML !== '<span class="animate-spin-slow inline-block w-6 h-6 border-4 border-amber-400/30 border-t-amber-400 rounded-full"></span>') {
+                
+                // 1. 中央大屏变成转圈圈
+                centerTriggerNumberBox.innerHTML = '<span class="animate-spin-slow inline-block w-6 h-6 border-4 border-amber-400/30 border-t-amber-400 rounded-full"></span>';
+                centerTriggerNumberBox.className = "text-3xl sm:text-4xl font-black text-amber-400 flex items-center justify-center h-[40px] drop-shadow-md";
+                publicRevealButtonBox.classList.add('hidden'); // 隐藏按钮
 
-              lastTriggerNumber = state.triggerNumber;
-              btnBox.classList.remove('hidden');
-              
-              // 1. 显示 Loading 转圈
-              btnBox.innerHTML = `
-                <button class="px-8 py-3 bg-slate-800 text-amber-400 border-2 border-amber-500/50 font-black text-sm sm:text-base rounded-xl shadow-xl flex items-center justify-center space-x-3 cursor-wait pointer-events-none">
-                  <div class="w-5 h-5 border-4 border-amber-500/30 border-t-amber-400 rounded-full animate-spin-slow"></div>
-                  <span>票选号 #${state.triggerNumber} 锁定中...</span>
-                </button>`;
-              
-              // 2. 等 2 秒后，变成“点击揭晓”按钮
-              if (triggerLoadingTimer) clearTimeout(triggerLoadingTimer);
-              triggerLoadingTimer = setTimeout(() => {
-                // 只有在还没揭晓的情况下才显示按钮
-                if (state.pkStage !== 'revealed') {
-                  btnBox.innerHTML = `
-                    <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                      <span>🎰</span><span>点击揭晓 #${state.triggerNumber}</span>
-                    </button>`;
-                }
-              }, 2000);
-
-            } else if (!state.triggerNumber) {
-              // 如果后台取消了票选号，按钮隐藏
-              btnBox.classList.add('hidden');
-              lastTriggerNumber = null;
+                // 2. 倒计时 2 秒
+                if (triggerLoadingTimer) clearTimeout(triggerLoadingTimer);
+                triggerLoadingTimer = setTimeout(() => {
+                  
+                  // 2 秒后，如果还是没揭晓，就展示真实号码和按钮
+                  if (state.pkStage !== 'revealed') {
+                    // 亮出票选号
+                    centerTriggerNumberBox.innerHTML = `#${state.triggerNumber}`;
+                    centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md animate-pop"; // 加个弹出动画
+                    
+                    // 显示揭晓按钮
+                    if (isAdminUnlocked) {
+                      publicRevealButtonBox.innerHTML = `
+                        <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+                          <span>🎰</span><span>点击揭晓 #${state.triggerNumber}</span>
+                        </button>`;
+                      publicRevealButtonBox.classList.remove('hidden');
+                    }
+                  }
+                }, 2000);
+              }
+            } 
+            // 情况 B：如果还没有票选号，或者重置了
+            else if (!state.triggerNumber) {
+              centerTriggerNumberBox.innerHTML = `#?`;
+              centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md";
+              publicRevealButtonBox.classList.add('hidden');
               if (triggerLoadingTimer) clearTimeout(triggerLoadingTimer);
             }
-          } else if (btnBox && (state.pkStage === 'revealed' || state.pkLocked === true)) {
-            // 如果已经开奖或者锁定，隐藏按钮
-            btnBox.classList.add('hidden');
+            // 情况 C：已经揭晓了（开奖完成）
+            else if (state.pkStage === 'revealed') {
+              centerTriggerNumberBox.innerHTML = `#${state.triggerNumber}`;
+              centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-emerald-400 tracking-widest drop-shadow-md pixel-hit"; // 揭晓后变成绿色
+              publicRevealButtonBox.classList.add('hidden');
+            }
           }
+
           updatePublicOverlayState();
           updateModeBadge();
           renderRoundTabs();
@@ -1152,9 +1161,9 @@
             const winnerOrderNo = cand ? cand.orderNo : '';
             __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
             
-                           // 前端弹窗同步：中奖即晋级，不再是淘汰
-                const isElimination = false; 
-                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
+            // 前端弹窗同步：中奖即晋级，不再是淘汰
+            const isElimination = false; 
+            showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
 
             setTimeout(() => {
               db.ref('tournament_state').transaction((finalState) => {
@@ -1359,28 +1368,8 @@
 
       if (hasActiveGroup) {
         if (isMarqueeRunning) {
-          const publicPollBadge = document.getElementById('publicPollBadge');
-          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-          if (publicPollBadge && state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
-          if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-          if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
         } else if (isTransitionPlaying) {
-          const publicPollBadge = document.getElementById('publicPollBadge');
-          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-          if (publicPollBadge && state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
-          if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-          if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
         } else {
-          const publicPollBadge = document.getElementById('publicPollBadge');
-          const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-          const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-          if (state.currentPollNumber) publicPollBadge.innerText = `POLL #${state.currentPollNumber}`;
-          if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = state.triggerNumber ? `#${state.triggerNumber}` : `#?`;
-      
-          if (state.pkStage === 'revealed') { if (nextRoundHint) nextRoundHint.classList.remove('hidden'); }
-
           const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
           const drawRound = (state.rounds || [])[drawRoundIdx] || activeRound;
           let activeMembers;
@@ -1407,12 +1396,6 @@
         const placeholders = getPlaceholderCardsHtml();
         if (window.innerWidth < 1024) { areaL.innerHTML = placeholders.join(''); areaR.innerHTML = ''; }
         else { areaL.innerHTML = placeholders[0] + placeholders[2]; areaR.innerHTML = placeholders[1] + placeholders[3]; }
-        const publicPollBadge = document.getElementById('publicPollBadge');
-        const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
-        if (publicPollBadge) publicPollBadge.innerText = `POLL #-`;
-        if (centerTriggerNumberBox) centerTriggerNumberBox.innerText = `#?`;
-        const publicRevealButtonBox = document.getElementById('publicRevealButtonBox');
-        if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
       }
 
       let passedList = list.filter(c => c.status === 'pass');
