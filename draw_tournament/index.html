@@ -772,7 +772,7 @@
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
           }
           
-          // ★ 拦截冠亚季决战的普通弹窗，交由 latestEvent 处理
+                   // ★ 判断当前是否是“决战轮”或“刚刚打完决战”
           const isFinalEvent = state.latestEvent && (state.latestEvent.winnerNamesKey === 'third' || state.latestEvent.winnerNamesKey === 'final');
           const isCurrentRoundFinal = state.rounds && state.rounds[state.drawRoundIndex ?? 0] && 
             (state.rounds[state.drawRoundIndex ?? 0].candidates || []).length <= 3 &&
@@ -796,7 +796,6 @@
           } else {
             if (state.pkStage === 'voting') __lastPkWinnerPopupKey = '';
           }
-
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
           
@@ -1158,6 +1157,7 @@
             const winnerOrderNo = cand ? cand.orderNo : '';
             __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
             
+                       // ★ 这里直接判断 isElimination（反向淘汰）
             const isElimination = state.isReverseElimination === true; 
             showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
 
@@ -1172,8 +1172,10 @@
                   if (winnerMember) {
                     const winnerId = String(winnerMember.id);
                     const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                    
                     const isReverse = finalState.isReverseElimination === true;
+                    const pendingCount = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
+                    const isFinal = (pendingCount <= 3);
+
                     if (!finalState.passHistory) finalState.passHistory = [];
                     const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
                     
@@ -1185,22 +1187,22 @@
                       const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
                       if (!target) return;
                       if (isReverse) {
-                        if (String(id) === winnerId) {
-                          target.status = 'out';
-                          target.eliminatedRoundIndex = roundIdx2;
-                        }
+                        if (String(id) === winnerId) { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
                       } else {
                         if (String(id) === winnerId) {
-                          target.status = 'pass';
-                          target.pollLabel = pollLabel;
-                          target.passTimestamp = Date.now();
-                          target.manualPassed = true;
-                        } else {
-                          target.status = 'out';
-                          target.eliminatedRoundIndex = roundIdx2;
-                        }
+                          target.status = 'pass'; target.pollLabel = pollLabel; target.passTimestamp = Date.now(); target.manualPassed = true;
+                        } else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
                       }
                     });
+
+                    // 前端在决战期也做一次同步（确保数据一致性）
+                    if (isFinal && !isReverse) {
+                       if (pendingCount === 3 && winnerCandidate) {
+                         winnerCandidate.rankTitle = "🥉 季军"; winnerCandidate.rankKey = "rankThird";
+                       } else if (pendingCount === 2 && winnerCandidate) {
+                         winnerCandidate.rankTitle = "👑 冠军"; winnerCandidate.rankKey = "rankChampion";
+                       }
+                    }
                   }
                 }
                 finalState.settled = true;
