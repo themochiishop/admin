@@ -875,22 +875,32 @@
       updatePickRandomBtnLabel();
     }
     
-       function revealPKWinner() {
+          function revealPKWinner() {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
-      // ★ 前台管理员在线且锁定时才拦截；前台已退出则后台可接管
-      if (state.pkLocked === true && publicAdminActive === true) {
-        alert("⚠️ 前台已点击揭晓，票选号已锁定！\n\n如需后台接管，请让前台管理员先退出。");
-        return;
+      
+      // ★ 修复：如果前台管理员在线且锁定了，才拦截
+      if (state.pkLocked === true && publicAdminActive === true) { 
+        alert("⚠️ 前台已点击揭晓，票选号已锁定！\n\n如需后台接管，请让前台先退出。"); 
+        return; 
       }
-      if (state.pkLocked === true && !publicAdminActive) {
-        // 前台退出后残留的锁，后台可以强制清除
-        state.pkLocked = false;
-      }
+      
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
-      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); return; }
+      
+      // ★ 修复：如果前台已经退出了，但号码已经被分配过（可能是中途退出残留），允许后台强制覆盖开奖
+      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) {
+        if (publicAdminActive) {
+          alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); 
+          return;
+        }
+        // 前台已退出，后台强制接管：重置显示号码，准备重新分配
+        state.activeGroupMembers.forEach(m => m.displayNumber = null);
+        state.pkLocked = false;
+        state.settled = false;
+      }
       
       state.pkStage = 'revealed'; state.settled = true;
+      // ... 后面的代码保持完全不变
       state.isDrawingScramble = false;
       state.pkLocked = true;
       state.currentPollFinished = true;
