@@ -958,8 +958,15 @@
       const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerMember ? winnerMember.displayNumber : '?'})`;
       if (!state.passHistory) state.passHistory = [];
       const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(winnerId));
-      if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerId))) {
-        state.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: state.drawRoundIndex ?? currentRoundIndex });
+           if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerId))) {
+        state.passHistory.push({ 
+          id: winnerCandidate.id, 
+          name: winnerCandidate.name, 
+          orderNo: winnerCandidate.orderNo, 
+          pollLabel, 
+          roundIndex: state.drawRoundIndex ?? currentRoundIndex,
+          passTimestamp: Date.now() // ★ 时间戳
+        });
       }
       const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
       activeGroup4Ids.forEach(id => {
@@ -1071,14 +1078,19 @@
       alert(`↩️ 买家【${foundCandidate.name}】已撤回，并重新回到当前轮次待PK名单池！`);
     }
 
-    function changeStatus(id, newStatus) {
+        function changeStatus(id, newStatus) {
       if (newStatus === 'pending') { undoEliminatedCandidate(id); return; }
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => String(c.id) === String(id));
       if (!target) return;
       target.status = newStatus;
       if (newStatus === 'out') target.eliminatedRoundIndex = currentRoundIndex;
-      if (newStatus === 'pass') advanceModeLogic(activeRound, target);
+      if (newStatus === 'pass') {
+        // ★ 加上 PICK 标记和时间戳
+        target.manualPassed = true; 
+        target.passTimestamp = Date.now();
+        advanceModeLogic(activeRound, target);
+      }
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
