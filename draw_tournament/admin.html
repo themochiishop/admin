@@ -914,7 +914,8 @@
       }, 2200);
     }
     
-  function clearCurrentActiveGroup() {
+     function clearCurrentActiveGroup() {
+      // ★ 二次确认，避免误触
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
         if (!confirm(`⚠️ 确认清空当前盲抽组？\n\nPOLL #${state.currentPollNumber || '?'} 的 ${state.activeGroupIds.length} 位组员将被移除（不会退回待 PK 池，POLL 号保留），票选号也会重置。`)) return;
       } else {
