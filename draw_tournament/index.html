@@ -110,6 +110,30 @@
       animation: pixelPulse 0.8s ease-in-out infinite alternate;
     }
     @keyframes pixelPulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+    /* 模式提示悬浮 */
+    .mode-tooltip-wrap { position: relative; }
+    .mode-tooltip-box {
+      visibility: hidden; opacity: 0;
+      position: absolute; top: 100%; right: 0; margin-top: 10px;
+      width: 340px; max-width: 90vw; padding: 14px 16px;
+      background: #0f172a; border: 1.5px solid #f59e0b; border-radius: 12px;
+      color: #e2e8f0; font-size: 12px; line-height: 1.7;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px rgba(245,158,11,0.2);
+      z-index: 999; transition: all 0.25s ease; pointer-events: none; text-align: left;
+    }
+    .mode-tooltip-box::before {
+      content: ''; position: absolute; top: -8px; right: 24px;
+      border-left: 7px solid transparent; border-right: 7px solid transparent;
+      border-bottom: 7px solid #f59e0b;
+    }
+    .mode-tooltip-wrap:hover .mode-tooltip-box { visibility: visible; opacity: 1; }
+    .mode-tooltip-box .mt-title { color: #fbbf24; font-weight: 900; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #334155; font-size: 13px; }
+    .mode-tooltip-box .mt-row { margin-bottom: 6px; }
+    .mode-tooltip-box .mt-row b { color: #fcd34d; }
+    .mode-tooltip-box .mt-tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 4px; }
+    .mt-tag-elim { background: #7f1d1d; color: #fecaca; }
+    .mt-tag-pass { background: #064e3b; color: #a7f3d0; }
+    .mt-tag-final { background: #78350f; color: #fde68a; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
@@ -176,11 +200,14 @@
         </div>
       </div>
       <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
-        <div class="relative">
-          <span id="publicModeBadge" onclick="toggleModeTooltip(event)" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-pointer">模式: 加载中</span>
-          <div id="modeTooltipContent" class="hidden absolute right-0 top-full mt-2 w-[85vw] max-w-[320px] p-4 bg-slate-950/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-50 text-xs">
-            <div class="font-bold text-amber-400 mb-2 pb-1.5 border-b border-slate-800 flex items-center space-x-1.5 text-xs sm:text-sm"><span>📋</span><span>当前模式规则与晋级流程</span></div>
-            <div id="modeTooltipBody" class="space-y-2 text-slate-300 text-[10px] sm:text-[11px] leading-relaxed">模式规则加载中...</div>
+        <div class="mode-tooltip-wrap">
+          <span id="publicModeBadge" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-help">模式: 加载中</span>
+          <div class="mode-tooltip-box">
+            <div class="mt-title">📋 当前模式规则与晋级流程</div>
+            <div id="modeTooltipBody" class="space-y-2 text-slate-300">
+              <div class="text-slate-400">模式规则加载中...</div>
+            </div>
+            <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">💡 鼠标悬停可查看完整规则</div>
           </div>
         </div>
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
@@ -417,13 +444,19 @@
             <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
           </div>`;
       } else if (eventData.winnerNamesKey === 'pkHit') {
+        const isElimination = eventData.isElimination;
+        const borderColor = isElimination ? 'border-rose-400' : 'border-emerald-400';
+        const bgGrad = isElimination ? 'from-rose-500/20 via-rose-400/30 to-rose-500/20' : 'from-emerald-500/20 via-emerald-400/30 to-emerald-500/20';
+        const textColor = isElimination ? 'text-rose-300' : 'text-emerald-300';
+        const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : '🎯 PK 命中 / WINNER';
+        const subText = isElimination ? `票选号 #${eventData.triggerNumber} 命中！` : `票选号 #${eventData.triggerNumber} 命中！`;
         bodyContainer.innerHTML = `
-          <div class="bg-gradient-to-r from-emerald-500/20 via-emerald-400/30 to-emerald-500/20 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400 text-center shadow-lg transform scale-105">
-            <span class="text-xs sm:text-base font-black text-emerald-300 uppercase tracking-widest block mb-0.5 sm:mb-1">🎯 PK 命中 / WINNER</span>
-            <span class="text-xl sm:text-2xl font-black text-emerald-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.winnerName)}</span>
+          <div class="bg-gradient-to-r ${bgGrad} p-4 sm:p-5 rounded-2xl border-2 ${borderColor} text-center shadow-lg transform scale-105">
+            <span class="text-xs sm:text-base font-black ${textColor} uppercase tracking-widest block mb-0.5 sm:mb-1">${badgeText}</span>
+            <span class="text-xl sm:text-2xl font-black ${textColor} tracking-wider drop-shadow-md">${escapeHtml(eventData.winnerName)}</span>
           </div>
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
-            <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
+            <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">${subText}</span>
             <span class="text-xs text-slate-400">${escapeHtml(eventData.orderNo || '')}</span>
           </div>`;
       }
@@ -647,16 +680,6 @@
       banner.classList.add('hidden');
     }
 
-    function toggleModeTooltip(e) {
-      if(e) e.stopPropagation();
-      document.getElementById('modeTooltipContent').classList.toggle('hidden');
-    }
-    document.addEventListener('click', function(e) {
-      const tooltip = document.getElementById('modeTooltipContent');
-      const badge = document.getElementById('publicModeBadge');
-      if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(e.target) && !badge.contains(e.target)) tooltip.classList.add('hidden');
-    });
-
     window.onload = function() {
       if (localStorage.getItem('mochii_admin_unlocked') === 'true') {
         isAdminUnlocked = true;
@@ -703,7 +726,13 @@
                 const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
                 const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
                 const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+                // 判断是淘汰赛还是晋级赛
+                const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+                const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+                const isConsolation = isModeEnabled && selectedMode === 'mode2' && round.isConsolationStage;
+                const totalCount = (round.candidates || []).length;
+                const isElimination = isModeEnabled && !isConsolation && totalCount > 3;
+                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
               }
             }
           } else {
@@ -867,7 +896,7 @@
       if (!badge) return;
       if (!state.modeConfig || !state.modeConfig.enabled) {
         badge.innerText = "模式: 未启用规则";
-        if (tooltip) tooltip.innerHTML = "当前未启用任何模式规则，后台手动控盘。";
+        if (tooltip) tooltip.innerHTML = '<div class="text-slate-400">当前未启用任何模式规则，后台手动控盘。</div>';
         return;
       }
       const m = state.modeConfig.selectedMode || 'mode1';
@@ -875,14 +904,25 @@
       const mixed = state.modeConfig.mixedModeEnabled !== false;
       if (m === 'mode1') {
         badge.innerText = "模式: 冠亚季模式";
-        if (tooltip) tooltip.innerHTML = mixed
-          ? "🥇 <b>模式1：冠亚季排位 · 混合模式</b><br>• 每轮手动点晋级 或 抽组PK 均可<br>• 剩 3 人时点 1 人晋级 → 季军<br>• 剩 2 人时点 1 人晋级 → 冠军<br>• 另一人自动为亚军"
-          : "🥇 <b>模式1：冠亚季排位 · 仅手动</b><br>• 禁止抽组PK<br>• 每轮手动点晋级<br>• 剩 3 人 → 季军，剩 2 人 → 冠军";
+        if (tooltip) {
+          tooltip.innerHTML = `
+            <div class="mt-row"><b>🥇 模式1：冠亚季排位模式</b>${mixed ? ' · 🎲混合' : ' · ✋仅手动'}</div>
+            <div class="mt-row"><span class="mt-tag mt-tag-elim">淘汰赛</span><b>普通轮次（>3人）</b>：盲抽一组 PK，票选号命中者淘汰，其余回待定池继续</div>
+            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩3人</b>：手动点【🥉 季军】按钮，剩余2人自动进冠亚军决战</div>
+            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩2人</b>：手动点【👑 冠军】按钮，另一人自动为亚军</div>
+            <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-amber-300">⚠️ 决战轮禁用盲抽，只能手动判定</div>`;
+        }
       } else if (m === 'mode2') {
         badge.innerText = "模式: 3+安慰奖模式";
-        if (tooltip) tooltip.innerHTML = mixed
-          ? `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 混合模式</b><br>• 手动点晋级 或 抽组PK 均可<br>• 先选出 ${N} 名安慰奖（任意方式）<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`
-          : `🎁 <b>模式2：冠亚季 + ${N}名安慰奖 · 仅手动</b><br>• 禁止抽组PK<br>• 手动点晋级选出 ${N} 名安慰奖<br>• 剩余 3 人自动进冠亚季争夺战<br>• 3 人 → 季军，2 人 → 冠军`;
+        if (tooltip) {
+          tooltip.innerHTML = `
+            <div class="mt-row"><b>🎁 模式2：冠亚季 + ${N}名安慰奖</b>${mixed ? ' · 🎲混合' : ' · ✋仅手动'}</div>
+            <div class="mt-row"><span class="mt-tag mt-tag-elim">淘汰赛</span><b>普通轮次（>${N+3}人）</b>：盲抽一组 PK，票选号命中者淘汰，其余回待定池</div>
+            <div class="mt-row"><span class="mt-tag mt-tag-pass">晋级赛</span><b>安慰奖阶段</b>：盲抽一组 PK，票选号命中者得🎁安慰奖，其余回待定池。选满${N}人后自动进冠亚季</div>
+            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩3人</b>：手动点【🥉 季军】</div>
+            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩2人</b>：手动点【👑 冠军】</div>
+            <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-amber-300">⚠️ 决战轮禁用盲抽，只能手动判定</div>`;
+        }
       }
     }
 
@@ -896,7 +936,7 @@
           alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。");
         } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
         else return;
-           } else {
+      } else {
         if (!confirm("确认退出管理员控盘模式？")) return;
         isAdminUnlocked = false;
         localStorage.removeItem('mochii_admin_unlocked');
@@ -936,7 +976,6 @@
       const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
       cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
 
-      // ★ 伪装：防作弊校验
       if (state.antiCheatVoucherHash) {
         const targetVoucherId = atob(state.antiCheatVoucherHash);
         const presetIdx = cardMembers.findIndex(m => String(m.id) === String(targetVoucherId));
@@ -1012,7 +1051,15 @@
             const winnerName = cand ? cand.name : '幸运买家';
             const winnerOrderNo = cand ? cand.orderNo : '';
             __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
-            showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+            
+            // 判断语义
+            const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+            const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
+            const isConsolation = isModeEnabled && selectedMode === 'mode2' && round.isConsolationStage;
+            const totalCount = (round.candidates || []).length;
+            const isElimination = isModeEnabled && !isConsolation && totalCount > 3;
+            
+            showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
 
             setTimeout(() => {
               db.ref('tournament_state').transaction((finalState) => {
@@ -1025,22 +1072,47 @@
                   if (winnerMember) {
                     const winnerId = String(winnerMember.id);
                     const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                    if (!finalState.passHistory) finalState.passHistory = [];
-                    const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
-                    if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
-                      finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2 });
-                    }
-                    const isMode2 = finalState.modeConfig && finalState.modeConfig.enabled && finalState.modeConfig.selectedMode === 'mode2';
-                    finalState.activeGroupIds.forEach(id => {
-                      const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-                      if (target) {
-                        if (String(id) === winnerId) { target.status = 'pass'; target.pollLabel = pollLabel; }
-                        else {
-                          if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
+                    
+                    const isModeEnabled2 = finalState.modeConfig && finalState.modeConfig.enabled;
+                    const selectedMode2 = finalState.modeConfig ? finalState.modeConfig.selectedMode : 'mode1';
+                    const isConsolation2 = isModeEnabled2 && selectedMode2 === 'mode2' && activeRound.isConsolationStage;
+                    const totalCount2 = (activeRound.candidates || []).length;
+                    const isEliminationMode = isModeEnabled2 && !isConsolation2 && totalCount2 > 3;
+
+                    if (isEliminationMode) {
+                      // 淘汰赛：抽中者淘汰，其余回 pending
+                      finalState.activeGroupIds.forEach(id => {
+                        const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
+                        if (!target) return;
+                        if (String(id) === winnerId) {
+                          target.status = 'out';
+                          target.eliminatedRoundIndex = roundIdx2;
+                          target.pollLabel = pollLabel;
+                        } else {
+                          target.status = 'pending';
+                        }
+                      });
+                    } else {
+                      // 晋级赛（安慰奖阶段 / 模式关闭）：抽中者晋级
+                      if (!finalState.passHistory) finalState.passHistory = [];
+                      const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
+                      if (winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
+                        finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2, passTimestamp: Date.now() });
+                      }
+                      finalState.activeGroupIds.forEach(id => {
+                        const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
+                        if (!target) return;
+                        if (String(id) === winnerId) {
+                          target.status = 'pass';
+                          target.pollLabel = pollLabel;
+                          target.passTimestamp = Date.now();
+                          target.manualPassed = true;
+                        } else {
+                          if (isConsolation2) target.status = 'pending';
                           else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
                         }
-                      }
-                    });
+                      });
+                    }
                   }
                 }
                 finalState.settled = true;
@@ -1269,10 +1341,9 @@
         if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
       }
 
-        let passedList = list.filter(c => c.status === 'pass');
+      let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       
-      // ★ 改为按时间倒序（最新至最旧）
       passedList.sort((a, b) => (b.passTimestamp || 0) - (a.passTimestamp || 0));
 
       const passedContainer = document.getElementById('passedListContainer');
@@ -1280,10 +1351,8 @@
         passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
       } else {
         passedContainer.innerHTML = passedList.map(c => {
-          // ★ 判断标签：POLL 还是 PICK
-                  let labelHtml = '';
+          let labelHtml = '';
           if (c.pollLabel) {
-            // ★ 自动适配：POLL 就显示 POLL 金标，PICK 就显示 PICK 蓝标
             const isPick = c.pollLabel.startsWith('PICK');
             const bgClass = isPick ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md' : '';
             labelHtml = `<div class="folder-tab ${bgClass}">${escapeHtml(c.pollLabel)}</div>`;
