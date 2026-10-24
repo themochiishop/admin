@@ -421,11 +421,10 @@
 
     let __lastPkWinnerPopupKey = '';
 
-     let __popupTimer = null;
+      let __popupTimer = null;
     function showWinnerPopup(eventData, durationSeconds) {
       const modal = document.getElementById('congratModal');
       const bodyContainer = document.getElementById('congratModalBody');
-      // 获取顶部的图标和标题DOM
       const iconEl = modal.querySelector('.text-5xl.sm\\:text-7xl'); 
       const titleEl = document.getElementById('congratModalTitle');
       const badgeEl = document.getElementById('congratBadge');
@@ -441,23 +440,28 @@
 
       // ★ 动态修改顶部图标与标题
       if (eventData.winnerNamesKey === 'pkHit' && eventData.isElimination) {
-        // 如果是淘汰赛
-        if (iconEl) iconEl.innerText = '💥';
+        // ======== 淘汰赛：随机表情 ========
+        const sadEmojis = ['😞', '😒', '🙄', '😟', '😕', '🥺', '😩', '😥', '😭'];
+        const randomSadEmoji = sadEmojis[Math.floor(Math.random() * sadEmojis.length)];
+
+        if (iconEl) iconEl.innerText = randomSadEmoji;
         if (titleEl) {
           titleEl.innerText = '很遗憾！抱憾离场';
           titleEl.className = 'text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-rose-600 mb-3 sm:mb-4';
         }
         if (badgeEl) badgeEl.innerText = 'ELIMINATED ANNOUNCEMENT';
+        
       } else if (eventData.winnerNamesKey === 'pkHit' && !eventData.isElimination) {
-        // 如果是安慰奖晋级赛
+        // ======== 安慰奖晋级赛 ========
         if (iconEl) iconEl.innerText = '🎁';
         if (titleEl) {
           titleEl.innerText = '恭喜！成功获得安慰奖';
           titleEl.className = 'text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-400 to-emerald-500 mb-3 sm:mb-4';
         }
         if (badgeEl) badgeEl.innerText = 'LUCKY DRAW WINNER';
+        
       } else {
-        // 冠亚季决战等其他情况
+        // ======== 冠亚季决战等其他情况 ========
         if (badgeEl) badgeEl.innerText = 'WINNER ANNOUNCEMENT';
       }
 
