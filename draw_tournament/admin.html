@@ -965,7 +965,7 @@
           orderNo: winnerCandidate.orderNo, 
           pollLabel, 
           roundIndex: state.drawRoundIndex ?? currentRoundIndex,
-          passTimestamp: Date.now() // ★ 时间戳
+          passTimestamp: Date.now() // ★ 加上时间戳，方便前台倒序
         });
       }
       const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
@@ -1078,17 +1078,46 @@
       alert(`↩️ 买家【${foundCandidate.name}】已撤回，并重新回到当前轮次待PK名单池！`);
     }
 
-        function changeStatus(id, newStatus) {
+          function changeStatus(id, newStatus) {
       if (newStatus === 'pending') { undoEliminatedCandidate(id); return; }
       const activeRound = state.rounds[currentRoundIndex];
       const target = activeRound.candidates.find(c => String(c.id) === String(id));
       if (!target) return;
       target.status = newStatus;
       if (newStatus === 'out') target.eliminatedRoundIndex = currentRoundIndex;
+      
       if (newStatus === 'pass') {
-        // ★ 加上 PICK 标记和时间戳
-        target.manualPassed = true; 
+        // ★ 计算当前轮次下，已经 PICK 了第几个
+        // 统计本轮的 pass 记录里，属于手动 PICK 且带有 pickLabel 的数量
+        let pickCountInRound = 0;
+        activeRound.candidates.forEach(c => {
+          if (c.manualPassed && c.pollLabel && c.pollLabel.startsWith('PICK')) {
+             pickCountInRound++;
+          }
+        });
+        
+        // 当前正要点的是第 pickCountInRound + 1 个
+        const currentPickIndex = pickCountInRound + 1;
+        const roundNum = currentRoundIndex + 1;
+
+        // 写入伪装标签：PICK #轮次 (#本轮序号)
+        target.manualPassed = true;
+        target.pollLabel = `PICK #${roundNum} (#${currentPickIndex})`;
         target.passTimestamp = Date.now();
+        
+        // 同时也推入 passHistory，保证前端不依赖候选源数据也能渲染
+        if (!state.passHistory) state.passHistory = [];
+        if (!state.passHistory.some(p => String(p.id) === String(target.id))) {
+          state.passHistory.push({
+            id: target.id,
+            name: target.name,
+            orderNo: target.orderNo,
+            pollLabel: target.pollLabel,
+            roundIndex: currentRoundIndex,
+            passTimestamp: target.passTimestamp
+          });
+        }
+
         advanceModeLogic(activeRound, target);
       }
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
