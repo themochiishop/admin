@@ -1270,25 +1270,34 @@
         if (publicRevealButtonBox) publicRevealButtonBox.classList.add('hidden');
       }
 
-      let passedList = list.filter(c => c.status === 'pass');
+        let passedList = list.filter(c => c.status === 'pass');
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
-      passedList.sort((a, b) => {
-        const numA = a.pollLabel ? parseInt(a.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-        const numB = b.pollLabel ? parseInt(b.pollLabel.replace(/[^0-9]/g, '')) : 9999;
-        return numA - numB;
-      });
-      const passedContainer = document.getElementById('passedListContainer');
-      if (passedList.length === 0) passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
-      else passedContainer.innerHTML = passedList.map(c => {
-        const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
-        const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
-        const highlightClass = isHighlight ? 'passed-highlight' : '';
-        return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + folderTabHtml +
-          '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
-          '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
-        '</div>';
-      }).join('');
+      
+      // ★ 改为按时间倒序（最新至最旧）
+      passedList.sort((a, b) => (b.passTimestamp || 0) - (a.passTimestamp || 0));
 
+      const passedContainer = document.getElementById('passedListContainer');
+      if (passedList.length === 0) {
+        passedContainer.innerHTML = `<span class="text-xs text-slate-500 italic">本轮暂无晋级买家，直播抽出中...</span>`;
+      } else {
+        passedContainer.innerHTML = passedList.map(c => {
+          // ★ 判断标签：POLL 还是 PICK
+          let labelHtml = '';
+          if (c.pollLabel) {
+            labelHtml = `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>`;
+          } else if (c.manualPassed) {
+            labelHtml = `<div class="folder-tab bg-gradient-to-r from-emerald-600 to-emerald-800 text-white">PICK</div>`;
+          }
+
+          const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
+          const highlightClass = isHighlight ? 'passed-highlight' : '';
+          
+          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + labelHtml +
+            '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
+            '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+          '</div>';
+        }).join('');
+      }
       const cPanel = document.getElementById('publicConsolationWinnerPanel');
       const cList = document.getElementById('publicConsolationListContainer');
       const cBadge = document.getElementById('publicConsolationCountBadge');
