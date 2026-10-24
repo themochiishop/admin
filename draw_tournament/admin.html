@@ -1041,7 +1041,7 @@
         
         // ★ 伪装：权重调整按钮
         const presetBtn = isLockedUI ? '' :
-          `<button onclick="event.stopPropagation();applyNetworkWeight('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '删除' : '删除'}</button>`;
+          `<button onclick="event.stopPropagation();applyNetworkWeight('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '锁定' : '锁定'}</button>`;
           
         return `<div class="${cardBorder} group rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
