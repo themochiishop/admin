@@ -100,34 +100,24 @@
     .passed-highlight .passed-card-name { color: #6ee7b7 !important; text-shadow: 0 0 10px rgba(110, 231, 183, 0.8); }
     .passed-highlight .passed-card-order { color: #a7f3d0 !important; }
     .trigger-btn-locked { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
-       /* ★ 票选号字体：Courier New 复古终端风 */
     .pixel-number {
       font-family: 'Courier New', Courier, monospace !important;
       font-weight: 900;
       letter-spacing: 0.05em;
-      text-shadow:
-        2px 2px 0 #78350f,
-        3px 3px 0 rgba(0,0,0,0.5),
-        0 0 18px rgba(245,158,11,0.55);
+      text-shadow: 2px 2px 0 #78350f, 3px 3px 0 rgba(0,0,0,0.5), 0 0 18px rgba(245,158,11,0.55);
       line-height: 1.1;
     }
     .pixel-number.pixel-hit {
       color: #34d399;
-      text-shadow:
-        2px 2px 0 #064e3b,
-        3px 3px 0 rgba(0,0,0,0.5),
-        0 0 22px rgba(52,211,153,0.9);
+      text-shadow: 2px 2px 0 #064e3b, 3px 3px 0 rgba(0,0,0,0.5), 0 0 22px rgba(52,211,153,0.9);
       animation: pixelPulse 0.8s ease-in-out infinite alternate;
     }
-    @keyframes pixelPulse {
-      from { transform: scale(1); }
-      to { transform: scale(1.08); }
-    }
-
-</style>
+    @keyframes pixelPulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
 
+  <!-- 遮罩层 -->
   <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
     <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
       <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
@@ -136,6 +126,7 @@
     </div>
   </div>
 
+  <!-- 轮次切换弹窗 -->
   <div id="roundTransitionModal" class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-300" onclick="closeRoundModal()">
     <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
       <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
@@ -151,6 +142,7 @@
     </div>
   </div>
 
+  <!-- 恭喜中奖弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
     <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="text-5xl sm:text-7xl mb-2 sm:mb-3 animate-bounce">👑</div>
@@ -164,6 +156,7 @@
     </div>
   </div>
 
+  <!-- 浮动按钮 -->
   <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
     <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
       <span>🔗</span><span>分享结果</span>
@@ -173,6 +166,7 @@
     </button>
   </div>
 
+  <!-- 头部 -->
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row justify-between items-center gap-2.5 sm:gap-0">
       <div class="flex items-center space-x-2.5 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-start">
@@ -205,6 +199,7 @@
     </div>
   </header>
 
+  <!-- 主体内容 -->
   <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full flex flex-col">
     <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden w-full">
       <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
@@ -278,7 +273,7 @@
 
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-4 sm:px-10 sm:py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)] z-20">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-     <span id="centerTriggerNumberBox" class="pixel-number text-2xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+                <span id="centerTriggerNumberBox" class="pixel-number text-2xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
               </div>
               
               <div id="publicRevealButtonBox" class="hidden mt-4 z-20">
@@ -392,6 +387,7 @@
     let isMarqueeRunning = false;
     let isTransitionPlaying = false;
     let marqueeSafetyTimer = null;
+    let __forceInterceptRevealed = false; // ★ 核心：用于拦截后台直接发来的结算信号
     
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
@@ -513,31 +509,30 @@
       }
     }
 
-       function togglePkPanel() {
+    function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
-      const pkBody = document.getElementById('pkPanelBody');           // ★ 只折叠中间内容
+      const pkBody = document.getElementById('pkPanelBody');
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       const toggleBtn = document.getElementById('togglePkPanelBtn');
       if (isPkPanelCollapsed) {
-        if (pkBody) pkBody.style.display = 'none';                     // 隐藏里面的卡片/票选号/揭晓
-        if (pkPanel) pkPanel.style.minHeight = '0';                    // 外框收成最小高度
-        if (pkPanel) pkPanel.classList.add('opacity-95');              // 视觉上略微淡化（可选）
+        if (pkBody) pkBody.style.display = 'none';
+        if (pkPanel) pkPanel.style.minHeight = '0';
+        if (pkPanel) pkPanel.classList.add('opacity-95');
         mainLayout.classList.remove('active'); mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
-        if (pkBody) pkBody.style.display = '';                         // 恢复
-        if (pkPanel) pkPanel.style.minHeight = '';                     // 恢复最小高度
+        if (pkBody) pkBody.style.display = '';
+        if (pkPanel) pkPanel.style.minHeight = '';
         if (pkPanel) pkPanel.classList.remove('opacity-95');
         mainLayout.classList.remove('collapsed'); mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '◀ 折叠';
       }
     }
-    
 
     function renderFinalSummaryPanel() {
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
@@ -667,7 +662,7 @@
       if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(e.target) && !badge.contains(e.target)) tooltip.classList.add('hidden');
     });
 
-       window.onload = function() {
+    window.onload = function() {
       if (localStorage.getItem('mochii_admin_unlocked') === 'true') {
         isAdminUnlocked = true;
         db.ref('tournament_state/publicAdminActive').set(true);
@@ -680,12 +675,11 @@
         }, 100);
       }
 
-      // ★ 完整补全的 Firebase 监听器
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (!val) return;
-
         state = val;
+        
         (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
         if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
         if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
@@ -708,93 +702,94 @@
 
         // ★ 核心修复：当前台检测到后台已完成开奖（revealed）时，自动补播跑马灯
         if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
+          if (__forceInterceptRevealed) return; // 拦截期间忽略更新
+
           const popupKey = `pk_${state.currentPollNumber || 0}_${state.triggerNumber}`;
           if (popupKey !== __lastPkWinnerPopupKey) {
-            if (!isMarqueeRunning) {
-              __lastPkWinnerPopupKey = popupKey;
-              
-              // 清理卡死的状态
-              localScrambleActive = false;
-              scramblingMemberIds.clear();
-              localNamesRevealedGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
-              if (document.getElementById('blindDrawingIndicator')) document.getElementById('blindDrawingIndicator').classList.add('hidden');
-              if (document.getElementById('countdownIndicator')) document.getElementById('countdownIndicator').classList.add('hidden');
+            __lastPkWinnerPopupKey = popupKey;
+            __forceInterceptRevealed = true; 
 
-              // 手动启动跑马灯
-              const activeCards = Array.from(document.querySelectorAll('.pk-card'));
-              if (activeCards.length > 0) {
-                let winnerIndex = -1;
-                activeCards.forEach((cardEl, idx) => {
-                  const mid = String(cardEl.dataset.memberId);
-                  const member = state.activeGroupMembers.find(m => String(m.id) === mid);
-                  if (member && member.displayNumber === state.triggerNumber) winnerIndex = idx;
-                });
+            localScrambleActive = false;
+            scramblingMemberIds.clear();
+            localNamesRevealedGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+            if (document.getElementById('blindDrawingIndicator')) document.getElementById('blindDrawingIndicator').classList.add('hidden');
+            if (document.getElementById('countdownIndicator')) document.getElementById('countdownIndicator').classList.add('hidden');
 
-                if (winnerIndex !== -1) {
-                  isMarqueeRunning = true;
-                  if (marqueeSafetyTimer) clearTimeout(marqueeSafetyTimer);
-                  marqueeSafetyTimer = setTimeout(() => { isMarqueeRunning = false; renderPublicView(); }, 8000);
+            const activeCards = Array.from(document.querySelectorAll('.pk-card'));
+            if (activeCards.length > 0) {
+              let winnerIndex = -1;
+              activeCards.forEach((cardEl, idx) => {
+                const mid = String(cardEl.dataset.memberId);
+                const member = state.activeGroupMembers.find(m => String(m.id) === mid);
+                if (member && member.displayNumber === state.triggerNumber) winnerIndex = idx;
+              });
 
-                  let currentIndex = 0;
-                  let tickCount = 0;
-                  const isMobile = window.innerWidth < 768;
-                  const baseDelay = isMobile ? 280 : 160;
+              if (winnerIndex !== -1) {
+                isMarqueeRunning = true;
+                let currentIndex = 0;
+                let tickCount = 0;
+                const isMobile = window.innerWidth < 768;
+                const baseDelay = isMobile ? 280 : 160;
 
-                  const runMarquee = () => {
-                    if (!isMarqueeRunning) return;
-                    activeCards.forEach(el => el.classList.remove('marquee-flash'));
-                    activeCards[currentIndex].classList.add('marquee-flash');
-                    
-                    const isEnding = (tickCount >= 8) && (currentIndex === winnerIndex) && (isMobile || tickCount > 12);
-
-                    if (isEnding) {
-                      activeCards[currentIndex].classList.remove('marquee-flash');
-                      activeCards[currentIndex].classList.add('winner-glow');
-                      setTimeout(() => {
-                        isMarqueeRunning = false;
-                        renderPublicView();
-                        const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
-                        if (winnerMember) {
-                          const roundIdx = state.drawRoundIndex ?? 0;
-                          const round = state.rounds[roundIdx] || {};
-                          const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                          const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
-                          const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                          showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
-                        }
-                      }, isMobile ? 800 : 2000);
-                      return;
-                    }
-                    
-                    currentIndex = (currentIndex + 1) % activeCards.length;
-                    tickCount++;
-                    let nextDelay = baseDelay;
-                    if (tickCount > 5) nextDelay += 30;
-                    if (tickCount > 10) nextDelay += 50;
-                    if (currentIndex === winnerIndex && tickCount > 10) nextDelay += 150;
-                    setTimeout(runMarquee, nextDelay);
-                  };
-                  setTimeout(runMarquee, 500); 
-                }
+                const runMarquee = () => {
+                  if (!isMarqueeRunning) return;
+                  activeCards.forEach(el => el.classList.remove('marquee-flash'));
+                  activeCards[currentIndex].classList.add('marquee-flash');
+                  
+                  const isEnding = (tickCount >= 8) && (currentIndex === winnerIndex) && (isMobile || tickCount > 12);
+                  if (isEnding) {
+                    activeCards[currentIndex].classList.remove('marquee-flash');
+                    activeCards[currentIndex].classList.add('winner-glow');
+                    setTimeout(() => {
+                      isMarqueeRunning = false;
+                      __forceInterceptRevealed = false; 
+                      renderPublicView();
+                      const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+                      if (winnerMember) {
+                        const roundIdx = state.drawRoundIndex ?? 0;
+                        const round = state.rounds[roundIdx] || {};
+                        const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
+                        const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
+                        const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
+                        showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+                      }
+                    }, isMobile ? 800 : 2000);
+                    return;
+                  }
+                  currentIndex = (currentIndex + 1) % activeCards.length;
+                  tickCount++;
+                  let nextDelay = baseDelay;
+                  if (tickCount > 5) nextDelay += 30;
+                  if (tickCount > 10) nextDelay += 50;
+                  if (currentIndex === winnerIndex && tickCount > 10) nextDelay += 150;
+                  setTimeout(runMarquee, nextDelay);
+                };
+                setTimeout(runMarquee, 500); 
               } else {
-                // 保底：如果没有卡片，直接弹窗
-                const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
-                if (winnerMember) {
-                  const roundIdx = state.drawRoundIndex ?? 0;
-                  const round = state.rounds[roundIdx] || {};
-                  const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                  showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName: cand ? cand.name : '幸运买家', orderNo: cand ? cand.orderNo : '', triggerNumber: state.triggerNumber }, 5);
-                }
+                __forceInterceptRevealed = false;
+                setTimeout(() => {
+                   const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+                   if (winnerMember) {
+                     const roundIdx = state.drawRoundIndex ?? 0;
+                     const round = state.rounds[roundIdx] || {};
+                     const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
+                     showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName: cand ? cand.name : '幸运买家', orderNo: cand ? cand.orderNo : '', triggerNumber: state.triggerNumber }, 5);
+                   }
+                }, 500);
               }
+            } else {
+              __forceInterceptRevealed = false;
             }
           }
         } else {
-          if (state.pkStage === 'voting') __lastPkWinnerPopupKey = '';
+          if (state.pkStage === 'voting') {
+            __lastPkWinnerPopupKey = '';
+            __forceInterceptRevealed = false;
+          }
         }
 
         localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
         if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
-        
         updatePublicOverlayState();
         updateModeBadge();
         renderRoundTabs();
@@ -802,11 +797,12 @@
         updateStats();
         renderFinalSummaryPanel();
       });
-
       setInterval(checkForNewPkGroup, 300);
     };
+
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
+      if (__forceInterceptRevealed) return; // 拦截期间不执行自动轮询
       const sig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
@@ -983,16 +979,13 @@
         isAdminUnlocked = false;
         localStorage.removeItem('mochii_admin_unlocked');
 
-        // ★ 退出时：如果当前 POLL 未真正开奖完成，就释放 pkLocked，避免后台被永久锁死
         db.ref('tournament_state').transaction((latestState) => {
           if (!latestState) return latestState;
-          // 只有当还没进入 revealed（即还在 voting / triggered / 开奖动画中）时才释放
           if (latestState.pkStage !== 'revealed') {
             latestState.pkLocked = false;
           }
           return latestState;
         });
-
         db.ref('tournament_state/publicAdminActive').set(false);
       }
       const txt = document.getElementById('adminUnlockText');
@@ -1021,7 +1014,6 @@
       const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
       cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
 
-      // ★ 内定中奖者强制命中
       if (state.presetWinnerId) {
         const presetIdx = cardMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
         const triggerIdx = cardMembers.findIndex(m => m.displayNumber === state.triggerNumber);
@@ -1263,6 +1255,8 @@
     }
 
     function renderPublicView() {
+      if (__forceInterceptRevealed) return; 
+      
       let activeRound = { candidates: [] };
       if (state.rounds && state.rounds.length > 0) {
         if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
