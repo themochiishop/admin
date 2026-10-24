@@ -882,7 +882,7 @@
       updatePickRandomBtnLabel();
     }
     
-               function revealPKWinner() {
+             function revealPKWinner() {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       
@@ -891,7 +891,7 @@
         return; 
       }
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
-      
+
       // 清理之前的烂摊子
       if (state.activeGroupMembers.some(m => m.displayNumber !== null)) {
         state.activeGroupMembers.forEach(m => m.displayNumber = null);
@@ -899,7 +899,7 @@
         state.settled = false;
       }
 
-      // 1. 提前算好所有的号码，并处理好内定逻辑（暂不写入云端）
+      // 1. 先在后台计算出中奖号码（暂不写入云端）
       const total = state.activeGroupMembers.length;
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
       let tempMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
@@ -919,27 +919,26 @@
       }
       const winnerMember = tempMembers.find(m => m.displayNumber === state.triggerNumber);
 
-      // 2. ★ 欺骗前台：让它以为是刚开始盲抽，启动跑马灯
-      // 我们把 pkStage 强制设为 voting，并通过 isDrawingScramble 激活前台的跑马灯机制
+      // 2. ★ 核心绝杀：不发 revealed，而是设成 voting 并启动盲抽动画状态
       state.pkStage = 'voting';
       state.isDrawingScramble = true; 
       state.settled = true;
       state.pkLocked = true;
       state.currentPollFinished = true;
       
-      // 清空当前的号码，让前台彻底重新开始洗牌动画
+      // 强制清空显示，让前台乖乖开始洗牌
       state.activeGroupMembers.forEach(m => m.displayNumber = null);
       saveState();
 
-      // 3. 等待 3.5 秒（足够前台完成倒计时 + 跑马灯）
+      // 3. 给前台 2.5 秒的时间播放盲抽动画和跑马灯
       setTimeout(() => {
-        // ★ 时间到！强行降下结果，触发前台高亮和弹窗
+        // 时间到！瞬间降下真实结果
         state.activeGroupMembers = tempMembers;
-        state.pkStage = 'revealed'; // 变回 revealed，前台立刻展示最终结果
+        state.pkStage = 'revealed';
         state.isDrawingScramble = false;
         state.pkLocked = true;
 
-        // 把中奖者塞入晋级区
+        // 将中奖者送入晋级区
         if (winnerMember) {
           const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
           if (activeRound) {
@@ -967,19 +966,17 @@
           }
         }
 
-        // 清理状态
         state.presetWinnerId = null;
         activeGroup4Ids = []; state.activeGroupIds = []; 
         
-        // 结束后解锁
+        // 真正结束
         state.pkStage = 'voting';
         state.triggerNumber = null; 
         state.settled = false;
         state.pkLocked = false;
 
         saveState();
-        
-      }, 3500); // 3.5秒足够前台把动画播完
+      }, 2500); // 延迟 2.5 秒确保前台动画播完
     }
     
      function clearCurrentActiveGroup() {
