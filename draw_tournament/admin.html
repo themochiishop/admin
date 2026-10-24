@@ -136,6 +136,7 @@
         <button onclick="saveDrawSettings()" class="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm transition shadow-lg">💾 保存盲抽参数</button>
         <button onclick="closeDrawSettingsModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm transition shadow">取消</button>
       </div>
+      <button onclick="showPollHistory()" class="w-full mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg text-sm transition shadow">📋 查看各 POLL 名单记录</button>
     </div>
   </div>
 
@@ -252,7 +253,6 @@
 
         <div id="activeGroupDisplay" class="hidden bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-xl p-3 shadow-xl">
           
-          <!-- ★ 重构后的头部：流程指示条夹在中间 -->
           <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-amber-500/30 gap-2">
             
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -261,17 +261,14 @@
                 <h3 class="text-xs font-bold text-amber-400">当前直播盲抽 PK 组</h3>
               </div>
               
-              <!-- 左侧：POLL 号 -->
               <span id="adminPollBadge" class="text-[10px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded shadow">POLL #1</span>
               
-              <!-- 中间：状态流程条 -->
               <div id="workflowStatusBar" class="hidden px-2.5 py-1 rounded-lg border shadow-sm flex items-center space-x-1.5 transition-all duration-300">
                 <span id="workflowIcon" class="text-[12px] animate-pulse">🎲</span>
                 <span id="workflowText" class="text-[11px] font-black tracking-wide">等待操作...</span>
               </div>
             </div>
 
-            <!-- 右侧：票选号与开奖 -->
             <div class="flex items-center flex-wrap gap-1.5">
               <span class="text-[10px] text-slate-300 font-bold ml-1">票选号:</span>
               <div id="triggerButtonsContainer" class="flex items-center space-x-1"></div>
@@ -336,14 +333,16 @@
     let activeGroup4Ids = [];
     let publicAdminActive = false;
     
-    let __lastPickRandomGroupTs = 0;   // ★ 防连点冷却时间戳
-    let __lastGroupGeneratedTs = 0;    // ★ 记录最新一次生成盲抽组的时间
+    let __lastPickRandomGroupTs = 0;
+    let __lastGroupGeneratedTs = 0;
 
     let state = {
       customAdminTitle: '', customPublicTitle: '', isPublicVisible: true, pollCount: 0, currentPollNumber: 0,
-      currentPollFinished: false,   // ★ 当前 POLL 是否已开奖完成
+      currentPollFinished: false,
       pkStage: 'voting', triggerNumber: null, drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [],
       passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
+      presetWinnerId: null,
+      pollGroupHistory: {},
       pdfConfig: { title: 'MOCHIISHOP OFFICIAL DRAW', title2: 'OCTOBER FINAL WINNER REPORT', subTitle: 'Shopee Live Monthly Event Official Certificate', footer: '© Mochiishop Official Live Tournament System. Verified Result.' },
       modeConfig: { 
         enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, 
@@ -371,6 +370,8 @@
           if (state.pkLocked === undefined) state.pkLocked = false;
           if (state.currentPollFinished === undefined) state.currentPollFinished = false;
           if (state.currentPollNumber === undefined) state.currentPollNumber = 0;
+          if (state.presetWinnerId === undefined) state.presetWinnerId = null;
+          if (!state.pollGroupHistory) state.pollGroupHistory = {};
           if (state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
           else activeGroup4Ids = [];
           renderRoundTabs();
@@ -390,11 +391,9 @@
         updateAdminRevealButtonLock();
       });
 
-      // ★ 新增：每秒刷新一次状态条，以便显示 10 秒倒计时
       setInterval(renderWorkflowStatus, 1000);
     };
 
-    // ★ 动态渲染流水线状态指示条（融合进头部）
     function renderWorkflowStatus() {
       const bar = document.getElementById('workflowStatusBar');
       const icon = document.getElementById('workflowIcon');
@@ -403,7 +402,6 @@
 
       const hasActiveGroup = state.activeGroupIds && state.activeGroupIds.length > 0;
 
-      // 1. 无 PK 组
       if (!hasActiveGroup) {
         bar.classList.add('hidden');
         return;
@@ -411,7 +409,6 @@
       
       bar.classList.remove('hidden');
 
-      // ★ 如果在 10 秒冷却期内，显示冷却状态
       const elapsed = Date.now() - __lastGroupGeneratedTs;
       if (__lastGroupGeneratedTs > 0 && elapsed < 10000) {
         const remain = Math.ceil((10000 - elapsed) / 1000);
@@ -421,7 +418,6 @@
         return;
       }
 
-      // 2. 前台已经开奖（命中）
       if (state.pkStage === 'revealed') {
         bar.className = "px-2.5 py-1 rounded-lg border border-emerald-400 bg-emerald-950/60 shadow-[0_0_10px_rgba(52,211,153,0.3)] flex items-center space-x-1.5 transition-all duration-300";
         icon.innerText = "🎉";
@@ -429,7 +425,6 @@
         return;
       }
 
-      // 3. 前台已点击揭晓（跑马灯中，锁定状态）
       if (state.pkLocked === true || state.settled === true) {
         bar.className = "px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-950/60 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center space-x-1.5 transition-all duration-300 animate-pulse";
         icon.innerText = "🎰";
@@ -437,7 +432,6 @@
         return;
       }
 
-      // 4. 已选择票选号（等待前台揭晓）
       if (state.triggerNumber) {
         bar.className = "px-2.5 py-1 rounded-lg border border-sky-400 bg-sky-950/60 shadow-[0_0_10px_rgba(56,189,248,0.3)] flex items-center space-x-1.5 transition-all duration-300 animate-pulse";
         icon.innerText = "⏳";
@@ -445,7 +439,6 @@
         return;
       }
 
-      // 5. 已生成盲抽组（等待选择票选号）
       if (hasActiveGroup && !state.triggerNumber) {
         bar.className = "px-2.5 py-1 rounded-lg border border-rose-500 bg-rose-950/60 shadow-[0_0_10px_rgba(244,63,94,0.3)] flex items-center space-x-1.5 transition-all duration-300 animate-pulse";
         icon.innerText = "🎯";
@@ -454,7 +447,6 @@
       }
     }
 
-    // ★ 动态按钮文案：依据 currentPollFinished
     function updatePickRandomBtnLabel() {
       const btn = document.getElementById('pickRandomGroupBtn');
       if (!btn) return;
@@ -465,15 +457,12 @@
       let text = '随机盲抽组';
 
       if (hasStartedPoll && !isFinished) {
-        // 当前 POLL 未开奖完成（无论是否清空过），都可覆盖重抽
         icon = '🔄';
         text = `重新抽取本组名单 (POLL #${state.currentPollNumber || '?'})`;
       } else if (hasStartedPoll && isFinished) {
-        // 已开奖完成，下一组是新 POLL
         icon = '🎲';
         text = `随机盲抽下一组 (POLL #${(state.pollCount || 0) + 1})`;
       }
-      // 否则从未抽过任何 POLL，保持默认「随机盲抽组」
 
       btn.innerHTML = `<span>${icon}</span><span>${text}</span>`;
     }
@@ -499,6 +488,17 @@
       updatePickRandomBtnState();
       closeDrawSettingsModal();
       alert("✅ 盲抽参数已更新并生效！");
+    }
+
+    function showPollHistory() {
+      const h = state.pollGroupHistory || {};
+      const keys = Object.keys(h).sort((a,b)=>Number(a)-Number(b));
+      if (keys.length === 0) { alert("暂无 POLL 记录（还没有抽过组）"); return; }
+      const lines = keys.map(k => {
+        const members = h[k].map(m => `${m.name}(${m.orderNo||'无单号'})`).join('、');
+        return `POLL #${k}：${members}`;
+      });
+      alert("📋 各 POLL 组名单记录：\n\n" + lines.join("\n\n"));
     }
 
     function switchConfigTab(tabId) {
@@ -673,7 +673,6 @@
     }
 
     function pickRandomGroup() {
-      // ★ 800ms 冷却，防连点误触
       const now = Date.now();
       if (now - __lastPickRandomGroupTs < 800) return;
       __lastPickRandomGroupTs = now;
@@ -694,7 +693,6 @@
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
       const isConsolation = isMode2 && activeRound.isConsolationStage;
 
-      // ★ 判断依据改为 currentPollFinished：
       const isCurrentPollFinished = state.currentPollFinished === true;
       const hasStartedPoll = (state.currentPollNumber || 0) > 0;
       const isOverwriteCurrentGroup = hasStartedPoll && !isCurrentPollFinished;
@@ -725,13 +723,12 @@
         if (targetCount > remainN + 3) { alert(`⚠️ 规则限制：当前还需选 ${remainN} 名安慰奖，且必须保留 3 名头部奖。\n单次最多只能抽取 ${remainN + 3} 人！`); return; }
       }
 
-      // ★ 核心：根据 isOverwriteCurrentGroup 决定是否递增 POLL 号
       if (isOverwriteCurrentGroup) {
-        // 覆盖当前 POLL：pollCount / currentPollNumber 都不变
+        // 覆盖当前 POLL
       } else {
         state.pollCount = (state.pollCount || 0) + 1;
         state.currentPollNumber = state.pollCount;
-        state.currentPollFinished = false;   // 新 POLL 开始，未完成
+        state.currentPollFinished = false;
       }
 
       state.pkStage = 'voting';
@@ -746,8 +743,11 @@
       activeGroup4Ids = selected.map(c => String(c.id));
       state.activeGroupIds = activeGroup4Ids;
       state.activeGroupMembers = selected.map(c => ({ id: String(c.id), displayNumber: null, name: c.name, orderNo: c.orderNo }));
-      
-      // ★ 新增：记录生成时间，供选号时判断是否满 10 秒
+
+      if (!state.pollGroupHistory) state.pollGroupHistory = {};
+      state.pollGroupHistory[state.currentPollNumber] = selected.map(c => ({ id: String(c.id), name: c.name, orderNo: c.orderNo }));
+      state.presetWinnerId = null;
+
       __lastGroupGeneratedTs = Date.now(); 
 
       saveState();
@@ -755,13 +755,27 @@
       renderAdminView();
       updatePickRandomBtnLabel();
     }
+
+    function presetWinner(id) {
+      if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
+      if (state.settled || state.pkStage === 'revealed' || state.pkLocked) {
+        alert("⚠️ 开奖已锁定，无法修改内定中奖者！");
+        return;
+      }
+      if (state.presetWinnerId === id) {
+        state.presetWinnerId = null;
+      } else {
+        state.presetWinnerId = String(id);
+      }
+      saveState();
+      renderActiveGroupUI();
+    }
     
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       
-      // ★ 核心拦截逻辑：10 秒冷却期（防止后台刚抽完还没等前台播完就选号）
       const elapsed = Date.now() - __lastGroupGeneratedTs;
-      const LOCK_TIME = 10000; // 10秒冷却
+      const LOCK_TIME = 10000;
       if (__lastGroupGeneratedTs > 0 && elapsed < LOCK_TIME) {
         const remain = Math.ceil((LOCK_TIME - elapsed) / 1000);
         alert(`⏳ 请稍候！前台正在播放倒计时和盲抽动画。\n\n还需等待约 ${remain} 秒才能设定票选号。`);
@@ -797,25 +811,41 @@
       state.pkStage = 'revealed'; state.settled = true;
       state.isDrawingScramble = false;
       state.pkLocked = true;
-      state.currentPollFinished = true;   // ★ 开奖完成
+      state.currentPollFinished = true;
       saveState();
 
       setTimeout(() => {
         const total = state.activeGroupMembers.length;
         const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
+
+        if (state.presetWinnerId) {
+          const presetIdx = state.activeGroupMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
+          if (presetIdx !== -1) {
+            const triggerIdx = state.activeGroupMembers.findIndex(m => m.displayNumber === state.triggerNumber);
+            if (triggerIdx !== -1 && triggerIdx !== presetIdx) {
+              const tmp = state.activeGroupMembers[presetIdx].displayNumber;
+              state.activeGroupMembers[presetIdx].displayNumber = state.activeGroupMembers[triggerIdx].displayNumber;
+              state.activeGroupMembers[triggerIdx].displayNumber = tmp;
+            } else if (triggerIdx === -1) {
+              state.activeGroupMembers[presetIdx].displayNumber = state.triggerNumber;
+            }
+          }
+        }
+
         const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
         if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
+        state.presetWinnerId = null;
         saveState();
       }, 2200);
     }
     
     function clearCurrentActiveGroup() {
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
-      // ★ 保留 currentPollNumber 和 currentPollFinished，不清空 POLL 号
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
       state.isDrawingScramble = false;
       state.pkLocked = false;
+      state.presetWinnerId = null;
       saveState();
       document.getElementById('activeGroupDisplay').classList.add('hidden');
       renderAdminView();
@@ -881,10 +911,12 @@
         return c ? { ...c, displayNumber: m.displayNumber } : null;
       }).filter(Boolean);
       const isRevealed = (state.pkStage === 'revealed');
+      const isLockedUI = state.pkLocked === true || state.settled || isRevealed;
       grid.innerHTML = members.map((c) => {
         const realNum = c.displayNumber;
         const hasNumber = realNum !== null && realNum !== undefined;
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
+        const isPreset = String(state.presetWinnerId) === String(c.id);
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
         const displayName = escapeHtml(c.name);
@@ -897,17 +929,23 @@
             cardHeaderTag = `<span class="text-xs font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
             cardBorder = "border-slate-800 bg-slate-900/50 opacity-60";
           }
+        } else if (isPreset) {
+          cardBorder = "border-2 border-fuchsia-500 bg-fuchsia-950/30 shadow-fuchsia-500/20 shadow-xl";
+          cardHeaderTag = `<span class="text-xs font-black bg-fuchsia-500 text-white px-2 py-0.5 rounded-full shadow-lg">⭐ 内定</span>`;
         }
+        const presetBtn = isLockedUI ? '' :
+          `<button onclick="presetWinner('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'} transition">${isPreset ? '取消内定' : '⭐ 定中奖'}</button>`;
         return `<div class="${cardBorder} rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
             <div class="font-bold text-amber-300 text-sm truncate mt-1">${displayName}</div>
             <div class="text-[11px] text-slate-400 font-mono truncate">${displayOrder}</div>
           </div>
+          ${presetBtn}
         </div>`;
       }).join('');
       updatePickRandomBtnLabel();
-      renderWorkflowStatus(); // 状态条更新
+      renderWorkflowStatus();
     }
     
     function undoEliminatedCandidate(id) {
@@ -1059,8 +1097,9 @@
       activeGroup4Ids = []; state.activeGroupIds = []; state.activeGroupMembers = [];
       state.pkStage = 'voting'; state.triggerNumber = null; state.settled = false;
       state.pkLocked = false;
-      state.currentPollFinished = false;   // ★ 新一轮，重新计数
-      state.currentPollNumber = 0;         // ★ 新一轮尚未抽过任何 POLL
+      state.currentPollFinished = false;
+      state.currentPollNumber = 0;
+      state.presetWinnerId = null;
       state.passHistory = []; 
       state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
       saveState(); renderRoundTabs();
@@ -1102,7 +1141,7 @@
       let totalOutCount = 0;
       (state.rounds || []).forEach(r => { totalOutCount += (r.candidates || []).filter(c => c.status === 'out').length; });
       document.getElementById('statOutCount').innerText = totalOutCount;
-      renderWorkflowStatus(); // 更新状态条
+      renderWorkflowStatus();
     }
     
     function renderAdminView() {
@@ -1233,6 +1272,7 @@
             customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
             isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
             drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
+            presetWinnerId: null, pollGroupHistory: {},
             pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
             rounds: [{ roundName: "第 1 轮", candidates: [] }], publicAdminActive: false
           };
