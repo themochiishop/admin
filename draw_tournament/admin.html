@@ -886,38 +886,38 @@
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       
-      // 如果后台能点到按钮，且前台还在线，提示让前台操作
-      if (publicAdminActive) { 
-        alert("⚠️ 前台管理员已登录并接管揭晓，请在前台操作。"); 
+      // 如果前台管理员在线且锁定了，才拦截
+      if (state.pkLocked === true && publicAdminActive === true) { 
+        alert("⚠️ 前台已点击揭晓，票选号已锁定！\n\n如需后台接管，请让前台先退出。"); 
         return; 
       }
       
-      // 如果当前这一轮已经彻底开完奖了，则拦截
-      if (state.pkStage === 'revealed' || state.settled) {
-        alert("⚠️ 本轮已经开奖完成，请抽取下一组。");
-        return;
-      }
+      if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
 
-      // ★ 强制接管：如果前台退出了，留下烂摊子（比如锁定了、或者分配了号码），后台直接清理并接管
-      if (state.pkLocked === true || state.activeGroupMembers.some(m => m.displayNumber !== null)) {
-        // 重置残留状态，以便后台重新走流程
+      // 如果之前分配过烂摊子，清理掉
+      if (state.activeGroupMembers.some(m => m.displayNumber !== null)) {
+        state.activeGroupMembers.forEach(m => m.displayNumber = null);
         state.pkLocked = false;
         state.settled = false;
-        state.activeGroupMembers.forEach(m => m.displayNumber = null);
       }
       
-      state.pkStage = 'revealed'; state.settled = true;
+      // 1. 先设为 revealed 状态，触发前台的盲抽/跑马灯动画
+      // 注意：此时先不写入真实的 displayNumber，让前台卡片全是 "??"
+      state.pkStage = 'revealed'; 
+      state.settled = true;
       state.isDrawingScramble = false;
       state.pkLocked = true;
       state.currentPollFinished = true;
       saveState();
 
+      // 2. 延迟 2.5 秒（等待前台跑马灯播完）
       setTimeout(() => {
         const total = state.activeGroupMembers.length;
+        // 随机分配号码
         const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
 
-        // 如果后台有内定，则强制让内定的人拿票选号
+        // 如果有内定，强制让内定的人拿票选号
         if (state.presetWinnerId) {
           const presetIdx = state.activeGroupMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
           if (presetIdx !== -1) {
@@ -932,11 +932,50 @@
           }
         }
 
+        // 找中奖者并送入晋级区
         const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
-        if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
+        if (winnerMember) {
+          // ★ 关键：写入真实号码的同时，更新 passHistory 并触发放大高亮
+          const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
+          if (activeRound) {
+            const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerMember.displayNumber})`;
+            if (!state.passHistory) state.passHistory = [];
+            const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(winnerMember.id));
+            if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerMember.id))) {
+              state.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: state.drawRoundIndex ?? currentRoundIndex });
+            }
+            const isMode2 = state.modeConfig && state.modeConfig.enabled && state.modeConfig.selectedMode === 'mode2';
+            activeGroup4Ids.forEach(id => {
+              const target = activeRound.candidates.find(c => String(c.id) === String(id));
+              if (target) {
+                if (String(id) === String(winnerMember.id)) { target.status = 'pass'; target.pollLabel = pollLabel; }
+                else { 
+                  if (isMode2 && activeRound.isConsolationStage) target.status = 'pending';
+                  else { target.status = 'out'; target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex; }
+                }
+              }
+            });
+            if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === true) {
+              const winnerTarget = activeRound.candidates.find(c => String(c.id) === String(winnerMember.id));
+              if (winnerTarget) advanceModeLogic(activeRound, winnerTarget);
+            }
+          }
+        }
+        
+        // 清理组状态，准备下一轮
         state.presetWinnerId = null;
+        activeGroup4Ids = []; state.activeGroupIds = []; 
+        // 注意：这里不清空 activeGroupMembers，让前台可以把高亮渲染出来
+        // state.activeGroupMembers = []; 
+        
+        // 播放完毕，解除锁定，切回投票态
+        state.pkStage = 'voting';
+        state.triggerNumber = null; 
+        state.settled = false;
+        state.pkLocked = false;
+
         saveState();
-      }, 2200);
+      }, 2500); // 2500ms 刚好覆盖前台的延迟与高亮动画
     }
     
      function clearCurrentActiveGroup() {
