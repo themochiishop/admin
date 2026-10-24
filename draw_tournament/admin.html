@@ -875,10 +875,18 @@
       updatePickRandomBtnLabel();
     }
     
-    function revealPKWinner() {
+       function revealPKWinner() {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
-      if (state.pkLocked === true) { alert("⚠️ 前台已点击揭晓，票选号已锁定！"); return; }
+      // ★ 前台管理员在线且锁定时才拦截；前台已退出则后台可接管
+      if (state.pkLocked === true && publicAdminActive === true) {
+        alert("⚠️ 前台已点击揭晓，票选号已锁定！\n\n如需后台接管，请让前台管理员先退出。");
+        return;
+      }
+      if (state.pkLocked === true && !publicAdminActive) {
+        // 前台退出后残留的锁，后台可以强制清除
+        state.pkLocked = false;
+      }
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
       if (state.activeGroupMembers.every(m => m.displayNumber !== null)) { alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); return; }
       
