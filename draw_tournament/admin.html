@@ -515,12 +515,31 @@
       });
     }
 
+    // ★ 更新：决战轮禁用盲抽
     function updatePickRandomBtnState() {
       const btn = document.getElementById('pickRandomGroupBtn');
       if (!btn) return;
+      // 混合模式关闭时禁用
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
         btn.disabled = true; btn.title = "当前模式已关闭【混合模式】，不可使用盲抽";
-      } else { btn.disabled = false; btn.title = ""; }
+        updatePickRandomBtnLabel();
+        return;
+      }
+      
+      // ★ 冠亚季决战轮次禁用盲抽
+      const activeRound = state.rounds && state.rounds[currentRoundIndex];
+      const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
+      const totalCount = activeRound ? (activeRound.candidates || []).length : 0;
+      const isConsolationStage = isModeEnabled && state.modeConfig.selectedMode === 'mode2' && activeRound && activeRound.isConsolationStage;
+      
+      if (isModeEnabled && !isConsolationStage && (totalCount === 3 || totalCount === 2)) {
+        btn.disabled = true; 
+        btn.title = `当前是冠亚季决战轮次（${totalCount}人），请手动点击下方【${totalCount === 3 ? '🥉 季军' : '👑 冠军'}】按钮判定！`;
+        updatePickRandomBtnLabel();
+        return;
+      }
+      
+      btn.disabled = false; btn.title = "";
       updatePickRandomBtnLabel();
     }
 
@@ -689,6 +708,16 @@
       if (publicAdminActive) { console.log("提示：前台管理员已接管开奖，后台盲抽仅作测试准备。"); }
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
         alert("⚠️ 当前模式已关闭【混合模式】，所有阶段均不支持抽组PK。\n如需抽组PK，请在设置里重新勾选【🎲 启用混合模式】。");
+        return;
+      }
+
+      // ★ 防御性二次校验：决战轮禁止盲抽
+      const activeRoundCheck = state.rounds && state.rounds[currentRoundIndex];
+      const isModeEnabledCheck = state.modeConfig && state.modeConfig.enabled;
+      const totalCountCheck = activeRoundCheck ? (activeRoundCheck.candidates || []).length : 0;
+      const isConsolationCheck = isModeEnabledCheck && state.modeConfig.selectedMode === 'mode2' && activeRoundCheck && activeRoundCheck.isConsolationStage;
+      if (isModeEnabledCheck && !isConsolationCheck && (totalCountCheck === 3 || totalCountCheck === 2)) {
+        alert(`⚠️ 当前是冠亚季决战轮次（${totalCountCheck}人）！\n\n请手动点击下方【${totalCountCheck === 3 ? '🥉 季军' : '👑 冠军'}】按钮判定，此阶段不可盲抽。`);
         return;
       }
       
@@ -951,6 +980,7 @@
       updatePickRandomBtnLabel();
     }
     
+    // ★ 修改：盲抽结束后仅在非决战轮（total > 3）触发 advanceModeLogic
     function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
@@ -979,7 +1009,12 @@
           }
         }
       });
-      if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === true) {
+      // ★ 盲抽结束后：只有在非决战轮次（total > 3）才触发自动推进逻辑
+      // 决战轮次（3人/2人）已禁用盲抽按钮，这里只是防御性判断
+      const roundTotalCount = (activeRound.candidates || []).length;
+      if (state.modeConfig && state.modeConfig.enabled 
+          && state.modeConfig.mixedModeEnabled === true 
+          && roundTotalCount > 3) {
         const winnerTarget = activeRound.candidates.find(c => String(c.id) === String(winnerId));
         if (winnerTarget) advanceModeLogic(activeRound, winnerTarget);
       }
@@ -1116,11 +1151,19 @@
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
+    // ★ 修改：加防御判断，非手动晋级的盲抽不触发决战轮冠亚季判定
     function advanceModeLogic(activeRound, justPassed) {
       if (!state.modeConfig || !state.modeConfig.enabled) return;
       const mode = state.modeConfig.selectedMode || 'mode1';
       const total = activeRound.candidates || [];
       const N = state.modeConfig.mode2ConsolationCount || 10;
+
+      // ★ 防御：决战轮次的冠亚季判定只应由手动点击触发
+      // 盲抽 winner 没有 manualPassed 标记，跳过决战轮判定
+      // 但安慰奖阶段的自动补齐逻辑仍需执行
+      if (!justPassed.manualPassed && !(mode === 'mode2' && activeRound.isConsolationStage)) {
+        return;
+      }
 
       if (mode === 'mode2' && activeRound.isConsolationStage) {
         if (!justPassed.rankKey) { justPassed.rankTitle = "🎁 安慰奖"; justPassed.rankKey = "rankConsolation"; }
@@ -1183,7 +1226,7 @@
       }
     }
 
-    // ★★★ 修改后的 createNewRound() ★★★
+    // ★ createNewRound() 含模式禁用逻辑
     function createNewRound() {
       const cur = state.rounds[currentRoundIndex];
       let passed = (cur.candidates || []).filter(c => c.status === 'pass');
@@ -1264,7 +1307,7 @@
 
     function closeAdvanceModal() { document.getElementById('advanceModal').classList.add('hidden'); }
 
-    // ★★★ 修改后的 executeAdvanceRound() ★★★
+    // ★ executeAdvanceRound() 含二次校验
     function executeAdvanceRound(modeType) {
       closeAdvanceModal();
       const cur = state.rounds[currentRoundIndex];
@@ -1348,6 +1391,7 @@
       state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
       saveState();
       renderRoundTabs();
+      updatePickRandomBtnState();
       updatePickRandomBtnLabel();
       alert(`🎉 已开启【${label}】！`);
     }
@@ -1360,19 +1404,22 @@
         return `<button onclick="switchRound(${idx})" class="px-3 py-1 rounded-lg text-xs border transition ${activeClass} whitespace-nowrap">${escapeHtml(getRoundTitle(idx))}</button>`;
       }).join('');
     }
+    // ★ switchRound() 加入 updatePickRandomBtnState 调用
     function switchRound(idx) {
       currentRoundIndex = idx;
       if (state.drawRoundIndex === idx && state.activeGroupIds && state.activeGroupIds.length > 0) activeGroup4Ids = [...state.activeGroupIds];
       else if (state.activeGroupIds && state.activeGroupIds.length > 0 && state.pkStage !== 'voting') activeGroup4Ids = [...state.activeGroupIds];
       else activeGroup4Ids = [];
       renderRoundTabs(); renderAdminView(); updateStats();
+      updatePickRandomBtnState();
     }
     
+    // ★ saveState() 调用完整状态更新
     function saveState() {
       localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
       db.ref('tournament_state').set(state);
       updateStats(); renderAdminView(); checkAndTogglePdfExportBtn(); updateRefreshBtnState();
-      updatePickRandomBtnLabel();
+      updatePickRandomBtnState();
     }
     
     function updateStats() {
