@@ -385,10 +385,9 @@
     let scrambleIntervalId = null;
     let countdownTimerId = null;
     let isMarqueeRunning = false;
-        let __isInterceptingFromAdmin = false; // ★ 拦截后台直接结算的锁
+    let __isInterceptingFromAdmin = false; // ★ 锁：用于拦截后台结算，强制播完动画
     let isTransitionPlaying = false;
     let marqueeSafetyTimer = null;
-    let __forceInterceptRevealed = false; // ★ 核心：用于拦截后台直接发来的结算信号
     
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
@@ -676,7 +675,7 @@
         }, 100);
       }
 
-         db.ref('tournament_state').on('value', (snapshot) => {
+      db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (!val) return;
         state = val;
@@ -793,14 +792,9 @@
 
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
-          let __lastPkGroupSignature = '';
-    function checkForNewPkGroup() {
       // ★ 加上这把锁：如果在跑后台动画，定时器禁止干扰
       if (__isInterceptingFromAdmin) return; 
 
-      const sig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
-      // ... 下面的代码保持不变
-      if (__forceInterceptRevealed) return; // 拦截期间不执行自动轮询
       const sig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
       if (sig && sig !== __lastPkGroupSignature) {
         __lastPkGroupSignature = sig;
