@@ -906,10 +906,21 @@
           alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。");
         } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
         else return;
-      } else {
+           } else {
         if (!confirm("确认退出管理员控盘模式？")) return;
         isAdminUnlocked = false;
         localStorage.removeItem('mochii_admin_unlocked');
+
+        // ★ 退出时：如果当前 POLL 未真正开奖完成，就释放 pkLocked，避免后台被永久锁死
+        db.ref('tournament_state').transaction((latestState) => {
+          if (!latestState) return latestState;
+          // 只有当还没进入 revealed（即还在 voting / triggered / 开奖动画中）时才释放
+          if (latestState.pkStage !== 'revealed') {
+            latestState.pkLocked = false;
+          }
+          return latestState;
+        });
+
         db.ref('tournament_state/publicAdminActive').set(false);
       }
       const txt = document.getElementById('adminUnlockText');
