@@ -240,7 +240,7 @@
           <div class="rule-tooltip-content">
             <div class="font-bold text-amber-400 mb-1.5">🔥 盲抽 PK 规则</div>
             <div class="mb-1.5">• <b>普通轮次</b>：盲抽 4 人组队 PK，票选号命中者<b class="text-emerald-400">晋级</b>，其余 3 人<b class="text-rose-400">淘汰</b>。</div>
-            <div class="mb-1.5">• <b>人数限制</b>：待定池剩下不到 8 人时，盲抽按钮将锁定，请手动点晋级。</div>
+            <div class="mb-1.5">• <b>人数限制</b>：待定池剩下不到 4 人时，盲抽按钮将锁定，请手动点晋级。</div>
             <div class="mb-1.5">• <b>安慰奖阶段</b>（模式2）：盲抽 4 人，命中者得安慰奖，其余回待定池。</div>
             <div class="mb-1.5">• <b>冠亚季决战</b>（3人或2人）：盲抽禁用，只能手动点【季军】或【冠军】。</div>
           </div>
@@ -274,7 +274,7 @@
                   <div class="font-bold text-amber-400 mb-1.5">🎲 随机盲抽组说明</div>
                   <div>• <b>普通轮次</b>：抽一组 4 人 PK，命中者晋级，其余淘汰。</div>
                   <div>• <b>安慰奖阶段</b>：抽一组 PK，命中者得安慰奖，其余回待定池。</div>
-                  <div class="mt-1.5 text-rose-300">• <b>决战轮次（3/2人）或待定<8人</b> 已禁用，需手动点。</div>
+                  <div class="mt-1.5 text-rose-300">• <b>决战轮次（3/2人）或待定<4人</b> 已禁用，需手动点。</div>
                 </div>
               </div>
               <button id="reshuffleCurrentGroupBtn" onclick="reshuffleCurrentGroup()" class="px-2.5 py-1.5 bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/50 text-[11px] rounded-lg transition font-bold flex items-center space-x-1" title="保持当前 POLL 号不变，重新从待 PK 池随机抽取本组名单">🔄 重抽本组名单</button>
@@ -575,7 +575,7 @@
         return;
       }
       
-      // 普通轮次如果剩不到 4 人，也禁用（因为必须抽至少 2 人才能淘汰 1 个晋级 1 个，抽 1 人没意义）
+      // 普通轮次如果剩不到 3 人，也禁用
       if (isModeEnabled && !isConsolationStage && pendingCount > 0 && pendingCount < 3) {
         btn.disabled = true;
         btn.title = `待定人数仅剩 ${pendingCount} 人，不足以进行 PK。请手动点击晋级！`;
