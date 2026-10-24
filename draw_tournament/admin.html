@@ -1004,9 +1004,9 @@
           cardBorder = "border-2 border-fuchsia-500 bg-fuchsia-950/30 shadow-fuchsia-500/20 shadow-xl";
           cardHeaderTag = `<span class="text-xs font-black bg-fuchsia-500 text-white px-2 py-0.5 rounded-full shadow-lg">⭐ 内定</span>`;
         }
-        // ★ hover 才显示的「定中奖」按钮
+              // ★ hover 才显示的按钮
         const presetBtn = isLockedUI ? '' :
-          `<button onclick="event.stopPropagation();presetWinner('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '取消内定' : '⭐ 定中奖'}</button>`;
+          `<button onclick="event.stopPropagation();presetWinner('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '删除' : '删除'}</button>`;
         return `<div class="${cardBorder} group rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
