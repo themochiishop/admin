@@ -421,12 +421,47 @@
 
     let __lastPkWinnerPopupKey = '';
 
-    let __popupTimer = null;
+     let __popupTimer = null;
     function showWinnerPopup(eventData, durationSeconds) {
       const modal = document.getElementById('congratModal');
       const bodyContainer = document.getElementById('congratModalBody');
+      // 获取顶部的图标和标题DOM
+      const iconEl = modal.querySelector('.text-5xl.sm\\:text-7xl'); 
+      const titleEl = document.getElementById('congratModalTitle');
+      const badgeEl = document.getElementById('congratBadge');
+      
       if (!modal || !bodyContainer) return;
 
+      // 重置默认样式（安全起见，每次重置）
+      if (iconEl) iconEl.innerText = '👑';
+      if (titleEl) {
+        titleEl.innerText = '热烈祝贺！成功获得荣誉！';
+        titleEl.className = 'text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3 sm:mb-4';
+      }
+
+      // ★ 动态修改顶部图标与标题
+      if (eventData.winnerNamesKey === 'pkHit' && eventData.isElimination) {
+        // 如果是淘汰赛
+        if (iconEl) iconEl.innerText = '💥';
+        if (titleEl) {
+          titleEl.innerText = '很遗憾！抱憾离场';
+          titleEl.className = 'text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-rose-600 mb-3 sm:mb-4';
+        }
+        if (badgeEl) badgeEl.innerText = 'ELIMINATED ANNOUNCEMENT';
+      } else if (eventData.winnerNamesKey === 'pkHit' && !eventData.isElimination) {
+        // 如果是安慰奖晋级赛
+        if (iconEl) iconEl.innerText = '🎁';
+        if (titleEl) {
+          titleEl.innerText = '恭喜！成功获得安慰奖';
+          titleEl.className = 'text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-400 to-emerald-500 mb-3 sm:mb-4';
+        }
+        if (badgeEl) badgeEl.innerText = 'LUCKY DRAW WINNER';
+      } else {
+        // 冠亚季决战等其他情况
+        if (badgeEl) badgeEl.innerText = 'WINNER ANNOUNCEMENT';
+      }
+
+      // 下面是原来的弹窗内容生成逻辑
       if (eventData.winnerNamesKey === 'third') {
         bodyContainer.innerHTML = `
           <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
@@ -448,15 +483,15 @@
         const borderColor = isElimination ? 'border-rose-400' : 'border-emerald-400';
         const bgGrad = isElimination ? 'from-rose-500/20 via-rose-400/30 to-rose-500/20' : 'from-emerald-500/20 via-emerald-400/30 to-emerald-500/20';
         const textColor = isElimination ? 'text-rose-300' : 'text-emerald-300';
-        const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : '🎯 PK 命中 / WINNER';
-        const subText = isElimination ? `票选号 #${eventData.triggerNumber} 命中！` : `票选号 #${eventData.triggerNumber} 命中！`;
+        const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : '🎁 获得安慰奖 / CONSOLATION';
+        
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r ${bgGrad} p-4 sm:p-5 rounded-2xl border-2 ${borderColor} text-center shadow-lg transform scale-105">
             <span class="text-xs sm:text-base font-black ${textColor} uppercase tracking-widest block mb-0.5 sm:mb-1">${badgeText}</span>
             <span class="text-xl sm:text-2xl font-black ${textColor} tracking-wider drop-shadow-md">${escapeHtml(eventData.winnerName)}</span>
           </div>
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
-            <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">${subText}</span>
+            <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
             <span class="text-xs text-slate-400">${escapeHtml(eventData.orderNo || '')}</span>
           </div>`;
       }
