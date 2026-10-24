@@ -679,13 +679,25 @@
       }
     }
 
-    function updateWinnerBannerUI() {
+       function updateWinnerBannerUI() {
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
       if (!banner || !content) return;
-      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
-      if (summaryPanel && !summaryPanel.classList.contains('hidden')) { banner.classList.add('hidden'); return; }
+      
+      // ★ 反向淘汰模式公告
+      if (state.isReverseElimination === true && state.pkStage === 'voting') {
+        banner.classList.remove('hidden');
+        content.innerHTML = `<span class="text-rose-400 font-black animate-pulse">💥 绝地大逃杀（反向淘汰）开启！抽中票选号的人将被直接淘汰！</span>`;
+        return;
+      }
+      if (state.isReverseElimination === true && state.pkStage === 'revealed') {
+        banner.classList.remove('hidden');
+        content.innerHTML = `<span class="text-emerald-400 font-bold">✅ 本轮淘汰已完成，其余成员安全过关！</span>`;
+        return;
+      }
 
+      const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
+      // ... 下面保留原来的代码（如果 summaryPanel 不是 hidden 就 return）
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
@@ -1279,21 +1291,37 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-    function getCardHtml(c, idx, isRevealed) {
+     function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
       const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
+      const isReverse = state.isReverseElimination === true; // ★ 获取反向状态
+      
       let header = `<span class="text-sm font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>`;
       let border = "border-amber-500/50 bg-slate-900";
+
       if (isRevealed && hasNumber) {
-        if (isWinner) {
-          header = `<span class="text-sm font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
-          border = "border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-105 z-10 transition-all duration-700 ease-out";
+        if (isReverse) {
+          // ★ 反向淘汰赛：命中=淘汰（红/灰），未命中=安全（绿色）
+          if (isWinner) {
+            header = `<span class="text-sm font-black bg-rose-500 text-white px-3 py-0.5 rounded-full shadow-lg">💥 #${realNum} 淘汰</span>`;
+            border = "border-4 border-rose-500 bg-slate-800 shadow-[0_0_30px_rgba(244,63,94,0.8)] opacity-70 grayscale z-10 transition-all duration-700 ease-out";
+          } else {
+            header = `<span class="text-sm font-black bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-full shadow">🛡️ #${realNum} 安全</span>`;
+            border = "border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_20px_rgba(52,211,153,0.5)] transform scale-105 z-10 transition-all duration-300";
+          }
         } else {
-          header = `<span class="text-sm font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
-          border = "border-2 border-slate-700 bg-slate-900/50 opacity-60 transition-all duration-300";
+          // 常规赛：命中=晋级（绿色），未命中=淘汰（红/灰）
+          if (isWinner) {
+            header = `<span class="text-sm font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
+            border = "border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-105 z-10 transition-all duration-700 ease-out";
+          } else {
+            header = `<span class="text-sm font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
+            border = "border-2 border-slate-700 bg-slate-900/50 opacity-60 transition-all duration-300";
+          }
         }
       }
+      
       const currentGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
       const namesRevealed = (currentGroupSig === localNamesRevealedGroupSig);
       const isScrambling = !isRevealed && (!namesRevealed || localScrambleActive || scramblingMemberIds.has(String(c.id)));
@@ -1390,7 +1418,18 @@
         else { areaL.innerHTML = placeholders[0] + placeholders[2]; areaR.innerHTML = placeholders[1] + placeholders[3]; }
       }
 
-      let passedList = list.filter(c => c.status === 'pass');
+            let passedList = list.filter(c => c.status === 'pass');
+      
+      // ★ 反向淘汰赛：未抽中的“安全”人员也展示在右侧晋级名单中
+      if (state.isReverseElimination === true && state.pkStage === 'revealed' && state.activeGroupIds) {
+        const safeMembers = list.filter(c => state.activeGroupIds.includes(String(c.id)) && c.displayNumber !== state.triggerNumber);
+        safeMembers.forEach(sm => {
+          if (!passedList.some(c => String(c.id) === String(sm.id))) {
+            passedList.push({ ...sm, status: 'pass', isSafe: true });
+          }
+        });
+      }
+
       if (state.passHistory) state.passHistory.forEach(hist => { if (!passedList.some(c => String(c.id) === String(hist.id))) passedList.push(hist); });
       
       passedList.sort((a, b) => (b.passTimestamp || 0) - (a.passTimestamp || 0));
@@ -1405,6 +1444,8 @@
             const isPick = c.pollLabel.startsWith('PICK');
             const bgClass = isPick ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md' : '';
             labelHtml = `<div class="folder-tab ${bgClass}">${escapeHtml(c.pollLabel)}</div>`;
+          } else if (c.isSafe) {
+            labelHtml = `<div class="folder-tab bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md">安全过关</div>`;
           }
 
           const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
