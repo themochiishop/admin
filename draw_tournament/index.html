@@ -1298,18 +1298,18 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-     function getCardHtml(c, idx, isRevealed) {
+      function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
       const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
-      const isReverse = state.isReverseElimination === true; // ★ 获取反向状态
+      const isReverse = state.isReverseElimination === true; // ★ 获取淘汰赛状态
       
       let header = `<span class="text-sm font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>`;
       let border = "border-amber-500/50 bg-slate-900";
 
       if (isRevealed && hasNumber) {
         if (isReverse) {
-          // ★ 反向淘汰赛：命中=淘汰（红/灰），未命中=安全（绿色）
+          // 淘汰赛：命中=淘汰（红/灰），未命中=安全（绿色）
           if (isWinner) {
             header = `<span class="text-sm font-black bg-rose-500 text-white px-3 py-0.5 rounded-full shadow-lg">💥 #${realNum} 淘汰</span>`;
             border = "border-4 border-rose-500 bg-slate-800 shadow-[0_0_30px_rgba(244,63,94,0.8)] opacity-70 grayscale z-10 transition-all duration-700 ease-out";
@@ -1361,26 +1361,27 @@
       return html;
     }
 
-    function renderPublicView() {
-      let activeRound = { candidates: [] };
-      if (state.rounds && state.rounds.length > 0) {
-        if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
-        if (currentRoundIndex < 0) currentRoundIndex = 0;
-        activeRound = state.rounds[currentRoundIndex];
-      }
-            // 控制模式标签
+       function renderPublicView() {
+      // 1. 控制大框背景颜色和标签
+      const pkPanel = document.getElementById('publicActiveGroupDisplay');
       const modeBadge = document.getElementById('modeBadge');
       const modeBadgeText = document.getElementById('modeBadgeText');
-      if (modeBadge && modeBadgeText) {
-        modeBadge.classList.remove('hidden');
+      
+      if (pkPanel && modeBadge && modeBadgeText) {
         if (state.isReverseElimination === true) {
+          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-rose-950/60 via-slate-900/90 to-rose-950/60 border-2 border-rose-500/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_30px_rgba(244,63,94,0.3)] relative overflow-hidden flex-col min-h-[400px]";
+          modeBadge.classList.remove('hidden');
           modeBadgeText.className = "text-[10px] px-2 py-0.5 rounded border font-black shadow-sm bg-rose-500 text-white border-rose-400 animate-pulse";
           modeBadgeText.innerText = "淘汰模式";
         } else {
+          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
+          modeBadge.classList.remove('hidden');
           modeBadgeText.className = "text-[10px] px-2 py-0.5 rounded border font-black shadow-sm bg-emerald-950/80 text-emerald-300 border-emerald-500/50";
           modeBadgeText.innerText = "晋级模式";
         }
       }
+
+      // ... 下面的其他代码保持你原本的 renderPublicView 逻辑不变 ...
       const searchEl = document.getElementById('searchInput');
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
