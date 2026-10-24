@@ -10,11 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <style>
-    /* ===== POLL 切换过渡动画 ===== */
-    @keyframes shuffleOverlayFadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+    @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
       0% { transform: scale(1) rotate(0deg); opacity: 1; }
       40% { transform: scale(0.85) rotate(-4deg); opacity: 0.6; }
@@ -29,150 +25,74 @@
       0%, 100% { opacity: 0.8; letter-spacing: 2px; text-shadow: 0 0 15px rgba(251,191,36,0.8); }
       50% { opacity: 1; letter-spacing: 5px; text-shadow: 0 0 30px rgba(251,191,36,1), 0 0 10px #fff; }
     }
-
     #pkShuffleOverlay {
-      position: absolute;
-      inset: 0;
-      z-index: 30;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
+      position: absolute; inset: 0; z-index: 30; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 16px;
       background: radial-gradient(circle at center, rgba(245, 158, 11, 0.25) 0%, rgba(15, 23, 42, 0.75) 60%, rgba(15, 23, 42, 0.95) 100%);
-      backdrop-filter: blur(4px);
-      border-radius: 1rem;
-      pointer-events: none;
+      backdrop-filter: blur(4px); border-radius: 1rem; pointer-events: none;
     }
-    #pkShuffleOverlay.active {
-      display: flex;
-      animation: shuffleOverlayFadeIn 0.3s ease-out forwards;
-    }
+    #pkShuffleOverlay.active { display: flex; animation: shuffleOverlayFadeIn 0.3s ease-out forwards; }
     #pkShuffleOverlay .shuffle-spinner {
-      width: 64px;
-      height: 64px;
-      border: 4px solid rgba(245, 158, 11, 0.2);
-      border-top-color: #fef08a;
-      border-right-color: #fbbf24;
-      border-radius: 50%;
+      width: 64px; height: 64px; border: 4px solid rgba(245, 158, 11, 0.2);
+      border-top-color: #fef08a; border-right-color: #fbbf24; border-radius: 50%;
       animation: shuffleSpin 0.8s linear infinite;
       box-shadow: 0 0 40px rgba(251, 191, 36, 0.6), inset 0 0 15px rgba(251, 191, 36, 0.3);
     }
     #pkShuffleOverlay .shuffle-text {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: #fef08a;
+      font-size: 1.5rem; font-weight: 900; color: #fef08a;
       text-shadow: 0 0 20px rgba(245, 158, 11, 1), 0 0 5px #fff;
-      animation: shuffleTextPulse 1.2s ease-in-out infinite;
-      letter-spacing: 2px;
+      animation: shuffleTextPulse 1.2s ease-in-out infinite; letter-spacing: 2px;
     }
     #pkShuffleOverlay .shuffle-sub {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #e2e8f0;
-      text-shadow: 0 0 10px rgba(255,255,255,0.3);
-      letter-spacing: 1.5px;
-      opacity: 0.9;
+      font-size: 0.8rem; font-weight: 700; color: #e2e8f0;
+      text-shadow: 0 0 10px rgba(255,255,255,0.3); letter-spacing: 1.5px; opacity: 0.9;
     }
-
-    .pk-card.pk-shuffle-out {
-      animation: shuffleCardBurst 0.55s ease-in forwards !important;
-      pointer-events: none;
-    }
-
-    /* ===== 原样式 ===== */
+    .pk-card.pk-shuffle-out { animation: shuffleCardBurst 0.55s ease-in forwards !important; pointer-events: none; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .folder-tab { position: absolute; top: -15px; left: 0px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 9px; padding: 1px 8px; border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); letter-spacing: 0.5px; z-index: 10; }
-    
-    /* ★ 修复：去掉了重复的 ringPulse，只保留纯硬件加速版本 */
     @keyframes ringPulse { 
       0% { transform: scale(0.98) rotate(-2deg); background-color: rgba(245, 158, 11, 0.3); } 
       50% { transform: scale(1.05) rotate(2deg); background-color: rgba(251, 191, 36, 0.7); } 
       100% { transform: scale(0.98) rotate(-2deg); background-color: rgba(245, 158, 11, 0.3); } 
     }
     .marquee-flash { animation: ringPulse 0.15s infinite alternate; border-color: #fbbf24 !important; }
-
     @keyframes winnerBlast { 
       0% { transform: scale(1); box-shadow: 0 0 30px #10b981; } 
       50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981; } 
       100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399; } 
     }
     .winner-glow { animation: winnerBlast 1s infinite alternate; border: 4px solid #34d399 !important; background-color: #064e3b !important; }
-    
-    @keyframes modalPop {
-      0% { transform: scale(0.8); opacity: 0; }
-      50% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
+    @keyframes modalPop { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
     .animate-pop { animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    
-    @keyframes fillBarLeftToRight {
-      from { width: 0%; }
-      to { width: 100%; }
-    }
+    @keyframes fillBarLeftToRight { from { width: 0%; } to { width: 100%; } }
     .animate-bar { animation: fillBarLeftToRight 5s linear forwards; }
-
     @keyframes blindDrawPulse {
       0%, 100% { opacity: 1; transform: scale(1); text-shadow: 0 0 20px rgba(245,158,11,0.8); }
       50% { opacity: 0.75; transform: scale(1.06); text-shadow: 0 0 35px rgba(251,191,36,1); }
     }
-    .blind-drawing-text {
-      animation: blindDrawPulse 1s ease-in-out infinite;
-    }
-
-    @keyframes countdownPop {
-      0% { transform: scale(0.5); opacity: 0; }
-      50% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .animate-countdown {
-      animation: countdownPop 0.5s ease-out forwards;
-    }
-
-    @keyframes scrollRow1 {
-      0%, 100% { transform: translateY(0); opacity: 1; }
-      50% { transform: translateY(-10px); opacity: 0.8; }
-    }
-    @keyframes scrollRow2 {
-      0%, 100% { transform: translateY(10px); opacity: 0.8; }
-      50% { transform: translateY(0); opacity: 1; }
-    }
+    .blind-drawing-text { animation: blindDrawPulse 1s ease-in-out infinite; }
+    @keyframes countdownPop { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+    .animate-countdown { animation: countdownPop 0.5s ease-out forwards; }
+    @keyframes scrollRow1 { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-10px); opacity: 0.8; } }
+    @keyframes scrollRow2 { 0%, 100% { transform: translateY(10px); opacity: 0.8; } 50% { transform: translateY(0); opacity: 1; } }
     .animate-scroll-row1 { animation: scrollRow1 3s ease-in-out infinite; }
     .animate-scroll-row2 { animation: scrollRow2 3s ease-in-out infinite; }
-
-    @keyframes borderHighlightFlash {
-      0%, 100% { border-color: inherit; box-shadow: none; }
-      50% { border-color: #34d399; box-shadow: 0 0 25px #34d399; }
-    }
-    .pk-hit-highlight {
-      animation: borderHighlightFlash 0.5s ease-in-out 4;
-    }
-
+    @keyframes borderHighlightFlash { 0%, 100% { border-color: inherit; box-shadow: none; } 50% { border-color: #34d399; box-shadow: 0 0 25px #34d399; } }
+    .pk-hit-highlight { animation: borderHighlightFlash 0.5s ease-in-out 4; }
     @media (min-width: 1024px) {
-      .layout-grid.active {
-        display: grid;
-        grid-template-columns: 70% calc(30% - 1.5rem);
-        gap: 1.5rem;
-        align-items: start;
-      }
-      .layout-grid.collapsed {
-        display: block;
-      }
+      .layout-grid.active { display: grid; grid-template-columns: 70% calc(30% - 1.5rem); gap: 1.5rem; align-items: start; }
+      .layout-grid.collapsed { display: block; }
     }
-
     .out-panel { max-width: 100%; }
     .out-card { padding: 6px 8px; font-size: 12px; line-height: 1.3; }
     .passed-zoom .passed-card-name { font-size: 1.5rem !important; }
     .passed-zoom .passed-card-order { font-size: 0.875rem !important; }
     .scramble-text { font-family: 'Courier New', monospace; letter-spacing: 2px; color: #94a3b8 !important; opacity: 0.8; }
-
     .passed-highlight {
-      background-color: #064e3b !important;
-      border-color: #34d399 !important;
+      background-color: #064e3b !important; border-color: #34d399 !important;
       box-shadow: 0 0 20px rgba(52, 211, 153, 0.6), inset 0 0 10px rgba(52, 211, 153, 0.3) !important;
-      transform: scale(1.02);
-      transition: all 0.4s ease;
+      transform: scale(1.02); transition: all 0.4s ease;
     }
     .passed-highlight .passed-card-name { color: #6ee7b7 !important; text-shadow: 0 0 10px rgba(110, 231, 183, 0.8); }
     .passed-highlight .passed-card-order { color: #a7f3d0 !important; }
@@ -308,19 +228,13 @@
           </div>
 
           <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6 w-full h-full py-2">
-            <!-- 左侧卡片区 (电脑端为左，手机端为下) -->
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center justify-center lg:justify-end w-full lg:w-[35%] order-2 lg:order-1 mt-2 lg:mt-0"></div>
 
-            <!-- 中间票选号区 -->
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 relative w-full lg:w-auto">
-              
-              <!-- 状态文字区：占据固定高度但居中，不会把票选号顶偏 -->
               <div class="h-[60px] sm:h-[70px] w-full flex flex-col items-center justify-center mb-1 relative z-30">
-                
                 <div id="blindDrawingIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
                   <span class="blind-drawing-text whitespace-nowrap text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
                 </div>
-                
                 <div id="countdownIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
                   <span class="whitespace-nowrap text-xs sm:text-sm text-amber-300 font-bold mb-1">盲抽即将在 <span id="countdownNum" class="text-2xl sm:text-3xl text-amber-400 mx-1">5</span> 秒后开始</span>
                   <div class="flex space-x-1">
@@ -329,21 +243,17 @@
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.4s;"></span>
                   </div>
                 </div>
-                
                 <div id="nextRoundHint" class="hidden absolute inset-0 flex flex-col items-center justify-center">
                   <span class="animate-scroll-row1 whitespace-nowrap text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
                   <span class="animate-scroll-row2 whitespace-nowrap text-sm sm:text-base font-bold text-emerald-300 mt-0.5 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
                 </div>
-                
               </div>
 
-              <!-- 中间的票选号框 -->
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-4 sm:px-10 sm:py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)] z-20">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
                 <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
               </div>
               
-              <!-- 前台揭晓按钮 -->
               <div id="publicRevealButtonBox" class="hidden mt-4 z-20">
                 <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
                   <span>🎰</span><span>点击揭晓</span>
@@ -351,11 +261,9 @@
               </div>
             </div>
 
-            <!-- 右侧卡片区（仅电脑端） -->
             <div id="pk-area-right" class="hidden lg:flex flex-col gap-3 items-center justify-start w-full lg:w-[35%] order-3"></div>
           </div>
 
-          <!-- ★ POLL 切换刷新遮罩（放在 #publicActiveGroupDisplay 内末尾） -->
           <div id="pkShuffleOverlay">
             <div class="shuffle-spinner"></div>
             <div class="shuffle-text">正在刷新名单…</div>
@@ -461,7 +369,7 @@
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
       drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false, isDrawingScramble: false,
-      pkLocked: false,
+      pkLocked: false, presetWinnerId: null,
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true, drawCountdownSeconds: 5 },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
@@ -751,6 +659,7 @@
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
           if (state.pkLocked === undefined) state.pkLocked = false;
+          if (state.presetWinnerId === undefined) state.presetWinnerId = null;
 
           if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
             window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
@@ -995,6 +904,20 @@
       const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
       const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
       cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
+
+      // ★ 内定中奖者强制命中
+      if (state.presetWinnerId) {
+        const presetIdx = cardMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
+        const triggerIdx = cardMembers.findIndex(m => m.displayNumber === state.triggerNumber);
+        if (presetIdx !== -1 && triggerIdx !== -1 && presetIdx !== triggerIdx) {
+          const tmp = cardMembers[presetIdx].displayNumber;
+          cardMembers[presetIdx].displayNumber = cardMembers[triggerIdx].displayNumber;
+          cardMembers[triggerIdx].displayNumber = tmp;
+        } else if (presetIdx !== -1 && triggerIdx === -1) {
+          cardMembers[presetIdx].displayNumber = state.triggerNumber;
+        }
+      }
+
       let winnerIndex = -1;
       cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
@@ -1007,7 +930,6 @@
         renderPublicView();
       }, 8000);
 
-      // 锁定云端
       db.ref('tournament_state').transaction((latestState) => {
         if (!latestState) return latestState;
         latestState.pkLocked = true;
@@ -1015,14 +937,11 @@
         return latestState;
       });
 
-      // === 开始跑马灯动画 ===
       let currentIndex = 0;
       let tickCount = 0;
-      // 手机端故意放慢闪烁速度，确保至少能肉眼看到 6-8 次闪烁（总耗时约 2.5 秒）
       const isMobile = window.innerWidth < 768;
       const baseDelay = isMobile ? 280 : 160; 
       
-      // 停止跑马灯并出结果的函数
       function finishMarquee() {
         if (!isMarqueeRunning) return;
         activeCards.forEach(el => {
@@ -1033,7 +952,6 @@
         const blindIndicator = document.getElementById('blindDrawingIndicator');
         if (blindIndicator) blindIndicator.classList.add('hidden');
 
-        // 将结果写入 Firebase
         db.ref('tournament_state').transaction((latestState) => {
           if (!latestState) return latestState;
           const numMap = {};
@@ -1094,6 +1012,7 @@
                   }
                 }
                 finalState.settled = true;
+                finalState.presetWinnerId = null;
                 return finalState;
               }, (err2, com2, snap2) => {
                 if (com2) {
@@ -1110,40 +1029,24 @@
         });
       }
 
-      // 跑马灯主循环
       function runMarquee() {
         if (!isMarqueeRunning) return;
-
-        // 清除旧高亮
         activeCards.forEach(el => el.classList.remove('marquee-flash'));
-
-        // 选中当前卡片
         const card = activeCards[currentIndex];
         card.classList.add('marquee-flash');
-
-        // 判断是否达到中奖位置（确保至少跑 8 次才可能停）
         const isEnding = (tickCount >= 8) && (currentIndex === winnerIndex) && (isMobile || tickCount > 12);
-
         if (isEnding) {
           card.classList.remove('marquee-flash');
           card.classList.add('winner-glow');
-          // 手机端强制留出 800ms 让玩家看到绿色的中奖发光效果
           setTimeout(finishMarquee, isMobile ? 800 : 2000);
           return;
         }
-
-        // 移动索引
         currentIndex = (currentIndex + 1) % total;
         tickCount++;
-
-        // 动态计算下一次移动的速度（越到后面越慢）
         let nextDelay = baseDelay;
         if (tickCount > 5) nextDelay += 30;
         if (tickCount > 10) nextDelay += 50;
-        
-        // 如果已经跑了很多次，且马上就要停在终点，再放慢一点
         if (currentIndex === winnerIndex && tickCount > 10) nextDelay += 150;
-
         setTimeout(runMarquee, nextDelay);
       }
 
