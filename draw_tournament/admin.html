@@ -271,8 +271,8 @@
               <div class="rule-tooltip">
                 <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
                 <button id="toggleModeBtn" onclick="toggleDrawMode()" class="px-2.5 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/50 text-[11px] rounded-lg transition font-bold flex items-center space-x-1 ml-1" title="切换 晋级赛 / 淘汰赛">
-  <span id="modeBtnIcon">🏆</span><span id="modeBtnText">当前: 晋级赛</span>
-</button>
+                  <span id="modeBtnIcon">🏆</span><span id="modeBtnText">当前: 晋级赛</span>
+                </button>
                 <div class="rule-tooltip-content">
                   <div class="font-bold text-amber-400 mb-1.5">🎲 随机盲抽组说明</div>
                   <div>• <b>普通轮次</b>：抽一组 4 人 PK，命中者晋级，其余淘汰。</div>
@@ -490,7 +490,7 @@
       }
     }
 
-       function updatePickRandomBtnLabel() {
+    function updatePickRandomBtnLabel() {
       const btn = document.getElementById('pickRandomGroupBtn');
       const modeBtn = document.getElementById('toggleModeBtn');
       const modeIcon = document.getElementById('modeBtnIcon');
@@ -575,7 +575,7 @@
       });
     }
 
-                  function updatePickRandomBtnState() {
+    function updatePickRandomBtnState() {
       const btn = document.getElementById('pickRandomGroupBtn');
       if (!btn) return;
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
@@ -767,7 +767,7 @@
       saveState(); renderRoundTabs();
     }
 
-                               function pickRandomGroup() {
+    function pickRandomGroup() {
       const now = Date.now();
       if (now - __lastPickRandomGroupTs < 800) return;
       __lastPickRandomGroupTs = now;
@@ -808,7 +808,7 @@
 
       if (isReverse) {
         promptMsg += `💥 当前为【淘汰模式】\n请输入要盲抽的人数（最多 ${maxAllow} 人）:`;
-      } else if (isConsolation) {
+      } else if (isConsolationStage) {
         promptMsg += `🎁 当前为【安慰奖晋级】\n请输入要盲抽的人数（最多 ${maxAllow} 人）:`;
       } else {
         promptMsg += `🔥 当前为【晋级模式】\n请输入要盲抽的人数（最多 ${maxAllow} 人）:`;
@@ -866,7 +866,8 @@
       renderAdminView();
       updatePickRandomBtnLabel();
     }
-        function toggleDrawMode() {
+
+    function toggleDrawMode() {
       if (state.currentDrawMode === 'eliminate') {
         state.currentDrawMode = 'advance';
       } else {
@@ -876,6 +877,7 @@
       updatePickRandomBtnLabel();
       renderAdminView();
     }
+
     function reshuffleCurrentGroup() {
       const now = Date.now();
       if (now - __lastPickRandomGroupTs < 800) return;
@@ -1061,7 +1063,7 @@
       updatePickRandomBtnLabel();
     }
     
-                          function passWinnerAndEliminateOthers(winnerId) {
+    function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
 
@@ -1079,8 +1081,6 @@
 
       if (isReverse) {
         // ======= 💥 淘汰赛模式 =======
-        // 按照当前组的成员，淘汰指定的数量（包含命中者，或者按顺序淘汰前 N 个）
-        // 这里的逻辑是：随机淘汰这组里的 N 个人。为了刺激感，默认命中者必定淘汰。
         const groupMembers = activeRound.candidates.filter(c => activeGroup4Ids.includes(String(c.id)));
         let eliminatedCount = 0;
 
