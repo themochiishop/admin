@@ -238,12 +238,11 @@
         <div class="rule-tooltip">
           <span class="px-2.5 py-1.5 bg-sky-900/40 border border-sky-500/50 text-sky-300 text-[11px] font-bold rounded-lg cursor-help">❓ 玩法说明</span>
           <div class="rule-tooltip-content">
-            <div class="font-bold text-amber-400 mb-1.5">🔥 盲抽淘汰赛规则</div>
-            <div class="mb-1.5">• <b>普通轮次</b>（人数&gt;3）：盲抽一组，票选号命中者<b class="text-rose-400">淘汰</b>，其余组员回待定池继续。</div>
-            <div class="mb-1.5">• <b>淘汰保底</b>：每次最多淘汰到剩3人，避免人数不足。</div>
-            <div class="mb-1.5">• <b>安慰奖阶段</b>（模式2）：盲抽一组，票选号命中者<b class="text-emerald-400">获得安慰奖</b>，其余回待定池。</div>
+            <div class="font-bold text-amber-400 mb-1.5">🔥 盲抽 PK 规则</div>
+            <div class="mb-1.5">• <b>普通轮次</b>：盲抽 4 人组队 PK，票选号命中者<b class="text-emerald-400">晋级</b>，其余 3 人<b class="text-rose-400">淘汰</b>。</div>
+            <div class="mb-1.5">• <b>人数限制</b>：待定池剩下不到 8 人时，盲抽按钮将锁定，请手动点晋级。</div>
+            <div class="mb-1.5">• <b>安慰奖阶段</b>（模式2）：盲抽 4 人，命中者得安慰奖，其余回待定池。</div>
             <div class="mb-1.5">• <b>冠亚季决战</b>（3人或2人）：盲抽禁用，只能手动点【季军】或【冠军】。</div>
-            <div class="mt-2 pt-1.5 border-t border-slate-700 text-[10px] text-slate-400">💡 点击按钮可看详细说明</div>
           </div>
         </div>
         <button onclick="resetRounds()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/50 text-[11px] font-bold rounded-lg transition shadow flex items-center space-x-1">
@@ -273,9 +272,9 @@
                 <button id="pickRandomGroupBtn" onclick="pickRandomGroup()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-[11px] rounded-lg shadow-lg flex items-center space-x-1 transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-600 disabled:text-slate-400 disabled:transform-none"><span>🎲</span><span>随机盲抽组</span></button>
                 <div class="rule-tooltip-content">
                   <div class="font-bold text-amber-400 mb-1.5">🎲 随机盲抽组说明</div>
-                  <div>• <b>普通轮次</b>：抽一组 PK，命中者淘汰，其他回待定池。</div>
-                  <div>• <b>安慰奖阶段</b>：抽一组 PK，命中者得安慰奖，其他回待定池。</div>
-                  <div class="mt-1.5 text-rose-300">• <b>决战轮次（3/2人）已禁用</b>，需手动点季军/冠军。</div>
+                  <div>• <b>普通轮次</b>：抽一组 4 人 PK，命中者晋级，其余淘汰。</div>
+                  <div>• <b>安慰奖阶段</b>：抽一组 PK，命中者得安慰奖，其余回待定池。</div>
+                  <div class="mt-1.5 text-rose-300">• <b>决战轮次（3/2人）或待定<8人</b> 已禁用，需手动点。</div>
                 </div>
               </div>
               <button id="reshuffleCurrentGroupBtn" onclick="reshuffleCurrentGroup()" class="px-2.5 py-1.5 bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/50 text-[11px] rounded-lg transition font-bold flex items-center space-x-1" title="保持当前 POLL 号不变，重新从待 PK 池随机抽取本组名单">🔄 重抽本组名单</button>
@@ -565,11 +564,19 @@
       const activeRound = state.rounds && state.rounds[currentRoundIndex];
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const totalCount = activeRound ? (activeRound.candidates || []).length : 0;
+      const pendingCount = activeRound ? (activeRound.candidates || []).filter(c => c.status === 'pending').length : 0;
       const isConsolationStage = isModeEnabled && state.modeConfig.selectedMode === 'mode2' && activeRound && activeRound.isConsolationStage;
       
       if (isModeEnabled && !isConsolationStage && (totalCount === 3 || totalCount === 2)) {
         btn.disabled = true; 
         btn.title = `当前是冠亚季决战轮次（${totalCount}人），请手动点击下方【${totalCount === 3 ? '🥉 季军' : '👑 冠军'}】按钮判定！`;
+        updatePickRandomBtnLabel();
+        return;
+      }
+      
+      if (isModeEnabled && !isConsolationStage && pendingCount > 0 && pendingCount < 8) {
+        btn.disabled = true;
+        btn.title = `待定人数仅剩 ${pendingCount} 人，盲抽容易导致不够进决战。请手动点击晋级！`;
         updatePickRandomBtnLabel();
         return;
       }
@@ -753,6 +760,7 @@
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
       const totalCount = (activeRound.candidates || []).length;
       const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
+      
       if (isModeEnabled && !isConsolationStage && (totalCount === 3 || totalCount === 2)) {
         alert(`⚠️ 当前是冠亚季决战轮次（${totalCount}人）！\n\n请手动点击下方【${totalCount === 3 ? '🥉 季军' : '👑 冠军'}】按钮判定，此阶段不可盲抽。`);
         return;
@@ -764,6 +772,11 @@
       const isMode2 = isModeEnabled && selectedMode === 'mode2';
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
       const isConsolation = isMode2 && activeRound.isConsolationStage;
+
+      if (isModeEnabled && !isConsolation && pendingList.length < 8) {
+        alert(`⚠️ 当前待定池仅剩 ${pendingList.length} 人！\n\n人数过少，盲抽 4 人 PK 容易导致人数不足以进入冠亚季决战。\n请直接在下方名单中【手动点击晋级】，或推进到决战轮。`);
+        return;
+      }
 
       const isCurrentPollFinished = state.currentPollFinished === true;
       const hasStartedPoll = (state.currentPollNumber || 0) > 0;
@@ -781,9 +794,9 @@
       if (isConsolation) {
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         const remainN = N - picked;
-        promptMsg = `${promptTitle}\n🎁 安慰奖遴选阶段（晋级赛）。\n还需选出 ${remainN} 名安慰奖，当前池子有 ${pendingList.length} 人。\n\n请输入本次盲抽人数:`;
-      } else if (isModeEnabled && pendingList.length > 3) {
-        promptMsg = `${promptTitle}\n🔥 生存淘汰赛。\n票选号命中者将被淘汰，其他组员回到待定池继续。\n当前待定 ${pendingList.length} 人（目标剩 3 人）。\n\n请输入本次参与 PK 的人数:`;
+        promptMsg = `${promptTitle}\n🎁 安慰奖遴选阶段。\n还需选出 ${remainN} 名安慰奖，当前池子有 ${pendingList.length} 人。\n\n请输入本次盲抽人数:`;
+      } else if (isModeEnabled && pendingList.length >= 8) {
+        promptMsg = `${promptTitle}\n🔥 死亡淘汰赛。\n票选号命中者【晋级】，其余组员【淘汰】。\n当前池子有 ${pendingList.length} 人（最多抽 4 人）。\n\n请输入本次参与 PK 的人数:`;
       }
 
       const defaultVal = state.modeConfig && state.modeConfig.defaultPickCount ? state.modeConfig.defaultPickCount : 4;
@@ -792,13 +805,11 @@
       const targetCount = parseInt(s, 10);
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
       if (targetCount > pendingList.length) { alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`); return; }
-
-      if (isModeEnabled && !isConsolation && pendingList.length > 3) {
-        const maxAllow = pendingList.length - 3 + 1;
-        if (targetCount > maxAllow) {
-          alert(`⚠️ 淘汰赛规则：当前 ${pendingList.length} 人，最少要保留 3 人进入冠亚季决战。\n本次最多只能抽 ${maxAllow} 人。`);
-          return;
-        }
+      
+      if (isModeEnabled && !isConsolation && pendingList.length >= 8) {
+        const maxAllow = pendingList.length - 3;
+        if (targetCount > maxAllow) { alert(`⚠️ 淘汰规则：当前 ${pendingList.length} 人，必须保留3人进入决战。最多只能抽 ${maxAllow} 人！`); return; }
+        if (targetCount > 4) { alert(`⚠️ 每次盲抽最多只允许抽 4 人 PK！`); return; }
       }
 
       if (isConsolation) {
@@ -1028,7 +1039,6 @@
       updatePickRandomBtnLabel();
     }
     
-    // ★★★ 核心：区分淘汰赛 / 晋级赛语义 ★★★
     function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
@@ -1041,47 +1051,9 @@
       const isConsolation = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
       const totalCount = (activeRound.candidates || []).length;
 
-      // ★ 淘汰赛：模式开启 + 非安慰奖阶段 + 人数>3
-      const isEliminationMode = isModeEnabled && !isConsolation && totalCount > 3;
-
-      if (isEliminationMode) {
-        // ===== 🔥 淘汰赛语义 =====
-        activeGroup4Ids.forEach(id => {
-          const target = activeRound.candidates.find(c => String(c.id) === String(id));
-          if (!target) return;
-          if (String(id) === String(winnerId)) {
-            target.status = 'out';
-            target.eliminatedRoundIndex = state.drawRoundIndex ?? currentRoundIndex;
-            target.pollLabel = pollLabel;
-          } else {
-            target.status = 'pending';
-          }
-        });
-
-        activeGroup4Ids = [];
-        state.activeGroupIds = [];
-        state.activeGroupMembers = [];
-        state.pkStage = 'voting';
-        state.triggerNumber = null;
-        state.settled = false;
-        saveState();
-        renderActiveGroupUI();
-        updatePickRandomBtnLabel();
-
-        const remainPending = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
-        if (remainPending === 3) {
-          setTimeout(() => alert(`🔥 已淘汰至剩 3 人！\n\n请点击【⏩ 锁定晋级并推进】选择【👑 冠亚季终极决战】，进入最终决战！`), 400);
-        } else if (remainPending < 3) {
-          setTimeout(() => alert(`⚠️ 已淘汰至只剩 ${remainPending} 人（不足 3 人），无法进入冠亚季决战！\n\n请检查本轮初始人数或撤回淘汰者。`), 400);
-        } else {
-          setTimeout(() => alert(`✅ 已淘汰 1 人，本轮还剩 ${remainPending} 人待定。\n\n请继续盲抽淘汰，或手动点击晋级。`), 400);
-        }
-        return;
-      }
-
-      // ===== 🎁 晋级赛语义（安慰奖阶段 / 模式关闭） =====
       if (!state.passHistory) state.passHistory = [];
       const winnerCandidate = activeRound.candidates.find(c => String(c.id) === String(winnerId));
+      
       if (winnerCandidate && !state.passHistory.some(p => String(p.id) === String(winnerId))) {
         state.passHistory.push({
           id: winnerCandidate.id,
@@ -1100,7 +1072,7 @@
           target.status = 'pass';
           target.pollLabel = pollLabel;
           target.passTimestamp = Date.now();
-          target.manualPassed = true;
+          target.manualPassed = false; 
         } else {
           if (isConsolation) {
             target.status = 'pending';
@@ -1135,6 +1107,11 @@
             setTimeout(() => alert(`🎁 安慰奖已选满 ${N} 名！\n\n自动进入【${label}】！`), 400);
             return;
           }
+        }
+      } else {
+        const remainPending = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
+        if (remainPending === 3) {
+           setTimeout(() => alert(`🔥 已淘汰至剩 3 人！\n\n请点击【⏩ 锁定晋级并推进】，进入冠亚季决战！`), 400);
         }
       }
 
@@ -1270,7 +1247,6 @@
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
-    // ★ 只在手动晋级时触发决战轮判定
     function advanceModeLogic(activeRound, justPassed) {
       if (!state.modeConfig || !state.modeConfig.enabled) return;
       const mode = state.modeConfig.selectedMode || 'mode1';
