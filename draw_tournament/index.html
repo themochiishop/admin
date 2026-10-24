@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 抽奖实时晋级大屏</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -97,7 +100,31 @@
     .passed-highlight .passed-card-name { color: #6ee7b7 !important; text-shadow: 0 0 10px rgba(110, 231, 183, 0.8); }
     .passed-highlight .passed-card-order { color: #a7f3d0 !important; }
     .trigger-btn-locked { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
-  </style>
+       /* ★ 票选号字体：Courier New 复古终端风 */
+    .pixel-number {
+      font-family: 'Courier New', Courier, monospace !important;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-shadow:
+        2px 2px 0 #78350f,
+        3px 3px 0 rgba(0,0,0,0.5),
+        0 0 18px rgba(245,158,11,0.55);
+      line-height: 1.1;
+    }
+    .pixel-number.pixel-hit {
+      color: #34d399;
+      text-shadow:
+        2px 2px 0 #064e3b,
+        3px 3px 0 rgba(0,0,0,0.5),
+        0 0 22px rgba(52,211,153,0.9);
+      animation: pixelPulse 0.8s ease-in-out infinite alternate;
+    }
+    @keyframes pixelPulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.08); }
+    }
+
+</style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
 
@@ -251,7 +278,7 @@
 
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-4 sm:px-10 sm:py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)] z-20">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-                <span id="centerTriggerNumberBox" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
+     <span id="centerTriggerNumberBox" class="pixel-number text-2xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
               </div>
               
               <div id="publicRevealButtonBox" class="hidden mt-4 z-20">
@@ -486,24 +513,30 @@
       }
     }
 
-    function togglePkPanel() {
+       function togglePkPanel() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       isPkPanelCollapsed = !isPkPanelCollapsed;
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
+      const pkBody = document.getElementById('pkPanelBody');           // ★ 只折叠中间内容
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       const toggleBtn = document.getElementById('togglePkPanelBtn');
       if (isPkPanelCollapsed) {
-        pkPanel.style.display = 'none';
+        if (pkBody) pkBody.style.display = 'none';                     // 隐藏里面的卡片/票选号/揭晓
+        if (pkPanel) pkPanel.style.minHeight = '0';                    // 外框收成最小高度
+        if (pkPanel) pkPanel.classList.add('opacity-95');              // 视觉上略微淡化（可选）
         mainLayout.classList.remove('active'); mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
-        pkPanel.style.display = '';
+        if (pkBody) pkBody.style.display = '';                         // 恢复
+        if (pkPanel) pkPanel.style.minHeight = '';                     // 恢复最小高度
+        if (pkPanel) pkPanel.classList.remove('opacity-95');
         mainLayout.classList.remove('collapsed'); mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '◀ 折叠';
       }
+    }
     }
 
     function renderFinalSummaryPanel() {
