@@ -552,7 +552,7 @@
       });
     }
 
-    function updatePickRandomBtnState() {
+       function updatePickRandomBtnState() {
       const btn = document.getElementById('pickRandomGroupBtn');
       if (!btn) return;
       if (state.modeConfig && state.modeConfig.enabled && state.modeConfig.mixedModeEnabled === false) {
@@ -567,6 +567,7 @@
       const pendingCount = activeRound ? (activeRound.candidates || []).filter(c => c.status === 'pending').length : 0;
       const isConsolationStage = isModeEnabled && state.modeConfig.selectedMode === 'mode2' && activeRound && activeRound.isConsolationStage;
       
+      // 决战轮（3/2人）禁用盲抽
       if (isModeEnabled && !isConsolationStage && (totalCount === 3 || totalCount === 2)) {
         btn.disabled = true; 
         btn.title = `当前是冠亚季决战轮次（${totalCount}人），请手动点击下方【${totalCount === 3 ? '🥉 季军' : '👑 冠军'}】按钮判定！`;
@@ -574,9 +575,10 @@
         return;
       }
       
-      if (isModeEnabled && !isConsolationStage && pendingCount > 0 && pendingCount < 8) {
+      // 普通轮次如果剩不到 4 人，也禁用（因为必须抽至少 2 人才能淘汰 1 个晋级 1 个，抽 1 人没意义）
+      if (isModeEnabled && !isConsolationStage && pendingCount > 0 && pendingCount < 3) {
         btn.disabled = true;
-        btn.title = `待定人数仅剩 ${pendingCount} 人，盲抽容易导致不够进决战。请手动点击晋级！`;
+        btn.title = `待定人数仅剩 ${pendingCount} 人，不足以进行 PK。请手动点击晋级！`;
         updatePickRandomBtnLabel();
         return;
       }
@@ -742,7 +744,7 @@
       saveState(); renderRoundTabs();
     }
 
-    function pickRandomGroup() {
+        function pickRandomGroup() {
       const now = Date.now();
       if (now - __lastPickRandomGroupTs < 800) return;
       __lastPickRandomGroupTs = now;
@@ -761,6 +763,7 @@
       const totalCount = (activeRound.candidates || []).length;
       const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
       
+      // 决战轮禁止盲抽
       if (isModeEnabled && !isConsolationStage && (totalCount === 3 || totalCount === 2)) {
         alert(`⚠️ 当前是冠亚季决战轮次（${totalCount}人）！\n\n请手动点击下方【${totalCount === 3 ? '🥉 季军' : '👑 冠军'}】按钮判定，此阶段不可盲抽。`);
         return;
@@ -772,11 +775,6 @@
       const isMode2 = isModeEnabled && selectedMode === 'mode2';
       const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
       const isConsolation = isMode2 && activeRound.isConsolationStage;
-
-      if (isModeEnabled && !isConsolation && pendingList.length < 8) {
-        alert(`⚠️ 当前待定池仅剩 ${pendingList.length} 人！\n\n人数过少，盲抽 4 人 PK 容易导致人数不足以进入冠亚季决战。\n请直接在下方名单中【手动点击晋级】，或推进到决战轮。`);
-        return;
-      }
 
       const isCurrentPollFinished = state.currentPollFinished === true;
       const hasStartedPoll = (state.currentPollNumber || 0) > 0;
@@ -795,8 +793,8 @@
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
         const remainN = N - picked;
         promptMsg = `${promptTitle}\n🎁 安慰奖遴选阶段。\n还需选出 ${remainN} 名安慰奖，当前池子有 ${pendingList.length} 人。\n\n请输入本次盲抽人数:`;
-      } else if (isModeEnabled && pendingList.length >= 8) {
-        promptMsg = `${promptTitle}\n🔥 死亡淘汰赛。\n票选号命中者【晋级】，其余组员【淘汰】。\n当前池子有 ${pendingList.length} 人（最多抽 4 人）。\n\n请输入本次参与 PK 的人数:`;
+      } else if (isModeEnabled && pendingList.length > 3) {
+        promptMsg = `${promptTitle}\n🔥 死亡淘汰赛。\n票选号命中 1 人【晋级】，组内其余人【淘汰】。\n当前池子有 ${pendingList.length} 人。\n\n请输入本次参与 PK 的人数:`;
       }
 
       const defaultVal = state.modeConfig && state.modeConfig.defaultPickCount ? state.modeConfig.defaultPickCount : 4;
@@ -806,7 +804,8 @@
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
       if (targetCount > pendingList.length) { alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`); return; }
       
-      if (isModeEnabled && !isConsolation && pendingList.length >= 8) {
+      // ★ 防卡死限制：每次最多抽4人，且必须保证抽完之后还剩至少3人
+      if (isModeEnabled && !isConsolation && pendingList.length > 3) {
         const maxAllow = pendingList.length - 3;
         if (targetCount > maxAllow) { alert(`⚠️ 淘汰规则：当前 ${pendingList.length} 人，必须保留3人进入决战。最多只能抽 ${maxAllow} 人！`); return; }
         if (targetCount > 4) { alert(`⚠️ 每次盲抽最多只允许抽 4 人 PK！`); return; }
@@ -1039,7 +1038,7 @@
       updatePickRandomBtnLabel();
     }
     
-    function passWinnerAndEliminateOthers(winnerId) {
+        function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
 
@@ -1065,6 +1064,7 @@
         });
       }
 
+      // ★ 抽中者晋级(pass)，其他人淘汰(out)
       activeGroup4Ids.forEach(id => {
         const target = activeRound.candidates.find(c => String(c.id) === String(id));
         if (!target) return;
@@ -1072,8 +1072,9 @@
           target.status = 'pass';
           target.pollLabel = pollLabel;
           target.passTimestamp = Date.now();
-          target.manualPassed = false; 
+          target.manualPassed = false; // 盲抽晋级，不是手动
         } else {
+          // 安慰奖阶段：其他人回待定池
           if (isConsolation) {
             target.status = 'pending';
           } else {
@@ -1109,6 +1110,7 @@
           }
         }
       } else {
+        // 普通轮次淘汰检查
         const remainPending = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
         if (remainPending === 3) {
            setTimeout(() => alert(`🔥 已淘汰至剩 3 人！\n\n请点击【⏩ 锁定晋级并推进】，进入冠亚季决战！`), 400);
