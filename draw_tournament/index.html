@@ -676,7 +676,7 @@
         }, 100);
       }
 
-      db.ref('tournament_state').on('value', (snapshot) => {
+         db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (!val) return;
         state = val;
@@ -692,7 +692,7 @@
         if (state.pkLocked === undefined) state.pkLocked = false;
         if (state.presetWinnerId === undefined) state.presetWinnerId = null;
 
-              if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
+        if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
           window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
           queueRoundTransition(state.latestRoundEvent.roundTitle, state.latestRoundEvent.delay || 0);
         }
@@ -701,7 +701,7 @@
           if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
         }
 
-        // ★ 核心逻辑：如果后台发来了结果，且我们没有在跑，强行截获并播放跑马灯
+        // ★ 核心拦截：当前台发现最终结果，且没在播动画时，强行接管画面
         if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
           const popupKey = `pk_${state.currentPollNumber || 0}_${state.triggerNumber}`;
           
@@ -716,7 +716,7 @@
             if (document.getElementById('blindDrawingIndicator')) document.getElementById('blindDrawingIndicator').classList.add('hidden');
             if (document.getElementById('countdownIndicator')) document.getElementById('countdownIndicator').classList.add('hidden');
 
-            // 获取当前屏幕上的卡片（此时它们还是 "??"）
+            // 获取屏幕上的原始卡片 DOM
             const activeCards = Array.from(document.querySelectorAll('.pk-card'));
             let winnerIndex = -1;
             activeCards.forEach((cardEl, idx) => {
@@ -782,7 +782,9 @@
         updatePublicOverlayState();
         updateModeBadge();
         renderRoundTabs();
-        renderPublicView();
+        
+        // 注意：这里的 renderPublicView 会被 __isInterceptingFromAdmin 锁住，所以不会覆盖动画
+        renderPublicView(); 
         updateStats();
         renderFinalSummaryPanel();
       });
@@ -791,6 +793,13 @@
 
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
+          let __lastPkGroupSignature = '';
+    function checkForNewPkGroup() {
+      // ★ 加上这把锁：如果在跑后台动画，定时器禁止干扰
+      if (__isInterceptingFromAdmin) return; 
+
+      const sig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
+      // ... 下面的代码保持不变
       if (__forceInterceptRevealed) return; // 拦截期间不执行自动轮询
       const sig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.pkStage || '') + '|' + (state.currentPollNumber || 0);
       if (sig && sig !== __lastPkGroupSignature) {
