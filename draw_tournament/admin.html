@@ -1030,7 +1030,7 @@
       updatePickRandomBtnLabel();
     }
     
-           function passWinnerAndEliminateOthers(winnerId) {
+             function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
 
@@ -1063,8 +1063,9 @@
           target.status = 'pass';
           target.pollLabel = pollLabel;
           target.passTimestamp = Date.now();
-          target.manualPassed = false; 
+          target.manualPassed = false; // 盲抽晋级，不是手动
         } else {
+          // 如果是安慰奖阶段，其余人回待定池；如果是决战轮或普通轮，其余人淘汰
           if (isConsolation) {
             target.status = 'pending';
           } else {
@@ -1081,6 +1082,7 @@
       state.triggerNumber = null;
       state.settled = false;
 
+      // 如果当前是安慰奖阶段
       if (isConsolation) {
         const N = state.modeConfig.mode2ConsolationCount || 10;
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
@@ -1098,47 +1100,56 @@
             return;
           }
         }
-      } else {
-        // ★ 决战轮：盲抽完自动判定冠亚季
-        if (isModeEnabled && totalCount === 3) {
-          // 3人抽中1人当季军，其它2人自动去冠亚军
+      } 
+      // 当前是 3 人决战轮，且使用了盲抽
+      else if (isModeEnabled && totalCount === 3) {
+        // 盲抽抽中的直接成为季军，另外2人自动进入下一轮
+        if (winnerCandidate) {
           winnerCandidate.rankTitle = "🥉 季军";
           winnerCandidate.rankKey = "rankThird";
-          const two = activeRound.candidates.filter(c => String(c.id) !== String(winnerId));
-          state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: winnerCandidate.name };
-          saveState();
-          
-          setTimeout(() => {
-            const label = "👑 冠亚军终极决战 (2选1)";
-            const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-            state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
-            currentRoundIndex = state.rounds.length - 1;
-            state.passHistory = [];
-            state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-            saveState(); renderRoundTabs();
-            setTimeout(() => alert(`🥉 【${winnerCandidate.name}】通过盲抽锁定季军！\n\n已自动进入【${label}】。`), 100);
-          }, 5000);
-          return;
-        } else if (isModeEnabled && totalCount === 2) {
-          // 2人抽中1人当冠军，另1人亚军
+        }
+        const two = activeRound.candidates.filter(c => String(c.id) !== String(winnerId));
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: winnerCandidate.name };
+        saveState();
+        renderRoundTabs();
+        
+        // 延迟 3 秒后自动进入冠亚军决战
+        setTimeout(() => {
+          const label = "👑 冠亚军终极决战 (2选1)";
+          const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
+          currentRoundIndex = state.rounds.length - 1;
+          state.passHistory = [];
+          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
+          saveState(); renderRoundTabs();
+          setTimeout(() => alert(`🥉 【${winnerCandidate.name}】通过盲抽锁定季军！\n\n已自动进入【${label}】。`), 100);
+        }, 4000);
+        return;
+      } 
+      // 当前是 2 人决战轮，且使用了盲抽
+      else if (isModeEnabled && totalCount === 2) {
+        // 盲抽抽中的直接成为冠军，另一位成为亚军
+        if (winnerCandidate) {
           winnerCandidate.rankTitle = "👑 冠军";
           winnerCandidate.rankKey = "rankChampion";
-          const ru = activeRound.candidates.find(c => String(c.id) !== String(winnerId));
-          let ruName = "未知买家";
-          if (ru) {
-            ru.status = 'pass';
-            ru.rankTitle = "🥈 亚军";
-            ru.rankKey = "rankRunnerUp";
-            ruName = ru.name;
-          }
-          state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: winnerCandidate.name, runnerUpName: ruName };
-          saveState(); renderRoundTabs();
-          return;
-        } else {
-          const remainPending = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
-          if (remainPending === 3) {
-             setTimeout(() => alert(`🔥 已淘汰至剩 3 人！\n\n请继续盲抽或手动点击，进入冠亚季决战！`), 400);
-          }
+        }
+        const ru = activeRound.candidates.find(c => String(c.id) !== String(winnerId));
+        let ruName = "未知买家";
+        if (ru) {
+          ru.status = 'pass';
+          ru.rankTitle = "🥈 亚军";
+          ru.rankKey = "rankRunnerUp";
+          ruName = ru.name;
+        }
+        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: winnerCandidate.name, runnerUpName: ruName };
+        saveState(); renderRoundTabs();
+        return;
+      } 
+      // 普通轮次盲抽
+      else {
+        const remainPending = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
+        if (remainPending === 3) {
+           setTimeout(() => alert(`🔥 已淘汰至剩 3 人！\n\n请继续盲抽或手动点击，进入冠亚季决战！`), 400);
         }
       }
 
