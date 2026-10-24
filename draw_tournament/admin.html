@@ -536,12 +536,19 @@
       else { btn.disabled = false; btn.title = "点击刷新或导入买家名单"; }
     }
 
-    function updateAdminRevealButtonLock() {
+      function updateAdminRevealButtonLock() {
       const btn = document.getElementById('adminRevealBtn');
       const hint = document.getElementById('adminLockedHint');
       if (!btn) return;
-      if (publicAdminActive) { btn.classList.add('opacity-80'); if (hint) hint.classList.remove('hidden'); }
-      else { btn.classList.remove('opacity-80'); if (hint) hint.classList.add('hidden'); }
+      
+      // ★ 核心逻辑：前台登入，隐藏按钮并显示提示；前台未登入，显示按钮
+      if (publicAdminActive) { 
+        btn.classList.add('hidden'); 
+        if (hint) hint.classList.remove('hidden'); 
+      } else { 
+        btn.classList.remove('hidden'); 
+        if (hint) hint.classList.add('hidden'); 
+      }
     }
 
     function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); switchConfigTab('tabTitle'); }
@@ -875,32 +882,31 @@
       updatePickRandomBtnLabel();
     }
     
-          function revealPKWinner() {
+            function revealPKWinner() {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       
-      // ★ 修复：如果前台管理员在线且锁定了，才拦截
-      if (state.pkLocked === true && publicAdminActive === true) { 
-        alert("⚠️ 前台已点击揭晓，票选号已锁定！\n\n如需后台接管，请让前台先退出。"); 
+      // 如果后台能点到按钮，且前台还在线，提示让前台操作
+      if (publicAdminActive) { 
+        alert("⚠️ 前台管理员已登录并接管揭晓，请在前台操作。"); 
         return; 
       }
       
-      if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
-      
-      // ★ 修复：如果前台已经退出了，但号码已经被分配过（可能是中途退出残留），允许后台强制覆盖开奖
-      if (state.activeGroupMembers.every(m => m.displayNumber !== null)) {
-        if (publicAdminActive) {
-          alert("⚠️ 本轮 #号 已经分配过了，无法重复开奖！\n如果要重新测试，请点击【清空盲抽组】重新抽取。"); 
-          return;
-        }
-        // 前台已退出，后台强制接管：重置显示号码，准备重新分配
-        state.activeGroupMembers.forEach(m => m.displayNumber = null);
+      // 如果当前这一轮已经彻底开完奖了，则拦截
+      if (state.pkStage === 'revealed' || state.settled) {
+        alert("⚠️ 本轮已经开奖完成，请抽取下一组。");
+        return;
+      }
+
+      // ★ 强制接管：如果前台退出了，留下烂摊子（比如锁定了、或者分配了号码），后台直接清理并接管
+      if (state.pkLocked === true || state.activeGroupMembers.some(m => m.displayNumber !== null)) {
+        // 重置残留状态，以便后台重新走流程
         state.pkLocked = false;
         state.settled = false;
+        state.activeGroupMembers.forEach(m => m.displayNumber = null);
       }
       
       state.pkStage = 'revealed'; state.settled = true;
-      // ... 后面的代码保持完全不变
       state.isDrawingScramble = false;
       state.pkLocked = true;
       state.currentPollFinished = true;
@@ -911,6 +917,7 @@
         const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
 
+        // 如果后台有内定，则强制让内定的人拿票选号
         if (state.presetWinnerId) {
           const presetIdx = state.activeGroupMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
           if (presetIdx !== -1) {
