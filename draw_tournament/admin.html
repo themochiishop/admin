@@ -767,7 +767,7 @@
       saveState(); renderRoundTabs();
     }
 
-    function pickRandomGroup() {
+     function pickRandomGroup() {
       const now = Date.now();
       if (now - __lastPickRandomGroupTs < 800) return;
       __lastPickRandomGroupTs = now;
@@ -825,9 +825,10 @@
       // ★ 如果是淘汰模式，继续弹窗询问“淘汰几个”
       let eliminateCount = 1;
       if (isReverse) {
-        const maxElim = Math.min(targetCount - 1, pendingList.length - 3); // 最多淘汰到只剩3人
+        // ★ 修改这里：允许淘汰所有抽中的人（不再强制保留 1 个）
+        const maxElim = targetCount; 
         const msg2 = `💥 淘汰模式已开启！\n本次抽了 ${targetCount} 人上台。\n\n请输入要淘汰的人数（最多淘汰 ${maxElim} 人）:`;
-        const s2 = prompt(msg2, "1");
+        const s2 = prompt(msg2, Math.min(1, maxElim).toString()); // 默认淘汰 1 个
         if (s2 === null) return;
         eliminateCount = parseInt(s2, 10);
         if (isNaN(eliminateCount) || eliminateCount < 1 || eliminateCount > maxElim) {
