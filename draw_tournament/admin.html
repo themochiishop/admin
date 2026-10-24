@@ -882,7 +882,7 @@
       updatePickRandomBtnLabel();
     }
     
-            function revealPKWinner() {
+              function revealPKWinner() {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       
@@ -891,51 +891,50 @@
         alert("⚠️ 前台已点击揭晓，票选号已锁定！\n\n如需后台接管，请让前台先退出。"); 
         return; 
       }
-      
       if (state.settled) { alert("本轮正在结算中，请稍候"); return; }
 
-      // 如果之前分配过烂摊子，清理掉
-      if (state.activeGroupMembers.some(m => m.displayNumber !== null)) {
-        state.activeGroupMembers.forEach(m => m.displayNumber = null);
-        state.pkLocked = false;
-        state.settled = false;
-      }
-      
-      // 1. 先设为 revealed 状态，触发前台的盲抽/跑马灯动画
-      // 注意：此时先不写入真实的 displayNumber，让前台卡片全是 "??"
-      state.pkStage = 'revealed'; 
-      state.settled = true;
-      state.isDrawingScramble = false;
-      state.pkLocked = true;
-      state.currentPollFinished = true;
-      saveState();
+      // 1. 先在后台计算出中奖者（提前内定好结果）
+      const total = state.activeGroupMembers.length;
+      const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+      let tempMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
 
-      // 2. 延迟 2.5 秒（等待前台跑马灯播完）
-      setTimeout(() => {
-        const total = state.activeGroupMembers.length;
-        // 随机分配号码
-        const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
-        state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
-
-        // 如果有内定，强制让内定的人拿票选号
-        if (state.presetWinnerId) {
-          const presetIdx = state.activeGroupMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
-          if (presetIdx !== -1) {
-            const triggerIdx = state.activeGroupMembers.findIndex(m => m.displayNumber === state.triggerNumber);
-            if (triggerIdx !== -1 && triggerIdx !== presetIdx) {
-              const tmp = state.activeGroupMembers[presetIdx].displayNumber;
-              state.activeGroupMembers[presetIdx].displayNumber = state.activeGroupMembers[triggerIdx].displayNumber;
-              state.activeGroupMembers[triggerIdx].displayNumber = tmp;
-            } else if (triggerIdx === -1) {
-              state.activeGroupMembers[presetIdx].displayNumber = state.triggerNumber;
-            }
+      if (state.presetWinnerId) {
+        const presetIdx = tempMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
+        if (presetIdx !== -1) {
+          const triggerIdx = tempMembers.findIndex(m => m.displayNumber === state.triggerNumber);
+          if (triggerIdx !== -1 && triggerIdx !== presetIdx) {
+            const tmp = tempMembers[presetIdx].displayNumber;
+            tempMembers[presetIdx].displayNumber = tempMembers[triggerIdx].displayNumber;
+            tempMembers[triggerIdx].displayNumber = tmp;
+          } else if (triggerIdx === -1) {
+            tempMembers[presetIdx].displayNumber = state.triggerNumber;
           }
         }
+      }
+      const winnerMember = tempMembers.find(m => m.displayNumber === state.triggerNumber);
 
-        // 找中奖者并送入晋级区
-        const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
+      // 2. ★ 障眼法：不要立刻把状态变成 revealed！
+      // 设置 isDrawingScramble = true，欺骗前台“正在盲抽”
+      state.isDrawingScramble = true;
+      state.pkStage = 'voting'; 
+      state.settled = true;
+      state.pkLocked = true;
+      state.currentPollFinished = true;
+      
+      // 强制清空号码，让前台重新播放跑马灯
+      state.activeGroupMembers.forEach(m => m.displayNumber = null);
+      saveState();
+
+      // 3. 延迟 3.5 秒，让前台跑马灯跑完
+      setTimeout(() => {
+        // 此时再真正把号码和状态写进去
+        state.activeGroupMembers = tempMembers;
+        state.pkStage = 'revealed';
+        state.isDrawingScramble = false;
+        state.pkLocked = true;
+
+        // 将中奖者送入晋级区
         if (winnerMember) {
-          // ★ 关键：写入真实号码的同时，更新 passHistory 并触发放大高亮
           const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
           if (activeRound) {
             const pollLabel = `POLL #${state.currentPollNumber || 1} (#${winnerMember.displayNumber})`;
@@ -961,21 +960,20 @@
             }
           }
         }
-        
-        // 清理组状态，准备下一轮
+
         state.presetWinnerId = null;
         activeGroup4Ids = []; state.activeGroupIds = []; 
-        // 注意：这里不清空 activeGroupMembers，让前台可以把高亮渲染出来
-        // state.activeGroupMembers = []; 
+        // 注意：这里不清空 activeGroupMembers，让前台可以高亮
+        // 也就是保留号码，让前台显示命中
         
-        // 播放完毕，解除锁定，切回投票态
+        // 完全结束，允许下一次抽取
         state.pkStage = 'voting';
         state.triggerNumber = null; 
         state.settled = false;
         state.pkLocked = false;
 
         saveState();
-      }, 2500); // 2500ms 刚好覆盖前台的延迟与高亮动画
+      }, 3500); // 延迟 3.5 秒，足够覆盖前台的倒计时+跑马灯
     }
     
      function clearCurrentActiveGroup() {
