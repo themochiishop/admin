@@ -684,7 +684,7 @@
       }
     }
 
-       function updateWinnerBannerUI() {
+    function updateWinnerBannerUI() {
       const banner = document.getElementById('winnerAnnouncementBanner');
       const content = document.getElementById('winnerBannerContent');
       if (!banner || !content) return;
@@ -702,7 +702,8 @@
       }
 
       const summaryPanel = document.getElementById('finalTournamentSummaryPanel');
-      // ... 下面保留原来的代码（如果 summaryPanel 不是 hidden 就 return）
+      if (summaryPanel && !summaryPanel.classList.contains('hidden')) { banner.classList.add('hidden'); return; }
+
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
@@ -777,7 +778,7 @@
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
           }
           
-                   // ★ 判断当前是否是“决战轮”或“刚刚打完决战”
+          // ★ 判断当前是否是“决战轮”或“刚刚打完决战”
           const isFinalEvent = state.latestEvent && (state.latestEvent.winnerNamesKey === 'third' || state.latestEvent.winnerNamesKey === 'final');
           const isCurrentRoundFinal = state.rounds && state.rounds[state.drawRoundIndex ?? 0] && 
             (state.rounds[state.drawRoundIndex ?? 0].candidates || []).length <= 3 &&
@@ -1162,7 +1163,7 @@
             const winnerOrderNo = cand ? cand.orderNo : '';
             __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
             
-                       // ★ 这里直接判断 isElimination（反向淘汰）
+            // ★ 这里直接判断 isElimination（反向淘汰）
             const isElimination = state.isReverseElimination === true; 
             showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
 
@@ -1298,7 +1299,7 @@
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-      function getCardHtml(c, idx, isRevealed) {
+    function getCardHtml(c, idx, isRevealed) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
       const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
@@ -1361,7 +1362,7 @@
       return html;
     }
 
-       function renderPublicView() {
+    function renderPublicView() {
       // 1. 控制大框背景颜色和标签
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
       const modeBadge = document.getElementById('modeBadge');
@@ -1381,21 +1382,16 @@
         }
       }
 
-      // ... 下面的其他代码保持你原本的 renderPublicView 逻辑不变 ...
+      let activeRound = { candidates: [] };
+      if (state.rounds && state.rounds.length > 0) {
+        if (currentRoundIndex >= state.rounds.length) currentRoundIndex = state.rounds.length - 1;
+        if (currentRoundIndex < 0) currentRoundIndex = 0;
+        activeRound = state.rounds[currentRoundIndex];
+      }
       const searchEl = document.getElementById('searchInput');
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
- // ★ 控制大框背景颜色
-      const pkPanel = document.getElementById('publicActiveGroupDisplay');
-      if (pkPanel) {
-        if (state.isReverseElimination === true) {
-          // 浅红/深红渐变
-          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-rose-950/60 via-slate-900/90 to-rose-950/60 border-2 border-rose-500/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_30px_rgba(244,63,94,0.3)] relative overflow-hidden flex-col min-h-[400px]";
-        } else {
-          // 正常金色渐变
-          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
-        }
-      }
+
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       if (isPkPanelCollapsed) {
@@ -1449,7 +1445,7 @@
         else { areaL.innerHTML = placeholders[0] + placeholders[2]; areaR.innerHTML = placeholders[1] + placeholders[3]; }
       }
 
-            let passedList = list.filter(c => c.status === 'pass');
+      let passedList = list.filter(c => c.status === 'pass');
       
       // ★ 反向淘汰赛：未抽中的“安全”人员也展示在右侧晋级名单中
       if (state.isReverseElimination === true && state.pkStage === 'revealed' && state.activeGroupIds) {
