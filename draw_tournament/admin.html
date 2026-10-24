@@ -744,7 +744,7 @@
       saveState(); renderRoundTabs();
     }
 
-        function pickRandomGroup() {
+          function pickRandomGroup() {
       const now = Date.now();
       if (now - __lastPickRandomGroupTs < 800) return;
       __lastPickRandomGroupTs = now;
@@ -804,8 +804,9 @@
       if (isNaN(targetCount) || targetCount <= 0) { alert("请输入有效数字！"); return; }
       if (targetCount > pendingList.length) { alert(`⚠️ 抽取人数不能超过当前待定人数（${pendingList.length}人）！`); return; }
       
-      // ★ 防卡死限制：每次最多抽4人，且必须保证抽完之后还剩至少3人
-      if (isModeEnabled && !isConsolation && pendingList.length > 3) {
+      // ★ 核心修复：只有当待定人数 > 4 时，才进行保底限制校验。
+      // 如果待定池刚好是 4 人，允许全部抽上来 4 进 1！
+      if (isModeEnabled && !isConsolation && pendingList.length > 4) {
         const maxAllow = pendingList.length - 3;
         if (targetCount > maxAllow) { alert(`⚠️ 淘汰规则：当前 ${pendingList.length} 人，必须保留3人进入决战。最多只能抽 ${maxAllow} 人！`); return; }
         if (targetCount > 4) { alert(`⚠️ 每次盲抽最多只允许抽 4 人 PK！`); return; }
