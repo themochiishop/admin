@@ -702,18 +702,34 @@
             window.__lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
           }
-          if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
+                   if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
             const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
             if (winnerMember) {
-              const popupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
-              if (popupKey !== __lastPkWinnerPopupKey) {
-                __lastPkWinnerPopupKey = popupKey;
-                const roundIdx = state.drawRoundIndex ?? 0;
-                const round = state.rounds[roundIdx] || {};
-                const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
-                const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+              // ★ 如果本地已经在播跑马灯，就不要抢前台的活儿
+              if (!isMarqueeRunning) {
+                // 强制把跑马灯的终态记录为已揭示，确保渲染卡片时高亮中奖者
+                const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
+                localNamesRevealedGroupSig = curGroupSig;
+                localScrambleActive = false;
+                scramblingMemberIds.clear();
+                if (blindDrawingIndicator) blindDrawingIndicator.classList.add('hidden');
+                if (countdownIndicator) countdownIndicator.classList.add('hidden');
+                if (nextRoundHint) nextRoundHint.classList.add('hidden');
+
+                const popupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
+                if (popupKey !== __lastPkWinnerPopupKey) {
+                  __lastPkWinnerPopupKey = popupKey;
+                  const roundIdx = state.drawRoundIndex ?? 0;
+                  const round = state.rounds[roundIdx] || {};
+                  const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
+                  const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
+                  const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
+                  
+                  // 延迟极短时间后弹窗，让卡片先高亮一下
+                  setTimeout(() => {
+                    showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
+                  }, 500);
+                }
               }
             }
           } else {
