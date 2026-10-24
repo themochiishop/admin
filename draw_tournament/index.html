@@ -270,8 +270,7 @@
 
               <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-4 sm:px-10 sm:py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)] z-20">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
-                <span id="centerTriggerNumberBox" class="pixel-number text-2xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>
-              </div>
+<span id="centerTriggerNumberBox" class="pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>              </div>
               
               <div id="publicRevealButtonBox" class="hidden mt-4 z-20">
                 <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
@@ -1282,11 +1281,12 @@
       } else {
         passedContainer.innerHTML = passedList.map(c => {
           // ★ 判断标签：POLL 还是 PICK
-          let labelHtml = '';
+                  let labelHtml = '';
           if (c.pollLabel) {
-            labelHtml = `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>`;
-          } else if (c.manualPassed) {
-            labelHtml = `<div class="folder-tab bg-gradient-to-r from-emerald-600 to-emerald-800 text-white">PICK</div>`;
+            // ★ 自动适配：POLL 就显示 POLL 金标，PICK 就显示 PICK 蓝标
+            const isPick = c.pollLabel.startsWith('PICK');
+            const bgClass = isPick ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md' : '';
+            labelHtml = `<div class="folder-tab ${bgClass}">${escapeHtml(c.pollLabel)}</div>`;
           }
 
           const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
