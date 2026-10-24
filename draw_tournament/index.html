@@ -679,22 +679,7 @@
           renderPublicView();
         }, 100);
       }
-      db.ref('tournament_state').on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (val) {
-          state = val;
-          (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
-          if (state.activeGroupIds) state.activeGroupIds = state.activeGroupIds.map(id => String(id));
-          if (state.activeGroupMembers) state.activeGroupMembers = state.activeGroupMembers.map(m => ({ ...m, id: String(m.id) }));
-          if (!state.passHistory) state.passHistory = [];
-          if (!state.modeConfig) state.modeConfig = {};
-          if (state.modeConfig.mixedModeEnabled === undefined) state.modeConfig.mixedModeEnabled = true;
-          if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
-          if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
-          if (state.pkLocked === undefined) state.pkLocked = false;
-          if (state.presetWinnerId === undefined) state.presetWinnerId = null;
-
-          if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
+               if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
             window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
             queueRoundTransition(state.latestRoundEvent.roundTitle, state.latestRoundEvent.delay || 0);
           }
@@ -702,15 +687,15 @@
             window.__lastSeenEventTime = state.latestEvent.timestamp;
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
           }
-                                   // ★ 核心修复：当前台检测到后台已完成开奖（revealed）时，自动补播跑马灯
+
+          // ★ 核心修复：当前台检测到后台已完成开奖（revealed）时，自动补播跑马灯
           if (state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
             const popupKey = `pk_${state.currentPollNumber || 0}_${state.triggerNumber}`;
             if (popupKey !== __lastPkWinnerPopupKey) {
-              // 如果不是当前设备正在跑，且当前还没播过这局
               if (!isMarqueeRunning) {
-                __lastPkWinnerPopupKey = popupKey; // 记录已经播过
+                __lastPkWinnerPopupKey = popupKey;
                 
-                // 强行清理卡死的状态
+                // 清理卡死的状态
                 localScrambleActive = false;
                 scramblingMemberIds.clear();
                 localNamesRevealedGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
@@ -788,43 +773,7 @@
           } else {
             if (state.pkStage === 'voting') __lastPkWinnerPopupKey = '';
           }
-                          const roundIdx = state.drawRoundIndex ?? 0;
-                          const round = state.rounds[roundIdx] || {};
-                          const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                          const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
-                          const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                          showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber }, 5);
-                        }
-                      }
-                    }, isMobile ? 800 : 2000);
-                    return;
-                  }
-                  currentIndex = (currentIndex + 1) % activeCards.length;
-                  tickCount++;
-                  let nextDelay = baseDelay;
-                  if (tickCount > 5) nextDelay += 30;
-                  if (tickCount > 10) nextDelay += 50;
-                  if (currentIndex === winnerIndex && tickCount > 10) nextDelay += 150;
-                  setTimeout(runMarquee, nextDelay);
-                };
-                setTimeout(runMarquee, 500); // 稍微延迟，等卡片渲染出来
-              } else {
-                // 如果找不到对应卡片（比如前台刷新后直接查不到DOM），直接弹窗保底
-                isMarqueeRunning = false;
-                const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
-                if (winnerMember) {
-                   setTimeout(() => {
-                     const roundIdx = state.drawRoundIndex ?? 0;
-                     const round = state.rounds[roundIdx] || {};
-                     const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
-                     showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName: cand ? cand.name : '幸运买家', orderNo: cand ? cand.orderNo : '', triggerNumber: state.triggerNumber }, 5);
-                   }, 500);
-                }
-              }
-            }
-          } else {
-            if (state.pkStage === 'voting') __lastPkWinnerPopupKey = '';
-          }
+
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
           updatePublicOverlayState();
@@ -835,6 +784,8 @@
           renderFinalSummaryPanel();
         }
       });
+      setInterval(checkForNewPkGroup, 300);
+    };
       setInterval(checkForNewPkGroup, 300);
     };
 
