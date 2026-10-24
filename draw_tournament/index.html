@@ -267,12 +267,17 @@
       </div>
 
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
-        <div id="publicActiveGroupDisplay" class="w-full bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
+       <div id="publicActiveGroupDisplay" class="w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
           <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
-            <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
-              <span class="text-base sm:text-2xl animate-bounce">🔥</span>
-              <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
-            </div>
+           <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
+  <span class="text-base sm:text-2xl animate-bounce">🔥</span>
+  <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
+  
+  <!-- ★ 新增模式标签 -->
+  <div id="modeBadge" class="hidden sm:flex ml-1">
+    <span id="modeBadgeText" class="text-[10px] px-2 py-0.5 rounded border font-black shadow-sm">晋级赛</span>
+  </div>
+</div>
             <div class="flex items-center space-x-2 flex-shrink-0">
               <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #-</span>
               <button type="button" id="togglePkPanelBtn" onclick="togglePkPanel()" class="hidden text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold transition">◀ 折叠</button>
@@ -1363,10 +1368,33 @@
         if (currentRoundIndex < 0) currentRoundIndex = 0;
         activeRound = state.rounds[currentRoundIndex];
       }
+            // 控制模式标签
+      const modeBadge = document.getElementById('modeBadge');
+      const modeBadgeText = document.getElementById('modeBadgeText');
+      if (modeBadge && modeBadgeText) {
+        modeBadge.classList.remove('hidden');
+        if (state.isReverseElimination === true) {
+          modeBadgeText.className = "text-[10px] px-2 py-0.5 rounded border font-black shadow-sm bg-rose-500 text-white border-rose-400 animate-pulse";
+          modeBadgeText.innerText = "淘汰模式";
+        } else {
+          modeBadgeText.className = "text-[10px] px-2 py-0.5 rounded border font-black shadow-sm bg-emerald-950/80 text-emerald-300 border-emerald-500/50";
+          modeBadgeText.innerText = "晋级模式";
+        }
+      }
       const searchEl = document.getElementById('searchInput');
       const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
       const list = (activeRound.candidates || []).filter(c => (c.name || '').toLowerCase().includes(search) || (c.orderNo || '').toLowerCase().includes(search));
-
+ // ★ 控制大框背景颜色
+      const pkPanel = document.getElementById('publicActiveGroupDisplay');
+      if (pkPanel) {
+        if (state.isReverseElimination === true) {
+          // 浅红/深红渐变
+          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-rose-950/60 via-slate-900/90 to-rose-950/60 border-2 border-rose-500/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_30px_rgba(244,63,94,0.3)] relative overflow-hidden flex-col min-h-[400px]";
+        } else {
+          // 正常金色渐变
+          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
+        }
+      }
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       if (isPkPanelCollapsed) {
