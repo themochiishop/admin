@@ -762,12 +762,15 @@
             if (state.latestEvent.type === 'finalCongrat') showWinnerPopup(state.latestEvent, 5);
           }
           
-          // ★ 拦截冠亚季决战的普通弹窗，交由 latestEvent 处理
+                    // ★ 判断当前是否是“决战轮”或“刚刚打完决战”
+          // 当 latestEvent 包含 third 或 final 时，说明后台触发了决战弹窗
+          const isFinalEvent = state.latestEvent && (state.latestEvent.winnerNamesKey === 'third' || state.latestEvent.winnerNamesKey === 'final');
           const isCurrentRoundFinal = state.rounds && state.rounds[state.drawRoundIndex ?? 0] && 
             (state.rounds[state.drawRoundIndex ?? 0].candidates || []).length <= 3 &&
             !state.rounds[state.drawRoundIndex ?? 0].isConsolationStage;
 
-          if (!isCurrentRoundFinal && state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
+          // 只有当不是决战轮，且后台没发出决战指令时，才弹普通晋级窗
+          if (!isCurrentRoundFinal && !isFinalEvent && state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
             const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
             if (winnerMember) {
               const popupKey = `pk_${state.currentPollNumber || 0}_${winnerMember.id}_${state.triggerNumber}`;
@@ -816,10 +819,11 @@
                     centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md animate-pop"; // 加个弹出动画
                     
                     // 显示揭晓按钮
+                                        // 显示揭晓按钮
                     if (isAdminUnlocked) {
                       publicRevealButtonBox.innerHTML = `
                         <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                          <span>🎰</span><span>点击揭晓 #${state.triggerNumber}</span>
+                          <span>🎰</span><span>点击揭晓</span>
                         </button>`;
                       publicRevealButtonBox.classList.remove('hidden');
                     }
