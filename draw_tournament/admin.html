@@ -1030,7 +1030,7 @@
       updatePickRandomBtnLabel();
     }
     
-             function passWinnerAndEliminateOthers(winnerId) {
+                function passWinnerAndEliminateOthers(winnerId) {
       const activeRound = state.rounds[state.drawRoundIndex ?? currentRoundIndex];
       if (!activeRound) return;
 
@@ -1063,9 +1063,8 @@
           target.status = 'pass';
           target.pollLabel = pollLabel;
           target.passTimestamp = Date.now();
-          target.manualPassed = false; // 盲抽晋级，不是手动
+          target.manualPassed = true; // ★ 关键：让系统知道这是通过盲抽产生的合法晋级
         } else {
-          // 如果是安慰奖阶段，其余人回待定池；如果是决战轮或普通轮，其余人淘汰
           if (isConsolation) {
             target.status = 'pending';
           } else {
@@ -1082,7 +1081,6 @@
       state.triggerNumber = null;
       state.settled = false;
 
-      // 如果当前是安慰奖阶段
       if (isConsolation) {
         const N = state.modeConfig.mode2ConsolationCount || 10;
         const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
@@ -1100,20 +1098,17 @@
             return;
           }
         }
-      } 
-      // 当前是 3 人决战轮，且使用了盲抽
-      else if (isModeEnabled && totalCount === 3) {
-        // 盲抽抽中的直接成为季军，另外2人自动进入下一轮
-        if (winnerCandidate) {
-          winnerCandidate.rankTitle = "🥉 季军";
-          winnerCandidate.rankKey = "rankThird";
-        }
+      } else if (isModeEnabled && totalCount === 3) {
+        // ★ 3人决战盲抽逻辑
+        winnerCandidate.rankTitle = "🥉 季军";
+        winnerCandidate.rankKey = "rankThird";
         const two = activeRound.candidates.filter(c => String(c.id) !== String(winnerId));
+        
+        // 触发大屏的季军专属弹窗
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: winnerCandidate.name };
         saveState();
         renderRoundTabs();
         
-        // 延迟 3 秒后自动进入冠亚军决战
         setTimeout(() => {
           const label = "👑 冠亚军终极决战 (2选1)";
           const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
@@ -1123,16 +1118,12 @@
           state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
           saveState(); renderRoundTabs();
           setTimeout(() => alert(`🥉 【${winnerCandidate.name}】通过盲抽锁定季军！\n\n已自动进入【${label}】。`), 100);
-        }, 4000);
+        }, 4000); // 等 4 秒，让弹窗放完
         return;
-      } 
-      // 当前是 2 人决战轮，且使用了盲抽
-      else if (isModeEnabled && totalCount === 2) {
-        // 盲抽抽中的直接成为冠军，另一位成为亚军
-        if (winnerCandidate) {
-          winnerCandidate.rankTitle = "👑 冠军";
-          winnerCandidate.rankKey = "rankChampion";
-        }
+      } else if (isModeEnabled && totalCount === 2) {
+        // ★ 2人决战盲抽逻辑
+        winnerCandidate.rankTitle = "👑 冠军";
+        winnerCandidate.rankKey = "rankChampion";
         const ru = activeRound.candidates.find(c => String(c.id) !== String(winnerId));
         let ruName = "未知买家";
         if (ru) {
@@ -1141,12 +1132,12 @@
           ru.rankKey = "rankRunnerUp";
           ruName = ru.name;
         }
+        
+        // 触发大屏的冠亚军专属弹窗
         state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: winnerCandidate.name, runnerUpName: ruName };
         saveState(); renderRoundTabs();
         return;
-      } 
-      // 普通轮次盲抽
-      else {
+      } else {
         const remainPending = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
         if (remainPending === 3) {
            setTimeout(() => alert(`🔥 已淘汰至剩 3 人！\n\n请继续盲抽或手动点击，进入冠亚季决战！`), 400);
