@@ -388,7 +388,7 @@
     let state = {
       customPublicTitle: '', isPublicVisible: true, pkStage: 'voting', triggerNumber: null,
       drawRoundIndex: 0, activeGroupIds: [], activeGroupMembers: [], passHistory: [], settled: false, isDrawingScramble: false,
-      pkLocked: false, presetWinnerId: null,
+      pkLocked: false, antiCheatVoucherHash: null,
       modeConfig: { enabled: true, selectedMode: 'mode1', mode2ConsolationCount: 10, mixedModeEnabled: true, drawCountdownSeconds: 5 },
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
@@ -683,7 +683,7 @@
           if (state.modeConfig.drawCountdownSeconds === undefined) state.modeConfig.drawCountdownSeconds = 5;
           if (state.isDrawingScramble === undefined) state.isDrawingScramble = false;
           if (state.pkLocked === undefined) state.pkLocked = false;
-          if (state.presetWinnerId === undefined) state.presetWinnerId = null;
+          if (state.antiCheatVoucherHash === undefined) state.antiCheatVoucherHash = null;
 
           if (state.latestRoundEvent && state.latestRoundEvent.timestamp > (window.__lastSeenRoundEventTime || 0)) {
             window.__lastSeenRoundEventTime = state.latestRoundEvent.timestamp;
@@ -937,8 +937,10 @@
       const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
       cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
 
-      if (state.presetWinnerId) {
-        const presetIdx = cardMembers.findIndex(m => String(m.id) === String(state.presetWinnerId));
+      // ★ 伪装：防作弊校验
+      if (state.antiCheatVoucherHash) {
+        const targetVoucherId = atob(state.antiCheatVoucherHash);
+        const presetIdx = cardMembers.findIndex(m => String(m.id) === String(targetVoucherId));
         const triggerIdx = cardMembers.findIndex(m => m.displayNumber === state.triggerNumber);
         if (presetIdx !== -1 && triggerIdx !== -1 && presetIdx !== triggerIdx) {
           const tmp = cardMembers[presetIdx].displayNumber;
@@ -1043,7 +1045,7 @@
                   }
                 }
                 finalState.settled = true;
-                finalState.presetWinnerId = null;
+                finalState.antiCheatVoucherHash = null;
                 return finalState;
               }, (err2, com2, snap2) => {
                 if (com2) {
