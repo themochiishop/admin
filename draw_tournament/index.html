@@ -1088,10 +1088,9 @@
             const winnerOrderNo = cand ? cand.orderNo : '';
             __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
             
-            // ★ 修正：前端强制走抽中即晋级逻辑
-            const isElimination = false;
-            
-            showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
+                           // 前端弹窗同步：中奖即晋级，不再是淘汰
+                const isElimination = false; 
+                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
 
             setTimeout(() => {
               db.ref('tournament_state').transaction((finalState) => {
