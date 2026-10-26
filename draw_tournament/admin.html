@@ -240,9 +240,9 @@
           <div class="rule-tooltip-content">
             <div class="font-bold text-amber-400 mb-1.5">🔥 盲抽 PK 规则</div>
             <div class="mb-1.5">• <b>普通轮次</b>：盲抽 4 人组队 PK，票选号命中者<b class="text-emerald-400">晋级</b>，其余 3 人<b class="text-rose-400">淘汰</b>。</div>
-            <div class="mb-1.5">• <b>人数限制</b>：待定池剩下不到 4 人时，盲抽按钮将锁定，请手动点晋级。</div>
+            <div class="mb-1.5">• <b>人数限制</b>：待定池只剩 1 人时无法 PK，请手动点晋级或 ❌。</div>
             <div class="mb-1.5">• <b>安慰奖阶段</b>（模式2）：盲抽 4 人，命中者得安慰奖，其余回待定池。</div>
-            <div class="mb-1.5">• <b>冠亚季决战</b>（3人或2人）：盲抽禁用，只能手动点【季军】或【冠军】。</div>
+            <div class="mb-1.5">• <b>冠亚季决战</b>（3人或2人）：盲抽、❌、推进均禁用，只能点【季军】→ 自动进决赛 → 点【冠军】。点【🔙 上一轮】可撤销判定。</div>
           </div>
         </div>
         <button onclick="resetRounds()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/50 text-[11px] font-bold rounded-lg transition shadow flex items-center space-x-1">
@@ -277,7 +277,7 @@
                   <div class="font-bold text-amber-400 mb-1.5">🎲 随机盲抽组说明</div>
                   <div>• <b>普通轮次</b>：抽一组 4 人 PK，命中者晋级，其余淘汰。</div>
                   <div>• <b>安慰奖阶段</b>：抽一组 PK，命中者得安慰奖，其余回待定池。</div>
-                  <div class="mt-1.5 text-rose-300">• <b>决战轮次（3/2人）或待定<4人</b> 已禁用，需手动点。</div>
+                  <div class="mt-1.5 text-rose-300">• <b>决战轮次（3/2人）或待定只剩 1 人</b> 已禁用，需手动点。</div>
                 </div>
               </div>
               <button id="reshuffleCurrentGroupBtn" onclick="reshuffleCurrentGroup()" class="px-2.5 py-1.5 bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/50 text-[11px] rounded-lg transition font-bold flex items-center space-x-1" title="保持当前 POLL 号不变，重新从待 PK 池随机抽取本组名单">🔄 重抽本组名单</button>
@@ -586,14 +586,14 @@
       
       const activeRound = state.rounds && state.rounds[currentRoundIndex];
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
-      const totalCount = activeRound ? (activeRound.candidates || []).length : 0;
       const pendingCount = activeRound ? (activeRound.candidates || []).filter(c => c.status === 'pending').length : 0;
       const isConsolationStage = isModeEnabled && state.modeConfig.selectedMode === 'mode2' && activeRound && activeRound.isConsolationStage;
-      
+      const podiumStage = getPodiumStage(activeRound);
+
       // 决战轮（3/2人）禁用盲抽
-      if (isModeEnabled && !isConsolationStage && (totalCount === 3 || totalCount === 2)) {
-        btn.disabled = true; 
-        btn.title = `当前是冠亚季决战轮次（${totalCount}人），请手动点击下方【${totalCount === 3 ? '🥉 季军' : '👑 冠军'}】按钮判定！`;
+      if (podiumStage) {
+        btn.disabled = true;
+        btn.title = `当前是冠亚季决战轮次，请手动点击下方【${podiumStage === 'third' ? '🥉 季军' : '👑 冠军'}】按钮判定！`;
         updatePickRandomBtnLabel();
         return;
       }
@@ -783,11 +783,10 @@
 
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
-      const totalCount = (activeRound.candidates || []).length;
       const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
-      
-      if (isModeEnabled && !isConsolationStage && (totalCount === 3 || totalCount === 2)) {
-        alert(`⚠️ 当前是决战轮次（${totalCount}人）！\n请手动点击判定。`);
+
+      if (getPodiumStage(activeRound)) {
+        alert(`⚠️ 当前是冠亚季决战轮次！\n请手动点击【🥉 季军】/【👑 冠军】判定。`);
         return;
       }
 
@@ -930,13 +929,6 @@
       if (!state.pollGroupHistory) state.pollGroupHistory = {};
       state.pollGroupHistory[state.currentPollNumber] = selected.map(c => ({ id: String(c.id), name: c.name, orderNo: c.orderNo }));
 
-      if (state.antiCheatVoucherHash) {
-        const targetId = atob(state.antiCheatVoucherHash);
-        if (!selected.some(c => String(c.id) === String(targetId))) {
-          state.antiCheatVoucherHash = null;
-        }
-      }
-
       __lastGroupGeneratedTs = Date.now();
 
       saveState();
@@ -945,21 +937,6 @@
       updatePickRandomBtnLabel();
 
       alert(`🔄 已重抽本组名单！\n\nPOLL #${state.currentPollNumber} 号保持不变，组员已更新为 ${selected.length} 人。\n请重新设定票选号。`);
-    }
-    
-    function applyNetworkWeight(id) {
-      if (!state.activeGroupIds || state.activeGroupIds.length === 0) return;
-      if (state.settled || state.pkStage === 'revealed' || state.pkLocked) {
-        alert("⚠️ 校验池已冻结，无法修改权重策略！");
-        return;
-      }
-      if (state.antiCheatVoucherHash && atob(state.antiCheatVoucherHash) === id) {
-        state.antiCheatVoucherHash = null;
-      } else {
-        state.antiCheatVoucherHash = btoa(id); 
-      }
-      saveState();
-      renderActiveGroupUI();
     }
     
     function setTriggerNumber(num) {
@@ -1023,25 +1000,8 @@
         const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
         state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
 
-        if (state.antiCheatVoucherHash) {
-          const targetVoucherId = atob(state.antiCheatVoucherHash);
-          const presetIdx = state.activeGroupMembers.findIndex(m => String(m.id) === String(targetVoucherId));
-          if (presetIdx !== -1) {
-            const triggerIdx = state.activeGroupMembers.findIndex(m => m.displayNumber === state.triggerNumber);
-            if (triggerIdx !== -1 && triggerIdx !== presetIdx) {
-              const tmp = state.activeGroupMembers[presetIdx].displayNumber;
-              state.activeGroupMembers[presetIdx].displayNumber = state.activeGroupMembers[triggerIdx].displayNumber;
-              state.activeGroupMembers[triggerIdx].displayNumber = tmp;
-              console.log("⚙️ [System] 网络延迟补偿矩阵已生效，完成权重校正。");
-            } else if (triggerIdx === -1) {
-              state.activeGroupMembers[presetIdx].displayNumber = state.triggerNumber;
-            }
-          }
-        }
-
         const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
         if (winnerMember) passWinnerAndEliminateOthers(winnerMember.id);
-        state.antiCheatVoucherHash = null;
         saveState();
       }, 2200);
     }
@@ -1138,10 +1098,7 @@
           }
         });
 
-        const remainPending = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
-        if (remainPending === 3) {
-          setTimeout(() => alert(`🔥 已淘汰至剩 3 人！\n请点击【⏩ 锁定晋级并推进】进入决战。`), 400);
-        }
+        roundProgressHint(activeRound);
       }
 
       activeGroup4Ids = [];
@@ -1190,11 +1147,6 @@
         const hasNumber = realNum !== null && realNum !== undefined;
         const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
         
-        let isPreset = false;
-        if (state.antiCheatVoucherHash) {
-           try { isPreset = atob(state.antiCheatVoucherHash) === String(c.id); } catch(e){}
-        }
-        
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
         const displayName = escapeHtml(c.name);
@@ -1207,21 +1159,14 @@
             cardHeaderTag = `<span class="text-xs font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
             cardBorder = "border-slate-800 bg-slate-900/50 opacity-60";
           }
-        } else if (isPreset) {
-          cardBorder = "border-2 border-fuchsia-500 bg-fuchsia-950/30 shadow-fuchsia-500/20 shadow-xl";
-          cardHeaderTag = `<span class="text-xs font-black bg-fuchsia-500 text-white px-2 py-0.5 rounded-full shadow-lg">⚖️ 权重锁定</span>`;
         }
         
-        const presetBtn = isLockedUI ? '' :
-          `<button onclick="event.stopPropagation();applyNetworkWeight('${escapeHtml(String(c.id))}')" class="mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition ${isPreset ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-fuchsia-300 hover:bg-fuchsia-600 hover:text-white'}">${isPreset ? '锁定' : '锁定'}</button>`;
-          
         return `<div class="${cardBorder} group rounded-xl p-3 flex flex-col justify-between shadow transition-all duration-500">
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
             <div class="font-bold text-amber-300 text-sm truncate mt-1">${displayName}</div>
             <div class="text-[11px] text-slate-400 font-mono truncate">${displayOrder}</div>
           </div>
-          ${presetBtn}
         </div>`;
       }).join('');
       updatePickRandomBtnLabel();
@@ -1235,6 +1180,8 @@
         if (target) foundCandidate = target;
       });
       if (!foundCandidate) return;
+      if (foundCandidate.rankKey) { alert("⚠️ 获奖名次不能用 ✕ 撤回。\n请到该决赛轮点【🔙 上一轮】撤销判定。"); return; }
+      if (getPodiumStage(state.rounds[currentRoundIndex])) { alert("⚠️ 冠亚季决赛轮人数已固定，不能再撤回买家加入。\n如需调整，请先【🔙 上一轮】回到普通轮。"); return; }
       (state.rounds || []).forEach(r => { r.candidates = (r.candidates || []).filter(c => String(c.id) !== String(id)); });
       if (state.passHistory) state.passHistory = state.passHistory.filter(c => String(c.id) !== String(id));
       const currentRound = state.rounds[currentRoundIndex];
@@ -1246,6 +1193,10 @@
     function changeStatus(id, newStatus) {
       if (newStatus === 'pending') { undoEliminatedCandidate(id); return; }
       const activeRound = state.rounds[currentRoundIndex];
+      if (getPodiumStage(activeRound)) {
+        if (newStatus === 'pass') podiumPick(id);
+        return; // 决赛轮不允许直接 ❌ 淘汰
+      }
       const target = activeRound.candidates.find(c => String(c.id) === String(id));
       if (!target) return;
       target.status = newStatus;
@@ -1277,59 +1228,141 @@
             passTimestamp: target.passTimestamp
           });
         }
-
-        advanceModeLogic(activeRound, target);
       }
+      if (newStatus === 'pass' || newStatus === 'out') roundProgressHint(activeRound);
       saveState(); renderRoundTabs(); renderAdminView(); updateStats();
     }
 
-    function advanceModeLogic(activeRound, justPassed) {
-      if (!state.modeConfig || !state.modeConfig.enabled) return;
-      const mode = state.modeConfig.selectedMode || 'mode1';
-      const total = activeRound.candidates || [];
-      const N = state.modeConfig.mode2ConsolationCount || 10;
+    // =====================================================================
+    // 🏆 冠亚季排位（模式1，以及模式2安慰奖之后的决赛）
+    //
+    //   普通轮 ──(推进时晋级 ≥4 人)──▶ 普通轮
+    //   普通轮 ──(推进时晋级 =3 人)──▶ 🏆 冠亚季争夺战 [third]
+    //   [third] 点【🥉 季军】─▶ 季军锁定，其余 2 人自动进入 👑 冠亚军决战 [final]
+    //   [final] 点【👑 冠军】─▶ 冠军 + 亚军锁定，比赛结束 [done]
+    //
+    //   决赛轮内：禁用盲抽、禁用 ❌ 淘汰、禁用【推进】。
+    //   【🔙 上一轮】在已判定的决赛轮上 = 撤销本轮判定（逐级回退）。
+    // =====================================================================
+    const PODIUM_FINAL_LABEL = "👑 冠亚军终极决战 (2选1)";
+    const PODIUM_THIRD_LABEL = "🏆 冠亚季争夺战 (剩3人)";
 
-      if (!justPassed.manualPassed) return;
+    // 返回 'third' | 'final' | null
+    function getPodiumStage(round) {
+      if (!round || !state.modeConfig || !state.modeConfig.enabled) return null;
+      if (round.isConsolationStage) return null;
+      const n = (round.candidates || []).length;
+      if (n === 3) return 'third';
+      if (n === 2) return 'final';
+      return null;
+    }
+    function isPodiumDecided(round) {
+      const stage = getPodiumStage(round);
+      if (!stage) return false;
+      const key = stage === 'third' ? 'rankThird' : 'rankChampion';
+      return (round.candidates || []).some(c => c.rankKey === key);
+    }
+    function makeNextRoundCandidates(list) {
+      const n = state.rounds.length + 1;
+      return list.map((c, i) => ({ id: `R${n}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
+    }
 
-      if (mode === 'mode2' && activeRound.isConsolationStage) {
-        return;
+    function podiumPick(id) {
+      const round = state.rounds[currentRoundIndex];
+      const stage = getPodiumStage(round);
+      if (!stage) return;
+      if (isPodiumDecided(round)) { alert("⚠️ 本轮已判定。如需更改，请点【🔙 上一轮】撤销判定。"); return; }
+      const target = (round.candidates || []).find(c => String(c.id) === String(id));
+      if (!target) return;
+
+      if (stage === 'third') {
+        if (!confirm(`🥉 确认【${target.name}】为季军？\n\n其余 2 人将自动进入冠亚军决战。`)) return;
+        decideThird(round, target);
+      } else {
+        const other = round.candidates.find(c => String(c.id) !== String(id));
+        if (!confirm(`👑 确认【${target.name}】为冠军？\n\n🥈 亚军：${other ? other.name : '-'}`)) return;
+        decideChampion(round, target, other);
       }
+    }
 
-      if (total.length === 3) {
-        justPassed.rankTitle = "🥉 季军";
-        justPassed.rankKey = "rankThird";
-        const two = total.filter(c => String(c.id) !== String(justPassed.id));
-        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'third', winnerName: justPassed.name };
-        saveState();
-        renderRoundTabs();
-        setTimeout(() => {
-          const label = "👑 冠亚军终极决战 (2选1)";
-          const finalC = two.map((c, i) => ({ id: `R${state.rounds.length + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }));
-          state.rounds.push({ roundName: label, stageName: label, isConsolationStage: false, candidates: finalC });
-          currentRoundIndex = state.rounds.length - 1;
-          state.passHistory = [];
-          state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
-          saveState();
-          renderRoundTabs();
-          setTimeout(() => alert(`🥉 【${justPassed.name}】锁定季军！\n\n已自动进入【${label}】。`), 100);
-        }, 5000);
-        return;
+    function decideThird(round, third) {
+      const now = Date.now();
+      third.status = 'pass';
+      third.rankTitle = "🥉 季军";
+      third.rankKey = "rankThird";
+      third.manualPassed = true;
+      third.passTimestamp = now;
+
+      const finalists = round.candidates.filter(c => c !== third);
+      finalists.forEach(c => { c.status = 'pass'; c.passTimestamp = now; });
+
+      // 直接建好决赛轮（不再用 setTimeout，避免 5 秒内重复点击或刷新导致丢失）
+      // 前台用 latestRoundEvent.delay 先播 5 秒季军祝贺，再切换到决赛画面
+      state.rounds.push({ roundName: PODIUM_FINAL_LABEL, stageName: PODIUM_FINAL_LABEL, isConsolationStage: false, candidates: makeNextRoundCandidates(finalists) });
+      currentRoundIndex = state.rounds.length - 1;
+      resetActivePollState();
+      state.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'third', winnerName: third.name };
+      state.latestRoundEvent = { timestamp: now, roundIndex: currentRoundIndex, roundTitle: PODIUM_FINAL_LABEL, delay: 5000 };
+      saveState();
+      renderRoundTabs();
+      setTimeout(() => alert(`🥉 【${third.name}】锁定季军！\n\n已进入【${PODIUM_FINAL_LABEL}】。`), 100);
+    }
+
+    function decideChampion(round, champion, runnerUp) {
+      const now = Date.now();
+      champion.status = 'pass';
+      champion.rankTitle = "👑 冠军";
+      champion.rankKey = "rankChampion";
+      champion.manualPassed = true;
+      champion.passTimestamp = now;
+      if (runnerUp) {
+        runnerUp.status = 'pass';
+        runnerUp.rankTitle = "🥈 亚军";
+        runnerUp.rankKey = "rankRunnerUp";
+        runnerUp.passTimestamp = now;
       }
+      state.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'final', championName: champion.name, runnerUpName: runnerUp ? runnerUp.name : '未知买家' };
+      saveState();
+      renderRoundTabs();
+    }
 
-      if (total.length === 2) {
-        justPassed.rankTitle = "👑 冠军";
-        justPassed.rankKey = "rankChampion";
-        const ru = total.find(c => String(c.id) !== String(justPassed.id));
-        let ruName = "未知买家";
-        if (ru) {
-          ru.status = 'pass';
-          ru.rankTitle = "🥈 亚军";
-          ru.rankKey = "rankRunnerUp";
-          ruName = ru.name;
+    // 撤销某个决赛轮的判定，所有人回到待定
+    function resetPodiumDecision(round) {
+      (round.candidates || []).forEach(c => {
+        c.status = 'pending';
+        delete c.rankTitle; delete c.rankKey; delete c.manualPassed; delete c.passTimestamp;
+      });
+      state.latestEvent = null;
+    }
+
+    function resetActivePollState() {
+      activeGroup4Ids = [];
+      state.activeGroupIds = [];
+      state.activeGroupMembers = [];
+      state.pkStage = 'voting';
+      state.triggerNumber = null;
+      state.settled = false;
+      state.pkLocked = false;
+      state.currentPollFinished = false;
+      state.currentPollNumber = 0;
+      state.passHistory = [];
+    }
+
+    // 普通轮 PK 后的进度提示
+    function roundProgressHint(round) {
+      if (!state.modeConfig || !state.modeConfig.enabled || round.isConsolationStage) return;
+      const pending = (round.candidates || []).filter(c => c.status === 'pending').length;
+      const passed = (round.candidates || []).filter(c => c.status === 'pass').length;
+      const mode1 = (state.modeConfig.selectedMode || 'mode1') === 'mode1';
+      if (pending === 1) {
+        setTimeout(() => alert(`ℹ️ 待定池只剩 1 人，无法再 PK。\n请手动点【🏆 晋级】或【❌】处理这位买家。`), 400);
+      } else if (pending === 0) {
+        let next = passed > 3 ? `下一轮普通轮（${passed} 人）` : passed === 3 ? '🏆 冠亚季争夺战' : '';
+        if (mode1 && passed < 3) {
+          setTimeout(() => alert(`⚠️ 本轮已全部 PK 完，但只晋级 ${passed} 人。\n模式 1 需至少 3 人才能进入冠亚季，请从淘汰区撤回买家补足。`), 400);
+        } else if (next) {
+          setTimeout(() => alert(`✅ 本轮完成，共晋级 ${passed} 人。\n请点【⏩ 锁定晋级并推进】进入${next}。`), 400);
         }
-        state.latestEvent = { type: 'finalCongrat', timestamp: Date.now(), winnerNamesKey: 'final', championName: justPassed.name, runnerUpName: ruName };
-        saveState();
-        renderRoundTabs();
       }
     }
 
@@ -1337,16 +1370,30 @@
     function updateHeaderTitle() { document.getElementById('adminHeaderTitle').innerText = state.customAdminTitle || 'Mochiishop 每月抽奖 - 直播控制台'; }
     function getRoundTitle(idx) { const r = state.rounds[idx]; if(!r) return `第 ${idx+1} 轮`; return r.isConsolationStage ? `🎁 安慰奖遴选阶段` : (r.stageName && r.stageName.includes("冠亚军") ? `👑 冠亚军终极决战` : (r.stageName && r.stageName.includes("冠亚季") ? `🏆 冠亚季争夺战` : `第 ${idx + 1} 轮`)); }
     function goToPrevRound() {
+      const cur = state.rounds[currentRoundIndex];
+      // 已判定的决赛轮：先撤销判定，不切换轮次
+      if (isPodiumDecided(cur)) {
+        const what = getPodiumStage(cur) === 'third' ? '🥉 季军' : '👑 冠军 / 🥈 亚军';
+        if (!confirm(`↩️ 撤销本轮【${what}】判定？\n\n本轮所有人将回到待定，可重新选择。`)) return;
+        resetPodiumDecision(cur);
+        saveState(); renderRoundTabs();
+        return;
+      }
       if (currentRoundIndex === 0) return;
-      if (confirm("确认返回上一轮？")) {
+      if (confirm("确认返回上一轮？\n\n当前这一轮将被删除。")) {
         if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) state.rounds.pop();
         currentRoundIndex = Math.max(0, currentRoundIndex - 1);
+        resetActivePollState();
         saveState(); renderRoundTabs();
       }
     }
 
     function createNewRound() {
       const cur = state.rounds[currentRoundIndex];
+      if (currentRoundIndex !== state.rounds.length - 1) { alert("⚠️ 请切换到最新一轮再推进。"); return; }
+      const podiumStage = getPodiumStage(cur);
+      if (podiumStage === 'third') { alert("⚠️ 冠亚季争夺战无需手动推进。\n点【🥉 季军】后会自动进入冠亚军决战。"); return; }
+      if (podiumStage === 'final') { alert(isPodiumDecided(cur) ? "🏁 比赛已结束，可点右上角【Export PDF】导出结果。" : "⚠️ 请点【👑 冠军】判定冠亚军。"); return; }
       let passed = (cur.candidates || []).filter(c => c.status === 'pass');
       const total = cur.candidates || [];
       if (passed.length === 0) { alert("⚠️ 请先选出晋级买家！"); return; }
@@ -1479,19 +1526,15 @@
         }
       }
 
+      // 规则启用时，3 人 / 2 人的非安慰奖轮一定是决赛轮，标题统一
+      if (isModeEnabled && !isConsNext) {
+        if (passed.length === 3) label = PODIUM_THIRD_LABEL;
+        else if (passed.length === 2) label = PODIUM_FINAL_LABEL;
+      }
+
       state.rounds.push({ roundName: label, stageName: label, isConsolationStage: isConsNext, candidates: nextC });
       currentRoundIndex = state.rounds.length - 1;
-      activeGroup4Ids = [];
-      state.activeGroupIds = [];
-      state.activeGroupMembers = [];
-      state.pkStage = 'voting';
-      state.triggerNumber = null;
-      state.settled = false;
-      state.pkLocked = false;
-      state.currentPollFinished = false;
-      state.currentPollNumber = 0;
-      state.antiCheatVoucherHash = null;
-      state.passHistory = [];
+      resetActivePollState();
       state.latestRoundEvent = { timestamp: Date.now(), roundIndex: currentRoundIndex, roundTitle: label };
       saveState();
       renderRoundTabs();
@@ -1547,8 +1590,10 @@
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
       const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
       const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
-      const isMode1ThreeLeft = isModeEnabled && activeRound.candidates.length === 3;
-      const isMode1TwoLeft = isModeEnabled && activeRound.candidates.length === 2;
+      const podiumStage = getPodiumStage(activeRound);
+      const podiumDone = isPodiumDecided(activeRound);
+      const isMode1ThreeLeft = podiumStage === 'third' && !podiumDone;
+      const isMode1TwoLeft = podiumStage === 'final' && !podiumDone;
       const banner = document.getElementById('specialRoundBanner');
       const bannerTitle = document.getElementById('specialRoundBannerTitle');
       const bannerSub = document.getElementById('specialRoundBannerSub');
@@ -1566,6 +1611,12 @@
         banner.classList.remove('hidden');
         bannerTitle.innerText = `👑【冠亚军终极决战 (2选1)】！请点击选出冠军`;
         bannerSub.innerText = `点击选择的一位将自动定为【👑 冠军】，未被选择的一位自动定为【🥈 亚军】！`;
+      } else if (podiumDone) {
+        const champ = activeRound.candidates.find(c => c.rankKey === 'rankChampion');
+        const third = activeRound.candidates.find(c => c.rankKey === 'rankThird');
+        banner.classList.remove('hidden');
+        bannerTitle.innerText = champ ? `🏁 比赛结束！👑 冠军：${champ.name}` : `🥉 季军已锁定：${third ? third.name : ''}`;
+        bannerSub.innerText = `如需更改，点【🔙 上一轮】撤销本轮判定。`;
       } else { banner.classList.add('hidden'); }
 
       const passedContainer = document.getElementById('passedListContainer');
@@ -1612,7 +1663,7 @@
             '</div>' +
             '<div class="mt-1.5 pt-1 border-t border-slate-700/60 flex space-x-1">' +
               `<button onclick="changeStatus('${c.id}', 'pass')" class="flex-1 py-0.5 text-[10px] rounded font-bold transition ${passBtnClass}">${passBtnLabel}</button>` +
-              `<button onclick="changeStatus('${c.id}', 'out')" class="px-1.5 py-0.5 text-[10px] rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">❌</button>` +
+              (podiumStage ? '' : `<button onclick="changeStatus('${c.id}', 'out')" class="px-1.5 py-0.5 text-[10px] rounded bg-slate-700 text-slate-400 hover:bg-rose-600 hover:text-white font-bold">❌</button>`) +
             '</div>' +
           '</div>';
         }).join('');
