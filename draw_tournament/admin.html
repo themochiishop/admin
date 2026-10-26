@@ -55,6 +55,15 @@
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+  <div id="loginGate" class="fixed inset-0 z-[200] bg-slate-950 flex items-center justify-center p-6">
+    <div class="bg-slate-800 border border-amber-500/40 rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
+      <div class="text-4xl mb-3">🎬</div>
+      <h2 class="text-lg font-black text-amber-400 mb-1">抽奖直播控制台</h2>
+      <p id="loginGateMsg" class="text-xs text-slate-400 mb-6">正在检查登录状态…</p>
+      <button id="loginGateBtn" onclick="adminGoogleLogin()" class="hidden w-full py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition shadow-lg">🔐 使用 Google 登录</button>
+      <button id="loginGateSwitchBtn" onclick="adminSignOut()" class="hidden w-full mt-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-bold rounded-xl transition">切换账号</button>
+    </div>
+  </div>
 
   <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
@@ -80,6 +89,7 @@
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
           <span>📄</span><span>Export PDF</span>
         </button>
+        <button id="adminUserBadge" onclick="adminSignOut()" class="hidden px-2 py-1 bg-slate-900 border border-slate-700 text-[10px] text-slate-400 rounded-lg hover:text-rose-300 hover:border-rose-500/50 transition" title="点击退出登录"></button>
         <button onclick="goToPrevRound()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">🔙 上一轮</button>
         <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
           <span>⏩ 锁定晋级并推进</span>
@@ -367,7 +377,73 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
+    // ===== 🔐 登录：只有这两个 Google 账号能写入（与 Firebase 规则一致）=====
+    const ALLOWED_ADMIN_EMAILS = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
+    let __adminListenersStarted = false;
+
+    function isAllowedAdmin(user) {
+      return !!(user && !user.isAnonymous &&
+        (user.providerData || []).some(p => p && p.providerId === 'google.com') &&
+        ALLOWED_ADMIN_EMAILS.includes(String(user.email || '').toLowerCase()));
+    }
+
+    firebase.auth().onAuthStateChanged((user) => {
+      const gate = document.getElementById('loginGate');
+      const msg = document.getElementById('loginGateMsg');
+      const loginBtn = document.getElementById('loginGateBtn');
+      const switchBtn = document.getElementById('loginGateSwitchBtn');
+      const badge = document.getElementById('adminUserBadge');
+      if (isAllowedAdmin(user)) {
+        gate.classList.add('hidden');
+        badge.innerText = '👤 ' + user.email + ' · 退出';
+        badge.classList.remove('hidden');
+        if (!__adminListenersStarted) { __adminListenersStarted = true; startAdminListeners(); }
+        return;
+      }
+      gate.classList.remove('hidden');
+      badge.classList.add('hidden');
+      loginBtn.classList.remove('hidden');
+      if (user && !user.isAnonymous) {
+        msg.innerHTML = `当前账号 <b class="text-rose-300">${escapeHtml(user.email || '')}</b> 没有控制台权限。<br>请换成授权的 Google 账号。`;
+        switchBtn.classList.remove('hidden');
+      } else {
+        msg.innerText = '请使用授权的 Google 账号登录后操作。';
+        switchBtn.classList.add('hidden');
+      }
+      if (__adminListenersStarted) location.reload(); // 退出后清掉画面数据
+    });
+
+    function adminGoogleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      firebase.auth().signInWithPopup(provider).catch((e) => {
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+          return firebase.auth().signInWithRedirect(provider);
+        }
+        if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+        if (e.code === 'auth/unauthorized-domain') {
+          alert(`❌ 登录失败：这个网址还没加入授权网域。\n\n请到 Firebase → draw-tournament → Authentication → 设置 → 授权网域，添加：\n${location.hostname}`);
+          return;
+        }
+        alert('❌ 登录失败：' + (e.code || e.message));
+      });
+    }
+    function adminSignOut() {
+      if (__adminListenersStarted && !confirm('确认退出登录？')) return;
+      firebase.auth().signOut();
+    }
+
+    let __lastWriteErrorAlert = 0;
+    function reportWriteError(e) {
+      console.error('写入失败:', e);
+      if (Date.now() - __lastWriteErrorAlert < 3000) return;
+      __lastWriteErrorAlert = Date.now();
+      if (e && /permission/i.test(String(e.code || e.message))) {
+        alert('❌ 保存失败：没有写入权限 (PERMISSION_DENIED)。\n\n请确认右上角登录的是授权的 Google 账号。');
+      } else {
+        alert('❌ 保存失败：' + (e && (e.code || e.message) || '未知错误'));
+      }
+    }
 
     const DEFAULT_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfngCgWRlCl4c1z1EgJPSDWhN1PLqq8isbfzw_0nP2nctAS4QZSQj4Vw6MZchvqdNmVYc7BZZwtzlJ/pub?gid=322881163&single=true&output=csv";
 
@@ -399,7 +475,7 @@
       rounds: [{ roundName: "第 1 轮", candidates: [] }]
     };
 
-    window.onload = function() {
+    function startAdminListeners() {
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -441,14 +517,14 @@
           updateRefreshBtnState();
           updatePickRandomBtnLabel();
         }
-      });
+      }, (err) => { console.error('读取失败:', err); alert('❌ 读取抽奖数据失败：' + (err.code || err.message) + '\n请重新登录后刷新页面。'); });
       db.ref('tournament_state/publicAdminActive').on('value', (snap) => {
         publicAdminActive = !!snap.val();
         updateAdminRevealButtonLock();
       });
 
       setInterval(renderWorkflowStatus, 1000);
-    };
+    }
 
     function renderWorkflowStatus() {
       const bar = document.getElementById('workflowStatusBar');
@@ -1641,7 +1717,7 @@
     
     function saveState() {
       localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-      db.ref('tournament_state').set(state);
+      db.ref('tournament_state').set(state).catch(reportWriteError);
       updateStats(); renderAdminView(); checkAndTogglePdfExportBtn(); updateRefreshBtnState();
       updatePickRandomBtnState();
     }
@@ -1802,7 +1878,7 @@
           };
         }, (error) => {
           if (!error) { currentRoundIndex = 0; activeGroup4Ids = []; fetchGoogleSheetsData(false); }
-          else alert("❌ 重置失败，请重试");
+          else reportWriteError(error);
         });
       }
     }

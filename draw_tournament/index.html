@@ -402,8 +402,26 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
-    const ADMIN_PASSWORD = "023457";
+    // ===== 🔐 登录：观众匿名只读；管理员控盘需用授权 Google 账号（写入权限由 Firebase 规则把关）=====
+    const ALLOWED_ADMIN_EMAILS = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
+    let __publicListenersStarted = false;
+    function isAllowedAdmin(user) {
+      return !!(user && !user.isAnonymous &&
+        (user.providerData || []).some(p => p && p.providerId === 'google.com') &&
+        ALLOWED_ADMIN_EMAILS.includes(String(user.email || '').toLowerCase()));
+    }
+    firebase.auth().onAuthStateChanged((user) => {
+      if (!user) {
+        firebase.auth().signInAnonymously().catch((error) => { console.error("匿名登录失败:", error); });
+        return;
+      }
+      if (!__publicListenersStarted) { __publicListenersStarted = true; startPublicListeners(); }
+      // 之前已解锁（或从 Google 登录跳转回来）：只有授权账号才恢复控盘
+      if (localStorage.getItem('mochii_admin_unlocked') === 'true') {
+        if (isAllowedAdmin(user)) setAdminUnlocked(true);
+        else if (!user.isAnonymous) { localStorage.removeItem('mochii_admin_unlocked'); alert(`❌ 账号 ${user.email || ''} 没有控盘权限。`); }
+      }
+    });
 
     let currentRoundIndex = 0;
     let userManuallySelectedRound = false;
@@ -743,18 +761,7 @@
       banner.classList.add('hidden');
     }
 
-    window.onload = function() {
-      if (localStorage.getItem('mochii_admin_unlocked') === 'true') {
-        isAdminUnlocked = true;
-        db.ref('tournament_state/publicAdminActive').set(true);
-        setTimeout(() => {
-          const txt = document.getElementById('adminUnlockText');
-          if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; }
-          const toggleBtn = document.getElementById('togglePkPanelBtn');
-          if (toggleBtn) toggleBtn.classList.remove('hidden');
-          renderPublicView();
-        }, 100);
-      }
+    function startPublicListeners() {
       db.ref('tournament_state').on('value', (snapshot) => {
         const val = snapshot.val();
         if (val) {
@@ -855,7 +862,7 @@
         }
       });
       setInterval(checkForNewPkGroup, 300);
-    };
+    }
 
     let __lastPkGroupSignature = '';
     function checkForNewPkGroup() {
@@ -1031,16 +1038,30 @@
       }
     }
 
+    function setAdminUnlocked(on) {
+      isAdminUnlocked = on;
+      if (on) {
+        localStorage.setItem('mochii_admin_unlocked', 'true');
+        db.ref('tournament_state/publicAdminActive').set(true).catch(e => alert('❌ 控盘失败：' + (e.code || e.message)));
+      }
+      refreshAdminUnlockUI();
+    }
+
     function toggleAdminUnlock() {
       if (!isAdminUnlocked) {
-        const pin = prompt("🔐 请输入管理员解锁口令密码:", "");
-        if (pin === ADMIN_PASSWORD) {
-          isAdminUnlocked = true;
-          localStorage.setItem('mochii_admin_unlocked', 'true');
-          db.ref('tournament_state/publicAdminActive').set(true);
-          alert("✅ 成功解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。");
-        } else if (pin !== null && pin !== "") { alert("❌ 解锁口令错误！"); return; }
-        else return;
+        const user = firebase.auth().currentUser;
+        if (isAllowedAdmin(user)) { setAdminUnlocked(true); alert("✅ 已解锁管理员大屏控盘模式！\n后台开奖按钮已锁定。"); return; }
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        localStorage.setItem('mochii_admin_unlocked', 'true'); // 登录成功后由 onAuthStateChanged 完成解锁
+        firebase.auth().signInWithPopup(provider).catch((e) => {
+          if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') return firebase.auth().signInWithRedirect(provider);
+          localStorage.removeItem('mochii_admin_unlocked');
+          if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+          if (e.code === 'auth/unauthorized-domain') { alert(`❌ 登录失败：请到 Firebase → Authentication → 设置 → 授权网域，添加 ${location.hostname}`); return; }
+          alert('❌ 登录失败：' + (e.code || e.message));
+        });
+        return;
       } else {
         if (!confirm("确认退出管理员控盘模式？")) return;
         isAdminUnlocked = false;
@@ -1055,6 +1076,10 @@
         });
         db.ref('tournament_state/publicAdminActive').set(false);
       }
+      refreshAdminUnlockUI();
+    }
+
+    function refreshAdminUnlockUI() {
       const txt = document.getElementById('adminUnlockText');
       if (isAdminUnlocked) { if (txt) { txt.innerText = "🔓 管理员 (已解锁)"; txt.className = "text-amber-400 font-bold underline cursor-pointer"; } }
       else { if (txt) { txt.innerText = "🔑 管理员"; txt.className = "text-slate-600 hover:text-amber-400 underline cursor-pointer"; } }
