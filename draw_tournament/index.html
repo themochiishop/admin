@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=6"></script>
+  <script src="logic.js?v=7"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -128,6 +128,14 @@
       border-bottom: 7px solid #f59e0b;
     }
     .mode-tooltip-wrap:hover .mode-tooltip-box { visibility: visible; opacity: 1; }
+    .mode-tooltip-wrap.open .mode-tooltip-box { visibility: visible; opacity: 1; pointer-events: auto; }
+    /* 手机 / 触控：不用悬停，改为点一下打开；固定在屏幕内，可滚动 */
+    @media (max-width: 640px), (hover: none) {
+      .mode-tooltip-wrap:hover .mode-tooltip-box { visibility: hidden; opacity: 0; }
+      .mode-tooltip-wrap.open .mode-tooltip-box { visibility: visible; opacity: 1; }
+      .mode-tooltip-box { position: fixed; left: 10px; right: 10px; top: 110px; width: auto; max-width: none; max-height: 72vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+      .mode-tooltip-box::before { display: none; }
+    }
     .mode-tooltip-box .mt-title { color: #fbbf24; font-weight: 900; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #334155; font-size: 13px; }
     .mode-tooltip-box .mt-row { margin-bottom: 6px; }
     .mode-tooltip-box .mt-row b { color: #fcd34d; }
@@ -214,7 +222,7 @@
             <div id="modeTooltipBody" class="space-y-2 text-slate-300">
               <div class="text-slate-400">模式规则加载中...</div>
             </div>
-            <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">💡 鼠标悬停可查看完整规则</div>
+            <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">💡 电脑：鼠标悬停查看 · 手机：点标签打开 / 关闭</div>
           </div>
         </div>
         <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
@@ -347,6 +355,11 @@
         </div>
       </div>
 
+      <div id="publicProgressBanner" class="hidden w-full mt-3 sm:mt-4 bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border-2 border-amber-400/70 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-center">
+        <div id="publicProgressTitle" class="text-xs sm:text-base font-black text-amber-300 leading-snug"></div>
+        <div id="publicProgressSub" class="text-[10px] sm:text-xs text-amber-100/90 mt-1 leading-relaxed"></div>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
         <div class="flex flex-col justify-end min-w-0">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
@@ -417,6 +430,19 @@
       requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'none'; });
       setTimeout(close, isErr ? 12000 : isWarn ? 6000 : Math.min(9000, 3000 + msg.length * 40));
     }
+
+    // ===== 📱 抽奖期间保持屏幕常亮（Screen Wake Lock；切回页面或点一下画面会自动重新开启）=====
+    let __wakeLock = null;
+    async function keepScreenOn() {
+      try {
+        if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' || __wakeLock) return;
+        __wakeLock = await navigator.wakeLock.request('screen');
+        __wakeLock.addEventListener('release', () => { __wakeLock = null; });
+      } catch (e) { __wakeLock = null; }
+    }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepScreenOn(); });
+    ['click', 'touchstart'].forEach(ev => document.addEventListener(ev, keepScreenOn, { passive: true }));
+    keepScreenOn();
 
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
@@ -845,6 +871,12 @@
           }
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
+
+          // 🎰 同步跑马灯（刚打开页面时如果已经在揭晓中，直接显示结果）
+          if (state.pkStage === 'revealing' && __marqueeSig !== DrawLogic.pollSignature(state)) {
+            startSyncedMarquee(!__firstSnapshotHandled);
+          }
+          __firstSnapshotHandled = true;
           
           // ★ 核心控制：大屏中央数字框的 Loading 与 揭晓按钮 联动
           const centerTriggerNumberBox = document.getElementById('centerTriggerNumberBox');
@@ -881,6 +913,14 @@
               centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md";
               publicRevealButtonBox.classList.add('hidden');
               if (triggerLoadingTimer) clearTimeout(triggerLoadingTimer);
+            }
+            else if (state.pkStage === 'revealing') {
+              publicRevealButtonBox.classList.add('hidden');
+              if (triggerLoadingTimer) clearTimeout(triggerLoadingTimer);
+              if (!revealShown()) {
+                centerTriggerNumberBox.innerHTML = `#${state.triggerNumber}`;
+                centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md";
+              }
             }
             else if (state.pkStage === 'revealed') {
               centerTriggerNumberBox.innerHTML = `#${state.triggerNumber}`;
@@ -1039,6 +1079,23 @@
     }
 
     // 名单已出现、还没设定票选号 → 显示「正在等待票选号」；设定后自动消失
+    // 手机点模式标签：打开/关闭说明；点其他地方关闭
+    document.addEventListener('click', (e) => {
+      const wrap = document.querySelector('.mode-tooltip-wrap');
+      if (!wrap) return;
+      if (e.target.closest('#publicModeBadge')) {
+        const willOpen = !wrap.classList.contains('open');
+        wrap.classList.toggle('open', willOpen);
+        const box = wrap.querySelector('.mode-tooltip-box');
+        if (willOpen && box && window.matchMedia('(max-width: 640px), (hover: none)').matches) {
+          const r = document.getElementById('publicModeBadge').getBoundingClientRect();
+          box.style.top = Math.max(8, Math.round(r.bottom + 8)) + 'px';
+        }
+      } else if (!e.target.closest('.mode-tooltip-box')) {
+        wrap.classList.remove('open');
+      }
+    });
+
     function updateAwaitVoteHint() {
       const el = document.getElementById('awaitVoteIndicator');
       if (!el) return;
@@ -1052,8 +1109,27 @@
       el.classList.toggle('hidden', !show);
     }
     setInterval(updateAwaitVoteHint, 250);
+    const __revealSeenAt = {};
+    setInterval(() => {
+      if (!isAdminUnlocked || state.pkStage !== 'revealing') return;
+      const sig = DrawLogic.pollSignature(state);
+      if (!__revealSeenAt[sig]) { __revealSeenAt[sig] = Date.now(); return; }
+      if (Date.now() - __revealSeenAt[sig] > DrawLogic.REVEAL_SETTLE_MS + 6000) settleRevealFromPublic(sig);
+    }, 1000);
+
+    function updateProgressBanner() {
+      const box = document.getElementById('publicProgressBanner');
+      if (!box) return;
+      const ri = Math.max(0, Math.min(currentRoundIndex, (state.rounds || []).length - 1));
+      const info = DrawLogic.progressInfo(state, ri, 'public');
+      if (!info) { box.classList.add('hidden'); return; }
+      document.getElementById('publicProgressTitle').innerText = info.title;
+      document.getElementById('publicProgressSub').innerText = info.sub;
+      box.classList.remove('hidden');
+    }
 
     function updateModeBadge() {
+      try { updateProgressBanner(); } catch (e) {}
       const badge = document.getElementById('publicModeBadge');
       const tooltip = document.getElementById('modeTooltipBody');
       if (!badge) return;
@@ -1162,153 +1238,93 @@
       renderPublicView();
     }
 
-   function revealPKWinnerFromPublic() {
+function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
-      if (state.settled) { alert("正在开奖中..."); return; }
-      if (state.pkLocked === true) { alert("⚠️ 开奖已在进行中，请稍候..."); return; }
-      
+      if (state.settled || state.pkLocked === true || state.pkStage === 'revealing') { alert("⚠️ 开奖已在进行中，请稍候..."); return; }
       const btnBox = document.getElementById('publicRevealButtonBox');
-      if (!btnBox || btnBox.innerHTML.includes('LOADING')) {
-        alert("⚠️ 正在设定票选号，请稍候...");
-        return;
-      }
+      if (!btnBox || btnBox.innerHTML.includes('LOADING')) { alert("⚠️ 正在设定票选号，请稍候..."); return; }
+      if (!state.triggerNumber) { alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。"); return; }
 
-      if (!state.triggerNumber) {
-        alert("⚠️ 未拥有票选号！\n\n请等待直播间观众投票完成并设定好票选号后，再点击揭晓。");
-        return;
-      }
-      const activeCards = Array.from(document.querySelectorAll('.pk-card'));
-      if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
-      const total = activeCards.length;
-      const nums = DrawLogic.shuffle(Array.from({ length: total }, (_, i) => i + 1));
-      const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
-      cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
-
-      let winnerIndex = -1;
-      cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
-      if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
-      const winnerMemberId = cardMembers[winnerIndex].id;
-      const pollSig = DrawLogic.pollSignature(state);   // 之后每次写入都必须还是这一组
-
-      isMarqueeRunning = true;
-      if (marqueeSafetyTimer) clearTimeout(marqueeSafetyTimer);
-      marqueeSafetyTimer = setTimeout(() => {
-        isMarqueeRunning = false;
-        renderPublicView();
-      }, 8000);
-
-      db.ref('tournament_state').transaction((latestState) => {
-        if (!latestState || DrawLogic.pollSignature(latestState) !== pollSig) return;   // 组已变更：放弃
-        latestState.pkLocked = true;
-        latestState.currentPollFinished = true;   
-        return DrawLogic.bumpRev(latestState);
+      const pollSig = DrawLogic.pollSignature(state);
+      btnBox.classList.add('hidden');
+      db.ref('tournament_state').transaction((s) => {
+        if (!s || DrawLogic.pollSignature(s) !== pollSig || s.pkStage === 'revealing' || s.pkStage === 'revealed' || s.pkLocked) return;
+        if (!DrawLogic.beginReveal(s)) return;
+        return DrawLogic.bumpRev(s);
+      }, (err, committed) => {
+        if (err) { alert('❌ 揭晓失败：' + (err.code || err.message)); return; }
+        if (!committed) { alert('⚠️ 这一组已经在揭晓或已变更'); return; }
+        // 跑马灯由所有画面同步播放（见 startSyncedMarquee），这里只负责到时间结算
+        setTimeout(() => settleRevealFromPublic(pollSig), DrawLogic.REVEAL_SETTLE_MS);
       });
-
-      let currentIndex = 0;
-      let tickCount = 0;
-      const isMobile = window.innerWidth < 768;
-      const baseDelay = isMobile ? 280 : 160; 
-      
-      function finishMarquee() {
-        if (!isMarqueeRunning) return;
-        activeCards.forEach(el => {
-          el.classList.remove('marquee-flash');
-          el.classList.remove('winner-glow');
-        });
-        
-        const blindIndicator = document.getElementById('blindDrawingIndicator');
-        if (blindIndicator) blindIndicator.classList.add('hidden');
-
-        db.ref('tournament_state').transaction((latestState) => {
-          if (!latestState || DrawLogic.pollSignature(latestState) !== pollSig) return;
-          const numMap = {};
-          cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
-          latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
-            const nid = String(m.id);
-            return { ...m, displayNumber: numMap[nid] !== undefined ? numMap[nid] : m.displayNumber };
-          });
-          latestState.pkStage = 'revealed';
-          latestState.isDrawingScramble = false;
-          latestState.pkLocked = true;
-          return DrawLogic.bumpRev(latestState);
-        }, (error, committed, snapshot) => {
-          if (committed) {
-            state = snapshot.val();
-            const curGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
-            localNamesRevealedGroupSig = curGroupSig;
-            isMarqueeRunning = false;
-            if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
-            
-            renderPublicView();
-            
-            const roundIdx = state.drawRoundIndex ?? currentRoundIndex;
-            const round = state.rounds[roundIdx] || {};
-            const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMemberId));
-            const winnerName = cand ? cand.name : '幸运买家';
-            const winnerOrderNo = cand ? cand.orderNo : '';
-            __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winnerMemberId}_${state.triggerNumber}`;
-            
-            // ★ 这里直接判断 isElimination（反向淘汰）
-            const isElimination = state.isReverseElimination === true; 
-            const stageNow = DrawLogic.getRoundStage(state, roundIdx);
-            if (stageNow !== 'third' && stageNow !== 'final') {
-              showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination: false, isConsolation: stageNow === 'consolation' }, 5);
-            }
-
-            setTimeout(() => {
-              db.ref('tournament_state').transaction((finalState) => {
-                if (!finalState || DrawLogic.pollSignature(finalState) !== pollSig) return;   // 已结算过：不重复写
-                const roundIdx2 = finalState.drawRoundIndex ?? currentRoundIndex;
-                const activeRound = finalState.rounds[roundIdx2];
-                if (activeRound) {
-                  const triggerNum = finalState.triggerNumber;
-                  const winnerMember = (finalState.activeGroupMembers || []).find(m => m.displayNumber === triggerNum);
-                  if (winnerMember) {
-                    const winnerId = String(winnerMember.id);
-                    const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                    const res = DrawLogic.applyWinner(finalState, roundIdx2, winnerId, pollLabel, finalState.activeGroupIds || [], 'public');
-                    if (res) return DrawLogic.bumpRev(finalState);   // 已结算（可能已自动进入下一轮）
-                  }
-                }
-                return;   // 找不到命中者：不写入
-              }, (err2, com2, snap2) => {
-                if (com2) {
-                  state = snap2.val();
-                  renderRoundTabs(); renderPublicView(); updateStats();
-                }
-              });
-            }, 1000);
-          } else {
-            isMarqueeRunning = false;
-            if (marqueeSafetyTimer) { clearTimeout(marqueeSafetyTimer); marqueeSafetyTimer = null; }
-            renderPublicView();
-          }
-        });
-      }
-
-      function runMarquee() {
-        if (!isMarqueeRunning) return;
-        activeCards.forEach(el => el.classList.remove('marquee-flash'));
-        const card = activeCards[currentIndex];
-        card.classList.add('marquee-flash');
-        const isEnding = (tickCount >= 8) && (currentIndex === winnerIndex) && (isMobile || tickCount > 12);
-        if (isEnding) {
-          card.classList.remove('marquee-flash');
-          card.classList.add('winner-glow');
-          setTimeout(finishMarquee, isMobile ? 800 : 2000);
-          return;
-        }
-        currentIndex = (currentIndex + 1) % total;
-        tickCount++;
-        let nextDelay = baseDelay;
-        if (tickCount > 5) nextDelay += 30;
-        if (tickCount > 10) nextDelay += 50;
-        if (currentIndex === winnerIndex && tickCount > 10) nextDelay += 150;
-        setTimeout(runMarquee, nextDelay);
-      }
-
-      runMarquee();
     }
+
+    function settleRevealFromPublic(pollSig) {
+      db.ref('tournament_state').transaction((s) => {
+        if (!s || DrawLogic.pollSignature(s) !== pollSig || s.pkStage !== 'revealing') return;   // 已结算过
+        return DrawLogic.settleReveal(s, 'public') ? DrawLogic.bumpRev(s) : undefined;
+      });
+    }
+
+    // ===== 🎰 同步跑马灯：任何一方点揭晓，所有画面（大屏、手机）都播放同一段，停在同一位命中者 =====
+    let __marqueeSig = '';
+    let __revealDoneSig = '';
+    let __marqueeHighlightId = '';
+    let __firstSnapshotHandled = false;
+    function revealShown() {
+      if (state.pkStage === 'revealed') return true;
+      return state.pkStage === 'revealing' && __revealDoneSig === DrawLogic.pollSignature(state);
+    }
+    function startSyncedMarquee(skipAnimation) {
+      const sig = DrawLogic.pollSignature(state);
+      __marqueeSig = sig;
+      const members = (state.activeGroupMembers || []).map(m => String(m.id));
+      const winner = (state.activeGroupMembers || []).find(m => m.displayNumber === state.triggerNumber);
+      if (!winner || !members.length) return;
+      const finish = () => {
+        isMarqueeRunning = false;
+        __marqueeHighlightId = '';
+        __revealDoneSig = sig;
+        renderPublicView();
+        const box = document.getElementById('centerTriggerNumberBox');
+        if (box) { box.innerHTML = `#${state.triggerNumber}`; box.className = "pixel-number text-3xl sm:text-4xl font-black text-emerald-400 tracking-widest drop-shadow-md pixel-hit"; }
+        const ri = state.drawRoundIndex ?? 0;
+        const stage = DrawLogic.getRoundStage(state, ri);
+        if (stage !== 'third' && stage !== 'final') {   // 决赛的名次弹窗在结算后出现
+          const cand = ((state.rounds[ri] || {}).candidates || []).find(c => String(c.id) === String(winner.id)) || winner;
+          __lastPkWinnerPopupKey = `pk_${state.currentPollNumber || 0}_${winner.id}_${state.triggerNumber}`;
+          showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName: cand.name || '幸运买家', orderNo: cand.orderNo || '', triggerNumber: state.triggerNumber, isElimination: false, isConsolation: stage === 'consolation' }, 5);
+        }
+      };
+      if (skipAnimation) { finish(); return; }
+
+      // 画面上卡片的顺序（每一步都重新找卡片，画面重画也不会断）
+      const domOrder = () => Array.from(document.querySelectorAll('.pk-card')).map(el => String(el.dataset.memberId));
+      let order = domOrder();
+      if (order.length !== members.length) order = members;
+      const seq = DrawLogic.marqueeSequence(order.length, Math.max(0, order.indexOf(String(winner.id))));
+      const delays = DrawLogic.marqueeDelays();
+      isMarqueeRunning = true;
+      const ind = document.getElementById('blindDrawingIndicator');
+      if (ind) ind.classList.add('hidden');
+      let k = 0;
+      const tick = () => {
+        if (__marqueeSig !== sig) return;   // 已有新的揭晓取代
+        const id = order[seq[k]];
+        __marqueeHighlightId = id;
+        document.querySelectorAll('.pk-card').forEach(el => {
+          const on = String(el.dataset.memberId) === id;
+          el.classList.toggle('marquee-flash', on && k < seq.length - 1);
+          el.classList.toggle('winner-glow', on && k === seq.length - 1);
+        });
+        if (navigator.vibrate && k === seq.length - 1) { try { navigator.vibrate(60); } catch (e) {} }
+        k++;
+        if (k < seq.length) setTimeout(tick, delays[k - 1]);
+        else setTimeout(finish, 1200);   // 停在命中者上 1.2 秒再公布
+      };
+      tick();
+    }
+
 
     function updatePublicOverlayState() {
       const mask = document.getElementById('publicOverlayMask');
@@ -1397,7 +1413,7 @@
       const nameClass = isScrambling ? 'scramble-text' : '';
       const orderClass = isScrambling ? 'scramble-text' : '';
       return `
-        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
+        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card ${isMarqueeRunning && __marqueeHighlightId === String(c.id) ? 'marquee-flash' : ''} relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
           <div class="pk-card-name font-bold text-amber-300 text-base truncate w-full text-center ${nameClass}">${displayName}</div>
           <div class="pk-card-order text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1 ${orderClass}">${displayOrder}</div>
@@ -1458,7 +1474,8 @@
       const areaR = document.getElementById('pk-area-right');
 
       if (hasActiveGroup) {
-        if (isMarqueeRunning) {
+        if (isMarqueeRunning && document.querySelectorAll('.pk-card').length === (state.activeGroupIds || []).length) {
+          // 跑马灯进行中且卡片都在：不重画，避免闪烁
         } else if (isTransitionPlaying) {
         } else {
           const drawRoundIdx = state.drawRoundIndex ?? currentRoundIndex;
@@ -1478,7 +1495,7 @@
 
           areaL.innerHTML = ''; areaR.innerHTML = '';
           activeMembers.forEach((c, idx) => {
-            const cardHtml = getCardHtml(c, idx, state.pkStage === 'revealed');
+            const cardHtml = getCardHtml(c, idx, revealShown());
             if (window.innerWidth < 1024 || idx % 2 === 0) areaL.innerHTML += cardHtml;
             else areaR.innerHTML += cardHtml;
           });

@@ -10,7 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=6"></script>
+  <script src="logic.js?v=7"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -379,6 +379,19 @@
       setTimeout(close, isErr ? 12000 : isWarn ? 6000 : Math.min(9000, 3000 + msg.length * 40));
     }
 
+    // ===== 📱 抽奖期间保持屏幕常亮（Screen Wake Lock；切回页面或点一下画面会自动重新开启）=====
+    let __wakeLock = null;
+    async function keepScreenOn() {
+      try {
+        if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' || __wakeLock) return;
+        __wakeLock = await navigator.wakeLock.request('screen');
+        __wakeLock.addEventListener('release', () => { __wakeLock = null; });
+      } catch (e) { __wakeLock = null; }
+    }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepScreenOn(); });
+    ['click', 'touchstart'].forEach(ev => document.addEventListener(ev, keepScreenOn, { passive: true }));
+    keepScreenOn();
+
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -564,6 +577,12 @@
         return;
       }
 
+      if (state.pkStage === 'revealing') {
+        bar.className = "px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-950/60 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center space-x-1.5 transition-all duration-300 animate-pulse";
+        icon.innerText = "🎰";
+        text.innerHTML = `<span class="text-amber-400">POLL #${state.currentPollNumber} 揭晓中（各画面跑马灯）…</span>`;
+        return;
+      }
       if (state.pkStage === 'revealed') {
         bar.className = "px-2.5 py-1 rounded-lg border border-emerald-400 bg-emerald-950/60 shadow-[0_0_10px_rgba(52,211,153,0.3)] flex items-center space-x-1.5 transition-all duration-300";
         icon.innerText = "🎉";
@@ -712,7 +731,7 @@
       if (!r || !(r.candidates || []).length) return '请先导入买家名单';
       if (currentRoundIndex !== state.rounds.length - 1) return '请切换到最新一轮';
       if (DrawLogic.isTournamentFinished(state)) return '比赛已结束';
-      if (state.pkLocked === true || state.settled === true || state.pkStage === 'revealed') return '正在揭晓中，请稍候';
+      if (state.pkLocked === true || state.settled === true || state.pkStage === 'revealed' || state.pkStage === 'revealing') return '正在揭晓中，请稍候';
       if (DrawLogic.isPodiumDecided(state, currentRoundIndex)) return '本轮已判定，如需更改请点【🔙 上一轮】';
       if (!hasOpenPoll() && DrawLogic.plannedGroupSize(state, currentRoundIndex) < 1) return '本轮名单已抽完，请点【⏩ 推进】';
       return '';
@@ -1009,20 +1028,28 @@
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       if (!state.triggerNumber) { alert("⚠️ 请先设定票选号！"); return; }
       if (publicAdminActive) { alert("⚠️ 前台管理员已登录并接管揭晓，请在前台操作。"); return; }
-      if (state.pkStage === 'revealed' || state.settled) { alert("⚠️ 本组已经开奖。"); return; }
+      if (state.pkStage === 'revealed' || state.pkStage === 'revealing' || state.settled) { alert("⚠️ 本组已经开奖。"); return; }
 
-      // 先公布每个人的号码，4 秒后再结算（前台可以看到命中的是谁）
-      const total = state.activeGroupMembers.length;
-      const nums = DrawLogic.shuffle(Array.from({ length: total }, (_, i) => i + 1));
-      state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
-      state.pkStage = 'revealed'; state.settled = true; state.isDrawingScramble = false;
-      state.pkLocked = true; state.currentPollFinished = true;
+      // 进入「揭晓中」：前台、手机、后台同时播放跑马灯，约 5 秒后停在命中者，再停留 2.5 秒后结算
+      if (!DrawLogic.beginReveal(state)) { alert("❌ 无法定位命中者，请重新设定票选号。"); return; }
       saveState();
-
-      const winner = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
-      if (!winner) return;
-      setTimeout(() => finishPoll(winner.id), 4000);
+      const sig = DrawLogic.pollSignature(state);
+      setTimeout(() => settleRevealFromAdmin(sig), DrawLogic.REVEAL_SETTLE_MS);
     }
+
+    function settleRevealFromAdmin(sig) {
+      if (DrawLogic.pollSignature(state) !== sig || state.pkStage !== 'revealing') return;   // 已被前台结算
+      afterApplyWinner(DrawLogic.settleReveal(state, 'admin'));
+    }
+
+    // 保险：如果点揭晓的那台设备中途关掉，后台在跑马灯结束后几秒自动结算，不会卡在「揭晓中」
+    const __revealSeenAt = {};
+    setInterval(() => {
+      if (!__adminListenersStarted || state.pkStage !== 'revealing') return;
+      const sig = DrawLogic.pollSignature(state);
+      if (!__revealSeenAt[sig]) { __revealSeenAt[sig] = Date.now(); return; }
+      if (Date.now() - __revealSeenAt[sig] > DrawLogic.REVEAL_SETTLE_MS + 6000) settleRevealFromAdmin(sig);
+    }, 1000);
     
     function clearCurrentActiveGroup() {
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
@@ -1092,7 +1119,7 @@
         const c = (activeRound.candidates || []).find(x => String(x.id) === String(m.id));
         return c ? { ...c, displayNumber: m.displayNumber } : null;
       }).filter(Boolean);
-      const isRevealed = (state.pkStage === 'revealed');
+      const isRevealed = (state.pkStage === 'revealed' || state.pkStage === 'revealing');
       const isLockedUI = state.pkLocked === true || state.settled || isRevealed;
            grid.innerHTML = members.map((c) => {
         const realNum = c.displayNumber;
@@ -1364,36 +1391,11 @@
       const isMode1ThreeLeft = podiumStage === 'third' && !podiumDone;
       const isMode1TwoLeft = podiumStage === 'final' && !podiumDone;
       const banner = document.getElementById('specialRoundBanner');
-      const bannerTitle = document.getElementById('specialRoundBannerTitle');
-      const bannerSub = document.getElementById('specialRoundBannerSub');
-      const route = DrawLogic.roadmap(state, currentRoundIndex).map(x => `${x.label} ${x.n}人`).join(' → ');
-      const nextSize = DrawLogic.plannedGroupSize(state, currentRoundIndex);
-      banner.classList.remove('hidden');
-      if ((activeRound.candidates || []).length === 0) {
-        banner.classList.add('hidden');
-      } else if (isConsolationStage) {
-        const N = DrawLogic.consolationN(state);
-        const picked = activeRound.candidates.filter(c => c.rankKey === 'rankConsolation').length;
-        bannerTitle.innerText = `🎁 安慰奖阶段：已抽出 ${picked}/${N} 位（每组 ${nextSize || 4} 人，命中者得安慰奖，其余回名单池）`;
-        bannerSub.innerText = `📍 ${route}`;
-      } else if (isMode1ThreeLeft) {
-        bannerTitle.innerText = `🔥 冠亚季争夺战（3人）！点【🥉 盲抽季军】全员上台，命中者为季军`;
-        bannerSub.innerText = `也可直接点名单里的【🥉 季军】手动判定。选出季军后，余下 2 人自动进入【👑 冠亚军决战】`;
-      } else if (isMode1TwoLeft) {
-        bannerTitle.innerText = `👑 冠亚军终极决战（2选1）！点【👑 盲抽冠军】，命中者为冠军`;
-        bannerSub.innerText = `也可直接点名单里的【👑 冠军】手动判定。另一位自动为【🥈 亚军】`;
-      } else if (podiumDone) {
-        const champ = activeRound.candidates.find(c => c.rankKey === 'rankChampion');
-        const third = activeRound.candidates.find(c => c.rankKey === 'rankThird');
-        bannerTitle.innerText = champ ? `🏁 比赛结束！👑 冠军：${champ.name}` : `🥉 季军已锁定：${third ? third.name : ''}`;
-        bannerSub.innerText = `如需更改，点【🔙 上一轮】撤销本轮判定。`;
-      } else if (DrawLogic.modeOn(state)) {
-        const pend = activeRound.candidates.filter(c => c.status === 'pending').length;
-        const won = activeRound.candidates.filter(c => c.status === 'pass').length;
-        bannerTitle.innerText = pend > 0
-          ? `🎲 名单池剩 ${pend} 人 · 已晋级 ${won} 人 · 下一组建议 ${nextSize} 人`
-          : `✅ 本轮已抽完，共晋级 ${won} 人`;
-        bannerSub.innerText = `📍 路线：${route}`;
+      const info = DrawLogic.progressInfo(state, currentRoundIndex, 'admin');
+      if (info) {
+        banner.classList.remove('hidden');
+        document.getElementById('specialRoundBannerTitle').innerText = info.title;
+        document.getElementById('specialRoundBannerSub').innerText = info.sub;
       } else {
         banner.classList.add('hidden');
       }

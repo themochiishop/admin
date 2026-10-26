@@ -495,7 +495,84 @@
     return Math.max(0, st.groupGeneratedAt + animationLockMs(st) - Date.now());
   }
 
+  // ---------- 揭晓（所有画面同步跑马灯）----------
+  // 跑马灯节奏：22 步，由快到慢，最后一步停在命中者
+  const MARQUEE_STEPS = 22;
+  function marqueeDelays() {
+    const out = [];
+    for (let k = 0; k < MARQUEE_STEPS; k++) out.push(Math.round(90 + 430 * Math.pow(k / (MARQUEE_STEPS - 1), 2.2)));
+    return out;
+  }
+  const MARQUEE_MS = marqueeDelays().reduce((a, b) => a + b, 0);   // 约 5 秒
+  const REVEAL_SETTLE_MS = MARQUEE_MS + 2500;                       // 跑马灯结束后停留 2.5 秒再结算
+  // n 张卡、命中者在第 w 张：返回每一步亮哪一张（最后一步 = w）
+  function marqueeSequence(n, w) {
+    const start = ((w - (MARQUEE_STEPS - 1)) % n + n) % n;
+    return Array.from({ length: MARQUEE_STEPS }, (_, k) => (start + k) % n);
+  }
+
+  // 开始揭晓：随机分配号码，进入「揭晓中」。返回命中者 id（找不到返回 null）
+  function beginReveal(st) {
+    const members = st.activeGroupMembers || [];
+    if (!members.length || !st.triggerNumber) return null;
+    const nums = shuffle(Array.from({ length: members.length }, (_, i) => i + 1));
+    st.activeGroupMembers = members.map((m, i) => ({ ...m, displayNumber: nums[i] }));
+    const win = st.activeGroupMembers.find(m => m.displayNumber === st.triggerNumber);
+    if (!win) return null;
+    st.pkStage = 'revealing';
+    st.settled = true; st.pkLocked = true; st.currentPollFinished = true; st.isDrawingScramble = false;
+    st.revealAt = Date.now();
+    return String(win.id);
+  }
+  // 揭晓结算（跑马灯播完后）
+  function settleReveal(st, by) {
+    if (st.pkStage !== 'revealing') return null;
+    const m = (st.activeGroupMembers || []).find(x => x.displayNumber === st.triggerNumber);
+    if (!m) return null;
+    const ri = st.drawRoundIndex || 0;
+    const pollLabel = `POLL #${st.currentPollNumber || 1} (#${st.triggerNumber})`;
+    return applyWinner(st, ri, m.id, pollLabel, st.activeGroupIds || [], by);
+  }
+
+  // ---------- 进度提示（后台与前台共用）----------
+  // audience: 'admin'（给控盘的人看）| 'public'（给观众看）
+  function progressInfo(st, ri, audience) {
+    const r = st.rounds && st.rounds[ri];
+    if (!r || !cands(r).length || !modeOn(st)) return null;
+    const pub = audience === 'public';
+    const stage = getRoundStage(st, ri);
+    const route = roadmap(st, ri).map(x => `${x.label} ${x.n}人`).join(' → ');
+    const nextSize = plannedGroupSize(st, ri);
+    const list = cands(r);
+    if (isTournamentFinished(st)) {
+      let champ = '';
+      (st.rounds || []).forEach(x => cands(x).forEach(c => { if (c.rankKey === 'rankChampion') champ = c.name; }));
+      return { kind: 'done', title: `🏁 比赛结束！👑 冠军：${champ}`, sub: pub ? '恭喜所有得奖买家，感谢大家参与！' : '如需更改，点【🔙 上一轮】撤销本轮判定。' };
+    }
+    if (stage === 'consolation') {
+      const N = consolationN(st);
+      const got = list.filter(c => c.rankKey === 'rankConsolation').length;
+      return { kind: 'consolation', title: `🎁 安慰奖阶段：已抽出 ${got}/${N} 位（每组 ${nextSize || 4} 人，命中者得安慰奖，其余回名单池）`, sub: `📍 ${route}` };
+    }
+    if (stage === 'third') {
+      const decided = list.find(c => c.rankKey === 'rankThird');
+      if (decided) return { kind: 'third', title: `🥉 季军已锁定：${decided.name}`, sub: pub ? '余下 2 人进入冠亚军决战！' : '如需更改，点【🔙 上一轮】撤销本轮判定。' };
+      return { kind: 'third', title: pub ? '🔥 冠亚季争夺战（3人）！全员上台盲抽，命中者为 🥉 季军' : '🔥 冠亚季争夺战（3人）！点【🥉 盲抽季军】全员上台，命中者为季军',
+        sub: pub ? '选出季军后，余下 2 人进入 👑 冠亚军决战' : '也可直接点名单里的【🥉 季军】手动判定。选出季军后，余下 2 人自动进入【👑 冠亚军决战】' };
+    }
+    if (stage === 'final') {
+      return { kind: 'final', title: pub ? '👑 冠亚军终极决战（2选1）！命中者为冠军' : '👑 冠亚军终极决战（2选1）！点【👑 盲抽冠军】，命中者为冠军',
+        sub: pub ? '另一位为 🥈 亚军' : '也可直接点名单里的【👑 冠军】手动判定。另一位自动为【🥈 亚军】' };
+    }
+    const pend = list.filter(c => c.status === 'pending').length;
+    const won = list.filter(c => c.status === 'pass').length;
+    return { kind: 'normal',
+      title: pend > 0 ? `🎲 名单池剩 ${pend} 人 · 已晋级 ${won} 人 · 下一组${pub ? '' : '建议'} ${nextSize} 人` : `✅ 本轮已抽完，共晋级 ${won} 人`,
+      sub: `📍 路线：${route}` };
+  }
+
   global.DrawLogic = {
+    MARQUEE_STEPS, MARQUEE_MS, REVEAL_SETTLE_MS, marqueeDelays, marqueeSequence, beginReveal, settleReveal, progressInfo,
     bumpRev, pollSignature, PRESENCE_PATH, animationLockMs, lockRemainingMs,
     PODIUM_THIRD_LABEL, PODIUM_FINAL_LABEL, MAX_GROUP, randomInt, shuffle,
     modeOn, isMode2, consolationN, targetOf, countConsolation, consolationDone,
