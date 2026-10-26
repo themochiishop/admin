@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="logic.js?v=2"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="logic.js?v=3"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -87,6 +87,7 @@
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px]">EN</span></button>
           <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[10px]">MS</span></button>
         </div>
+        <button onclick="openRecordsModal()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" title="开奖记录与历史存档">📋 记录</button>
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
           <span>📄</span><span>Export PDF</span>
         </button>
@@ -98,6 +99,25 @@
       </div>
     </div>
   </header>
+
+  <div id="recordsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-5xl shadow-2xl relative flex flex-col" style="max-height: 88vh;">
+      <div class="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-slate-700">
+        <h3 class="text-base font-bold text-amber-400">📋 开奖记录</h3>
+        <div class="flex items-center gap-2">
+          <button onclick="downloadCurrentLogCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg">⬇️ 下载本场 CSV</button>
+          <button onclick="closeRecordsModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+        <div id="recordsTableBox"></div>
+        <div>
+          <h4 class="text-sm font-bold text-amber-300 mb-2">📚 历史存档 <span class="text-[10px] text-slate-400 font-normal">（每次【重置所有轮次】前自动保存）</span></h4>
+          <div id="archiveListBox" class="text-slate-400">载入中…</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="drawSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
@@ -131,7 +151,7 @@
         <button onclick="saveDrawSettings()" class="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-sm transition shadow-lg">💾 保存盲抽参数</button>
         <button onclick="closeDrawSettingsModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-lg text-sm transition shadow">取消</button>
       </div>
-      <button onclick="showPollHistory()" class="w-full mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg text-sm transition shadow">📋 查看各 POLL 名单记录</button>
+      <button onclick="closeDrawSettingsModal(); openRecordsModal()" class="w-full mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg text-sm transition shadow">📋 开奖记录 / 历史存档</button>
     </div>
   </div>
 
@@ -332,6 +352,33 @@
   </footer>
 
   <script>
+    // ===== 提示：不再用会卡住画面的 alert 弹窗，改为自动消失的提示条（点一下可关闭）=====
+    //   ❌ 错误：12 秒；⚠️ 警告：6 秒；其他：3~9 秒（依文字长度）
+    function alert(msg) { showToast(String(msg == null ? '' : msg)); }
+    function showToast(msg) {
+      let box = document.getElementById('toastBox');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'toastBox';
+        box.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(92vw,480px);';
+        document.body.appendChild(box);
+      }
+      const isErr = /^\s*❌/.test(msg), isWarn = /^\s*⚠️/.test(msg);
+      const theme = isErr ? 'background:#4c0519;border:1px solid #f43f5e;color:#ffe4e6;'
+        : isWarn ? 'background:#451a03;border:1px solid #f59e0b;color:#fef3c7;'
+        : 'background:#022c22;border:1px solid #10b981;color:#d1fae5;';
+      const el = document.createElement('div');
+      el.style.cssText = theme + 'pointer-events:auto;cursor:pointer;white-space:pre-line;font-size:13px;font-weight:600;line-height:1.5;padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);width:100%;transition:opacity .3s,transform .3s;opacity:0;transform:translateY(-6px);';
+      el.textContent = msg;
+      el.title = '点击关闭';
+      const close = () => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); };
+      el.onclick = close;
+      box.appendChild(el);
+      while (box.children.length > 4) box.firstChild.remove();
+      requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'none'; });
+      setTimeout(close, isErr ? 12000 : isWarn ? 6000 : Math.min(9000, 3000 + msg.length * 40));
+    }
+
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -441,8 +488,17 @@
     };
 
     function startAdminListeners() {
-      db.ref('tournament_state').on('value', (snapshot) => {
-        const val = snapshot.val();
+      db.ref('tournament_state').on('value', (snapshot) => applyServerState(snapshot.val()),
+        (err) => { console.error('读取失败:', err); alert('❌ 读取抽奖数据失败：' + (err.code || err.message) + '\n请重新登录后刷新页面。'); });
+      db.ref(DrawLogic.PRESENCE_PATH).on('value', (snap) => {
+        publicAdminActive = !!snap.val();
+        updateAdminRevealButtonLock();
+      });
+      setInterval(renderWorkflowStatus, 1000);
+    }
+
+    // 收到服务器最新数据（或写入冲突后同步）时刷新整个画面
+    function applyServerState(val) {
         if (val) {
           state = val;
           (state.rounds || []).forEach(r => { (r.candidates || []).forEach(c => { if (c.id) c.id = String(c.id); }); });
@@ -482,13 +538,6 @@
           updateRefreshBtnState();
           updatePickRandomBtnLabel();
         }
-      }, (err) => { console.error('读取失败:', err); alert('❌ 读取抽奖数据失败：' + (err.code || err.message) + '\n请重新登录后刷新页面。'); });
-      db.ref('tournament_state/publicAdminActive').on('value', (snap) => {
-        publicAdminActive = !!snap.val();
-        updateAdminRevealButtonLock();
-      });
-
-      setInterval(renderWorkflowStatus, 1000);
     }
 
     function renderWorkflowStatus() {
@@ -506,9 +555,9 @@
       
       bar.classList.remove('hidden');
 
-      const elapsed = Date.now() - __lastGroupGeneratedTs;
-      if (__lastGroupGeneratedTs > 0 && elapsed < 10000) {
-        const remain = Math.ceil((10000 - elapsed) / 1000);
+      const lockLeft = DrawLogic.lockRemainingMs(state);
+      if (lockLeft > 0) {
+        const remain = Math.ceil(lockLeft / 1000);
         bar.className = "px-2.5 py-1 rounded-lg border border-slate-500 bg-slate-800 shadow-sm flex items-center space-x-1.5 transition-all duration-300";
         icon.innerText = "⏳";
         text.innerHTML = `<span class="text-slate-300">等待前台动画倒计时 (${remain}s)…</span>`;
@@ -577,15 +626,68 @@
       alert("✅ 盲抽参数已更新并生效！");
     }
 
-    function showPollHistory() {
-      const h = state.pollGroupHistory || {};
-      const keys = Object.keys(h).sort((a,b)=>Number(a)-Number(b));
-      if (keys.length === 0) { alert("暂无 POLL 记录（还没有抽过组）"); return; }
-      const lines = keys.map(k => {
-        const members = h[k].map(m => `${m.name}(${m.orderNo||'无单号'})`).join('、');
-        return `POLL #${k}：${members}`;
-      });
-      alert("📋 各 POLL 组名单记录：\n\n" + lines.join("\n\n"));
+    // ===== 📋 开奖记录 / 历史存档 =====
+    function recordsTableHtml(log) {
+      if (!log || !log.length) return '<p class="text-slate-500 italic py-4 text-center">本场还没有开奖记录</p>';
+      const rows = log.slice().reverse().map(e => `<tr class="border-b border-slate-700/60 align-top">
+        <td class="py-1.5 pr-2 whitespace-nowrap text-slate-400 font-mono">${escapeHtml(DrawLogic.fmtTime(e.ts).slice(5))}</td>
+        <td class="py-1.5 pr-2 whitespace-nowrap">${e.round ? '第 ' + e.round + ' 轮' : ''}${e.poll ? '<br><span class="text-amber-400 font-bold">POLL #' + e.poll + '</span>' : ''}</td>
+        <td class="py-1.5 pr-2 whitespace-nowrap">${escapeHtml(DrawLogic.TYPE_TEXT[e.type] || e.type)}${e.trigger ? '<br><span class="text-sky-300">票选号 #' + e.trigger + '</span>' : ''}</td>
+        <td class="py-1.5 pr-2 text-slate-300">${escapeHtml(DrawLogic.membersText(e))}</td>
+        <td class="py-1.5 pr-2 whitespace-nowrap font-bold text-emerald-300">${escapeHtml(e.result || '')}${e.winner ? '<br><span class="text-slate-100">' + escapeHtml(e.winner.name) + '</span> <span class="text-slate-400 font-mono">' + escapeHtml(e.winner.orderNo || '') + '</span>' : ''}${e.runnerUp ? '<br><span class="text-slate-300">🥈 ' + escapeHtml(e.runnerUp.name) + '</span>' : ''}</td>
+        <td class="py-1.5 whitespace-nowrap text-slate-400">${escapeHtml(DrawLogic.BY_TEXT[e.by] || e.by || '')}</td>
+      </tr>`).join('');
+      return `<table class="w-full text-left"><thead><tr class="text-slate-400 border-b border-slate-600">
+        <th class="py-1.5 pr-2">时间</th><th class="py-1.5 pr-2">轮次</th><th class="py-1.5 pr-2">类型</th><th class="py-1.5 pr-2">组员（号码）</th><th class="py-1.5 pr-2">结果</th><th class="py-1.5">操作端</th>
+      </tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function downloadText(filename, text, mime) {
+      const blob = new Blob([text], { type: mime || 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+    function logFileName(prefix, ts) { return `${prefix}_${DrawLogic.fmtTime(ts).slice(0, 16).replace(/[: ]/g, '-')}.csv`; }
+
+    function downloadCurrentLogCSV() {
+      const log = state.drawLog ? Object.values(state.drawLog) : [];
+      if (!log.length) { alert('本场还没有开奖记录'); return; }
+      downloadText(logFileName('Mochiishop_DrawRecord', Date.now()), DrawLogic.drawLogToCSV(log, state.customAdminTitle || 'Mochiishop 每月抽奖'));
+    }
+
+    let __archiveCache = {};
+    function openRecordsModal() {
+      document.getElementById('recordsTableBox').innerHTML = recordsTableHtml(state.drawLog ? Object.values(state.drawLog) : []);
+      document.getElementById('recordsModal').classList.remove('hidden');
+      const box = document.getElementById('archiveListBox');
+      box.innerText = '载入中…';
+      db.ref(ARCHIVE_PATH).orderByKey().limitToLast(24).once('value').then(snap => {
+        const val = snap.val() || {};
+        __archiveCache = val;
+        const keys = Object.keys(val).sort().reverse();
+        if (!keys.length) { box.innerHTML = '<p class="italic text-slate-500">还没有存档</p>'; return; }
+        box.innerHTML = keys.map(k => {
+          const a = val[k] || {};
+          let champ = '-', buyers = 0;
+          (a.rounds || []).forEach((r, i) => (r.candidates || []).forEach(c => { if (i === 0) buyers++; if (c.rankKey === 'rankChampion') champ = c.name; }));
+          const n = a.drawLog ? Object.keys(a.drawLog).length : 0;
+          return `<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-2 mb-1.5">
+            <div><span class="font-bold text-slate-200">${escapeHtml(DrawLogic.fmtTime(a.archivedAt).slice(0, 16))}</span>
+              <span class="ml-2">${buyers} 张订单 · 👑 ${escapeHtml(champ)} · ${n} 条记录</span></div>
+            <button onclick="downloadArchiveCSV('${escapeHtml(k)}')" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-bold">⬇️ CSV</button>
+          </div>`;
+        }).join('');
+      }).catch(e => { box.innerText = '❌ 读取存档失败：' + (e.code || e.message); });
+    }
+    function closeRecordsModal() { document.getElementById('recordsModal').classList.add('hidden'); }
+    function downloadArchiveCSV(key) {
+      const a = __archiveCache[key];
+      if (!a) return;
+      const log = a.drawLog ? Object.values(a.drawLog) : [];
+      if (!log.length) { alert('这个存档没有开奖记录（可能是旧版本存的）'); return; }
+      downloadText(logFileName('Mochiishop_DrawRecord_Archive', a.archivedAt), DrawLogic.drawLogToCSV(log, a.customAdminTitle || 'Mochiishop 每月抽奖'));
     }
 
     function switchConfigTab(tabId) {
@@ -757,29 +859,23 @@
       if (importMode === 'customUrl' && cfg.customSheetUrl) fetchUrl = cfg.customSheetUrl;
       fetch(fetchUrl)
         .then(response => response.text())
-        .then(csvText => { parseCSVToFirstRound(csvText); if (isManual) alert("✅ 已成功导入买家名单！"); })
+        .then(csvText => { const summary = parseCSVToFirstRound(csvText); alert(summary); })
         .catch(err => { alert("❌ 导入失败，请检查链接格式或网络连接！"); });
     }
     
     function readLocalFileAndParse(file) {
       const reader = new FileReader();
-      reader.onload = function(e) { parseCSVToFirstRound(e.target.result); alert(`✅ 已成功从本地文件【${file.name}】导入买家名单！`); };
+      reader.onload = function(e) { const summary = parseCSVToFirstRound(e.target.result); alert(`📄 ${file.name}\n${summary}`); };
       reader.readAsText(file);
     }
     
+    // 返回导入摘要文字
     function parseCSVToFirstRound(csvText) {
-      const lines = csvText.split('\n'); const candidates = [];
-      lines.forEach((line, idx) => {
-        if (!line.trim()) return;
-        const parts = line.replace(/"/g, '').split(',');
-        if (parts[0] && parts[0].trim() !== '买家姓名' && parts[0].trim() !== 'Name') {
-          const nameStr = parts[0].trim(); const orderStr = parts[1] ? parts[1].trim() : '';
-          candidates.push({ id: `${nameStr}_${orderStr}_${idx}`, name: nameStr, orderNo: orderStr, status: 'pending' });
-        }
-      });
-      state.rounds[0].candidates = candidates;
+      const res = DrawLogic.parseBuyerCSV(csvText);
+      state.rounds[0].candidates = res.candidates;
       state.passHistory = [];
       saveState(); renderRoundTabs();
+      return res.summary;
     }
 
     function pickRandomGroup() {
@@ -807,9 +903,9 @@
 
       // 只剩 1 人：轮空直接晋级
       if (size === 1 && !redo) {
-        const lucky = pending[Math.floor(Math.random() * pending.length)];
+        const lucky = pending[DrawLogic.randomInt(pending.length)];
         if (!confirm(`ℹ️ 为了让人数刚好落在目标，【${lucky.name}】本轮轮空，直接晋级。\n\n确定？`)) return;
-        afterApplyWinner(DrawLogic.applyWinner(state, ri, lucky.id, `BYE 轮空`, [lucky.id]));
+        afterApplyWinner(DrawLogic.applyWinner(state, ri, lucky.id, `BYE 轮空`, [lucky.id], 'admin'));
         return;
       }
 
@@ -828,7 +924,10 @@
         size = n;
       }
 
-      if (!redo) {
+      if (redo) {
+        DrawLogic.logDraw(state, { type: 'redraw', round: ri + 1, stage: DrawLogic.STAGE_TEXT[stage], poll: state.currentPollNumber,
+          members: (state.activeGroupMembers || []).map(m => ({ name: m.name || '', orderNo: m.orderNo || '', no: null })), result: '🔄 重抽本组名单', by: 'admin' });
+      } else {
         state.pollCount = (state.pollCount || 0) + 1;
         state.currentPollNumber = state.pollCount;
       }
@@ -841,7 +940,7 @@
       state.pkLocked = false;
       state.isReverseElimination = false;
 
-      const shuffled = [...pending].sort(() => 0.5 - Math.random());
+      const shuffled = DrawLogic.shuffle(pending);
       const selected = shuffled.slice(0, size);
       activeGroup4Ids = selected.map(c => String(c.id));
       state.activeGroupIds = activeGroup4Ids;
@@ -850,6 +949,7 @@
       state.pollGroupHistory[state.currentPollNumber] = selected.map(c => ({ id: String(c.id), name: c.name, orderNo: c.orderNo || '' }));
 
       __lastGroupGeneratedTs = Date.now();
+      state.groupGeneratedAt = __lastGroupGeneratedTs;   // 存进数据：刷新页面后锁定时间仍然有效
       saveState();
       renderActiveGroupUI();
       renderAdminView();
@@ -865,10 +965,9 @@
     function setTriggerNumber(num) {
       if (!activeGroup4Ids || activeGroup4Ids.length === 0) return;
       
-      const elapsed = Date.now() - __lastGroupGeneratedTs;
-      const LOCK_TIME = 10000;
-      if (__lastGroupGeneratedTs > 0 && elapsed < LOCK_TIME) {
-        const remain = Math.ceil((LOCK_TIME - elapsed) / 1000);
+      const lockLeft = DrawLogic.lockRemainingMs(state);
+      if (lockLeft > 0) {
+        const remain = Math.ceil(lockLeft / 1000);
         alert(`⏳ 请稍候！前台正在播放倒计时和盲抽动画。\n\n还需等待约 ${remain} 秒才能设定票选号。`);
         return;
       }
@@ -900,7 +999,7 @@
 
       // 先公布每个人的号码，4 秒后再结算（前台可以看到命中的是谁）
       const total = state.activeGroupMembers.length;
-      const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+      const nums = DrawLogic.shuffle(Array.from({ length: total }, (_, i) => i + 1));
       state.activeGroupMembers = state.activeGroupMembers.map((m, idx) => ({ ...m, displayNumber: nums[idx] }));
       state.pkStage = 'revealed'; state.settled = true; state.isDrawingScramble = false;
       state.pkLocked = true; state.currentPollFinished = true;
@@ -913,7 +1012,9 @@
     
     function clearCurrentActiveGroup() {
       if (state.activeGroupIds && state.activeGroupIds.length > 0) {
-        if (!confirm(`⚠️ 确认清空当前盲抽组？\n\nPOLL #${state.currentPollNumber || '?'} 的 ${state.activeGroupIds.length} 位组员将被移除（不会退回待 PK 池，POLL 号保留），票选号也会重置。`)) return;
+        if (!confirm(`⚠️ 确认清空当前盲抽组？\n\nPOLL #${state.currentPollNumber || '?'} 作废，${state.activeGroupIds.length} 位组员留在名单池，下次重新抽组。`)) return;
+        DrawLogic.logDraw(state, { type: 'cleared', round: (state.drawRoundIndex ?? currentRoundIndex) + 1, poll: state.currentPollNumber,
+          members: (state.activeGroupMembers || []).map(m => ({ name: m.name || '', orderNo: m.orderNo || '', no: null })), result: '🗑️ 清空盲抽组（作废）', by: 'admin' });
       } else {
         if (!confirm("⚠️ 当前没有盲抽组，确认继续执行清空操作？")) return;
       }
@@ -934,7 +1035,7 @@
       const ri = state.drawRoundIndex ?? currentRoundIndex;
       const m = (state.activeGroupMembers || []).find(x => String(x.id) === String(winnerId));
       const pollLabel = `POLL #${state.currentPollNumber || 1} (#${m ? m.displayNumber : '?'})`;
-      afterApplyWinner(DrawLogic.applyWinner(state, ri, winnerId, pollLabel, state.activeGroupIds));
+      afterApplyWinner(DrawLogic.applyWinner(state, ri, winnerId, pollLabel, state.activeGroupIds, 'admin'));
     }
 
     function afterApplyWinner(res) {
@@ -1019,6 +1120,7 @@
       if (found.rankKey && found.rankKey !== 'rankConsolation') { alert("⚠️ 获奖名次不能用 ✕ 撤回。\n请到该决赛轮点【🔙 上一轮】撤销判定。"); return; }
       if (getPodiumStage(state.rounds[currentRoundIndex])) { alert("⚠️ 冠亚季决赛轮人数已固定，不能再撤回买家加入。\n如需调整，请先【🔙 上一轮】回到之前的轮次。"); return; }
 
+      DrawLogic.logDraw(state, { type: 'undo', round: foundRi + 1, winner: DrawLogic.personOf(found), result: found.rankKey === 'rankConsolation' ? '↩️ 撤回安慰奖' : (found.status === 'out' ? '↩️ 撤回淘汰' : '↩️ 撤回晋级'), by: 'manual' });
       // 安慰奖：退回本轮名单池
       if (found.rankKey === 'rankConsolation') {
         if (foundRi !== currentRoundIndex) { alert("⚠️ 请切换到安慰奖那一轮再撤回。"); return; }
@@ -1049,12 +1151,13 @@
       if (newStatus === 'pass') {
         const pickNo = (round.candidates || []).filter(c => c.manualPassed).length + 1;
         target.manualPassed = true;
-        afterApplyWinner(DrawLogic.applyWinner(state, ri, id, `PICK #${ri + 1} (#${pickNo})`, [id]));
+        afterApplyWinner(DrawLogic.applyWinner(state, ri, id, `PICK #${ri + 1} (#${pickNo})`, [id], 'manual'));
         return;
       }
       if (newStatus === 'out') {
         target.status = 'out';
         target.eliminatedRoundIndex = ri;
+        DrawLogic.logDraw(state, { type: 'out', round: ri + 1, stage: DrawLogic.STAGE_TEXT[DrawLogic.getRoundStage(state, ri)], winner: DrawLogic.personOf(target), result: '❌ 手动淘汰', by: 'manual' });
         const idx = DrawLogic.maybeAutoAdvance(state, ri, 0);
         afterApplyWinner({ stage: DrawLogic.getRoundStage(state, ri), name: target.name, newRoundIndex: idx });
       }
@@ -1093,7 +1196,7 @@
       const other = round.candidates.find(c => String(c.id) !== String(id));
       const msg = stage === 'third' ? `🥉 确认【${target.name}】为季军？\n\n其余 2 人将自动进入冠亚军决战。` : `👑 确认【${target.name}】为冠军？\n\n🥈 亚军：${other ? other.name : '-'}`;
       if (!confirm(msg)) return;
-      afterApplyWinner(DrawLogic.applyWinner(state, ri, id, '', [id]));
+      afterApplyWinner(DrawLogic.applyWinner(state, ri, id, '', [id], 'manual'));
     }
 
     // ★ 决赛轮判定的唯一入口（手动点按钮 / 后台盲抽揭晓 都走这里；前台 index.html 有同样一份）
@@ -1138,12 +1241,14 @@
       if (isPodiumDecided(cur)) {
         const what = getPodiumStage(cur) === 'third' ? '🥉 季军' : '👑 冠军 / 🥈 亚军';
         if (!confirm(`↩️ 撤销本轮【${what}】判定？\n\n本轮所有人将回到待定，可重新选择。`)) return;
+        DrawLogic.logDraw(state, { type: 'undo', round: currentRoundIndex + 1, result: `↩️ 撤销${what}判定`, by: 'manual' });
         resetPodiumDecision(cur);
         saveState(); renderRoundTabs();
         return;
       }
       if (currentRoundIndex === 0) return;
       if (confirm("确认返回上一轮？\n\n当前这一轮将被删除。")) {
+        DrawLogic.logDraw(state, { type: 'undo', round: currentRoundIndex + 1, result: `↩️ 删除第 ${currentRoundIndex + 1} 轮，返回上一轮`, by: 'manual' });
         if (currentRoundIndex === state.rounds.length - 1 && state.rounds.length > 1) state.rounds.pop();
         currentRoundIndex = Math.max(0, currentRoundIndex - 1);
         resetActivePollState();
@@ -1195,9 +1300,23 @@
       updatePickRandomBtnState();
     }
     
+    // ★ 比对版本号写入：只有服务器上的数据还是我们看到的那一版才写入；
+    //   如果前台刚好揭晓/改动过（版本号变了），这次写入会放弃，并同步最新数据，不会覆盖前台的结果。
     function saveState() {
-      localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
-      db.ref('tournament_state').set(state).catch(reportWriteError);
+      try { localStorage.setItem('mochii_tournament_state', JSON.stringify(state)); } catch (e) {}
+      const baseRev = state.rev || 0;
+      state.rev = baseRev + 1;
+      const payload = JSON.parse(JSON.stringify(state));
+      db.ref('tournament_state').transaction((cur) => {
+        if (((cur && cur.rev) || 0) !== baseRev) return;   // 数据已被别处更新：放弃
+        return payload;
+      }, (error, committed, snap) => {
+        if (error) { reportWriteError(error); if (snap) applyServerState(snap.val()); return; }
+        if (!committed) {
+          if (snap) applyServerState(snap.val());
+          alert('⚠️ 数据刚被前台更新，已同步最新画面。\n请确认后重新操作一次。');
+        }
+      });
       updateStats(); renderAdminView(); checkAndTogglePdfExportBtn(); updateRefreshBtnState();
       updatePickRandomBtnState();
     }
@@ -1354,22 +1473,37 @@
       }).join('');
     }
     
+    const ARCHIVE_PATH = 'tournament_archive';
+    function hasAnyData(st) {
+      return (st.rounds || []).some(r => (r.candidates || []).length > 0) || (st.drawLog && Object.keys(st.drawLog).length > 0);
+    }
     function resetRounds() {
-      if (confirm("⚠️ 确认重置所有数据？\n这将同时清除后台和前台的所有名单并自动重新导入！")) {
-        db.ref('tournament_state').transaction((currentData) => {
-          return {
-            customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
-            isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
-            drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
-            antiCheatVoucherHash: null, pollGroupHistory: {},
-            pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
-            rounds: [{ roundName: "第 1 轮", candidates: [] }], publicAdminActive: false
-          };
-        }, (error) => {
-          if (!error) { currentRoundIndex = 0; activeGroup4Ids = []; fetchGoogleSheetsData(false); }
-          else reportWriteError(error);
-        });
-      }
+      if (!confirm("⚠️ 确认重置所有数据？\n\n本场结果会先自动存档（可在【📋 记录】里查看下载），然后清空后台和前台的名单并重新导入。")) return;
+      const doReset = () => db.ref('tournament_state').transaction((currentData) => {
+        return {
+          rev: ((currentData && currentData.rev) || 0) + 1,
+          customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
+          isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
+          drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
+          antiCheatVoucherHash: null, pollGroupHistory: {}, drawLog: [],
+          pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
+          rounds: [{ roundName: "第 1 轮", candidates: [] }]
+        };
+      }, (error) => {
+        if (!error) { db.ref(DrawLogic.PRESENCE_PATH).set(false); currentRoundIndex = 0; activeGroup4Ids = []; fetchGoogleSheetsData(false); }
+        else reportWriteError(error);
+      });
+
+      if (!hasAnyData(state)) { doReset(); return; }
+      const now = Date.now();
+      const key = DrawLogic.fmtTime(now).replace(/[-: ]/g, '').slice(0, 14);   // 20261027_0433xx
+      const snapshot = JSON.parse(JSON.stringify(state));
+      snapshot.archivedAt = now;
+      const u = firebase.auth().currentUser;
+      snapshot.archivedBy = (u && u.email) || '';
+      db.ref(`${ARCHIVE_PATH}/${key}`).set(snapshot)
+        .then(() => { alert('✅ 本场已存档，正在重置…'); doReset(); })
+        .catch(e => alert('❌ 存档失败，已取消重置（数据没有被清空）：' + (e.code || e.message)));
     }
 
     function checkAndTogglePdfExportBtn() {
@@ -1446,19 +1580,59 @@
           </div>` : ''}
           <div style="border-top:1px solid #e2e8f0;padding-top:14px;margin-top:20px;font-size:10px;color:#94a3b8;text-align:center;"><p style="margin:0;">${escapeHtml(pdfFooter)}</p></div>
         </div>`;
-      document.body.appendChild(container);
+      // 开奖记录页（每页 18 条，只列盲抽揭晓、手动判定、轮空等影响结果的记录 + 重抽/撤销）
+      const log = state.drawLog ? Object.values(state.drawLog) : [];
+      const PER_PAGE = 18;
+      const logPages = [];
+      for (let i = 0; i < log.length; i += PER_PAGE) logPages.push(log.slice(i, i + PER_PAGE));
+      const makeLogPage = (rows, pageNo) => {
+        const el = document.createElement('div');
+        el.style.cssText = container.style.cssText;
+        el.innerHTML = `
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:22px;background:#fff;">
+            <div style="font-size:15px;font-weight:900;color:#92400e;margin-bottom:4px;">📋 OFFICIAL DRAW RECORD · 开奖记录</div>
+            <div style="font-size:10px;color:#64748b;margin-bottom:12px;">${escapeHtml(pdfTitle1)} · ${todayStr} · Page ${pageNo}/${logPages.length}</div>
+            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+              <thead><tr style="background:#fef3c7;color:#78350f;text-align:left;">
+                <th style="padding:6px;">Time</th><th style="padding:6px;">Round / POLL</th><th style="padding:6px;">Type</th>
+                <th style="padding:6px;">Members (No.)</th><th style="padding:6px;">Vote</th><th style="padding:6px;">Result</th>
+              </tr></thead>
+              <tbody>${rows.map((e, i) => `<tr style="border-bottom:1px solid #f1f5f9;${i % 2 ? 'background:#fafafa;' : ''}vertical-align:top;">
+                <td style="padding:5px 6px;white-space:nowrap;color:#64748b;font-family:monospace;">${escapeHtml(DrawLogic.fmtTime(e.ts).slice(5))}</td>
+                <td style="padding:5px 6px;white-space:nowrap;">${e.round ? 'R' + e.round : ''}${e.poll ? ' · #' + e.poll : ''}</td>
+                <td style="padding:5px 6px;white-space:nowrap;">${escapeHtml(DrawLogic.TYPE_TEXT[e.type] || e.type)}</td>
+                <td style="padding:5px 6px;color:#334155;">${escapeHtml(DrawLogic.membersText(e))}</td>
+                <td style="padding:5px 6px;white-space:nowrap;font-weight:700;">${e.trigger ? '#' + e.trigger : ''}</td>
+                <td style="padding:5px 6px;font-weight:700;color:#065f46;">${escapeHtml(e.result || '')}${e.winner ? '<br>' + escapeHtml(e.winner.name) + ' <span style="color:#64748b;font-family:monospace;font-weight:400;">' + escapeHtml(e.winner.orderNo || '') + '</span>' : ''}${e.runnerUp ? '<br>🥈 ' + escapeHtml(e.runnerUp.name) : ''}</td>
+              </tr>`).join('')}</tbody>
+            </table>
+          </div>`;
+        return el;
+      };
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      // 按比例放进 A4（不拉伸）；太高时等比缩小
+      const addElementPage = async (el, isFirst) => {
+        document.body.appendChild(el);
+        try {
+          const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+          let w = pdfWidth, h = canvas.height * pdfWidth / canvas.width;
+          if (h > pdfHeight) { w = w * pdfHeight / h; h = pdfHeight; }
+          if (!isFirst) pdf.addPage();
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pdfWidth - w) / 2, 0, w, h);
+        } finally {
+          if (document.body.contains(el)) document.body.removeChild(el);
+        }
+      };
       try {
-        const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
-        document.body.removeChild(container);
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        await addElementPage(container, true);
+        for (let i = 0; i < logPages.length; i++) await addElementPage(makeLogPage(logPages[i], i + 1), false);
         pdf.save(`Mochiishop_Tournament_Results_${todayStr}.pdf`);
       } catch (err) {
-        if (document.body.contains(container)) document.body.removeChild(container);
+        console.error(err);
         alert("❌ 生成 PDF 失败，请重新点击导出！");
       }
     }

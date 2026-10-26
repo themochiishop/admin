@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 抽奖实时晋级大屏</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="logic.js?v=2"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="logic.js?v=3"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -392,6 +392,33 @@
   </footer>
 
   <script>
+    // ===== 提示：不再用会卡住画面的 alert 弹窗，改为自动消失的提示条（点一下可关闭）=====
+    //   ❌ 错误：12 秒；⚠️ 警告：6 秒；其他：3~9 秒（依文字长度）
+    function alert(msg) { showToast(String(msg == null ? '' : msg)); }
+    function showToast(msg) {
+      let box = document.getElementById('toastBox');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'toastBox';
+        box.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(92vw,480px);';
+        document.body.appendChild(box);
+      }
+      const isErr = /^\s*❌/.test(msg), isWarn = /^\s*⚠️/.test(msg);
+      const theme = isErr ? 'background:#4c0519;border:1px solid #f43f5e;color:#ffe4e6;'
+        : isWarn ? 'background:#451a03;border:1px solid #f59e0b;color:#fef3c7;'
+        : 'background:#022c22;border:1px solid #10b981;color:#d1fae5;';
+      const el = document.createElement('div');
+      el.style.cssText = theme + 'pointer-events:auto;cursor:pointer;white-space:pre-line;font-size:13px;font-weight:600;line-height:1.5;padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);width:100%;transition:opacity .3s,transform .3s;opacity:0;transform:translateY(-6px);';
+      el.textContent = msg;
+      el.title = '点击关闭';
+      const close = () => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); };
+      el.onclick = close;
+      box.appendChild(el);
+      while (box.children.length > 4) box.firstChild.remove();
+      requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'none'; });
+      setTimeout(close, isErr ? 12000 : isWarn ? 6000 : Math.min(9000, 3000 + msg.length * 40));
+    }
+
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -532,7 +559,7 @@
           </div>
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
-            <span class="text-xs text-slate-400">${escapeHtml(eventData.orderNo || '')}</span>
+            <span class="text-xs text-slate-400">${escapeHtml(maskOrder(eventData.orderNo) || '')}</span>
           </div>`;
       }
 
@@ -679,19 +706,19 @@
           <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
           <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / 亚军</span>
           <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(runnerUp.orderNo || '无订单号') : '-'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(maskOrder(runnerUp.orderNo) || '无订单号') : '-'}</div>
         </div>
         <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
           <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
           <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
-          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(champion.orderNo || '无订单号')}</div>
+          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(maskOrder(champion.orderNo) || '无订单号')}</div>
         </div>
         <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
           <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(thirdPlace.orderNo || '无订单号') : '-'}</div>
+          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(maskOrder(thirdPlace.orderNo) || '无订单号') : '-'}</div>
         </div>`;
 
       if (consolations.length > 0) {
@@ -703,7 +730,7 @@
               <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}安慰奖</span>
               <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
             </div>
-            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(c.orderNo || '无订单号')}</div>
+            <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div>
           </div>`).join('');
       } else {
         consolationBox.classList.add('hidden');
@@ -1049,7 +1076,7 @@
       isAdminUnlocked = on;
       if (on) {
         localStorage.setItem('mochii_admin_unlocked', 'true');
-        db.ref('tournament_state/publicAdminActive').set(true).catch(e => alert('❌ 控盘失败：' + (e.code || e.message)));
+        db.ref(DrawLogic.PRESENCE_PATH).set(true).catch(e => alert('❌ 控盘失败：' + (e.code || e.message)));
       }
       refreshAdminUnlockUI();
     }
@@ -1075,13 +1102,11 @@
         localStorage.removeItem('mochii_admin_unlocked');
 
         db.ref('tournament_state').transaction((latestState) => {
-          if (!latestState) return latestState;
-          if (latestState.pkStage !== 'revealed') {
-            latestState.pkLocked = false;
-          }
-          return latestState;
+          if (!latestState || latestState.pkStage === 'revealed' || !latestState.pkLocked) return;
+          latestState.pkLocked = false;
+          return DrawLogic.bumpRev(latestState);
         });
-        db.ref('tournament_state/publicAdminActive').set(false);
+        db.ref(DrawLogic.PRESENCE_PATH).set(false);
       }
       refreshAdminUnlockUI();
     }
@@ -1116,7 +1141,7 @@
       const activeCards = Array.from(document.querySelectorAll('.pk-card'));
       if (activeCards.length === 0) { alert("当前没有卡片！"); return; }
       const total = activeCards.length;
-      const nums = Array.from({ length: total }, (_, i) => i + 1).sort(() => 0.5 - Math.random());
+      const nums = DrawLogic.shuffle(Array.from({ length: total }, (_, i) => i + 1));
       const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
       cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
 
@@ -1124,6 +1149,7 @@
       cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
       const winnerMemberId = cardMembers[winnerIndex].id;
+      const pollSig = DrawLogic.pollSignature(state);   // 之后每次写入都必须还是这一组
 
       isMarqueeRunning = true;
       if (marqueeSafetyTimer) clearTimeout(marqueeSafetyTimer);
@@ -1133,10 +1159,10 @@
       }, 8000);
 
       db.ref('tournament_state').transaction((latestState) => {
-        if (!latestState) return latestState;
+        if (!latestState || DrawLogic.pollSignature(latestState) !== pollSig) return;   // 组已变更：放弃
         latestState.pkLocked = true;
         latestState.currentPollFinished = true;   
-        return latestState;
+        return DrawLogic.bumpRev(latestState);
       });
 
       let currentIndex = 0;
@@ -1155,7 +1181,7 @@
         if (blindIndicator) blindIndicator.classList.add('hidden');
 
         db.ref('tournament_state').transaction((latestState) => {
-          if (!latestState) return latestState;
+          if (!latestState || DrawLogic.pollSignature(latestState) !== pollSig) return;
           const numMap = {};
           cardMembers.forEach(m => { numMap[m.id] = m.displayNumber; });
           latestState.activeGroupMembers = latestState.activeGroupMembers.map(m => {
@@ -1165,7 +1191,7 @@
           latestState.pkStage = 'revealed';
           latestState.isDrawingScramble = false;
           latestState.pkLocked = true;
-          return latestState;
+          return DrawLogic.bumpRev(latestState);
         }, (error, committed, snapshot) => {
           if (committed) {
             state = snapshot.val();
@@ -1192,7 +1218,7 @@
 
             setTimeout(() => {
               db.ref('tournament_state').transaction((finalState) => {
-                if (!finalState) return finalState;
+                if (!finalState || DrawLogic.pollSignature(finalState) !== pollSig) return;   // 已结算过：不重复写
                 const roundIdx2 = finalState.drawRoundIndex ?? currentRoundIndex;
                 const activeRound = finalState.rounds[roundIdx2];
                 if (activeRound) {
@@ -1201,15 +1227,11 @@
                   if (winnerMember) {
                     const winnerId = String(winnerMember.id);
                     const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
-                    const isReverse = finalState.isReverseElimination === true;
-
-                    const res = DrawLogic.applyWinner(finalState, roundIdx2, winnerId, pollLabel, finalState.activeGroupIds || []);
-                    if (res) return finalState;   // 已结算（可能已自动进入下一轮）
+                    const res = DrawLogic.applyWinner(finalState, roundIdx2, winnerId, pollLabel, finalState.activeGroupIds || [], 'public');
+                    if (res) return DrawLogic.bumpRev(finalState);   // 已结算（可能已自动进入下一轮）
                   }
                 }
-                finalState.settled = true;
-                finalState.antiCheatVoucherHash = null;
-                return finalState;
+                return;   // 找不到命中者：不写入
               }, (err2, com2, snap2) => {
                 if (com2) {
                   state = snap2.val();
@@ -1331,7 +1353,7 @@
       const namesRevealed = (currentGroupSig === localNamesRevealedGroupSig);
       const isScrambling = !isRevealed && (!namesRevealed || localScrambleActive || scramblingMemberIds.has(String(c.id)));
       const displayName = isScrambling ? '??' : escapeHtml(c.name);
-      const displayOrder = isScrambling ? '###' : escapeHtml(c.orderNo || '');
+      const displayOrder = isScrambling ? '###' : escapeHtml(maskOrder(c.orderNo) || '');
       const nameClass = isScrambling ? 'scramble-text' : '';
       const orderClass = isScrambling ? 'scramble-text' : '';
       return `
@@ -1477,7 +1499,7 @@
           
           return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + labelHtml +
             '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
-            '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(c.orderNo || '无订单号') + '</span>' +
+            '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</span>' +
           '</div>';
         }).join('');
       }
@@ -1492,7 +1514,7 @@
         if (cons.length > 0) {
           cPanel.classList.remove('hidden');
           cBadge.innerText = cons.length;
-          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(c.orderNo || '无订单号')}</span></div>`).join('');
+          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
         } else cPanel.classList.add('hidden');
       }
 
@@ -1520,7 +1542,7 @@
             '<div>' +
               '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
               '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + escapeHtml(c.name) + '</div>' +
-              '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
+              '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</div>' +
             '</div>' +
           '</div>';
         });
@@ -1566,6 +1588,12 @@
       updateWinnerBannerUI();
     }
 
+    // 前台只显示订单号后 4 位（搜索仍可用完整订单号）
+    function maskOrder(o) {
+      const t = String(o || '').trim();
+      if (!t) return '';
+      return t.length <= 4 ? t : '****' + t.slice(-4);
+    }
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>

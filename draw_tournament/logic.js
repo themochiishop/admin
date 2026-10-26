@@ -19,6 +19,26 @@
   const PAIR_PENALTY = 1;       // 2 人一组：可以，但尽量少用
   const BYE_PENALTY = 8;        // 1 人轮空：除非没有别的办法
 
+  // ---------- 公平随机 ----------
+  // 0 ≤ x < n 的均匀随机整数（浏览器加密随机数，拒绝采样避免取模偏差）
+  function randomInt(n) {
+    const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+    if (!c) return Math.floor(Math.random() * n);
+    const limit = Math.floor(0x100000000 / n) * n;
+    const buf = new Uint32Array(1);
+    do { c.getRandomValues(buf); } while (buf[0] >= limit);
+    return buf[0] % n;
+  }
+  // Fisher–Yates 洗牌：每种排列机会完全相同（不修改原数组）
+  function shuffle(list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   // ---------- 基本读取 ----------
   const modeOn = st => !!(st.modeConfig && st.modeConfig.enabled);
   const isMode2 = st => modeOn(st) && st.modeConfig.selectedMode === 'mode2';
@@ -185,6 +205,106 @@
     return isMode2(st) ? consolationN(st) + 3 : 3;
   }
 
+  // ---------- 名单导入 ----------
+  // 标准 CSV 解析（支持引号、引号内逗号/换行、"" 转义）
+  function parseCSVRows(text) {
+    const rows = []; let row = [], field = '', q = false;
+    const t = String(text || '').replace(/^\ufeff/, '');
+    for (let i = 0; i < t.length; i++) {
+      const ch = t[i];
+      if (q) {
+        if (ch === '"') { if (t[i + 1] === '"') { field += '"'; i++; } else q = false; }
+        else field += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && t[i + 1] === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = '';
+      } else field += ch;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows.map(r => r.map(x => x.trim())).filter(r => r.some(x => x !== ''));
+  }
+
+  /**
+   * 买家名单 → 候选人
+   *   一张订单 = 一次机会（同一买家多张订单就多次机会）
+   *   同一订单号重复出现只算一次
+   * 表头可选：第一行含「买家姓名 / Name」时自动识别「订单号 / Order」所在列，否则第 1 列名字、第 2 列订单号
+   */
+  function parseBuyerCSV(text) {
+    const rows = parseCSVRows(text);
+    let nameCol = 0, orderCol = 1, start = 0;
+    if (rows.length) {
+      const h = rows[0].map(x => x.toLowerCase());
+      const ni = h.findIndex(x => /买家姓名|买家|姓名|^name$|buyer|username/.test(x));
+      if (ni !== -1) {
+        nameCol = ni; start = 1;
+        let oi = h.findIndex(x => /订单号|单号|order\s*(no|id|number|sn)|^order$/.test(x));
+        if (oi === -1) oi = h.findIndex(x => /订单|order/.test(x));
+        if (oi !== -1) orderCol = oi;
+      }
+    }
+    const seen = new Set();
+    const out = []; let dup = 0, noOrder = 0, noName = 0;
+    for (let i = start; i < rows.length; i++) {
+      const name = (rows[i][nameCol] || '').trim();
+      const order = (rows[i][orderCol] || '').trim();
+      if (!name) { noName++; continue; }
+      if (order) {
+        const key = order.toUpperCase();
+        if (seen.has(key)) { dup++; continue; }
+        seen.add(key);
+      } else noOrder++;
+      out.push({ id: `b${out.length}`, name, orderNo: order, status: 'pending' });
+    }
+    const perName = {};
+    out.forEach(c => { perName[c.name] = (perName[c.name] || 0) + 1; });
+    const buyers = Object.keys(perName).length;
+    const multi = Object.values(perName).filter(n => n > 1).length;
+    const lines = [`✅ 已导入 ${out.length} 张订单（${buyers} 位买家${multi ? `，其中 ${multi} 位有多张订单 = 多次机会` : ''}）`];
+    if (dup) lines.push(`• 移除重复订单号 ${dup} 行（同一订单只算一次）`);
+    if (noOrder) lines.push(`⚠️ ${noOrder} 行没有订单号（已保留，请确认）`);
+    if (noName) lines.push(`• 跳过没有名字的 ${noName} 行`);
+    return { candidates: out, summary: lines.join('\n'), stats: { orders: out.length, buyers, multi, dup, noOrder, noName } };
+  }
+
+  // ---------- 开奖记录 ----------
+  // type: poll(盲抽揭晓) | manual(手动晋级/判定) | bye(轮空) | out(手动淘汰) | redraw(重抽) | cleared(清空组) | undo(撤回/撤销)
+  function logDraw(st, entry) {
+    if (!Array.isArray(st.drawLog)) st.drawLog = st.drawLog ? Object.values(st.drawLog) : [];
+    const clean = {};
+    Object.keys(entry).forEach(k => { if (entry[k] !== undefined) clean[k] = entry[k]; });
+    clean.ts = Date.now();
+    st.drawLog.push(clean);
+  }
+  const STAGE_TEXT = { normal: '普通轮', consolation: '安慰奖阶段', third: '冠亚季争夺战', final: '冠亚军决战' };
+  const RESULT_TEXT = { normal: '晋级', consolation: '🎁 安慰奖', third: '🥉 季军', final: '👑 冠军' };
+  function personOf(c) { return { name: c.name || '', orderNo: c.orderNo || '' }; }
+
+  const TYPE_TEXT = { poll: '盲抽揭晓', manual: '手动判定', bye: '轮空晋级', out: '手动淘汰', redraw: '重抽', cleared: '清空组', undo: '撤销' };
+  const BY_TEXT = { public: '前台主播', admin: '后台', manual: '后台手动' };
+  function fmtTime(ts) {
+    const d = new Date(ts || Date.now()), p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }
+  function membersText(e) {
+    return (e.members || []).map(m => `${m.no != null ? '#' + m.no + ' ' : ''}${m.name}(${m.orderNo || '-'})`).join(' / ');
+  }
+  // 开奖记录 → CSV（带 BOM，Excel 打开中文不乱码）
+  function drawLogToCSV(log, title) {
+    const esc = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const head = ['时间', '轮次', '阶段', 'POLL', '类型', '组员（号码 名字(订单号)）', '票选号', '结果', '得主/当事人', '订单号', '亚军', '操作端'];
+    const rows = (log || []).map(e => [fmtTime(e.ts), e.round ? `第 ${e.round} 轮` : '', e.stage || '', e.poll ? '#' + e.poll : '',
+      TYPE_TEXT[e.type] || e.type, membersText(e), e.trigger ? '#' + e.trigger : '', e.result || '',
+      e.winner ? e.winner.name : '', e.winner ? e.winner.orderNo : '', e.runnerUp ? `${e.runnerUp.name}(${e.runnerUp.orderNo})` : '', BY_TEXT[e.by] || e.by || '']);
+    const lines = [];
+    if (title) lines.push(esc(title));
+    lines.push(head.map(esc).join(','));
+    rows.forEach(r => lines.push(r.map(esc).join(',')));
+    return '\ufeff' + lines.join('\r\n');
+  }
+
   // ---------- 状态变更 ----------
   function resetPoll(st) {
     st.activeGroupIds = []; st.activeGroupMembers = [];
@@ -208,7 +328,7 @@
     const idx = st.rounds.length;
     st.rounds.push({
       roundName: label, stageName: label, isConsolationStage: isCons,
-      candidates: list.map((c, i) => ({ id: `R${idx + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo || '', pollLabel: c.pollLabel || '', status: 'pending' }))
+      candidates: list.map((c, i) => ({ id: `R${idx + 1}_${i}`, name: c.name, orderNo: c.orderNo || '', pollLabel: c.pollLabel || '', status: 'pending' }))
     });
     resetPoll(st);
     st.passHistory = [];
@@ -264,10 +384,33 @@
    *   groupIds：同组其他人（揭晓时 = 本组全部；手动点晋级时 = [winnerId]）
    * 返回 { stage, name, newRoundIndex? }
    */
-  function applyWinner(st, ri, winnerId, pollLabel, groupIds) {
+  function applyWinner(st, ri, winnerId, pollLabel, groupIds, source) {
     const r = st.rounds[ri];
     if (!r) return null;
     const stage = getRoundStage(st, ri);
+
+    // —— 先写开奖记录（结算后组员资料会被清空）——
+    const winC = cands(r).find(c => String(c.id) === String(winnerId));
+    if (!winC) return null;
+    const isPoll = (groupIds || []).length > 1;
+    const entry = {
+      type: isPoll ? 'poll' : (String(pollLabel || '').startsWith('BYE') ? 'bye' : 'manual'),
+      round: ri + 1, stage: STAGE_TEXT[stage],
+      poll: isPoll ? (st.currentPollNumber || null) : null,
+      trigger: isPoll ? (st.triggerNumber || null) : null,
+      winner: personOf(winC), result: RESULT_TEXT[stage], by: source || 'admin'
+    };
+    if (isPoll) {
+      entry.members = (st.activeGroupMembers || []).map(m => {
+        const c = cands(r).find(x => String(x.id) === String(m.id)) || m;
+        return { name: c.name || '', orderNo: c.orderNo || '', no: m.displayNumber == null ? null : m.displayNumber };
+      });
+    }
+    if (stage === 'final') {
+      const ru = cands(r).find(c => String(c.id) !== String(winnerId));
+      if (ru) entry.runnerUp = personOf(ru);
+    }
+    logDraw(st, entry);
     if (stage === 'third' || stage === 'final') return applyPodium(st, ri, winnerId, pollLabel);
     if (stage === 'consolation' && !r.isConsolationStage) {     // 固定下来
       r.isConsolationStage = true;
@@ -300,11 +443,33 @@
     return { stage, name: win.name, newRoundIndex: newIdx };
   }
 
+  // ---------- 并发安全 ----------
+  // 每次写入整份数据都把版本号 +1；后台写入前比对版本号，避免用旧数据覆盖前台刚揭晓的结果
+  function bumpRev(st) { st.rev = (st.rev || 0) + 1; return st; }
+  // 识别"同一组 POLL"
+  function pollSignature(st) {
+    return `${st.currentPollNumber || 0}|${(st.activeGroupIds || []).map(String).join(',')}`;
+  }
+  const PRESENCE_PATH = 'draw_presence/publicAdminActive';
+
+  // 抽组后前台动画时长：洗牌转场 1.6 秒 + 倒计时 N 秒 + 名字滚动 3 秒 + 0.4 秒缓冲
+  // 这段时间内不能设定票选号（观众还没看到这一组是谁）
+  function animationLockMs(st) {
+    const n = parseInt((st.modeConfig && st.modeConfig.drawCountdownSeconds) || 5, 10) || 5;
+    return Math.round((1.6 + n + 3 + 0.4) * 1000);
+  }
+  function lockRemainingMs(st) {
+    if (!st.groupGeneratedAt || !(st.activeGroupIds || []).length) return 0;
+    return Math.max(0, st.groupGeneratedAt + animationLockMs(st) - Date.now());
+  }
+
   global.DrawLogic = {
-    PODIUM_THIRD_LABEL, PODIUM_FINAL_LABEL, MAX_GROUP,
+    bumpRev, pollSignature, PRESENCE_PATH, animationLockMs, lockRemainingMs,
+    PODIUM_THIRD_LABEL, PODIUM_FINAL_LABEL, MAX_GROUP, randomInt, shuffle,
     modeOn, isMode2, consolationN, targetOf, countConsolation, consolationDone,
     getRoundStage, isPodiumDecided, isTournamentFinished,
     plannedGroupSize, isGroupSizeFeasible, roadmap, minimumBuyers,
-    resetPoll, pushNextRound, maybeAutoAdvance, applyWinner
+    resetPoll, pushNextRound, maybeAutoAdvance, applyWinner, logDraw, personOf, STAGE_TEXT,
+    TYPE_TEXT, BY_TEXT, fmtTime, membersText, drawLogToCSV, parseCSVRows, parseBuyerCSV
   };
 })(typeof window !== 'undefined' ? window : globalThis);
