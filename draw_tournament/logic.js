@@ -297,7 +297,7 @@
     if (stage === 'third') return { icon: '🥉', text: '揭晓季军' };
     if (stage === 'final') return { icon: '👑', text: '揭晓冠军' };
     if (stage === 'consolation') return { icon: '🎁', text: '揭晓安慰奖' };
-    return { icon: '🎰', text: '点击揭晓' };
+    return { icon: '🎯', text: '点击揭晓' };
   }
 
   // ---------- 开奖记录 ----------

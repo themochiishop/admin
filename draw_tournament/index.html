@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=7"></script>
+  <script src="logic.js?v=8"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -81,10 +81,24 @@
     .animate-scroll-row2 { animation: scrollRow2 3s ease-in-out infinite; }
     @keyframes borderHighlightFlash { 0%, 100% { border-color: inherit; box-shadow: none; } 50% { border-color: #34d399; box-shadow: 0 0 25px #34d399; } }
     .pk-hit-highlight { animation: borderHighlightFlash 0.5s ease-in-out 4; }
+    /* PK 组折叠：电脑上由右往左收成左边窄栏，晋级名单向左展开放大 */
+    .pk-collapsed-strip { display: none; }
     @media (min-width: 1024px) {
-      .layout-grid.active { display: grid; grid-template-columns: 70% calc(30% - 1.5rem); gap: 1.5rem; align-items: start; }
-      .layout-grid.collapsed { display: block; }
+      .layout-grid.active, .layout-grid.collapsed { display: grid; gap: 1.5rem; align-items: stretch; transition: grid-template-columns .45s ease; }
+      .layout-grid.active { grid-template-columns: 70% calc(30% - 1.5rem); }
+      .layout-grid.collapsed { grid-template-columns: 64px calc(100% - 64px - 1.5rem); }
+      .layout-grid.collapsed #publicActiveGroupDisplay { padding: 10px 6px !important; min-height: 420px !important; height: 100%; cursor: pointer; }
+      .layout-grid.collapsed #publicActiveGroupDisplay .pk-head,
+      .layout-grid.collapsed #pkPanelBody,
+      .layout-grid.collapsed .pk-progress-banner { display: none !important; }
+      .layout-grid.collapsed .pk-collapsed-strip { display: flex; flex-direction: column; align-items: center; gap: 14px; height: 100%; padding-top: 6px; }
+      .pk-strip-btn { width: 36px; height: 36px; border-radius: 10px; background: #1e293b; border: 1px solid #f59e0b; color: #fbbf24; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+      .pk-strip-text { writing-mode: vertical-rl; letter-spacing: 4px; color: #fbbf24; font-weight: 900; font-size: 15px; }
+      .pk-strip-poll { writing-mode: vertical-rl; font-size: 11px; font-weight: 900; color: #0f172a; background: #f59e0b; border-radius: 8px; padding: 8px 3px; }
     }
+    /* 折叠时晋级名单放大 */
+    .passed-zoom #passedListContainer { max-height: none !important; gap: 14px; }
+    .passed-zoom #passedListContainer > div { padding: 12px 16px !important; }
     .out-panel { max-width: 100%; }
     .out-card { padding: 6px 8px; font-size: 12px; line-height: 1.3; }
     .passed-zoom .passed-card-name { font-size: 1.5rem !important; }
@@ -203,7 +217,7 @@
   </div>
 
   <!-- 头部 -->
-  <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
+  <header class="bg-slate-800 border-b border-slate-700 relative md:sticky md:top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row justify-between items-center gap-2.5 sm:gap-0">
       <div class="flex items-center space-x-2.5 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-start">
         <div class="flex items-center space-x-2">
@@ -276,8 +290,14 @@
       </div>
 
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
+       <div id="pkColumn" class="w-full min-w-0 flex flex-col">
        <div id="publicActiveGroupDisplay" class="w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
-          <div class="flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
+          <div class="pk-collapsed-strip" onclick="togglePkPanel()" title="展开 PK 组">
+            <span class="pk-strip-btn">▶</span>
+            <span class="pk-strip-text">🔥 盲抽 PK 组</span>
+            <span id="pkStripPoll" class="pk-strip-poll">POLL #-</span>
+          </div>
+          <div class="pk-head flex flex-row justify-between items-center mb-4 pb-3 border-b border-amber-500/30 gap-2">
            <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
   <span class="text-base sm:text-2xl animate-bounce">🔥</span>
   <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
@@ -320,7 +340,7 @@
               
               <div id="publicRevealButtonBox" class="hidden mt-4 z-20">
                 <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                  <span class="reveal-icon">🎰</span><span class="reveal-text">点击揭晓</span>
+                  <span class="reveal-icon">🎯</span><span class="reveal-text">点击揭晓</span>
                 </button>
               </div>
             </div>
@@ -334,6 +354,12 @@
             <div class="shuffle-sub">LOADING NEXT POLL GROUP</div>
           </div>
         </div>
+
+        <div id="publicProgressBanner" class="hidden w-full mt-3 sm:mt-4 pk-progress-banner bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border-2 border-amber-400/70 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-center">
+          <div id="publicProgressTitle" class="text-xs sm:text-base font-black text-amber-300 leading-snug"></div>
+          <div id="publicProgressSub" class="text-[10px] sm:text-xs text-amber-100/90 mt-1 leading-relaxed"></div>
+        </div>
+       </div>
 
         <div id="rightPassedPanel" class="w-full flex flex-col gap-4 transition-all duration-300">
           <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
@@ -355,10 +381,6 @@
         </div>
       </div>
 
-      <div id="publicProgressBanner" class="hidden w-full mt-3 sm:mt-4 bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border-2 border-amber-400/70 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-center">
-        <div id="publicProgressTitle" class="text-xs sm:text-base font-black text-amber-300 leading-snug"></div>
-        <div id="publicProgressSub" class="text-[10px] sm:text-xs text-amber-100/90 mt-1 leading-relaxed"></div>
-      </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
         <div class="flex flex-col justify-end min-w-0">
@@ -672,17 +694,17 @@
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       const toggleBtn = document.getElementById('togglePkPanelBtn');
+      const strip = document.getElementById('pkStripPoll');
+      if (strip) strip.innerText = state.currentPollNumber ? `POLL #${state.currentPollNumber}` : 'POLL #-';
       if (isPkPanelCollapsed) {
-        if (pkBody) pkBody.style.display = 'none';
+        if (pkBody) pkBody.style.display = 'none';          // 手机：只留标题列
         if (pkPanel) pkPanel.style.minHeight = '0';
-        if (pkPanel) pkPanel.classList.add('opacity-95');
         mainLayout.classList.remove('active'); mainLayout.classList.add('collapsed');
         if (rightPanel) rightPanel.classList.add('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '▶ 展开';
       } else {
         if (pkBody) pkBody.style.display = '';
         if (pkPanel) pkPanel.style.minHeight = '';
-        if (pkPanel) pkPanel.classList.remove('opacity-95');
         mainLayout.classList.remove('collapsed'); mainLayout.classList.add('active');
         if (rightPanel) rightPanel.classList.remove('passed-zoom');
         if (toggleBtn) toggleBtn.innerText = '◀ 折叠';
@@ -896,7 +918,7 @@
                     centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md animate-pop";
                     if (isAdminUnlocked) {
                       const rl = DrawLogic.revealLabel(state);
-                      const isRank = rl.icon !== '🎰';
+                      const isRank = rl.text !== '点击揭晓';
                       const grad = isRank ? 'from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300' : 'from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300';
                       publicRevealButtonBox.innerHTML = `
                         <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r ${grad} text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
@@ -1439,6 +1461,10 @@ function revealPKWinnerFromPublic() {
 
     function renderPublicView() {
       // 1. 盲抽框固定为金色样式
+      const stripPoll = document.getElementById('pkStripPoll');
+      if (stripPoll) stripPoll.innerText = state.currentPollNumber ? `POLL #${state.currentPollNumber}` : 'POLL #-';
+      const pollBadge = document.getElementById('publicPollBadge');
+      if (pollBadge) pollBadge.innerText = state.currentPollNumber ? `POLL #${state.currentPollNumber}` : 'POLL #-';
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
       if (pkPanel) pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
 

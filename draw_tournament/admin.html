@@ -10,7 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=7"></script>
+  <script src="logic.js?v=8"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -66,7 +66,7 @@
     </div>
   </div>
 
-  <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
+  <header class="bg-slate-800 border-b border-slate-700 relative md:sticky md:top-0 z-40 shadow-lg">
     <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🎬</span>
@@ -106,6 +106,7 @@
         <h3 class="text-base font-bold text-amber-400">📋 开奖记录</h3>
         <div class="flex items-center gap-2">
           <button onclick="downloadCurrentLogCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg">⬇️ 下载本场 CSV</button>
+          <button onclick="clearAllLogEntries()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/50 text-xs font-bold rounded-lg">🗑 清空本场记录</button>
           <button onclick="closeRecordsModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
         </div>
       </div>
@@ -311,7 +312,7 @@
             <div class="flex items-center flex-wrap gap-1.5 shrink-0">
               <span class="text-[10px] text-slate-300 font-bold ml-1">票选号:</span>
               <div id="triggerButtonsContainer" class="flex items-center space-x-1"></div>
-              <button onclick="revealPKWinner()" id="adminRevealBtn" class="ml-2 px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-[11px] rounded-lg transition shadow-lg animate-pulse">🎰 揭晓开奖</button>
+              <button onclick="revealPKWinner()" id="adminRevealBtn" class="ml-2 px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-[11px] rounded-lg transition shadow-lg animate-pulse">🎯 点击揭晓</button>
               <span id="adminLockedHint" class="hidden text-[9px] text-rose-400 font-bold ml-1">🚫 前台已登入管理员</span>
             </div>
 
@@ -654,10 +655,11 @@
         <td class="py-1.5 pr-2 whitespace-nowrap">${escapeHtml(DrawLogic.TYPE_TEXT[e.type] || e.type)}${e.trigger ? '<br><span class="text-sky-300">票选号 #' + e.trigger + '</span>' : ''}</td>
         <td class="py-1.5 pr-2 text-slate-300">${escapeHtml(DrawLogic.membersText(e))}</td>
         <td class="py-1.5 pr-2 whitespace-nowrap font-bold text-emerald-300">${escapeHtml(e.result || '')}${e.winner ? '<br><span class="text-slate-100">' + escapeHtml(e.winner.name) + '</span> <span class="text-slate-400 font-mono">' + escapeHtml(e.winner.orderNo || '') + '</span>' : ''}${e.runnerUp ? '<br><span class="text-slate-300">🥈 ' + escapeHtml(e.runnerUp.name) + '</span>' : ''}</td>
-        <td class="py-1.5 whitespace-nowrap text-slate-400">${escapeHtml(DrawLogic.BY_TEXT[e.by] || e.by || '')}</td>
+        <td class="py-1.5 pr-2 whitespace-nowrap text-slate-400">${escapeHtml(DrawLogic.BY_TEXT[e.by] || e.by || '')}</td>
+        <td class="py-1.5 text-right"><button onclick="deleteLogEntry(${Number(e.ts) || 0})" class="px-1.5 py-0.5 rounded text-rose-400 hover:bg-rose-600 hover:text-white" title="删除这条记录">🗑</button></td>
       </tr>`).join('');
       return `<table class="w-full text-left"><thead><tr class="text-slate-400 border-b border-slate-600">
-        <th class="py-1.5 pr-2">时间</th><th class="py-1.5 pr-2">轮次</th><th class="py-1.5 pr-2">类型</th><th class="py-1.5 pr-2">组员（号码）</th><th class="py-1.5 pr-2">结果</th><th class="py-1.5">操作端</th>
+        <th class="py-1.5 pr-2">时间</th><th class="py-1.5 pr-2">轮次</th><th class="py-1.5 pr-2">类型</th><th class="py-1.5 pr-2">组员（号码）</th><th class="py-1.5 pr-2">结果</th><th class="py-1.5 pr-2">操作端</th><th class="py-1.5"></th>
       </tr></thead><tbody>${rows}</tbody></table>`;
     }
 
@@ -695,11 +697,47 @@
           return `<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-2 mb-1.5">
             <div><span class="font-bold text-slate-200">${escapeHtml(DrawLogic.fmtTime(a.archivedAt).slice(0, 16))}</span>
               <span class="ml-2">${buyers} 张订单 · 👑 ${escapeHtml(champ)} · ${n} 条记录</span></div>
-            <button onclick="downloadArchiveCSV('${escapeHtml(k)}')" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-bold">⬇️ CSV</button>
+            <div class="flex gap-1.5">
+              <button onclick="downloadArchiveCSV('${escapeHtml(k)}')" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-bold">⬇️ CSV</button>
+              <button onclick="deleteArchive('${escapeHtml(k)}')" class="px-2 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded font-bold" title="删除这个存档">🗑</button>
+            </div>
           </div>`;
         }).join('');
       }).catch(e => { box.innerText = '❌ 读取存档失败：' + (e.code || e.message); });
     }
+    function refreshRecordsTable() {
+      document.getElementById('recordsTableBox').innerHTML = recordsTableHtml(state.drawLog ? Object.values(state.drawLog) : []);
+    }
+    // 只删除记录，不会改变比赛结果
+    function deleteLogEntry(ts) {
+      const log = state.drawLog ? Object.values(state.drawLog) : [];
+      const i = log.findIndex(e => Number(e.ts) === Number(ts));
+      if (i < 0) { refreshRecordsTable(); return; }
+      const e = log[i];
+      const who = e.winner ? `${e.winner.name}` : '';
+      if (!confirm(`🗑 删除这条开奖记录？\n\n${DrawLogic.fmtTime(e.ts)} · ${DrawLogic.TYPE_TEXT[e.type] || e.type}${e.poll ? ' · POLL #' + e.poll : ''}\n${e.result || ''} ${who}\n\n（只删除记录，不会改变比赛结果）`)) return;
+      log.splice(i, 1);
+      state.drawLog = log;
+      saveState();
+      refreshRecordsTable();
+    }
+    function clearAllLogEntries() {
+      const n = state.drawLog ? Object.keys(state.drawLog).length : 0;
+      if (!n) { alert('本场没有记录'); return; }
+      if (!confirm(`🗑 清空本场全部 ${n} 条开奖记录？\n\n建议先点【⬇️ 下载本场 CSV】备份。\n（只删除记录，不会改变比赛结果）`)) return;
+      if (!confirm('⚠️ 再确认一次：清空后无法恢复。')) return;
+      state.drawLog = [];
+      saveState();
+      refreshRecordsTable();
+    }
+    function deleteArchive(key) {
+      const a = __archiveCache[key];
+      if (!confirm(`🗑 删除存档【${a ? DrawLogic.fmtTime(a.archivedAt).slice(0, 16) : key}】？\n\n删除后无法恢复，建议先下载 CSV。`)) return;
+      db.ref(`${ARCHIVE_PATH}/${key}`).remove()
+        .then(() => { alert('✅ 已删除存档'); openRecordsModal(); })
+        .catch(e => alert('❌ 删除失败：' + (e.code || e.message)));
+    }
+
     function closeRecordsModal() { document.getElementById('recordsModal').classList.add('hidden'); }
     function downloadArchiveCSV(key) {
       const a = __archiveCache[key];
