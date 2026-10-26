@@ -1066,6 +1066,53 @@
       renderPublicView();
     }
 
+    // ===== 冠亚季决赛轮（与 admin.html 保持一致）=====
+    const PODIUM_FINAL_LABEL = "👑 冠亚军终极决战 (2选1)";
+    function getPodiumStageOf(st, round) {
+      if (!round || !st.modeConfig || !st.modeConfig.enabled || round.isConsolationStage) return null;
+      const n = (round.candidates || []).length;
+      if (n === 3 && !(round.candidates || []).some(c => c.rankKey === 'rankThird')) return 'third';
+      if (n === 2 && !(round.candidates || []).some(c => c.rankKey === 'rankChampion')) return 'final';
+      return null;
+    }
+    function applyPodiumResult(st, roundIdx, winnerId, pollLabel) {
+      const round = st.rounds[roundIdx];
+      if (!round) return null;
+      const list = round.candidates || [];
+      const win = list.find(c => String(c.id) === String(winnerId));
+      if (!win) return null;
+      const now = Date.now();
+      const others = list.filter(c => c !== win);
+      win.status = 'pass'; win.manualPassed = true; win.passTimestamp = now;
+      if (pollLabel) win.pollLabel = pollLabel;
+      let result;
+      if (list.length === 3) {
+        win.rankTitle = "🥉 季军"; win.rankKey = "rankThird";
+        others.forEach(c => { c.status = 'pass'; c.passTimestamp = now; });
+        const nextIdx = st.rounds.length;
+        st.rounds.push({
+          roundName: PODIUM_FINAL_LABEL, stageName: PODIUM_FINAL_LABEL, isConsolationStage: false,
+          candidates: others.map((c, i) => ({ id: `R${nextIdx + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }))
+        });
+        st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'third', winnerName: win.name };
+        // 前台先播 5 秒季军祝贺，再切换到决赛画面
+        st.latestRoundEvent = { timestamp: now, roundIndex: nextIdx, roundTitle: PODIUM_FINAL_LABEL, delay: 5000 };
+        result = { stage: 'third', name: win.name, nextRoundIndex: nextIdx };
+      } else {
+        const ru = others[0];
+        win.rankTitle = "👑 冠军"; win.rankKey = "rankChampion";
+        if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ru.passTimestamp = now; }
+        st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'final', championName: win.name, runnerUpName: ru ? ru.name : '未知买家' };
+        result = { stage: 'final', name: win.name, runnerUp: ru ? ru.name : '' };
+      }
+      // 清空盲抽组状态
+      st.activeGroupIds = []; st.activeGroupMembers = [];
+      st.pkStage = 'voting'; st.triggerNumber = null; st.settled = false; st.pkLocked = false;
+      st.currentPollFinished = false; st.currentPollNumber = 0; st.passHistory = [];
+      st.isReverseElimination = false; st.antiCheatVoucherHash = null;
+      return result;
+    }
+
    function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
@@ -1153,7 +1200,9 @@
             
             // ★ 这里直接判断 isElimination（反向淘汰）
             const isElimination = state.isReverseElimination === true; 
-            showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
+            if (!getPodiumStageOf(state, round)) {
+              showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
+            }
 
             setTimeout(() => {
               db.ref('tournament_state').transaction((finalState) => {
@@ -1167,6 +1216,11 @@
                     const winnerId = String(winnerMember.id);
                     const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
                     const isReverse = finalState.isReverseElimination === true;
+
+                    if (getPodiumStageOf(finalState, activeRound)) {
+                      applyPodiumResult(finalState, roundIdx2, winnerId, pollLabel);
+                      return finalState;
+                    }
 
                     if (!finalState.passHistory) finalState.passHistory = [];
                     const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
