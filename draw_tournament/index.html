@@ -716,7 +716,8 @@
         });
       });
 
-      if (thirdPlaceName) {
+      const hasChampion = (state.rounds || []).some(r => (r.candidates || []).some(c => c.rankKey === 'rankChampion'));
+      if (thirdPlaceName && !hasChampion) {
         banner.classList.remove('hidden');
         content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
         return;
@@ -1087,19 +1088,6 @@
       const cardMembers = activeCards.map(cardEl => ({ id: String(cardEl.dataset.memberId), displayNumber: null }));
       cardMembers.forEach((m, idx) => { m.displayNumber = nums[idx]; });
 
-      if (state.antiCheatVoucherHash) {
-        const targetVoucherId = atob(state.antiCheatVoucherHash);
-        const presetIdx = cardMembers.findIndex(m => String(m.id) === String(targetVoucherId));
-        const triggerIdx = cardMembers.findIndex(m => m.displayNumber === state.triggerNumber);
-        if (presetIdx !== -1 && triggerIdx !== -1 && presetIdx !== triggerIdx) {
-          const tmp = cardMembers[presetIdx].displayNumber;
-          cardMembers[presetIdx].displayNumber = cardMembers[triggerIdx].displayNumber;
-          cardMembers[triggerIdx].displayNumber = tmp;
-        } else if (presetIdx !== -1 && triggerIdx === -1) {
-          cardMembers[presetIdx].displayNumber = state.triggerNumber;
-        }
-      }
-
       let winnerIndex = -1;
       cardMembers.forEach((m, idx) => { if (m.displayNumber === state.triggerNumber) winnerIndex = idx; });
       if (winnerIndex === -1) { alert("无法定位中奖者"); return; }
@@ -1179,8 +1167,6 @@
                     const winnerId = String(winnerMember.id);
                     const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
                     const isReverse = finalState.isReverseElimination === true;
-                    const pendingCount = (activeRound.candidates || []).filter(c => c.status === 'pending').length;
-                    const isFinal = (pendingCount <= 3);
 
                     if (!finalState.passHistory) finalState.passHistory = [];
                     const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
@@ -1200,15 +1186,6 @@
                         } else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
                       }
                     });
-
-                    // 前端在决战期也做一次同步（确保数据一致性）
-                    if (isFinal && !isReverse) {
-                       if (pendingCount === 3 && winnerCandidate) {
-                         winnerCandidate.rankTitle = "🥉 季军"; winnerCandidate.rankKey = "rankThird";
-                       } else if (pendingCount === 2 && winnerCandidate) {
-                         winnerCandidate.rankTitle = "👑 冠军"; winnerCandidate.rankKey = "rankChampion";
-                       }
-                    }
                   }
                 }
                 finalState.settled = true;
