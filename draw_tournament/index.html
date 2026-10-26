@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=3"></script>
+  <script src="logic.js?v=6"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -273,11 +273,6 @@
            <div class="flex items-center space-x-1.5 sm:space-x-2 truncate">
   <span class="text-base sm:text-2xl animate-bounce">🔥</span>
   <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
-  
-  <!-- ★ 新增模式标签 -->
-  <div id="modeBadge" class="hidden sm:flex ml-1">
-    <span id="modeBadgeText" class="text-[10px] px-2 py-0.5 rounded border font-black shadow-sm">晋级赛</span>
-  </div>
 </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
               <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #-</span>
@@ -301,6 +296,10 @@
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping" style="animation-delay: 0.4s;"></span>
                   </div>
                 </div>
+                <div id="awaitVoteIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
+                  <span class="whitespace-nowrap text-base sm:text-2xl font-black text-sky-300 tracking-wide animate-pulse drop-shadow-[0_0_14px_rgba(56,189,248,0.6)]">⏳ 正在等待票选号…</span>
+                  <span class="whitespace-nowrap text-[10px] sm:text-xs text-slate-400 mt-1">请在直播间投票，选出你支持的号码</span>
+                </div>
                 <div id="nextRoundHint" class="hidden absolute inset-0 flex flex-col items-center justify-center">
                   <span class="animate-scroll-row1 whitespace-nowrap text-base sm:text-lg font-black text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">🎉 恭喜</span>
                   <span class="animate-scroll-row2 whitespace-nowrap text-sm sm:text-base font-bold text-emerald-300 mt-0.5 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">✨ 新一轮盲抽即将开始 ✨</span>
@@ -313,7 +312,7 @@
               
               <div id="publicRevealButtonBox" class="hidden mt-4 z-20">
                 <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                  <span>🎰</span><span>点击揭晓</span>
+                  <span class="reveal-icon">🎰</span><span class="reveal-text">点击揭晓</span>
                 </button>
               </div>
             </div>
@@ -864,9 +863,12 @@
                     centerTriggerNumberBox.innerHTML = `#${state.triggerNumber}`;
                     centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md animate-pop";
                     if (isAdminUnlocked) {
+                      const rl = DrawLogic.revealLabel(state);
+                      const isRank = rl.icon !== '🎰';
+                      const grad = isRank ? 'from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300' : 'from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300';
                       publicRevealButtonBox.innerHTML = `
-                        <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
-                          <span>🎰</span><span>点击揭晓</span>
+                        <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r ${grad} text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+                          <span class="text-lg sm:text-xl">${rl.icon}</span><span>${rl.text}</span>
                         </button>`;
                       publicRevealButtonBox.classList.remove('hidden');
                     }
@@ -1036,40 +1038,77 @@
       });
     }
 
+    // 名单已出现、还没设定票选号 → 显示「正在等待票选号」；设定后自动消失
+    function updateAwaitVoteHint() {
+      const el = document.getElementById('awaitVoteIndicator');
+      if (!el) return;
+      const hidden = id => { const x = document.getElementById(id); return !x || x.classList.contains('hidden'); };
+      const show = (state.activeGroupIds || []).length > 0
+        && !state.triggerNumber
+        && state.pkStage !== 'revealed' && state.pkLocked !== true
+        && !countdownTimerId && !localScrambleActive && !isTransitionPlaying && !isMarqueeRunning
+        && hidden('countdownIndicator') && hidden('blindDrawingIndicator') && hidden('nextRoundHint')
+        && document.querySelectorAll('.pk-card').length > 0;
+      el.classList.toggle('hidden', !show);
+    }
+    setInterval(updateAwaitVoteHint, 250);
+
     function updateModeBadge() {
       const badge = document.getElementById('publicModeBadge');
       const tooltip = document.getElementById('modeTooltipBody');
       if (!badge) return;
       if (!state.modeConfig || !state.modeConfig.enabled) {
         badge.innerText = "模式: 未启用规则";
-        if (tooltip) tooltip.innerHTML = '<div class="text-slate-400">当前未启用任何模式规则，后台手动控盘。</div>';
+        if (tooltip) tooltip.innerHTML = '<div class="text-slate-400">当前未启用模式规则，由后台手动控盘。</div>';
         return;
       }
-      const m = state.modeConfig.selectedMode || 'mode1';
-      const N = state.modeConfig.mode2ConsolationCount || 10;
-      const mixed = state.modeConfig.mixedModeEnabled !== false;
-      if (m === 'mode1') {
-        badge.innerText = "模式: 冠亚季模式";
-        if (tooltip) {
-          tooltip.innerHTML = `
-            <div class="mt-row"><b>🥇 模式1：冠亚季排位模式</b>${mixed ? ' · 🎲混合' : ' · ✋仅手动'}</div>
-            <div class="mt-row"><span class="mt-tag mt-tag-pass">淘汰赛</span><b>普通轮次</b>：盲抽 4 人 PK，票选号命中者晋级，其余淘汰</div>
-            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩3人</b>：手动点【🥉 季军】按钮，剩余2人自动进冠亚军决战</div>
-            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩2人</b>：手动点【👑 冠军】按钮，另一人自动为亚军</div>
-            <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-amber-300">⚠️ 决战轮禁用盲抽，只能手动判定</div>`;
-        }
-      } else if (m === 'mode2') {
-        badge.innerText = "模式: 3+安慰奖模式";
-        if (tooltip) {
-          tooltip.innerHTML = `
-            <div class="mt-row"><b>🎁 模式2：冠亚季 + ${N}名安慰奖</b>${mixed ? ' · 🎲混合' : ' · ✋仅手动'}</div>
-            <div class="mt-row"><span class="mt-tag mt-tag-pass">淘汰赛</span><b>普通轮次</b>：盲抽一组 PK，票选号命中者晋级，其余淘汰</div>
-            <div class="mt-row"><span class="mt-tag mt-tag-pass">晋级赛</span><b>安慰奖阶段</b>：盲抽一组 PK，票选号命中者得🎁安慰奖，其余回待定池。选满${N}人后自动进冠亚季</div>
-            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩3人</b>：手动点【🥉 季军】</div>
-            <div class="mt-row"><span class="mt-tag mt-tag-final">决战轮</span><b>剩2人</b>：手动点【👑 冠军】</div>
-            <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-amber-300">⚠️ 决战轮禁用盲抽，只能手动判定</div>`;
-        }
-      }
+      const isM2 = state.modeConfig.selectedMode === 'mode2';
+      const N = DrawLogic.consolationN(state);
+      const ri = Math.max(0, Math.min(currentRoundIndex, (state.rounds || []).length - 1));
+      const round = (state.rounds || [])[ri] || { candidates: [] };
+      const stage = DrawLogic.getRoundStage(state, ri);
+      const cs = round.candidates || [];
+      const pend = cs.filter(c => c.status === 'pending').length;
+      const won = cs.filter(c => c.status === 'pass').length;
+      const consGot = DrawLogic.countConsolation(state);
+      const nextSize = DrawLogic.plannedGroupSize(state, ri);
+      const finished = DrawLogic.isTournamentFinished(state);
+      const stageName = { normal: `第 ${ri + 1} 轮`, consolation: '🎁 安慰奖阶段', third: '🏆 冠亚季争夺战', final: '👑 冠亚军决战' }[stage];
+
+      badge.innerText = `${isM2 ? '模式2: 冠亚季+安慰奖' : '模式1: 冠亚季'} · ${finished ? '🏁 已结束' : stageName}`;
+      if (!tooltip) return;
+
+      // —— 实时进度 ——
+      let now;
+      if (finished) now = '🏁 比赛已结束，恭喜所有得奖买家！';
+      else if (stage === 'third') now = `3 人全员上台盲抽，命中者获得 <b class="text-amber-300">🥉 季军</b>，其余 2 人进入冠亚军决战`;
+      else if (stage === 'final') now = `2 人全员上台盲抽，命中者获得 <b class="text-amber-300">👑 冠军</b>，另一位为 🥈 亚军`;
+      else if (stage === 'consolation') now = `已抽出 <b class="text-emerald-300">${cs.filter(c => c.rankKey === 'rankConsolation').length}/${N}</b> 位安慰奖 · 每组 ${nextSize || 4} 人，命中者得安慰奖，其余回名单池`;
+      else now = `名单池剩 <b class="text-amber-300">${pend}</b> 人 · 已晋级 <b class="text-emerald-300">${won}</b> 人${pend ? ` · 下一组 ${nextSize} 人` : ' · 本轮已抽完'}`;
+      const route = finished ? '' : DrawLogic.roadmap(state, ri).map(x => `<span class="whitespace-nowrap">${escapeHtml(x.label)} <b>${x.n}人</b></span>`).join(' <span class="text-slate-500">→</span> ');
+
+      // —— 规则讲解 ——
+      const steps = [
+        ['📥', '全部订单进入名单池（一张订单 = 一次机会）'],
+        ['🎲', '每个 POLL 盲抽 <b>3~4 人</b>一组（Shopee 投票最多 4 个选项）'],
+        ['🗳️', '直播间投票选号码 → 后台设定票选号 → 主播点【揭晓】'],
+        ['🏆', '命中者<b class="text-emerald-300">晋级</b>，同组其他人淘汰'],
+        ['⏩', '名单池抽完 → <b>自动进入下一轮</b>，晋级者成为新名单池'],
+      ];
+      if (isM2) steps.push(['🎁', `人数到 ${N + 3} 人左右 → 安慰奖阶段：命中者得安慰奖，其余回池，抽满 <b>${N}</b> 位（已抽 ${consGot}）`]);
+      steps.push(['🥉', '剩 3 人 → 全员盲抽，命中者为 <b>季军</b>']);
+      steps.push(['👑', '剩 2 人 → 全员盲抽，命中者为 <b>冠军</b>，另一位为 <b>亚军</b>']);
+
+      tooltip.innerHTML = `
+        <div class="mt-row"><b>${isM2 ? `🎁 模式2：冠亚季 + ${N} 名安慰奖` : '🥇 模式1：冠亚季排位'}</b></div>
+        <div class="rounded-lg border border-amber-500/40 bg-amber-950/30 p-2">
+          <div class="text-[10px] font-black text-amber-400 mb-1">📍 当前进度 · ${finished ? '已结束' : stageName}</div>
+          <div class="text-[11px] leading-relaxed">${now}</div>
+          ${route ? `<div class="text-[10px] text-slate-300 mt-1.5 leading-relaxed">${route}</div>` : ''}
+        </div>
+        <div class="text-[10px] font-black text-slate-400 mt-1">📖 抽奖流程</div>
+        ${steps.map(([i, t]) => `<div class="mt-row text-[11px] leading-snug"><span class="mr-1">${i}</span>${t}</div>`).join('')}
+        <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">🔒 号码在揭晓时才随机分配，后台无法预先指定命中者</div>`;
     }
 
     function setAdminUnlocked(on) {
@@ -1287,6 +1326,7 @@
       return `第 ${idx + 1} 轮`;
     }
     function renderRoundTabs() {
+      try { updateModeBadge(); } catch (e) {}
       const container = document.getElementById('roundTabsContainer');
       if (!container) return;
       container.innerHTML = state.rounds.map((r, idx) => {
@@ -1382,24 +1422,9 @@
     }
 
     function renderPublicView() {
-      // 1. 控制大框背景颜色和标签
+      // 1. 盲抽框固定为金色样式
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
-      const modeBadge = document.getElementById('modeBadge');
-      const modeBadgeText = document.getElementById('modeBadgeText');
-      
-      if (pkPanel && modeBadge && modeBadgeText) {
-        if (state.isReverseElimination === true) {
-          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-rose-950/60 via-slate-900/90 to-rose-950/60 border-2 border-rose-500/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_30px_rgba(244,63,94,0.3)] relative overflow-hidden flex-col min-h-[400px]";
-          modeBadge.classList.remove('hidden');
-          modeBadgeText.className = "text-[10px] px-2 py-0.5 rounded border font-black shadow-sm bg-rose-500 text-white border-rose-400 animate-pulse";
-          modeBadgeText.innerText = "淘汰模式";
-        } else {
-          pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
-          modeBadge.classList.remove('hidden');
-          modeBadgeText.className = "text-[10px] px-2 py-0.5 rounded border font-black shadow-sm bg-emerald-950/80 text-emerald-300 border-emerald-500/50";
-          modeBadgeText.innerText = "晋级模式";
-        }
-      }
+      if (pkPanel) pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
 
       let activeRound = { candidates: [] };
       if (state.rounds && state.rounds.length > 0) {
@@ -1588,12 +1613,8 @@
       updateWinnerBannerUI();
     }
 
-    // 前台只显示订单号后 4 位（搜索仍可用完整订单号）
-    function maskOrder(o) {
-      const t = String(o || '').trim();
-      if (!t) return '';
-      return t.length <= 4 ? t : '****' + t.slice(-4);
-    }
+    // 前台订单号只显示前 6 位日期（搜索仍可用完整订单号）
+    function maskOrder(o) { return DrawLogic.maskOrder(o); }
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>

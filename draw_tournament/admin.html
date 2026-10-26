@@ -10,7 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=3"></script>
+  <script src="logic.js?v=6"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -798,7 +798,7 @@
       closeConfigModal();
       if (importMode === 'fileUpload') {
         const fileInput = document.getElementById('localFileInput');
-        if (fileInput && fileInput.files.length > 0) readLocalFileAndParse(fileInput.files[0]);
+        if (fileInput && fileInput.files.length > 0) fetchGoogleSheetsData(true);
         else alert("✅ 设置已保存！\n但您还未选择文件，请点击【🔄 刷新 / 导入名单】旁边的按钮上传本地文件。");
         return;
       }
@@ -842,27 +842,41 @@
       else if (m === 'mode2') { badge.innerText = `模式: 3+安慰奖模式(${state.modeConfig.mode2ConsolationCount || 10}名)${mixedTag}`; badge.className = "text-emerald-400 font-bold"; }
     }
     
-    function fetchGoogleSheetsData(isManual) {
-      if (currentRoundIndex !== 0) { if (isManual) alert("仅限在第 1 轮刷新/导入数据！"); return; }
-      if (state.rounds[0] && state.rounds[0].candidates && state.rounds[0].candidates.length > 0) {
-        if (isManual) alert("⚠️ 名单已导入且已锁定，如要覆盖请点击右上角【重置所有轮次数据】。");
-        return;
-      }
+    // 读取最新买家名单（不改动数据），返回 CSV 文字
+    function loadBuyerListText() {
       const cfg = state.modeConfig || {};
       const importMode = cfg.importMode || 'default';
       if (importMode === 'fileUpload') {
         const fileInput = document.getElementById('localFileInput');
-        if (fileInput && fileInput.files.length > 0) { readLocalFileAndParse(fileInput.files[0]); return; }
-        else if (isManual) { alert("⚠️ 请先在设置弹窗中选择并上传本地 .csv 或 .txt 文件！"); openConfigModal(); return; }
+        if (!fileInput || !fileInput.files.length) return Promise.reject(new Error('还没选择本地名单文件（设置 → 名单导入配置）'));
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(String(e.target.result || ''));
+          reader.onerror = () => reject(new Error('读取文件失败'));
+          reader.readAsText(fileInput.files[0]);
+        });
       }
-      let fetchUrl = DEFAULT_SHEET_CSV_URL;
-      if (importMode === 'customUrl' && cfg.customSheetUrl) fetchUrl = cfg.customSheetUrl;
-      fetch(fetchUrl)
-        .then(response => response.text())
-        .then(csvText => { const summary = parseCSVToFirstRound(csvText); alert(summary); })
-        .catch(err => { alert("❌ 导入失败，请检查链接格式或网络连接！"); });
+      const base = (importMode === 'customUrl' && cfg.customSheetUrl) ? cfg.customSheetUrl : DEFAULT_SHEET_CSV_URL;
+      return fetch(DrawLogic.toCsvUrl(base), { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error('表格回应 ' + r.status + '（请确认表格已「发布到网络」）'); return r.text(); })
+        .then(text => {
+          if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('读到的是网页不是 CSV，请确认表格已「发布到网络」');
+          return text;
+        });
     }
-    
+
+    function fetchGoogleSheetsData(isManual) {
+      if (currentRoundIndex !== 0) { if (isManual) alert("⚠️ 仅限在第 1 轮刷新/导入数据！"); return; }
+      if (state.rounds[0] && state.rounds[0].candidates && state.rounds[0].candidates.length > 0) {
+        if (isManual) alert("⚠️ 名单已导入且已锁定，如要换新名单请点【⚠️ 重置所有轮次】（会自动抓取最新名单）。");
+        return;
+      }
+      if (isManual) alert('⏳ 正在读取最新名单…');
+      loadBuyerListText()
+        .then(text => alert(parseCSVToFirstRound(text)))
+        .catch(e => alert('❌ 导入失败：' + (e.message || e)));
+    }
+
     function readLocalFileAndParse(file) {
       const reader = new FileReader();
       reader.onload = function(e) { const summary = parseCSVToFirstRound(e.target.result); alert(`📄 ${file.name}\n${summary}`); };
@@ -1060,6 +1074,8 @@
       displayContainer.classList.remove('hidden');
       
       if (pollBadge && state.currentPollNumber) pollBadge.innerText = `POLL #${state.currentPollNumber}`;
+      const revealBtn = document.getElementById('adminRevealBtn');
+      if (revealBtn) { const rl = DrawLogic.revealLabel(state); revealBtn.innerText = `${rl.icon} ${rl.text}`; }
       
       if (triggerButtonsContainer) {
         const total = (state.activeGroupMembers || []).length || activeGroup4Ids.length;
@@ -1477,32 +1493,51 @@
     function hasAnyData(st) {
       return (st.rounds || []).some(r => (r.candidates || []).length > 0) || (st.drawLog && Object.keys(st.drawLog).length > 0);
     }
+    // 重置流程：① 先读取最新名单 → ② 存档本场 → ③ 一次写入「清空 + 新名单」
+    //   （以前是先清空再另外导入，导入那一步有时会因为数据还没同步而被跳过，所以合并成一步）
     function resetRounds() {
-      if (!confirm("⚠️ 确认重置所有数据？\n\n本场结果会先自动存档（可在【📋 记录】里查看下载），然后清空后台和前台的名单并重新导入。")) return;
-      const doReset = () => db.ref('tournament_state').transaction((currentData) => {
-        return {
-          rev: ((currentData && currentData.rev) || 0) + 1,
-          customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
-          isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
-          drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
-          antiCheatVoucherHash: null, pollGroupHistory: {}, drawLog: [],
-          pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
-          rounds: [{ roundName: "第 1 轮", candidates: [] }]
-        };
-      }, (error) => {
-        if (!error) { db.ref(DrawLogic.PRESENCE_PATH).set(false); currentRoundIndex = 0; activeGroup4Ids = []; fetchGoogleSheetsData(false); }
-        else reportWriteError(error);
+      if (!confirm("⚠️ 确认重置所有数据？\n\n系统会：① 读取谷歌表格最新名单 ② 本场结果自动存档（可在【📋 记录】查看下载）③ 清空所有轮次并放入新名单。")) return;
+      alert('⏳ 正在读取最新名单…');
+      loadBuyerListText()
+        .then(text => DrawLogic.parseBuyerCSV(text))
+        .catch(e => ({ error: e }))
+        .then(res => {
+          if (res.error) {
+            if (!confirm(`⚠️ 读取最新名单失败：${res.error.message || res.error}\n\n仍然要重置吗？\n（名单会是空的，之后可点【🔄 刷新 / 导入名单】再导入）`)) return;
+            res = { candidates: [], summary: '' };
+          } else if (!res.candidates.length) {
+            if (!confirm('⚠️ 表格里没有读到任何买家，仍然要重置吗？')) return;
+          }
+          archiveThenReset(res);
+        });
+    }
+
+    function archiveThenReset(listRes) {
+      const doReset = () => db.ref('tournament_state').transaction((currentData) => ({
+        rev: ((currentData && currentData.rev) || 0) + 1,
+        customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
+        isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
+        drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
+        antiCheatVoucherHash: null, pollGroupHistory: {}, drawLog: [],
+        pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
+        rounds: [{ roundName: "第 1 轮", candidates: listRes.candidates }]
+      }), (error, committed, snap) => {
+        if (error) { reportWriteError(error); return; }
+        db.ref(DrawLogic.PRESENCE_PATH).set(false);
+        currentRoundIndex = 0; activeGroup4Ids = [];
+        if (snap) applyServerState(snap.val());
+        alert('✅ 已重置。' + (listRes.summary ? '\n' + listRes.summary : '\n名单为空，请点【🔄 刷新 / 导入名单】导入。'));
       });
 
       if (!hasAnyData(state)) { doReset(); return; }
       const now = Date.now();
-      const key = DrawLogic.fmtTime(now).replace(/[-: ]/g, '').slice(0, 14);   // 20261027_0433xx
+      const key = DrawLogic.fmtTime(now).replace(/[-: ]/g, '').slice(0, 14);
       const snapshot = JSON.parse(JSON.stringify(state));
       snapshot.archivedAt = now;
       const u = firebase.auth().currentUser;
       snapshot.archivedBy = (u && u.email) || '';
       db.ref(`${ARCHIVE_PATH}/${key}`).set(snapshot)
-        .then(() => { alert('✅ 本场已存档，正在重置…'); doReset(); })
+        .then(() => doReset())
         .catch(e => alert('❌ 存档失败，已取消重置（数据没有被清空）：' + (e.code || e.message)));
     }
 
@@ -1556,17 +1591,17 @@
                 <tr style="background-color:#fffbeb;border-bottom:1px solid #fef3c7;">
                   <td style="padding:14px 16px;font-weight:900;color:#b45309;">👑 CHAMPION</td>
                   <td style="padding:14px 16px;font-weight:900;color:#78350f;">${champion ? escapeHtml(champion.name) : 'N/A'}</td>
-                  <td style="padding:14px 16px;font-family:monospace;font-weight:700;color:#b45309;">${champion ? escapeHtml(champion.orderNo) : '-'}</td>
+                  <td style="padding:14px 16px;font-family:monospace;font-weight:700;color:#b45309;">${champion ? escapeHtml(DrawLogic.maskOrder(champion.orderNo)) : '-'}</td>
                 </tr>
                 <tr style="border-bottom:1px solid #f1f5f9;">
                   <td style="padding:12px 16px;font-weight:800;color:#475569;">🥈 RUNNER-UP</td>
                   <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</td>
-                  <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${runnerUp ? escapeHtml(runnerUp.orderNo) : '-'}</td>
+                  <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${runnerUp ? escapeHtml(DrawLogic.maskOrder(runnerUp.orderNo)) : '-'}</td>
                 </tr>
                 <tr>
                   <td style="padding:12px 16px;font-weight:800;color:#b45309;">🥉 3RD PLACE</td>
                   <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</td>
-                  <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${thirdPlace ? escapeHtml(thirdPlace.orderNo) : '-'}</td>
+                  <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${thirdPlace ? escapeHtml(DrawLogic.maskOrder(thirdPlace.orderNo)) : '-'}</td>
                 </tr>
               </tbody>
             </table>
@@ -1575,7 +1610,7 @@
           <div style="margin-bottom:26px;">
             <div style="font-size:14px;font-weight:800;color:#1e293b;border-left:5px solid #10b981;padding-left:10px;margin-bottom:12px;text-transform:uppercase;">🎁 Consolation Prize Winners (${consolations.length})</div>
             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12px;">
-              ${consolations.map((c, i) => `<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;"><div><span style="font-weight:800;color:#166534;font-size:11px;margin-right:8px;background:#dcfce7;padding:2px 6px;border-radius:4px;">#${i+1}</span><span style="font-weight:700;color:#065f46;font-size:13px;">${escapeHtml(c.name)}</span></div><span style="color:#64748b;font-family:monospace;font-size:11px;">${escapeHtml(c.orderNo || '-')}</span></div>`).join('')}
+              ${consolations.map((c, i) => `<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;"><div><span style="font-weight:800;color:#166534;font-size:11px;margin-right:8px;background:#dcfce7;padding:2px 6px;border-radius:4px;">#${i+1}</span><span style="font-weight:700;color:#065f46;font-size:13px;">${escapeHtml(c.name)}</span></div><span style="color:#64748b;font-family:monospace;font-size:11px;">${escapeHtml(DrawLogic.maskOrder(c.orderNo) || '-')}</span></div>`).join('')}
             </div>
           </div>` : ''}
           <div style="border-top:1px solid #e2e8f0;padding-top:14px;margin-top:20px;font-size:10px;color:#94a3b8;text-align:center;"><p style="margin:0;">${escapeHtml(pdfFooter)}</p></div>
@@ -1601,9 +1636,9 @@
                 <td style="padding:5px 6px;white-space:nowrap;color:#64748b;font-family:monospace;">${escapeHtml(DrawLogic.fmtTime(e.ts).slice(5))}</td>
                 <td style="padding:5px 6px;white-space:nowrap;">${e.round ? 'R' + e.round : ''}${e.poll ? ' · #' + e.poll : ''}</td>
                 <td style="padding:5px 6px;white-space:nowrap;">${escapeHtml(DrawLogic.TYPE_TEXT[e.type] || e.type)}</td>
-                <td style="padding:5px 6px;color:#334155;">${escapeHtml(DrawLogic.membersText(e))}</td>
+                <td style="padding:5px 6px;color:#334155;">${escapeHtml(DrawLogic.membersText(e, true))}</td>
                 <td style="padding:5px 6px;white-space:nowrap;font-weight:700;">${e.trigger ? '#' + e.trigger : ''}</td>
-                <td style="padding:5px 6px;font-weight:700;color:#065f46;">${escapeHtml(e.result || '')}${e.winner ? '<br>' + escapeHtml(e.winner.name) + ' <span style="color:#64748b;font-family:monospace;font-weight:400;">' + escapeHtml(e.winner.orderNo || '') + '</span>' : ''}${e.runnerUp ? '<br>🥈 ' + escapeHtml(e.runnerUp.name) : ''}</td>
+                <td style="padding:5px 6px;font-weight:700;color:#065f46;">${escapeHtml(e.result || '')}${e.winner ? '<br>' + escapeHtml(e.winner.name) + ' <span style="color:#64748b;font-family:monospace;font-weight:400;">' + escapeHtml(DrawLogic.maskOrder(e.winner.orderNo) || '') + '</span>' : ''}${e.runnerUp ? '<br>🥈 ' + escapeHtml(e.runnerUp.name) : ''}</td>
               </tr>`).join('')}</tbody>
             </table>
           </div>`;

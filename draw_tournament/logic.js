@@ -269,6 +269,37 @@
     return { candidates: out, summary: lines.join('\n'), stats: { orders: out.length, buyers, multi, dup, noOrder, noName } };
   }
 
+  // ---------- 公开显示 ----------
+  // 订单号：显示前 6 位（日期，例如 241027 = 2024-10-27 下单）+ 中间 **** + 后 4 位尾数
+  //   例：241027ABCD1234 → 241027****1234
+  function maskOrder(o) {
+    const t = String(o || '').trim();
+    if (!t) return '';
+    if (t.length <= 6) return t;
+    if (t.length <= 10) return t.slice(0, 6) + '*'.repeat(t.length - 6);   // 太短时只遮后段，避免露出全部
+    return t.slice(0, 6) + '****' + t.slice(-4);
+  }
+  // 表格链接 → CSV 链接（贴 pubhtml 网页链接也可以），并加时间戳避免拿到缓存的旧名单
+  function toCsvUrl(url) {
+    let u = String(url || '').trim();
+    if (!u) return '';
+    if (/\/pubhtml/.test(u)) {
+      u = u.replace('/pubhtml', '/pub');
+      u += (u.includes('?') ? '&' : '?') + 'output=csv';
+    } else if (/\/pub\?/.test(u) && !/output=csv/.test(u)) {
+      u += '&output=csv';
+    }
+    return u + (u.includes('?') ? '&' : '?') + '_ts=' + Date.now();
+  }
+  // 揭晓按钮文字（依当前阶段）
+  function revealLabel(st, ri) {
+    const stage = getRoundStage(st, ri == null ? (st.drawRoundIndex || 0) : ri);
+    if (stage === 'third') return { icon: '🥉', text: '揭晓季军' };
+    if (stage === 'final') return { icon: '👑', text: '揭晓冠军' };
+    if (stage === 'consolation') return { icon: '🎁', text: '揭晓安慰奖' };
+    return { icon: '🎰', text: '点击揭晓' };
+  }
+
   // ---------- 开奖记录 ----------
   // type: poll(盲抽揭晓) | manual(手动晋级/判定) | bye(轮空) | out(手动淘汰) | redraw(重抽) | cleared(清空组) | undo(撤回/撤销)
   function logDraw(st, entry) {
@@ -288,8 +319,9 @@
     const d = new Date(ts || Date.now()), p = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   }
-  function membersText(e) {
-    return (e.members || []).map(m => `${m.no != null ? '#' + m.no + ' ' : ''}${m.name}(${m.orderNo || '-'})`).join(' / ');
+  function membersText(e, mask) {
+    const o = x => (mask ? maskOrder(x) : x) || '-';
+    return (e.members || []).map(m => `${m.no != null ? '#' + m.no + ' ' : ''}${m.name}(${o(m.orderNo)})`).join(' / ');
   }
   // 开奖记录 → CSV（带 BOM，Excel 打开中文不乱码）
   function drawLogToCSV(log, title) {
@@ -470,6 +502,6 @@
     getRoundStage, isPodiumDecided, isTournamentFinished,
     plannedGroupSize, isGroupSizeFeasible, roadmap, minimumBuyers,
     resetPoll, pushNextRound, maybeAutoAdvance, applyWinner, logDraw, personOf, STAGE_TEXT,
-    TYPE_TEXT, BY_TEXT, fmtTime, membersText, drawLogToCSV, parseCSVRows, parseBuyerCSV
+    TYPE_TEXT, BY_TEXT, fmtTime, membersText, drawLogToCSV, parseCSVRows, parseBuyerCSV, maskOrder, revealLabel, toCsvUrl
   };
 })(typeof window !== 'undefined' ? window : globalThis);
