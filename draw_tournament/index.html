@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="logic.js?v=2"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -481,6 +482,13 @@
         }
         if (badgeEl) badgeEl.innerText = 'ELIMINATED ANNOUNCEMENT';
         
+      } else if (eventData.winnerNamesKey === 'pkHit' && eventData.isConsolation) {
+        if (iconEl) iconEl.innerText = '🎁';
+        if (titleEl) {
+          titleEl.innerText = '恭喜！获得安慰奖';
+          titleEl.className = 'text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-amber-300 to-pink-400 mb-3 sm:mb-4';
+        }
+        if (badgeEl) badgeEl.innerText = 'CONSOLATION PRIZE';
       } else if (eventData.winnerNamesKey === 'pkHit' && !eventData.isElimination) {
         // 晋级赛
         if (iconEl) iconEl.innerText = '🎉';
@@ -515,7 +523,7 @@
         const borderColor = isElimination ? 'border-rose-400' : 'border-emerald-400';
         const bgGrad = isElimination ? 'from-rose-500/20 via-rose-400/30 to-rose-500/20' : 'from-emerald-500/20 via-emerald-400/30 to-emerald-500/20';
         const textColor = isElimination ? 'text-rose-300' : 'text-emerald-300';
-        const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : '🎯 成功晋级 / ADVANCED';
+        const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : (eventData.isConsolation ? '🎁 安慰奖 / CONSOLATION' : '🎯 成功晋级 / ADVANCED');
         
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r ${bgGrad} p-4 sm:p-5 rounded-2xl border-2 ${borderColor} text-center shadow-lg transform scale-105">
@@ -740,9 +748,9 @@
         content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
         return;
       }
-      const isConsolationStage = isModeEnabled && selectedMode === 'mode2' && activeRound.isConsolationStage;
+      const isConsolationStage = DrawLogic.getRoundStage(state, currentRoundIndex) === 'consolation';
       if (isConsolationStage) {
-        const picked = (activeRound.candidates || []).filter(c => c.status === 'pass').length;
+        const picked = (activeRound.candidates || []).filter(c => c.rankKey === 'rankConsolation').length;
         banner.classList.remove('hidden');
         content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主 🎁</span>`;
         return;
@@ -788,9 +796,8 @@
           
           // ★ 判断当前是否是“决战轮”或“刚刚打完决战”
           const isFinalEvent = state.latestEvent && (state.latestEvent.winnerNamesKey === 'third' || state.latestEvent.winnerNamesKey === 'final');
-          const isCurrentRoundFinal = state.rounds && state.rounds[state.drawRoundIndex ?? 0] && 
-            (state.rounds[state.drawRoundIndex ?? 0].candidates || []).length <= 3 &&
-            !state.rounds[state.drawRoundIndex ?? 0].isConsolationStage;
+          const __st = DrawLogic.getRoundStage(state, state.drawRoundIndex ?? 0);
+          const isCurrentRoundFinal = __st === 'third' || __st === 'final';
 
           if (!isCurrentRoundFinal && !isFinalEvent && state.pkStage === 'revealed' && state.triggerNumber && state.activeGroupMembers && state.activeGroupMembers.length > 0) {
             const winnerMember = state.activeGroupMembers.find(m => m.displayNumber === state.triggerNumber);
@@ -803,8 +810,8 @@
                 const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
                 const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
                 const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                const isElimination = state.isReverseElimination === true; 
-                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
+                const isConsolation = DrawLogic.getRoundStage(state, roundIdx) === 'consolation';
+                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination: false, isConsolation }, 5);
               }
             }
           } else {
@@ -1091,53 +1098,6 @@
       renderPublicView();
     }
 
-    // ===== 冠亚季决赛轮（与 admin.html 保持一致）=====
-    const PODIUM_FINAL_LABEL = "👑 冠亚军终极决战 (2选1)";
-    function getPodiumStageOf(st, round) {
-      if (!round || !st.modeConfig || !st.modeConfig.enabled || round.isConsolationStage) return null;
-      const n = (round.candidates || []).length;
-      if (n === 3 && !(round.candidates || []).some(c => c.rankKey === 'rankThird')) return 'third';
-      if (n === 2 && !(round.candidates || []).some(c => c.rankKey === 'rankChampion')) return 'final';
-      return null;
-    }
-    function applyPodiumResult(st, roundIdx, winnerId, pollLabel) {
-      const round = st.rounds[roundIdx];
-      if (!round) return null;
-      const list = round.candidates || [];
-      const win = list.find(c => String(c.id) === String(winnerId));
-      if (!win) return null;
-      const now = Date.now();
-      const others = list.filter(c => c !== win);
-      win.status = 'pass'; win.manualPassed = true; win.passTimestamp = now;
-      if (pollLabel) win.pollLabel = pollLabel;
-      let result;
-      if (list.length === 3) {
-        win.rankTitle = "🥉 季军"; win.rankKey = "rankThird";
-        others.forEach(c => { c.status = 'pass'; c.passTimestamp = now; });
-        const nextIdx = st.rounds.length;
-        st.rounds.push({
-          roundName: PODIUM_FINAL_LABEL, stageName: PODIUM_FINAL_LABEL, isConsolationStage: false,
-          candidates: others.map((c, i) => ({ id: `R${nextIdx + 1}_${c.name}_${c.orderNo}_${i}`, name: c.name, orderNo: c.orderNo, pollLabel: c.pollLabel || '', status: 'pending' }))
-        });
-        st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'third', winnerName: win.name };
-        // 前台先播 5 秒季军祝贺，再切换到决赛画面
-        st.latestRoundEvent = { timestamp: now, roundIndex: nextIdx, roundTitle: PODIUM_FINAL_LABEL, delay: 5000 };
-        result = { stage: 'third', name: win.name, nextRoundIndex: nextIdx };
-      } else {
-        const ru = others[0];
-        win.rankTitle = "👑 冠军"; win.rankKey = "rankChampion";
-        if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ru.passTimestamp = now; }
-        st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'final', championName: win.name, runnerUpName: ru ? ru.name : '未知买家' };
-        result = { stage: 'final', name: win.name, runnerUp: ru ? ru.name : '' };
-      }
-      // 清空盲抽组状态
-      st.activeGroupIds = []; st.activeGroupMembers = [];
-      st.pkStage = 'voting'; st.triggerNumber = null; st.settled = false; st.pkLocked = false;
-      st.currentPollFinished = false; st.currentPollNumber = 0; st.passHistory = [];
-      st.isReverseElimination = false; st.antiCheatVoucherHash = null;
-      return result;
-    }
-
    function revealPKWinnerFromPublic() {
       if (!isAdminUnlocked) { alert("⚠️ 请先解锁管理员权限！"); return; }
       if (state.settled) { alert("正在开奖中..."); return; }
@@ -1225,8 +1185,9 @@
             
             // ★ 这里直接判断 isElimination（反向淘汰）
             const isElimination = state.isReverseElimination === true; 
-            if (!getPodiumStageOf(state, round)) {
-              showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination }, 5);
+            const stageNow = DrawLogic.getRoundStage(state, roundIdx);
+            if (stageNow !== 'third' && stageNow !== 'final') {
+              showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination: false, isConsolation: stageNow === 'consolation' }, 5);
             }
 
             setTimeout(() => {
@@ -1242,29 +1203,8 @@
                     const pollLabel = `POLL #${finalState.currentPollNumber || 1} (#${triggerNum})`;
                     const isReverse = finalState.isReverseElimination === true;
 
-                    if (getPodiumStageOf(finalState, activeRound)) {
-                      applyPodiumResult(finalState, roundIdx2, winnerId, pollLabel);
-                      return finalState;
-                    }
-
-                    if (!finalState.passHistory) finalState.passHistory = [];
-                    const winnerCandidate = activeRound.candidates.find(c => String(c.id) === winnerId);
-                    
-                    if (!isReverse && winnerCandidate && !finalState.passHistory.some(p => String(p.id) === winnerId)) {
-                      finalState.passHistory.push({ id: winnerCandidate.id, name: winnerCandidate.name, orderNo: winnerCandidate.orderNo, pollLabel, roundIndex: roundIdx2, passTimestamp: Date.now() });
-                    }
-                    
-                    finalState.activeGroupIds.forEach(id => {
-                      const target = (activeRound.candidates || []).find(c => String(c.id) === String(id));
-                      if (!target) return;
-                      if (isReverse) {
-                        if (String(id) === winnerId) { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
-                      } else {
-                        if (String(id) === winnerId) {
-                          target.status = 'pass'; target.pollLabel = pollLabel; target.passTimestamp = Date.now(); target.manualPassed = true;
-                        } else { target.status = 'out'; target.eliminatedRoundIndex = roundIdx2; }
-                      }
-                    });
+                    const res = DrawLogic.applyWinner(finalState, roundIdx2, winnerId, pollLabel, finalState.activeGroupIds || []);
+                    if (res) return finalState;   // 已结算（可能已自动进入下一轮）
                   }
                 }
                 finalState.settled = true;
@@ -1318,9 +1258,10 @@
     function getRoundTitle(idx) {
       const r = state.rounds[idx];
       if (!r) return `第 ${idx + 1} 轮`;
-      if (r.isConsolationStage) return `🎁 安慰奖遴选阶段`;
-      else if (r.stageName && r.stageName.includes("冠亚军")) return `👑 冠亚军终极决战`;
-      else if (r.stageName && r.stageName.includes("冠亚季")) return `🏆 冠亚季争夺战`;
+      const st = DrawLogic.getRoundStage(state, idx);
+      if (st === 'consolation') return `🎁 安慰奖遴选阶段`;
+      if (st === 'final') return `👑 冠亚军终极决战`;
+      if (st === 'third') return `🏆 冠亚季争夺战`;
       return `第 ${idx + 1} 轮`;
     }
     function renderRoundTabs() {
