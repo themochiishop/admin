@@ -57,6 +57,19 @@
               <input type="number" id="rsort" step="1" value="10">
             </label>
           </div>
+                    <div id="couponBox" class="panel" style="background:#f8fafc;padding:14px;margin-bottom:12px">
+            <label>优惠码格式
+              <select id="rcformat"></select>
+            </label>
+            <label>优惠码
+              <div style="display:flex;align-items:center;margin-top:4px">
+                <span id="rcprefix" style="padding:9px 11px;background:#e2e8f0;border:1px solid #cbd5e1;border-right:none;border-radius:8px 0 0 8px;color:#64748b;font-weight:700"></span>
+                <input id="rcsuffix" style="margin:0;text-transform:uppercase" autocomplete="off">
+              </div>
+              <small class="muted" id="rchint"></small>
+            </label>
+            <p class="meta">完整优惠码：<b id="rcfull">-</b>（所有兑换者共用这个码）</p>
+          </div>
           <label class="inline"><input type="checkbox" id="ractive" checked> 上架（会员看得到）</label>
           <div class="actions">
             <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
@@ -78,13 +91,31 @@
     import {
       collection, getDocs, doc, addDoc, updateDoc, writeBatch, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
-
+    import { requireAdmin, renderAdminNav, esc, COUPON_FORMATS } from "./js/admin-common.js";
     const $ = id => document.getElementById(id);
     renderAdminNav("rewards");
 
     let rewards = [];
     let coupons = {};   // code → 资料
+    
+    // ---------- 优惠码格式 ----------
+    $("rcformat").innerHTML = COUPON_FORMATS.map(f => `<option value="${f.id}">${f.label}</option>`).join("");
+    function fmtOf(id) { return COUPON_FORMATS.find(f => f.id === id) || COUPON_FORMATS[0]; }
+
+    function updateCouponUI() {
+      const f = fmtOf($("rcformat").value);
+      $("couponBox").classList.toggle("hidden", $("rtype").value !== "coupon");
+      $("rcprefix").textContent = f.prefix;
+      $("rcprefix").style.display = f.prefix ? "" : "none";
+      $("rcsuffix").style.borderRadius = f.prefix ? "0 8px 8px 0" : "8px";
+      $("rcsuffix").maxLength = f.maxLen;
+      $("rcsuffix").value = $("rcsuffix").value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, f.maxLen);
+      $("rchint").textContent = `请输入英文字 A-Z、数字 0-9，${f.minLen}–${f.maxLen} 个字（不包括前缀）`;
+      $("rcfull").textContent = $("rcsuffix").value ? f.prefix + $("rcsuffix").value : "-";
+    }
+    $("rtype").addEventListener("change", updateCouponUI);
+    $("rcformat").addEventListener("change", updateCouponUI);
+    $("rcsuffix").addEventListener("input", updateCouponUI);
     let currentImage = null;   // 目前表单里的图片
 
 // 把图片缩到最长边 max 像素，转成小档案
@@ -164,7 +195,8 @@ $("rimageRemove").addEventListener("click", () => {
                 ${r.description ? `<div class="meta">${esc(r.description)}</div>` : ""}
                 <div class="meta">
                   库存：${typeof r.stock === "number" ? r.stock : "不限"} · 排序 ${r.sortOrder ?? "-"}
-                  ${isCoupon ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
+                                   ${isCoupon && r.couponCode ? ` · 优惠码：<b>${esc(r.couponCode)}</b>（共用）` : ""}
+                  ${isCoupon && !r.couponCode ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
                     ${cs.unused === 0 ? '<span class="tag tag-bad">需补充</span>' : cs.unused < 5 ? '<span class="tag tag-warn">快用完</span>' : ""}` : ""}
                 </div>
               </div>
@@ -172,8 +204,7 @@ $("rimageRemove").addEventListener("click", () => {
             <div class="actions">
               <button class="btn btn-ghost" data-act="edit">编辑</button>
               <button class="btn btn-ghost" data-act="toggle">${r.active ? "下架" : "上架"}</button>
-              ${isCoupon ? `<button class="btn btn-ghost" data-act="codes">＋ 补充券码</button>` : ""}
-            </div>
+              ${isCoupon && !r.couponCode ? `<button class="btn btn-ghost" data-act="codes">＋ 补充券码</button>` : ""}            </div>
             ${isCoupon ? `
               <div class="codes-box hidden" style="margin-top:10px">
                 <label>每行一组券码（从 Shopee / TikTok 后台复制）
@@ -197,6 +228,10 @@ $("rimageRemove").addEventListener("click", () => {
       $("rstock").value = r && typeof r.stock === "number" ? r.stock : "";
       $("rsort").value = r ? (r.sortOrder ?? 10) : 10;
       $("ractive").checked = r ? !!r.active : true;
+            const cf = fmtOf(r && r.couponFormat);
+      $("rcformat").value = cf.id;
+      $("rcsuffix").value = r && r.couponCode ? r.couponCode.slice(cf.prefix.length) : "";
+      updateCouponUI();
       currentImage = r ? (r.image || null) : null;
 $("rimage").value = "";
 showPreview(currentImage);
@@ -225,6 +260,17 @@ showPreview(currentImage);
         $("formMsg").textContent = "请填写名称和正确的积分";
         $("formMsg").className = "msg err";
         return;
+      }
+            if (data.type === "coupon") {
+        const f = fmtOf($("rcformat").value);
+        const suffix = $("rcsuffix").value.trim().toUpperCase();
+        if (suffix && !new RegExp(`^[A-Z0-9]{${f.minLen},${f.maxLen}}$`).test(suffix)) {
+          $("formMsg").textContent = `优惠码只能用 A-Z、0-9，${f.minLen}–${f.maxLen} 个字（不包括前缀）`;
+          $("formMsg").className = "msg err";
+          return;
+        }
+        data.couponFormat = f.id;
+        data.couponCode = suffix ? f.prefix + suffix : null;
       }
       $("saveBtn").disabled = true;
       try {
