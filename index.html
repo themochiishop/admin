@@ -144,6 +144,15 @@
     .btn-admin-portal:hover { background: #1e293b; }
     .btn-public-portal { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
     .btn-public-portal:hover { background: #e2e8f0; }
+    .btn-claims-portal { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+    .btn-claims-portal:hover { background: #bae6fd; }
+    .btn-test-portal { background: #fdf4ff; color: #a21caf; border: 1px dashed #e879f9; }
+    .btn-test-portal:hover { background: #fae8ff; }
+    /* 每月抽奖卡片：领奖提醒 */
+    .claim-badge { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -6px 0 14px; padding: 8px 12px; border-radius: 8px;
+      background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; font-size: 0.82rem; font-weight: 700; text-decoration: none; transition: all .2s; }
+    .claim-badge:hover { background: #ffe4e6; }
+    .claim-badge[hidden] { display: none; }
 
     footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 0.85rem; }
   </style>
@@ -219,6 +228,7 @@
           <div class="card-icon">🎁</div>
           <div class="card-title">每月抽奖 Monthly Draw</div>
           <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
+          <a id="drawClaimBadge" class="claim-badge" href="./draw_tournament/claims.html" target="_blank" hidden><span id="drawClaimText">🎁 领奖</span><span>→</span></a>
         </div>
         <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
       </div>
@@ -235,11 +245,17 @@
       <div class="modal-title">每月抽奖活动入口</div>
       <div class="modal-desc">密码验证通过！请选择您要前往的系统页面：</div>
       <div class="modal-links">
-        <a href="https://admin.themochiishop.com/draw_tournament/admin.html" class="modal-link-btn btn-admin-portal" target="_blank">
+        <a href="./draw_tournament/admin.html" class="modal-link-btn btn-admin-portal" target="_blank">
           🎬 进入抽奖控制台 (Admin)
         </a>
         <a href="https://www.themochiishop.com/live-draw/" class="modal-link-btn btn-public-portal" target="_blank">
           🏆 打开买家公开普及大屏 (Public)
+        </a>
+        <a href="./draw_tournament/claims.html" class="modal-link-btn btn-claims-portal" target="_blank">
+          🎁 领奖追踪 (Claims)
+        </a>
+        <a href="https://www.themochiishop.com/live-draw/?test=1" class="modal-link-btn btn-test-portal" target="_blank">
+          🧪 测试大屏 (Test)
         </a>
       </div>
     </div>
@@ -264,6 +280,43 @@
     </div>
   </div>
 
+  <!-- 领奖提醒：读取抽奖系统的领奖清单（在本机登录过抽奖后台就会显示） -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script>
+    (function () {
+      try {
+        firebase.initializeApp({
+          apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
+          authDomain: "draw-tournament.firebaseapp.com",
+          databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "draw-tournament",
+          storageBucket: "draw-tournament.firebasestorage.app",
+          messagingSenderId: "803720903757",
+          appId: "1:803720903757:web:8b561daabc0d69af9e7004"
+        });
+        const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
+        let started = false;
+        firebase.auth().onAuthStateChanged(u => {
+          const ok = u && !u.isAnonymous && ALLOWED.includes(String(u.email || '').toLowerCase());
+          const badge = document.getElementById('drawClaimBadge');
+          if (!ok) { badge.hidden = true; return; }
+          if (started) return;
+          started = true;
+          firebase.database().ref('draw_private/claimBatches').on('value', snap => {
+            let left = 0, months = 0;
+            Object.values(snap.val() || {}).forEach(b => {
+              const n = Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.shipped).length;
+              if (n) { left += n; months++; }
+            });
+            badge.hidden = !left;
+            document.getElementById('drawClaimText').textContent = `🎁 ${left} 位得主未寄出${months > 1 ? `（${months} 场）` : ''}`;
+          }, () => { badge.hidden = true; });
+        });
+      } catch (e) { console.warn('领奖提醒载入失败', e); }
+    })();
+  </script>
   <script>
     // 每月抽奖弹窗逻辑
     function openDrawModal() {
