@@ -11,6 +11,16 @@ export function esc(s) {
   }[c]));
 }
 
+export const PLATFORM_LABELS = { tiktok: "TikTok", shopee: "Shopee" };
+
+export function platformTag(p) {
+  return `<span class="tag tag-${p === "shopee" ? "warn" : "pink"}">${esc(PLATFORM_LABELS[p] || p)}</span>`;
+}
+
+export function normalizeUsername(s) {
+  return String(s || "").trim().replace(/^@/, "").toLowerCase();
+}
+
 export function toDate(v) {
   if (!v) return null;
   if (typeof v.toDate === "function") return v.toDate();
@@ -44,6 +54,7 @@ export function computeBalance(ledger, redemptions, excludeId) {
 export function renderAdminNav(active) {
   const links = [
     ["redeem", "index.html", "兑换审核"],
+    ["members", "members.html", "会员管理"],
     ["rewards", "rewards.html", "奖品管理"],
     ["back", "../", "← 返回控制台"],
   ];

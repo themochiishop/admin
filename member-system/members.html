@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>会员管理 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+    .stat-box .n { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+    .stat-box .l { font-size: .8rem; color: #64748b; }
+    .table-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+    th { background: #f8fafc; color: #475569; font-weight: 600; cursor: pointer; user-select: none; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #fdf2f8; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    .toolbar input { flex: 1; min-width: 220px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>会员管理</h2>
+          <p class="muted">点一行查看会员详情、手动调整积分、管理绑定</p>
+        </div>
+        <button id="exportBtn" class="btn btn-ghost">⬇ 导出 CSV</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box"><div class="n" id="sMembers">-</div><div class="l">会员总数</div></div>
+        <div class="stat-box"><div class="n" id="sBound">-</div><div class="l">已绑定账号的会员</div></div>
+        <div class="stat-box"><div class="n" id="sAvail">-</div><div class="l">流通中的可用积分</div></div>
+        <div class="stat-box"><div class="n" id="sPending">-</div><div class="l">待确认积分</div></div>
+      </div>
+
+      <div class="toolbar">
+        <input id="search" placeholder="🔍 搜索称呼、电子邮件或平台用户名">
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="name">称呼</th>
+              <th data-sort="email">电子邮件</th>
+              <th>绑定账号</th>
+              <th data-sort="spendable" class="num">可用积分</th>
+              <th data-sort="pending" class="num">待确认</th>
+              <th data-sort="birthday">生日</th>
+              <th data-sort="createdAt">加入日期</th>
+            </tr>
+          </thead>
+          <tbody id="rows"><tr><td colspan="7" class="empty">载入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import {
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, platformTag
+    } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("members");
+
+    let rows = [];
+    let sortKey = "createdAt", sortDir = -1;
+
+    async function load() {
+      const [mS, bS, lS, rS] = await Promise.all([
+        getDocs(collection(db, "members")),
+        getDocs(collection(db, "bindings")),
+        getDocs(collection(db, "pointsLedger")),
+        getDocs(collection(db, "redemptions")),
+      ]);
+
+      const byUid = (snap, withId) => {
+        const m = {};
+        snap.docs.forEach(d => {
+          const x = withId ? { id: d.id, ...d.data() } : d.data();
+          (m[x.uid] = m[x.uid] || []).push(x);
+        });
+        return m;
+      };
+      const bindings = byUid(bS), ledgers = byUid(lS), redemptions = byUid(rS, true);
+
+      rows = mS.docs.map(d => {
+        const m = d.data();
+        const bal = computeBalance(ledgers[d.id] || [], redemptions[d.id] || []);
+        return {
+          uid: d.id,
+          name: m.name || "",
+          email: m.email || "",
+          birthday: m.birthday || "",
+          createdAt: toDate(m.createdAt),
+          bindings: bindings[d.id] || [],
+          spendable: bal.spendable,
+          pending: bal.pending,
+        };
+      });
+
+      $("sMembers").textContent = rows.length.toLocaleString();
+      $("sBound").textContent = rows.filter(r => r.bindings.length).length.toLocaleString();
+      $("sAvail").textContent = rows.reduce((s, r) => s + r.spendable, 0).toLocaleString();
+      $("sPending").textContent = rows.reduce((s, r) => s + r.pending, 0).toLocaleString();
+      render();
+    }
+
+    function filtered() {
+      const q = $("search").value.trim().toLowerCase();
+      let list = rows;
+      if (q) {
+        list = rows.filter(r =>
+          r.name.toLowerCase().includes(q) ||
+          r.email.toLowerCase().includes(q) ||
+          r.bindings.some(b => b.username.includes(q)));
+      }
+      return [...list].sort((a, b) => {
+        const x = a[sortKey] ?? "", y = b[sortKey] ?? "";
+        return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
+      });
+    }
+
+    function render() {
+      const list = filtered();
+      $("rows").innerHTML = list.length ? list.map(r => `
+        <tr data-uid="${esc(r.uid)}">
+          <td><b>${esc(r.name)}</b></td>
+          <td>${esc(r.email)}</td>
+          <td>${r.bindings.map(b => `${platformTag(b.platform)} ${esc(b.username)}`).join("<br>") || '<span class="muted">未绑定</span>'}</td>
+          <td class="num"><b>${r.spendable.toLocaleString()}</b></td>
+          <td class="num">${r.pending.toLocaleString()}</td>
+          <td>${esc(r.birthday) || '<span class="muted">-</span>'}</td>
+          <td>${fmtDate(r.createdAt)}</td>
+        </tr>`).join("") : `<tr><td colspan="7" class="empty">没有符合的会员</td></tr>`;
+    }
+
+    $("search").addEventListener("input", render);
+
+    document.querySelectorAll("th[data-sort]").forEach(th => {
+      th.addEventListener("click", () => {
+        const k = th.dataset.sort;
+        if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        render();
+      });
+    });
+
+    $("rows").addEventListener("click", e => {
+      const tr = e.target.closest("tr[data-uid]");
+      if (tr) location.href = "member.html?uid=" + encodeURIComponent(tr.dataset.uid);
+    });
+
+    $("exportBtn").addEventListener("click", () => {
+      const head = ["UID", "称呼", "电子邮件", "绑定账号", "可用积分", "待确认积分", "生日", "加入日期"];
+      const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const lines = [head.map(csvCell).join(",")].concat(filtered().map(r => [
+        r.uid, r.name, r.email,
+        r.bindings.map(b => b.platform + ":" + b.username).join(" / "),
+        r.spendable, r.pending, r.birthday, fmtDate(r.createdAt)
+      ].map(csvCell).join(",")));
+      const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `mochii-members-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    requireAdmin(() => load().catch(e => {
+      $("rows").innerHTML = `<tr><td colspan="7" class="empty">载入失败：${esc(e.message)}</td></tr>`;
+    }));
+  </script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>会员详情 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .big { font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
+    .bal-row { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 16px; }
+    .bal-row .l { font-size: .8rem; color: #64748b; }
+    .list-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .list-row:last-child { border-bottom: none; }
+    .plus { color: #16a34a; font-weight: 800; }
+    .minus { color: #dc2626; font-weight: 800; }
+    .inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+    .inline-form label { margin: 0; flex: 1; min-width: 120px; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2 id="mName">会员详情</h2>
+          <p class="muted" id="mSub"></p>
+        </div>
+        <a href="members.html" class="btn btn-ghost">← 会员列表</a>
+      </div>
+      <p id="pageError" class="msg err hidden"></p>
+
+      <div class="layout">
+        <!-- 左：积分 -->
+        <div>
+          <div class="panel">
+            <h3>积分</h3>
+            <div class="bal-row">
+              <div><div class="l">可用积分</div><div class="big" id="bSpend">-</div></div>
+              <div><div class="l">待确认</div><div class="big" id="bPending" style="color:#b45309">-</div></div>
+              <div><div class="l">兑换审核中</div><div class="big" id="bReserved" style="color:#64748b">-</div></div>
+            </div>
+
+            <h3 style="margin-top:8px">手动调整积分</h3>
+            <form id="adjustForm">
+              <div class="inline-form">
+                <label>积分（扣分填负数）
+                  <input type="number" id="adjDelta" required step="1" placeholder="例如 50 或 -20">
+                </label>
+                <label style="flex:2">原因（会员看得到）
+                  <input id="adjReason" required maxlength="60" placeholder="例如：直播活动奖励 / 补发漏单积分">
+                </label>
+              </div>
+              <div class="actions">
+                <button type="submit" class="btn btn-primary" id="adjBtn">确认调整（立即生效）</button>
+              </div>
+              <p id="adjMsg" class="msg"></p>
+            </form>
+          </div>
+
+          <div class="panel">
+            <h3>资料</h3>
+            <form id="profileForm">
+              <label>称呼 <input id="pName" required maxlength="40"></label>
+              <label>生日 <input type="date" id="pBirthday"></label>
+              <p class="meta" id="pMeta"></p>
+              <div class="actions"><button type="submit" class="btn btn-ghost" id="pBtn">保存资料</button></div>
+              <p id="pMsg" class="msg"></p>
+            </form>
+          </div>
+        </div>
+
+        <!-- 右：绑定 -->
+        <div>
+          <div class="panel">
+            <h3>绑定账号</h3>
+            <div id="bindList"></div>
+            <h3 style="margin-top:18px">代为绑定</h3>
+            <p class="meta" style="margin-bottom:10px">会员改了用户名、或无法自行验证时使用。请先确认对方身份。</p>
+            <form id="bindForm" class="inline-form">
+              <label>平台
+                <select id="bPlatform">
+                  <option value="shopee">Shopee</option>
+                  <option value="tiktok">TikTok</option>
+                </select>
+              </label>
+              <label style="flex:2">用户名
+                <input id="bUser" required autocomplete="off">
+              </label>
+              <button type="submit" class="btn btn-primary" id="bBtn">绑定</button>
+            </form>
+            <p id="bindMsg" class="msg"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button data-tab="ledger" class="active">积分记录</button>
+        <button data-tab="orders">订单</button>
+        <button data-tab="redemptions">兑换</button>
+      </div>
+      <div class="panel">
+        <div id="tab-ledger"></div>
+        <div id="tab-orders" class="hidden"></div>
+        <div id="tab-redemptions" class="hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, query, where, getDocs, getDoc, doc, addDoc, updateDoc, setDoc,
+      deleteDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import {
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance,
+      platformTag, normalizeUsername
+    } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("members");
+
+    const uid = new URLSearchParams(location.search).get("uid");
+    const now = () => new Date();
+    let adminEmail = "";
+
+    function setMsg(el, text, type) {
+      el.textContent = text;
+      el.className = "msg" + (type ? " " + type : "");
+    }
+
+    document.querySelectorAll(".tabs button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
+        ["ledger", "orders", "redemptions"].forEach(t =>
+          $("tab-" + t).classList.toggle("hidden", t !== btn.dataset.tab));
+      });
+    });
+
+    async function load() {
+      if (!uid) throw new Error("网址缺少 uid");
+      const mine = c => getDocs(query(collection(db, c), where("uid", "==", uid)));
+      const [mSnap, bS, lS, oS, rS] = await Promise.all([
+        getDoc(doc(db, "members", uid)),
+        mine("bindings"), mine("pointsLedger"), mine("orders"), mine("redemptions")
+      ]);
+      if (!mSnap.exists()) throw new Error("找不到这位会员");
+
+      const m = mSnap.data();
+      $("mName").textContent = m.name || "(未填称呼)";
+      $("mSub").textContent = `${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
+      $("pName").value = m.name || "";
+      $("pBirthday").value = m.birthday || "";
+      $("pMeta").textContent = "UID：" + uid;
+
+      // 积分
+      const ledger = lS.docs.map(d => d.data())
+        .map(x => ({ ...x, at: toDate(x.availableAt), created: toDate(x.createdAt) }))
+        .sort((a, b) => (b.created || 0) - (a.created || 0));
+      const redemptions = rS.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));
+      const bal = computeBalance(ledger, redemptions);
+      $("bSpend").textContent = bal.spendable.toLocaleString();
+      $("bPending").textContent = bal.pending.toLocaleString();
+      $("bReserved").textContent = bal.reserved.toLocaleString();
+
+      $("tab-ledger").innerHTML = ledger.length ? ledger.map(x => `
+        <div class="list-row">
+          <div>
+            <div><b>${esc(x.reason)}</b> ${x.at && x.at > now() ? '<span class="tag tag-warn">待确认至 ' + fmtDate(x.at) + '</span>' : ""}</div>
+            <div class="meta">${x.orderNo ? "单号 " + esc(x.orderNo) + " · " : ""}${fmtDate(x.created, true)}${x.by ? " · 操作：" + esc(x.by) : ""}</div>
+          </div>
+          <div class="${x.delta >= 0 ? "plus" : "minus"}">${x.delta >= 0 ? "+" : ""}${x.delta}</div>
+        </div>`).join("") : `<p class="empty">没有积分记录</p>`;
+
+      // 订单
+      const orders = oS.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (toDate(b.orderTime) || 0) - (toDate(a.orderTime) || 0));
+      $("tab-orders").innerHTML = orders.length ? orders.map(o => `
+        <div class="list-row">
+          <div>
+            <div>${platformTag(o.platform)} <b>RM ${Number(o.amount || 0).toFixed(2)}</b>
+              ${o.status === "refunded" ? '<span class="tag tag-bad">已退货</span>' : ""}</div>
+            <div class="meta">${esc(o.id)} · ${esc(o.username)} · ${fmtDate(toDate(o.orderTime), true)}</div>
+          </div>
+          <div><b>${o.points || 0}</b> 分</div>
+        </div>`).join("") : `<p class="empty">没有订单</p>`;
+
+      // 兑换
+      const ST = { pending: "tag-warn", approved: "tag-ok", rejected: "tag-bad", cancelled: "" };
+      const STT = { pending: "审核中", approved: "已批准", rejected: "已拒绝", cancelled: "会员取消" };
+      $("tab-redemptions").innerHTML = redemptions.length ? redemptions.map(r => `
+        <div class="list-row">
+          <div>
+            <div><b>${esc(r.rewardName)}</b> <span class="tag ${ST[r.status] || ""}">${STT[r.status] || r.status}</span></div>
+            <div class="meta">申请 ${fmtDate(toDate(r.createdAt))}${r.couponCode ? " · 券码 " + esc(r.couponCode) : ""}${r.note ? " · " + esc(r.note) : ""}</div>
+          </div>
+          <div>${r.cost} 分</div>
+        </div>`).join("") : `<p class="empty">没有兑换记录</p>`;
+
+      // 绑定
+      const bindings = bS.docs.map(d => ({ id: d.id, ...d.data() }));
+      $("bindList").innerHTML = bindings.length ? bindings.map(b => `
+        <div class="list-row">
+          <div>
+            <div>${platformTag(b.platform)} <b>${esc(b.username)}</b></div>
+            <div class="meta">绑定于 ${fmtDate(toDate(b.createdAt))} · ${b.verifyOrder === "admin" ? "管理员代绑" : "验证单号 " + esc(b.verifyOrder)}</div>
+          </div>
+          <button class="btn btn-bad" data-unbind="${esc(b.id)}">解除</button>
+        </div>`).join("") : `<p class="muted" style="font-size:.88rem">尚未绑定任何账号</p>`;
+    }
+
+    // ---------- 手动调整积分 ----------
+    $("adjustForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const delta = parseInt($("adjDelta").value, 10);
+      const reason = $("adjReason").value.trim();
+      if (!delta || !reason) { setMsg($("adjMsg"), "请填写积分（不能是 0）和原因", "err"); return; }
+      if (!confirm(`给 ${$("mName").textContent} ${delta > 0 ? "加" : "扣"} ${Math.abs(delta)} 分？\n原因：${reason}\n\n积分记录无法删除，如有错误需要再调整一笔更正。`)) return;
+      $("adjBtn").disabled = true;
+      try {
+        await addDoc(collection(db, "pointsLedger"), {
+          uid,
+          delta,
+          reason: (delta > 0 ? "奖励：" : "调整：") + reason,
+          orderNo: null,
+          by: adminEmail,
+          availableAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        });
+        $("adjustForm").reset();
+        setMsg($("adjMsg"), "已调整 ✅", "ok");
+        await load();
+      } catch (err) {
+        setMsg($("adjMsg"), "调整失败：" + err.message, "err");
+      } finally {
+        $("adjBtn").disabled = false;
+      }
+    });
+
+    // ---------- 更正资料 ----------
+    $("profileForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const data = { name: $("pName").value.trim() };
+      const b = $("pBirthday").value;
+      if (b) data.birthday = b;
+      $("pBtn").disabled = true;
+      try {
+        await updateDoc(doc(db, "members", uid), data);
+        setMsg($("pMsg"), "已保存 ✅", "ok");
+        await load();
+      } catch (err) {
+        setMsg($("pMsg"), "保存失败：" + err.message, "err");
+      } finally {
+        $("pBtn").disabled = false;
+      }
+    });
+
+    // ---------- 代为绑定 ----------
+    $("bindForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const platform = $("bPlatform").value;
+      const username = normalizeUsername($("bUser").value);
+      if (!username || username.includes("/")) { setMsg($("bindMsg"), "用户名不正确", "err"); return; }
+      const id = platform + "_" + username;
+      $("bBtn").disabled = true;
+      try {
+        const exist = await getDoc(doc(db, "bindings", id));
+        if (exist.exists()) {
+          const owner = exist.data().uid;
+          setMsg($("bindMsg"), owner === uid ? "这个账号已经绑定在这位会员名下" :
+            "这个账号已被其他会员绑定，请先到那位会员的页面解除（UID：" + owner + "）", "err");
+          return;
+        }
+        await setDoc(doc(db, "bindings", id), {
+          uid, platform, username, verifyOrder: "admin", createdAt: serverTimestamp()
+        });
+        $("bindForm").reset();
+        setMsg($("bindMsg"), "已绑定 ✅ 积分会在下次计算积分时入账（每小时自动，或在表格按同步）", "ok");
+        await load();
+      } catch (err) {
+        setMsg($("bindMsg"), "绑定失败：" + err.message, "err");
+      } finally {
+        $("bBtn").disabled = false;
+      }
+    });
+
+    // ---------- 解除绑定 ----------
+    $("bindList").addEventListener("click", async e => {
+      const id = e.target.dataset.unbind;
+      if (!id) return;
+      if (!confirm(`解除绑定「${id}」？\n\n这个账号订单的积分会在下次计算积分时扣回（每小时自动，或在表格按同步）。`)) return;
+      e.target.disabled = true;
+      try {
+        await deleteDoc(doc(db, "bindings", id));
+        setMsg($("bindMsg"), "已解除绑定", "ok");
+        await load();
+      } catch (err) {
+        alert("解除失败：" + err.message);
+        e.target.disabled = false;
+      }
+    });
+
+    requireAdmin(user => {
+      adminEmail = user.email || "";
+      load().catch(e => {
+        $("pageError").textContent = "载入失败：" + e.message;
+        $("pageError").classList.remove("hidden");
+      });
+    });
+  </script>
+</body>
+</html>
