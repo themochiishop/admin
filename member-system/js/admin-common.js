@@ -30,7 +30,7 @@ export const TIER_LABELS = {
 export function tierHTML(tier) {
   const label = TIER_LABELS[tier] || TIER_LABELS.mochii;
   return (tier || "mochii") === "mochii"
-    ? `<img src="https://www.themochiishop.com/member-system/img/member.jpg" alt="" style="width:18px;height:18px;border-radius:4px;vertical-align:-4px"> ${label}`
+    ? `<img src="https://www.themochiishop.com/memberclub/img/member.jpg" alt="" style="width:18px;height:18px;border-radius:4px;vertical-align:-4px"> ${label}`
     : label;
 }
 export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3 };
