@@ -163,43 +163,61 @@
     return (g - p.byes) + p.pairs * PAIR_PENALTY + p.byes * BYE_PENALTY; // 投票次数 + 惩罚
   }
 
-  // 从 m 人走到 T 人最少要多少代价；choice[m] = 本轮最佳组数
-  const _memo = {};
-  function planTable(T) {
-    if (_memo[T]) return _memo[T];
-    _memo[T] = { cost: { [T]: 0 }, choice: {} };
-    return _memo[T];
-  }
-  function costTo(m, T) {
-    const tb = planTable(T);
-    if (m < T) return Infinity;
-    if (tb.cost[m] !== undefined) return tb.cost[m];
-    // 自下而上补齐，避免深递归
-    for (let x = T + 1; x <= m; x++) {
-      if (tb.cost[x] !== undefined) continue;
-      let best = Infinity, bestG = null;
-      for (let g = Math.max(T, Math.ceil(x / MAX_GROUP)); g < x; g++) {
-        const c = stepCost(x, g) + tb.cost[g];
-        if (c < best) { best = c; bestG = g; }
-      }
-      tb.cost[x] = best; tb.choice[x] = bestG;
+  // ---------- 整场规划（动态规划）----------
+  // 把后面所有阶段一起算：普通轮减人 → 奖项阶段（人数在 T~2T-1 就直接开始）→ 剩下的人再加赛 → … → 冠亚军
+  //   cost[j][m]：从「m 人的新一轮、下一个要抽第 j 个奖项」开始，到比赛结束的最小代价（投票次数 + 2人组/轮空惩罚）
+  //   choice[j][m]：'tier' = 直接开始奖项阶段；数字 = 这一轮分几组
+  const _pipe = {};
+  function pipeline(st, exceptRi) {
+    const tiers = [], needs = [];
+    TIERS.forEach(t => { const k = tierLeft(st, t, exceptRi); if (k > 0) { tiers.push(t); needs.push(k); } });
+    const F = finalSize(st);
+    const key = needs.join(',') + '|' + tiers.join(',') + '|' + F;
+    if (!_pipe[key]) {
+      const T = needs.map((_, j) => needs.slice(j).reduce((a, b) => a + b, 0) + F);
+      _pipe[key] = { tiers, needs, F, T, cost: needs.map(() => []).concat([[]]), choice: needs.map(() => []).concat([[]]), upto: 1 };
     }
-    return tb.cost[m];
+    return _pipe[key];
+  }
+  function ensurePipe(P, m) {
+    if (m <= P.upto) return;
+    const L = P.needs.length;
+    for (let x = P.upto + 1; x <= m; x++) {
+      for (let j = L; j >= 0; j--) {
+        const T = j === L ? P.F : P.T[j];
+        let best = Infinity, ch = null;
+        if (j === L && x === P.F) best = 0;
+        else if (j < L && x >= T && x < 2 * T) { best = P.needs[j] + P.cost[j + 1][x - P.needs[j]]; ch = 'tier'; }
+        else if (x > T) {
+          for (let g = Math.max(T, Math.ceil(x / MAX_GROUP)); g < x; g++) {
+            const c = stepCost(x, g) + P.cost[j][g];
+            if (c < best) { best = c; ch = g; }
+          }
+        }
+        P.cost[j][x] = best; P.choice[j][x] = ch;
+      }
+    }
+    P.upto = m;
+  }
+  function pipeCost(P, m, j) {
+    if (m < 2) return Infinity;
+    ensurePipe(P, m);
+    const v = P.cost[j][m];
+    return v === undefined ? Infinity : v;
   }
 
-  // 本轮还剩 r 人待 PK、已有 w 人晋级：剩下的人最好再分几组
-  function bestRemainingGroups(r, w, T) {
-    if (r <= 0) return { g: 0, cost: (T == null || w === T || costTo(w, T) < Infinity) ? 0 : Infinity };
-    if (T == null) return { g: Math.ceil(r / MAX_GROUP), cost: 0 };
+  // 本轮还剩 r 人待 PK、已有 w 人晋级：剩下的人最好再分几组（P = 整场规划；没启用模式时为 null）
+  function bestRemainingGroups(r, w, P) {
+    if (!P) return { g: r > 0 ? Math.ceil(r / MAX_GROUP) : 0, cost: 0 };
+    if (r <= 0) return { g: 0, cost: pipeCost(P, w, 0) };
     let best = { g: null, cost: Infinity };
     for (let g = Math.ceil(r / MAX_GROUP); g <= r; g++) {
-      const next = w + g;
-      if (next < T) continue;
-      const c = stepCost(r, g) + costTo(next, T);
+      const c = stepCost(r, g) + pipeCost(P, w + g, 0);
       if (c < best.cost) best = { g, cost: c };
     }
     return best;
   }
+  const planOf = st => (modeOn(st) ? pipeline(st) : null);
 
   // 下一组建议抽几人
   function plannedGroupSize(st, ri) {
@@ -208,7 +226,7 @@
     const pending = pendingOf(r).length;
     if (pending === 0) return 0;
     if (stage !== 'normal') return Math.min(MAX_GROUP, pending);    // 奖项阶段 / 决赛：最多 4 人一组（3 人季军、2 人决赛 = 全员上台）
-    const plan = bestRemainingGroups(pending, passedOf(r).length, targetOf(st));
+    const plan = bestRemainingGroups(pending, passedOf(r).length, planOf(st));
     if (!plan.g) return Math.min(MAX_GROUP, pending);
     return Math.ceil(pending / plan.g);
   }
@@ -220,9 +238,8 @@
     const pending = pendingOf(r).length;
     if (s < 1 || s > Math.min(MAX_GROUP, pending)) return false;
     if (stage !== 'normal') return true;
-    const T = targetOf(st);
-    if (T == null) return true;
-    return bestRemainingGroups(pending - s, passedOf(r).length + 1, T).cost < Infinity;
+    if (!modeOn(st)) return true;
+    return bestRemainingGroups(pending - s, passedOf(r).length + 1, planOf(st)).cost < Infinity;
   }
 
   function tierStepLabel(tier, k) {
@@ -240,36 +257,43 @@
     out.push({ n: finalSize(st), label: '👑 冠亚军' });
     return out;
   }
+  // 按整场规划模拟后面的路线：从 m 人、第 j 个奖项开始
+  function simulateRoute(P, m, j, roundNo) {
+    const out = [], L = P.needs.length;
+    let k = roundNo, guard = 0;
+    while (guard++ < 60) {
+      if (pipeCost(P, m, j) === Infinity) break;
+      const ch = P.choice[j][m];
+      if (j === L && m === P.F) { out.push({ n: m, label: '👑 冠亚军' }); break; }
+      if (ch === 'tier') { out.push({ n: m, label: tierStepLabel(P.tiers[j], P.needs[j]) }); m -= P.needs[j]; j++; continue; }
+      if (ch == null) break;
+      out.push({ n: m, label: j > 0 ? '加赛' : `第 ${k++} 轮` });
+      m = ch;
+    }
+    return out;
+  }
   // 路线图，例如 [87, 22, 6, 3] + 说明
   function roadmap(st, ri) {
     const r = st.rounds[ri];
     const stage = getRoundStage(st, ri);
-    const steps = [];
-    if (!r) return steps;
+    if (!r) return [];
     const total = cands(r).length;
     if (stage === 'final') return [{ n: total, label: '👑 冠亚军' }];
     if (TIERS.includes(stage)) {
-      const idx = TIERS.indexOf(stage);
+      const P = pipeline(st, ri);
+      const j0 = P.tiers.indexOf(stage);
       const k = tierLeft(st, stage, ri);
-      const out = [{ n: total, label: tierStepLabel(stage, k) }];
       const left = pendingOf(r).length - (k - stageGot(st, ri));
-      const nextT = remainingFrom(st, idx + 1, ri);
-      if (left > nextT && freshStage(st, left) == null) out.push({ n: left, label: '加赛' });
-      return out.concat(tailSteps(st, idx + 1, ri));
+      const rest = j0 < 0 ? [] : simulateRoute(P, left, j0 + 1, ri + 2);
+      return [{ n: total, label: tierStepLabel(stage, k) }].concat(rest.length ? rest : tailSteps(st, TIERS.indexOf(stage) + 1, ri));
     }
-    steps.push({ n: total, label: `第 ${ri + 1} 轮` });
-    const T = targetOf(st);
-    if (T == null) return steps;
-    const plan = bestRemainingGroups(pendingOf(r).length, passedOf(r).length, T);
+    const steps = [{ n: total, label: `第 ${ri + 1} 轮` }];
+    if (!modeOn(st)) return steps;
+    const P = pipeline(st);
+    const plan = bestRemainingGroups(pendingOf(r).length, passedOf(r).length, P);
     if (plan.cost === Infinity) return steps;
-    let m = passedOf(r).length + plan.g, k = ri + 2;
-    while (m > T) {
-      steps.push({ n: m, label: `第 ${k++} 轮` });
-      costTo(m, T);
-      m = planTable(T).choice[m];
-      if (!m) break;
-    }
-    return steps.concat(tailSteps(st, 0));
+    const rest = simulateRoute(P, passedOf(r).length + plan.g, 0, ri + 2);
+    return steps.concat(rest.length ? rest : tailSteps(st, 0));
   }
 
   function minimumBuyers(st) {

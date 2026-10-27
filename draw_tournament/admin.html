@@ -11,8 +11,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=12"></script>
-  <script src="i18n.js?v=8"></script>
+  <script src="logic.js?v=13"></script>
+  <script src="i18n.js?v=9"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -123,7 +123,8 @@
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukc"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#ukc)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg><span class="text-[10px]">EN</span></button>
           <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 28 14" aria-hidden="true"><rect width="28" height="14" fill="#fff"/><rect y="0" width="28" height="1" fill="#CC0001"/><rect y="2" width="28" height="1" fill="#CC0001"/><rect y="4" width="28" height="1" fill="#CC0001"/><rect y="6" width="28" height="1" fill="#CC0001"/><rect y="8" width="28" height="1" fill="#CC0001"/><rect y="10" width="28" height="1" fill="#CC0001"/><rect y="12" width="28" height="1" fill="#CC0001"/><rect width="14" height="8" fill="#010066"/><circle cx="5.2" cy="4" r="2.9" fill="#FC0"/><circle cx="6.1" cy="4" r="2.45" fill="#010066"/><path fill="#FC0" d="M10.2 1.9l.45 1.4 1.4-.6-.75 1.3 1.45.35-1.45.35.75 1.3-1.4-.6-.45 1.4-.45-1.4-1.4.6.75-1.3-1.45-.35 1.45-.35-.75-1.3 1.4.6z"/></svg><span class="text-[10px]">MS</span></button>
         </div>
-        <button onclick="openRecordsModal()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded border border-slate-600 transition shadow" title="开奖记录与历史存档">📋 记录</button>
+        <button onclick="openRecordsModal()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded border border-slate-600 transition shadow" title="开奖记录、备份与历史存档">📋 记录</button>
+        <button id="claimsBtn" onclick="openClaimsModal()" class="hidden px-2.5 py-1 bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold rounded border border-sky-500 transition shadow" title="得奖者联系与寄送进度">🎁 领奖</button>
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded transition shadow-lg animate-pulse flex items-center space-x-1">
           <span>📄</span><span>Export PDF</span>
         </button>
@@ -141,6 +142,9 @@
       <div class="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-slate-700">
         <h3 class="text-base font-bold text-amber-400">📋 开奖记录</h3>
         <div class="flex items-center gap-2">
+          <button onclick="downloadBackup()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded" title="下载目前整场比赛的备份文件">💾 备份</button>
+          <button onclick="document.getElementById('restoreFileInput').click()" class="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-xs font-bold rounded" title="用备份文件还原比赛">♻️ 还原</button>
+          <input type="file" id="restoreFileInput" accept=".json,application/json" class="hidden" onchange="restoreBackupFile(this)">
           <button onclick="downloadCurrentLogCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded">⬇️ 下载本场 CSV</button>
           <button id="deleteSelectedLogsBtn" onclick="deleteSelectedLogs()" disabled class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded disabled:opacity-40 disabled:cursor-not-allowed">🗑 删除选中</button>
           <button onclick="clearAllLogEntries()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/50 text-xs font-bold rounded">🗑 清空本场记录</button>
@@ -157,7 +161,26 @@
     </div>
   </div>
 
-  <div id="drawSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="claimsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="if (event.target === this) closeClaimsModal()">
+    <div class="bg-slate-800 border border-slate-700 rounded-lg w-full max-w-5xl shadow-2xl relative flex flex-col" style="max-height: 88vh;">
+      <div class="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-slate-700">
+        <div>
+          <h3 class="text-base font-bold text-sky-300">🎁 领奖追踪</h3>
+          <div id="claimsSummary" class="text-[11px] text-slate-400 mt-0.5"></div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="downloadClaimsCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded">⬇️ 下载 CSV</button>
+          <button onclick="closeClaimsModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4 text-xs">
+        <div id="claimsTableBox"></div>
+        <p class="text-[10px] text-slate-500 mt-3">勾选和备注会自动保存（离开输入框即保存），只有后台账号看得到。</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="drawSettingsModal" class=""fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-lg p-6 w-full max-w-md shadow-2xl relative">
       <button onclick="closeDrawSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
       <h3 class="text-lg font-bold text-amber-400 mb-2 flex items-center space-x-2"><span>🎲</span><span>盲抽参数设置</span></h3>
@@ -617,7 +640,7 @@
           syncModalUIWithState();
           updateHeaderTitle();
           updateModeBadgeUI();
-          checkAndTogglePdfExportBtn();
+          checkAndTogglePdfExportBtn(); updateClaimsBtn();
           updatePickRandomBtnState();
           updateRefreshBtnState();
           updatePickRandomBtnLabel();
@@ -774,6 +797,128 @@
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
+    // ===================== 🎁 领奖追踪 =====================
+    // 存在 draw_private/claims/{订单号}：{ contacted, shipped, note, name, rank, orderNo, ts }
+    const CLAIMS_PATH = 'draw_private/claims';
+    const CLAIM_RANKS = ['rankChampion', 'rankRunnerUp', 'rankThird', 'rankFinalist', 'rankConsolation'];
+    let claimsData = {}, claimsListening = false;
+    const escAttr = x => escapeHtml(x).replace(/"/g, '&quot;');
+    function claimKey(c) { return String(c.orderNo || ('name_' + (c.name || c.id))).replace(/[.#$\[\]\/]/g, '_'); }
+    function getWinners() {
+      const list = [];
+      (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => { if (CLAIM_RANKS.includes(c.rankKey)) list.push(c); }));
+      list.sort((a, b) => CLAIM_RANKS.indexOf(a.rankKey) - CLAIM_RANKS.indexOf(b.rankKey));
+      const cnt = {}, total = {};
+      list.forEach(c => { total[c.rankKey] = (total[c.rankKey] || 0) + 1; });
+      return list.map(c => { cnt[c.rankKey] = (cnt[c.rankKey] || 0) + 1; return { c, no: cnt[c.rankKey], many: total[c.rankKey] > 1, key: claimKey(c) }; });
+    }
+    function updateClaimsBtn() {
+      const b = document.getElementById('claimsBtn');
+      if (b) b.classList.toggle('hidden', !getWinners().length);
+      renderClaims();
+    }
+    function openClaimsModal() {
+      document.getElementById('claimsModal').classList.remove('hidden');
+      if (!claimsListening) {
+        claimsListening = true;
+        db.ref(CLAIMS_PATH).on('value', snap => { claimsData = snap.val() || {}; renderClaims(); },
+          e => { claimsListening = false; document.getElementById('claimsTableBox').innerHTML = `<p class="text-rose-300 py-4">❌ 读取失败：${escapeHtml(e.code || e.message)}<br>请确认 Firebase 规则已加入 draw_private。</p>`; });
+      }
+      renderClaims();
+    }
+    function closeClaimsModal() { document.getElementById('claimsModal').classList.add('hidden'); }
+    function rankLabel(w) { return (w.c.rankTitle || '') + (w.many ? ` #${w.no}` : ''); }
+    function renderClaims() {
+      const modal = document.getElementById('claimsModal'), box = document.getElementById('claimsTableBox');
+      if (!modal || modal.classList.contains('hidden') || !box) return;
+      const a = document.activeElement;
+      if (a && box.contains(a) && a.type === 'text') return;           // 正在输入备注时先不刷新
+      const ws = getWinners();
+      const sum = document.getElementById('claimsSummary');
+      if (!ws.length) { box.innerHTML = '<p class="text-slate-500 italic py-8 text-center">还没有得奖者</p>'; if (sum) sum.textContent = ''; return; }
+      let contacted = 0, shipped = 0;
+      const rows = ws.map(w => {
+        const d = claimsData[w.key] || {};
+        if (d.contacted) contacted++;
+        if (d.shipped) shipped++;
+        const p = DrawLogic.platformOf(w.c.orderNo);
+        return `<tr class="border-b border-slate-700/60 ${d.shipped ? 'opacity-55' : ''}">
+          <td class="py-2 pr-3 whitespace-nowrap font-bold text-amber-300">${escapeHtml(rankLabel(w))}</td>
+          <td class="py-2 pr-3 font-bold text-slate-100">${nameHtml(w.c.name)}</td>
+          <td class="py-2 pr-3 font-mono text-slate-300 whitespace-nowrap">${escapeHtml(w.c.orderNo || '-')}${p ? ` <span class="text-[10px] px-1 rounded ${p === 'T' ? 'bg-slate-600 text-slate-100' : 'bg-orange-600/80 text-white'}">${p === 'T' ? 'TikTok' : 'Shopee'}</span>` : ''}</td>
+          <td class="py-2 pr-3 text-center"><input type="checkbox" class="w-4 h-4 cursor-pointer" data-k="${escAttr(w.key)}" ${d.contacted ? 'checked' : ''} onchange="setClaim(this.dataset.k, 'contacted', this.checked)"></td>
+          <td class="py-2 pr-3 text-center"><input type="checkbox" class="w-4 h-4 cursor-pointer" data-k="${escAttr(w.key)}" ${d.shipped ? 'checked' : ''} onchange="setClaim(this.dataset.k, 'shipped', this.checked)"></td>
+          <td class="py-2 min-w-[180px]"><input type="text" data-k="${escAttr(w.key)}" value="${escAttr(d.note || '')}" placeholder="例：已私讯 / 运单号…" onchange="setClaim(this.dataset.k, 'note', this.value.trim())" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-sky-400"></td>
+        </tr>`;
+      }).join('');
+      if (sum) sum.innerHTML = `共 ${ws.length} 位得主 · 已联系 <b class="text-sky-300">${contacted}/${ws.length}</b> · 已寄出 <b class="text-emerald-300">${shipped}/${ws.length}</b>`;
+      box.innerHTML = `<table class="w-full text-left">
+        <thead><tr class="text-slate-400 border-b border-slate-600"><th class="py-1.5 pr-3">名次</th><th class="py-1.5 pr-3">名字</th><th class="py-1.5 pr-3">订单号</th><th class="py-1.5 pr-3 text-center">已联系</th><th class="py-1.5 pr-3 text-center">已寄出</th><th class="py-1.5">备注</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    }
+    function setClaim(key, field, value) {
+      const w = getWinners().find(x => x.key === key);
+      const patch = { [field]: value, ts: firebase.database.ServerValue.TIMESTAMP };
+      if (w) Object.assign(patch, { name: w.c.name || '', orderNo: w.c.orderNo || '', rank: rankLabel(w) });
+      db.ref(`${CLAIMS_PATH}/${key}`).update(patch).catch(e => alert('❌ 保存失败：' + (e.code || e.message) + '\n请确认 Firebase 规则已加入 draw_private。'));
+    }
+    function downloadClaimsCSV() {
+      const ws = getWinners();
+      if (!ws.length) { alert('还没有得奖者'); return; }
+      const esc = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+      const lines = [['名次', '名字', '订单号', '已联系', '已寄出', '备注'].join(',')].concat(ws.map(w => {
+        const d = claimsData[w.key] || {};
+        return [rankLabel(w), w.c.name, w.c.orderNo, d.contacted ? '✔' : '', d.shipped ? '✔' : '', d.note || ''].map(esc).join(',');
+      }));
+      downloadText(logFileName('Mochiishop_Claims', Date.now()), '\ufeff' + lines.join('\r\n'));
+    }
+
+    // ===================== 💾 备份 / ♻️ 还原 =====================
+    function backupFileName(ts) { return `Mochiishop_Backup_${DrawLogic.fmtTime(ts).replace(/[-: ]/g, '').slice(0, 14)}.json`; }
+    async function makeBackup() {
+      const [s1, s2] = await Promise.all([db.ref('tournament_state').once('value'), db.ref(CLAIMS_PATH).once('value').catch(() => null)]);
+      return { type: 'mochii-draw-backup', version: 1, savedAt: Date.now(), state: s1.val(), claims: s2 ? s2.val() : null };
+    }
+    async function downloadBackup() {
+      try {
+        const b = await makeBackup();
+        if (!b.state) { alert('目前没有比赛数据可以备份'); return; }
+        downloadText(backupFileName(b.savedAt), JSON.stringify(b), 'application/json');
+      } catch (e) { alert('❌ 备份失败：' + (e.code || e.message)); }
+    }
+    function restoreBackupFile(input) {
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        let b;
+        try { b = JSON.parse(reader.result); } catch (e) { alert('❌ 这不是有效的备份文件'); return; }
+        if (!b || b.type !== 'mochii-draw-backup' || !b.state || !Array.isArray(b.state.rounds)) { alert('❌ 这不是抽奖系统的备份文件'); return; }
+        const n = b.state.rounds.length;
+        const buyers = (b.state.rounds[0] && b.state.rounds[0].candidates || []).length;
+        if (!confirm(`♻️ 还原备份？\n\n备份时间：${DrawLogic.fmtTime(b.savedAt)}\n内容：${n} 轮 · 第 1 轮 ${buyers} 人\n\n目前的比赛会被覆盖（系统会先自动下载一份目前的备份）。前台大屏会立刻显示还原后的状态。`)) return;
+        try {
+          const cur = await makeBackup();
+          if (cur.state) downloadText(backupFileName(cur.savedAt).replace('Backup', 'Backup_before_restore'), JSON.stringify(cur), 'application/json');
+        } catch (e) { if (!confirm('⚠️ 无法先备份目前的比赛：' + (e.code || e.message) + '\n\n仍然要还原吗？')) return; }
+        db.ref('tournament_state').transaction(curState => {
+          const next = JSON.parse(JSON.stringify(b.state));
+          next.rev = ((curState && curState.rev) || 0) + 1;
+          return next;
+        }, (error, committed, snap) => {
+          if (error) { reportWriteError(error); return; }
+          if (b.claims) db.ref(CLAIMS_PATH).update(b.claims).catch(() => {});
+          activeGroup4Ids = [];
+          if (snap) applyServerState(snap.val());
+          currentRoundIndex = Math.max(0, (state.rounds || []).length - 1);
+          renderRoundTabs(); renderAdminView();
+          alert('✅ 已还原到 ' + DrawLogic.fmtTime(b.savedAt) + ' 的状态');
+        });
+      };
+      reader.readAsText(file);
+    }
+
     function logFileName(prefix, ts) { return `${prefix}_${DrawLogic.fmtTime(ts).slice(0, 16).replace(/[: ]/g, '-')}.csv`; }
 
     function downloadCurrentLogCSV() {
@@ -1575,7 +1720,7 @@
           alert('⚠️ 数据刚被前台更新，已同步最新画面。\n请确认后重新操作一次。');
         }
       });
-      updateStats(); renderAdminView(); checkAndTogglePdfExportBtn(); updateRefreshBtnState();
+      updateStats(); renderAdminView(); checkAndTogglePdfExportBtn(); updateRefreshBtnState(); updateClaimsBtn();
       updatePickRandomBtnState();
     }
     
