@@ -9,8 +9,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=9"></script>
-  <script src="i18n.js?v=5"></script>
+  <script src="logic.js?v=10"></script>
+  <script src="i18n.js?v=6"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -148,6 +148,16 @@
       .out-panel-fit .out-list-fit { flex: 1 1 0; min-height: 0; max-height: none; }
     }
     .out-card { padding: 6px 8px; font-size: 12px; line-height: 1.3; }
+    /* 平台底纹字母 */
+    .plat-host { position: relative; isolation: isolate; }
+    .pool-pk-badge { position: absolute; top: -9px; right: 6px; z-index: 2; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+    .plat-mark { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: -1; pointer-events: none; user-select: none;
+      font-family: 'Arial Black', 'Segoe UI Black', Impact, sans-serif; font-weight: 900; line-height: 1; font-size: 2.6rem; opacity: .10; }
+    .plat-mark.plat-T { color: #e2e8f0; }
+    .plat-mark.plat-S { color: #fb923c; opacity: .16; }
+    .plat-mark.sm { font-size: 1.15rem; right: 6px; }
+    .plat-mark.lg { font-size: 4.5rem; right: 10px; }
+    .plat-mark.xl { font-size: 5.5rem; right: 14px; }
     .passed-zoom .passed-card-name { font-size: 1.5rem !important; }
     .passed-zoom .passed-card-order { font-size: 0.875rem !important; }
     .scramble-text { font-family: 'Courier New', monospace; letter-spacing: 2px; color: #94a3b8 !important; opacity: 0.8; }
@@ -470,13 +480,33 @@
         <div class="bg-slate-800/30 rounded-lg p-2.5 border border-slate-800 flex flex-col out-panel out-panel-fit">
           <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
-            <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
+            <div class="flex items-center gap-1.5">
+              <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
+              <button type="button" onclick="openOutModal()" title="放大查看淘汰名单" class="text-[11px] leading-none text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded px-1.5 py-1">⤢ 放大</button>
+            </div>
           </div>
           <div id="outListContainer" class="space-y-2 out-list-fit thin-scroll pr-1"></div>
         </div>
       </div>
     </div>
   </main>
+
+  <!-- 淘汰区放大查看 -->
+  <div id="outModal" class="hidden fixed inset-0 z-[80] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6" onclick="if (event.target === this) closeOutModal()">
+    <div class="bg-slate-900 border border-slate-600 rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700">
+        <span class="text-lg">❌</span>
+        <h3 class="text-base sm:text-lg font-bold text-slate-200">淘汰区</h3>
+        <span id="outModalCount" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">0</span>
+        <div class="flex items-center bg-slate-950 border border-slate-700 rounded px-2 py-1 ml-auto w-40 sm:w-56 focus-within:border-amber-400">
+          <span class="text-slate-400 text-xs">🔍</span>
+          <input type="search" id="outModalSearch" oninput="renderOutModal()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5">
+        </div>
+        <button type="button" onclick="closeOutModal()" class="text-slate-400 hover:text-white text-xl leading-none px-1">✕</button>
+      </div>
+      <div id="outModalBody" class="overflow-y-auto thin-scroll p-4 space-y-4"></div>
+    </div>
+  </div>
 
   <footer class="bg-slate-950 border-t border-slate-800/80 py-3 text-center text-[10px] sm:text-xs text-slate-500">
     <div class="max-w-[1600px] mx-auto px-4 flex justify-between items-center">
@@ -731,6 +761,11 @@
       return { champion, runnerUp, third, cons };
     }
 
+    // 图片里的标题：自定义标题也跟着当前语言翻译（例：十月抽奖晋级榜 → October Draw Leaderboard）
+    function summaryTitle() {
+      const t = state.customPublicTitle || 'Mochiishop 每月抽奖晋级榜';
+      return window.I18N ? I18N.translate(t, summaryLang()) : t;
+    }
     function drawSummaryCanvas() {
       const T = SUMMARY_TX[summaryLang()] || SUMMARY_TX.zh;
       const d = getSummaryData();
@@ -756,7 +791,7 @@
       rr(16, 16, W - 32, H - 32, 14); x.lineWidth = 3; x.strokeStyle = '#fbbf24'; x.stroke();
 
       // 标题
-      text('🏆  ' + (state.customPublicTitle || 'Mochiishop'), W / 2, 70, `800 26px ${FONT}`, '#fde68a', W - 2 * PAD);
+      text('🏆  ' + summaryTitle(), W / 2, 70, `800 26px ${FONT}`, '#fde68a', W - 2 * PAD);
       text(T.title, W / 2, 120, `900 42px ${FONT}`, '#fbbf24', W - 2 * PAD);
       text(T.sub, W / 2, 170, `500 20px ${FONT}`, '#cbd5e1', W - 2 * PAD);
       x.strokeStyle = 'rgba(251,191,36,.35)'; x.lineWidth = 1; x.beginPath(); x.moveTo(PAD, 210); x.lineTo(W - PAD, 210); x.stroke();
@@ -914,19 +949,19 @@
       document.getElementById('winnerAnnouncementBanner').classList.add('hidden');
 
       podiumGrid.innerHTML = `
-        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
+        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition plat-host">${runnerUp ? platMark(runnerUp.orderNo, 'xl') : ''}
           <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
           <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / 亚军</span>
           <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? nameHtml(runnerUp.name) : 'N/A'}</div>
           <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(maskOrder(runnerUp.orderNo) || '无订单号') : '-'}</div>
         </div>
-        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-lg border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
+        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-lg border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2 plat-host">${platMark(champion.orderNo, 'xl')}
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
           <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
           <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${nameHtml(champion.name)}</div>
           <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(maskOrder(champion.orderNo) || '无订单号')}</div>
         </div>
-        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
+        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition plat-host">${thirdPlace ? platMark(thirdPlace.orderNo, 'xl') : ''}
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
           <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? nameHtml(thirdPlace.name) : 'N/A'}</div>
@@ -937,7 +972,7 @@
         consolationBox.classList.remove('hidden');
         consolationBadge.innerText = consolations.length;
         consolationGrid.innerHTML = consolations.map((c, i) => `
-          <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-md text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
+          <div class="plat-host p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-md text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">${platMark(c.orderNo)}
             <div>
               <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}安慰奖</span>
               <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${nameHtml(c.name)}</div>
@@ -997,12 +1032,12 @@
       const roundTotal = (activeRound.candidates || []).length;
       if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
         banner.classList.remove('hidden');
-        content.innerHTML = `<span class="text-amber-300 font-bold">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！</span>`;
+        content.innerHTML = `<span class="text-amber-300 font-bold"><span class="block sm:inline">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐</span> <span class="block sm:inline">🥉 即将在直播间选出季军得主！</span></span>`;
         return;
       }
       if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
         banner.classList.remove('hidden');
-        content.innerHTML = `<span class="text-amber-300 font-bold">🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！</span>`;
+        content.innerHTML = `<span class="text-amber-300 font-bold"><span class="block sm:inline">🔥 👑 冠亚军终极决战 2 选 1 开启中！</span> <span class="block sm:inline">🥈 即将选出冠军与亚军！</span></span>`;
         return;
       }
       banner.classList.add('hidden');
@@ -1493,9 +1528,38 @@
       isAdminUnlocked = on;
       if (on) {
         localStorage.setItem('mochii_admin_unlocked', 'true');
-        db.ref(DrawLogic.PRESENCE_PATH).set(true).catch(e => alert('❌ 控盘失败：' + (e.code || e.message)));
+        startPresence();
       }
       refreshAdminUnlockUI();
+    }
+
+    // —— 前台控盘心跳：后台据此判断前台主播是否在线（在线时后台不能揭晓，避免两边同时按）——
+    let __presTimer = null, __presConnHooked = false;
+    function presenceBeat() {
+      if (!isAdminUnlocked) return;
+      try {
+        const ref = db.ref(DrawLogic.PRESENCE_PATH);
+        ref.onDisconnect().remove();                     // 关掉页面 / 断线：服务器自动清掉
+        ref.set({ ts: firebase.database.ServerValue.TIMESTAMP })
+          .catch(() => ref.set(true).catch(e => console.warn('控盘心跳失败', e)));
+      } catch (e) { console.warn('控盘心跳失败', e); }
+    }
+    function startPresence() {
+      presenceBeat();
+      if (!__presTimer) __presTimer = setInterval(presenceBeat, DrawLogic.PRESENCE_BEAT_MS);
+      if (!__presConnHooked) {
+        __presConnHooked = true;
+        db.ref('.info/connected').on('value', s => { if (s.val()) presenceBeat(); });   // 重新连上时马上补一次
+      }
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) presenceBeat(); });
+    }
+    function stopPresence() {
+      if (__presTimer) { clearInterval(__presTimer); __presTimer = null; }
+      try {
+        const ref = db.ref(DrawLogic.PRESENCE_PATH);
+        ref.onDisconnect().cancel();
+        ref.remove().catch(() => {});
+      } catch (e) { console.warn(e); }
     }
 
     function toggleAdminUnlock() {
@@ -1523,7 +1587,7 @@
           latestState.pkLocked = false;
           return DrawLogic.bumpRev(latestState);
         });
-        db.ref(DrawLogic.PRESENCE_PATH).set(false);
+        stopPresence();
       }
       refreshAdminUnlockUI();
     }
@@ -1727,7 +1791,7 @@ function revealPKWinnerFromPublic() {
       const nameClass = isScrambling ? 'scramble-text' : '';
       const orderClass = isScrambling ? 'scramble-text' : '';
       return `
-        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card ${isMarqueeRunning && __marqueeHighlightId === String(c.id) ? 'marquee-flash' : ''} relative w-32 h-32 sm:w-36 sm:h-36 lg:w-44 lg:h-40 rounded-md border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
+        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card ${isMarqueeRunning && __marqueeHighlightId === String(c.id) ? 'marquee-flash' : ''} relative w-32 h-32 sm:w-36 sm:h-36 lg:w-44 lg:h-40 rounded-md border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3 plat-host">${isScrambling ? '' : platMark(c.orderNo, 'lg')}
           <div class="mb-2">${header}</div>
           <div class="pk-card-name font-bold text-amber-300 text-base lg:text-xl truncate w-full text-center ${nameClass}">${displayName}</div>
           <div class="pk-card-order text-[11px] lg:text-xs text-slate-400 font-mono truncate w-full text-center mt-1 ${orderClass}">${displayOrder}</div>
@@ -1752,6 +1816,9 @@ function revealPKWinnerFromPublic() {
     }
 
     function renderPublicView() {
+      const hTitle = document.getElementById('publicHeaderTitle');
+      const wantTitle = state.customPublicTitle || 'Mochiishop 每月抽奖晋级榜';
+      if (hTitle && hTitle.dataset.src !== wantTitle) { hTitle.dataset.src = wantTitle; hTitle.textContent = wantTitle; }
       // 1. 盲抽框固定为金色样式
       const stripPoll = document.getElementById('pkStripPoll');
       if (stripPoll) stripPoll.innerText = state.currentPollNumber ? `POLL #${state.currentPollNumber}` : 'POLL #-';
@@ -1865,7 +1932,7 @@ function revealPKWinnerFromPublic() {
           const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
           const highlightClass = isHighlight ? 'passed-highlight' : '';
           
-          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + labelHtml +
+          return `<div class="plat-host px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + labelHtml + platMark(c.orderNo) +
             '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + nameHtml(c.name) + '</span>' +
             '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</span>' +
           '</div>';
@@ -1882,7 +1949,7 @@ function revealPKWinnerFromPublic() {
         if (cons.length > 0) {
           cPanel.classList.remove('hidden');
           cBadge.innerText = cons.length;
-          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap flex-shrink-0">#${i+1}安慰奖</span><span class="passed-card-name font-bold text-emerald-300 text-base">${nameHtml(c.name)}</span><span class="passed-card-order text-slate-400 font-mono text-xs">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
+          cList.innerHTML = cons.map((c, i) => `<div class="plat-host px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded flex items-center space-x-2 text-xs shadow-sm mt-1.5">${platMark(c.orderNo)}<span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap flex-shrink-0">#${i+1}安慰奖</span><span class="passed-card-name font-bold text-emerald-300 text-base">${nameHtml(c.name)}</span><span class="passed-card-order text-slate-400 font-mono text-xs">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
         } else cPanel.classList.add('hidden');
       }
 
@@ -1903,15 +1970,13 @@ function revealPKWinnerFromPublic() {
           const isInActiveGroup = state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
           if (isInActiveGroup && namesRevealedForPending) {
             extraStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
-            pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
+            pkBadge = '<span class="pool-pk-badge text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded">🔥 PK中</span>';
           }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
-          cardsHtml += `<div class="relative p-3 rounded-md border ${extraStyle} shadow min-w-0 flex flex-col justify-between">` + folderTabHtml +
-            '<div>' +
-              '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + nameHtml(c.name) + '</div>' +
-              '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</div>' +
-            '</div>' +
+          cardsHtml += `<div class="plat-host pool-card px-2.5 pt-3 pb-2 rounded-md border ${extraStyle} shadow min-w-0">` + folderTabHtml + pkBadge + platMark(c.orderNo) +
+            '<div class="flex items-baseline min-w-0"><span class="text-[10px] font-mono text-slate-400 flex-shrink-0 mr-2">#' + (index + 1) + '</span>' +
+              '<span class="font-bold text-slate-100 text-xs sm:text-sm truncate">' + nameHtml(c.name) + '</span></div>' +
+            '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</div>' +
           '</div>';
         });
         pendingContainer.innerHTML = '<div class="pool-grid">' + cardsHtml + '</div>';
@@ -1941,7 +2006,7 @@ function revealPKWinnerFromPublic() {
           const rNum = Number(rIdxKey) + 1;
           const candidatesInGroup = grouped[rIdxKey];
           const groupRowsHtml = candidatesInGroup.map(c => `
-            <div class="out-card bg-slate-900/80 border border-slate-800 rounded-sm truncate">
+            <div class="out-card plat-host bg-slate-900/80 border border-slate-800 rounded-sm truncate">${platMark(c.orderNo, 'sm')}
               <span class="font-bold text-slate-300 text-[11px] truncate block">${nameHtml(c.name)}</span>
             </div>`).join('');
           return `<div class="bg-slate-900/40 p-1.5 rounded border border-slate-800">
@@ -1953,6 +2018,7 @@ function revealPKWinnerFromPublic() {
           </div>`;
         }).join('');
       }
+      renderOutModal();
       updateWinnerBannerUI();
     }
 
@@ -1960,6 +2026,46 @@ function revealPKWinnerFromPublic() {
     function maskOrder(o) { return DrawLogic.maskOrder(o); }
     // 买家名字：不翻译
     function nameHtml(x) { return `<span translate="no">${escapeHtml(x)}</span>`; }
+    // —— 淘汰区放大 ——
+    function openOutModal() {
+      document.getElementById('outModal').classList.remove('hidden');
+      renderOutModal();
+    }
+    function closeOutModal() { document.getElementById('outModal').classList.add('hidden'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOutModal(); });
+    function renderOutModal() {
+      const modal = document.getElementById('outModal');
+      if (!modal || modal.classList.contains('hidden')) return;
+      const q = (document.getElementById('outModalSearch').value || '').trim().toLowerCase();
+      const grouped = {}; let total = 0;
+      (state.rounds || []).forEach((r, rIdx) => (r.candidates || []).forEach(c => {
+        if (c.status !== 'out') return;
+        if (q && !(c.name || '').toLowerCase().includes(q) && !(c.orderNo || '').toLowerCase().includes(q)) return;
+        const k = c.eliminatedRoundIndex !== undefined ? c.eliminatedRoundIndex : rIdx;
+        (grouped[k] = grouped[k] || []).push(c); total++;
+      }));
+      document.getElementById('outModalCount').innerText = total;
+      const keys = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
+      document.getElementById('outModalBody').innerHTML = keys.length === 0
+        ? `<p class="text-sm text-slate-500 text-center py-10 italic">暂无淘汰人员</p>`
+        : keys.map(k => `<section>
+            <div class="flex items-center justify-between text-xs font-bold text-rose-400 border-b border-slate-700 pb-1 mb-2">
+              <span>❌ 第 ${Number(k) + 1} 轮</span><span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">${grouped[k].length}</span>
+            </div>
+            <div class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));">
+              ${grouped[k].map(c => `<div class="plat-host bg-slate-800/70 border border-slate-700 rounded px-2.5 py-1.5 min-w-0">${platMark(c.orderNo)}
+                <div class="font-bold text-slate-200 text-sm truncate">${nameHtml(c.name)}</div>
+                <div class="text-[11px] text-slate-400 font-mono truncate">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div>
+              </div>`).join('')}
+            </div>
+          </section>`).join('');
+    }
+
+    // 平台底纹：5 开头 TikTok → T，2 开头 Shopee → S（淡淡的大字母）
+    function platMark(order, size) {
+      const p = DrawLogic.platformOf(order);
+      return p ? `<span class="plat-mark plat-${p} ${size || ''}" aria-hidden="true" translate="no">${p}</span>` : '';
+    }
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>

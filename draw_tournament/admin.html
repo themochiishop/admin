@@ -10,8 +10,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=9"></script>
-  <script src="i18n.js?v=5"></script>
+  <script src="logic.js?v=10"></script>
+  <script src="i18n.js?v=6"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -43,6 +43,15 @@
       .main-grid { grid-template-columns: 1fr; }
     }
     .out-card { padding: 4px 6px; font-size: 11px; }
+    /* 平台底纹字母：5 开头 TikTok → T，2 开头 Shopee → S */
+    .plat-host { position: relative; isolation: isolate; }
+    .plat-mark { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: -1; pointer-events: none; user-select: none;
+      font-family: 'Arial Black', 'Segoe UI Black', Impact, sans-serif; font-weight: 900; line-height: 1; font-size: 2.4rem; opacity: .10; }
+    .plat-mark.plat-T { color: #e2e8f0; }
+    .plat-mark.plat-S { color: #fb923c; opacity: .16; }
+    .plat-mark.sm { font-size: 1.05rem; right: 26px; }
+    .plat-mark.lg { font-size: 3.6rem; }
+    .pool-pk-badge { position: absolute; top: -9px; right: 6px; z-index: 2; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
     .undo-btn { opacity: 0.5; transition: opacity 0.2s; }
     .out-card:hover .undo-btn { opacity: 1; }
     .trigger-btn-locked { opacity: 0.4; cursor: not-allowed !important; }
@@ -233,10 +242,10 @@
               </label>
               <label class="flex items-start space-x-2 p-3 rounded-md border border-slate-700 bg-slate-900/60 hover:bg-slate-800 cursor-pointer transition">
                 <input type="radio" name="drawMode" value="mode2" class="mt-1">
-                <div class="flex-1"><div class="font-bold text-emerald-300 text-sm">模式 2：冠亚季 + 安慰奖模式</div><div class="text-[11px] text-slate-400 mt-1 mb-2">晋级区需至少包含 (N + 3) 人才能开启。</div>
+                <div class="flex-1"><div class="font-bold text-emerald-300 text-sm">模式 2：冠亚季 + 安慰奖模式</div><div class="text-[11px] text-slate-400 mt-1 mb-2">晋级区需至少 <b id="mode2NeedText" class="text-emerald-300">13</b> 位（安慰奖 N + 冠亚季 3）才能推进到安慰奖阶段。</div>
                   <div class="flex items-center space-x-2 bg-slate-800 p-2.5 rounded border border-slate-700">
                     <span class="text-slate-300">安慰奖名额:</span>
-                    <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center font-bold text-emerald-400 focus:outline-none">
+                    <input type="number" id="mode2ConsolationCount" value="10" min="1" max="100" oninput="updateMode2NeedText()" class="w-16 bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-center font-bold text-emerald-400 focus:outline-none">
                     <span class="text-slate-400">人</span>
                   </div>
                 </div>
@@ -506,6 +515,15 @@
     let currentRoundIndex = 0;
     let activeGroup4Ids = [];
     let publicAdminActive = false;
+    let presenceRaw = null, serverOffset = 0;
+    // 前台主播在线（心跳 75 秒内）→ 后台揭晓按钮锁住
+    function refreshPresence() {
+      const on = DrawLogic.presenceActive(presenceRaw, Date.now() + serverOffset);
+      if (on === publicAdminActive) return;
+      publicAdminActive = on;
+      updateAdminRevealButtonLock();
+      if (typeof renderActiveGroupUI === 'function') renderActiveGroupUI();
+    }
     
     let __lastPickRandomGroupTs = 0;
     let __lastGroupGeneratedTs = 0;
@@ -532,11 +550,9 @@
     function startAdminListeners() {
       db.ref('tournament_state').on('value', (snapshot) => applyServerState(snapshot.val()),
         (err) => { console.error('读取失败:', err); alert('❌ 读取抽奖数据失败：' + (err.code || err.message) + '\n请重新登录后刷新页面。'); });
-      db.ref(DrawLogic.PRESENCE_PATH).on('value', (snap) => {
-        publicAdminActive = !!snap.val();
-        updateAdminRevealButtonLock();
-      });
-      setInterval(renderWorkflowStatus, 1000);
+      db.ref(DrawLogic.PRESENCE_PATH).on('value', (snap) => { presenceRaw = snap.val(); refreshPresence(); });
+      db.ref('.info/serverTimeOffset').on('value', (snap) => { serverOffset = snap.val() || 0; });
+      setInterval(() => { refreshPresence(); renderWorkflowStatus(); }, 1000);
     }
 
     // 收到服务器最新数据（或写入冲突后同步）时刷新整个画面
@@ -658,7 +674,7 @@
       if (state.triggerNumber) {
         bar.className = "px-2.5 py-1 rounded border border-sky-400 bg-sky-950/60 shadow-[0_0_10px_rgba(56,189,248,0.3)] flex items-center space-x-1.5 transition-all duration-300 animate-pulse";
         icon.innerText = "⏳";
-        text.innerHTML = `<span class="text-sky-400">已选票选号 #${state.triggerNumber}</span><span class="text-[10px] text-slate-300 font-normal">等待前台【揭晓】</span>`;
+        text.innerHTML = `<span class="text-sky-400">已选票选号 #${state.triggerNumber}</span><span class="text-[10px] text-slate-300 font-normal">${publicAdminActive ? '等待前台【揭晓】' : '前台未控盘，可在后台按【揭晓】'}</span>`;
         return;
       }
 
@@ -891,6 +907,10 @@
       }
     }
 
+    function updateMode2NeedText() {
+      const n = parseInt(document.getElementById('mode2ConsolationCount').value, 10) || 10;
+      const el = document.getElementById('mode2NeedText'); if (el) el.textContent = n + 3;
+    }
     function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); switchConfigTab('tabTitle'); }
     function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
     
@@ -960,6 +980,7 @@
       const radios = document.getElementsByName('drawMode');
       for (let r of radios) { if (r.value === (state.modeConfig.selectedMode || 'mode1')) r.checked = true; }
       document.getElementById('mode2ConsolationCount').value = state.modeConfig.mode2ConsolationCount || 10;
+      updateMode2NeedText();
       const importRadios = document.getElementsByName('importMode');
       for (let r of importRadios) { if (r.value === (state.modeConfig.importMode || 'default')) r.checked = true; }
       document.getElementById('customSheetUrlInput').value = state.modeConfig.customSheetUrl || '';
@@ -1261,7 +1282,7 @@
           }
         }
         
-        return `<div class="${cardBorder} group rounded-md p-3 flex flex-col justify-between shadow transition-all duration-500">
+        return `<div class="${cardBorder} plat-host group rounded-md p-3 flex flex-col justify-between shadow transition-all duration-500">${platMark(c.orderNo, 'lg')}
           <div>
             <div class="flex justify-between items-center mb-1">${cardHeaderTag}</div>
             <div class="font-bold text-amber-300 text-sm truncate mt-1">${displayName}</div>
@@ -1432,7 +1453,19 @@
       if (stage === 'consolation') {
         const left = DrawLogic.consolationN(state) - (cur.candidates || []).filter(c => c.rankKey === 'rankConsolation').length;
         if (left > 0) { alert(`⚠️ 安慰奖还差 ${left} 位，抽满后会自动进入冠亚季。`); return; }
-      } else if (pending.length > 0) {
+      } else {
+        // 模式要求的晋级人数：模式2 = 安慰奖 N + 冠亚季 3；模式1 = 3
+        const T = DrawLogic.targetOf(state);
+        const passedNow = (cur.candidates || []).filter(c => c.status === 'pass').length;
+        if (T != null && passedNow < T) {
+          const why = DrawLogic.isMode2(state) && !DrawLogic.consolationDone(state)
+            ? `模式2 需要晋级区至少 ${T} 位（安慰奖 ${DrawLogic.consolationN(state)} + 冠亚季 3）`
+            : `需要晋级区至少 ${T} 位（冠亚季 3）`;
+          alert(`⚠️ 晋级人数不足，暂时不能推进。\n${why}，目前只有 ${passedNow} 位。\n\n请继续盲抽名单池里的买家。`);
+          return;
+        }
+      }
+      if (stage !== 'consolation' && pending.length > 0) {
         if (!confirm(`⚠️ 本轮还有 ${pending.length} 位买家没抽。\n\n现在推进的话，他们会全部淘汰。确定？`)) return;
         pending.forEach(c => { c.status = 'out'; c.eliminatedRoundIndex = ri; });
       }
@@ -1531,7 +1564,7 @@
       passedContainer.innerHTML = passedList.length === 0 ? `<span class="text-xs text-slate-500 italic">本轮暂无胜出买家...</span>` : passedList.map(c => {
         const rankText = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] ml-1">${c.rankTitle}</span>` : '';
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
-        return `<div class="relative px-2.5 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded flex items-center space-x-1.5 text-xs shadow-sm mt-1.5">` + folderTabHtml +
+        return `<div class="plat-host px-2.5 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded flex items-center space-x-1.5 text-xs shadow-sm mt-1.5">` + folderTabHtml + platMark(c.orderNo) +
           '<span class="font-bold text-emerald-300 mt-0.5">' + nameHtml(c.name) + '</span>' +
           '<span class="text-slate-400 font-mono text-[10px] mt-0.5">' + escapeHtml(c.orderNo || '无订单号') + '</span>' + rankText +
           '<button onclick="undoEliminatedCandidate(\'' + c.id + '\')" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-0.5 rounded mt-0.5">✕</button>' +
@@ -1548,7 +1581,7 @@
           let statusBadge = '';
           if (activeGroup4Ids.includes(String(c.id))) {
             borderStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
-            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500 text-slate-950 font-black">🔥 PK中</span>`;
+            statusBadge = `<span class="pool-pk-badge px-1.5 py-0.5 rounded text-[9px] bg-amber-500 text-slate-950 font-black">🔥 PK中</span>`;
           }
           let passBtnLabel = '🏆 晋级';
           let passBtnClass = "bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white";
@@ -1556,10 +1589,10 @@
           else if (isMode1ThreeLeft) { passBtnLabel = '🥉 季军'; passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce"; }
           else if (isMode1TwoLeft) { passBtnLabel = '👑 冠军'; passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse"; }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
-          return `<div class="relative p-2 rounded border ${borderStyle} flex flex-col justify-between shadow transition min-w-0 mt-1.5">` + folderTabHtml +
+          return `<div class="plat-host px-2 pt-2.5 pb-1.5 rounded border ${borderStyle} flex flex-col justify-between shadow transition min-w-0 mt-1.5">` + folderTabHtml + statusBadge + platMark(c.orderNo) +
             '<div>' +
-              '<div class="flex justify-between items-center mb-0.5"><span class="text-[9px] font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-sm truncate mt-0.5">' + nameHtml(c.name) + '</div>' +
+              '<div class="flex items-baseline min-w-0"><span class="text-[9px] font-mono text-slate-400 flex-shrink-0 mr-2">#' + (index + 1) + '</span>' +
+              '<span class="font-bold text-slate-100 text-sm truncate">' + nameHtml(c.name) + '</span></div>' +
               '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
             '</div>' +
             '<div class="mt-1.5 pt-1 border-t border-slate-700/60 flex space-x-1">' +
@@ -1597,7 +1630,7 @@
         const rNum = Number(rIdxKey) + 1;
         const candidatesInGroup = grouped[rIdxKey];
         const rowsHtml = candidatesInGroup.map(c => `
-          <div class="out-card flex items-center justify-between gap-1 bg-slate-900/60 border border-slate-800 rounded-sm px-1.5 py-1 mt-0.5">
+          <div class="out-card plat-host flex items-center justify-between gap-1 bg-slate-900/60 border border-slate-800 rounded-sm px-1.5 py-1 mt-0.5">${platMark(c.orderNo, 'sm')}
             <span class="font-bold text-slate-300 text-[10px] truncate flex-1">${nameHtml(c.name)}</span>
             <button onclick="undoEliminatedCandidate('${c.id}')" class="undo-btn text-rose-400 hover:text-rose-300 text-[11px] font-black px-1 rounded hover:bg-rose-900/30 transition" title="撤回至当前待PK池">✕</button>
           </div>`).join('');
@@ -1645,7 +1678,6 @@
         rounds: [{ roundName: "第 1 轮", candidates: listRes.candidates }]
       }), (error, committed, snap) => {
         if (error) { reportWriteError(error); return; }
-        db.ref(DrawLogic.PRESENCE_PATH).set(false);
         currentRoundIndex = 0; activeGroup4Ids = [];
         if (snap) applyServerState(snap.val());
         alert('✅ 已重置。' + (listRes.summary ? '\n' + listRes.summary : '\n名单为空，请点【🔄 刷新 / 导入名单】导入。'));
@@ -1796,6 +1828,10 @@
 
     // 买家名字：不翻译
     function nameHtml(x) { return `<span translate="no">${escapeHtml(x)}</span>`; }
+    function platMark(order, size) {
+      const p = DrawLogic.platformOf(order);
+      return p ? `<span class="plat-mark plat-${p} ${size || ''}" aria-hidden="true" translate="no">${p}</span>` : '';
+    }
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>

@@ -385,6 +385,8 @@
     if (pendingOf(r).length > 0) return null;
     const winners = passedOf(r);
     if (winners.length < 2) return null;
+    const T = targetOf(st);
+    if (T != null && winners.length < T) return null;     // 人数不够模式要求，不自动推进
     return pushNextRound(st, winners, delayMs);
   }
 
@@ -484,6 +486,19 @@
     return `${st.currentPollNumber || 0}|${(st.activeGroupIds || []).map(String).join(',')}`;
   }
   const PRESENCE_PATH = 'draw_presence/publicAdminActive';
+  // 前台控盘心跳：每 20 秒更新一次时间；超过 75 秒没更新（关掉、断网、睡眠）就当作已离开
+  const PRESENCE_BEAT_MS = 20000, PRESENCE_TTL_MS = 75000;
+  function presenceActive(val, serverNow) {
+    if (val === true) return true;                                   // 旧版本写入的 true
+    return !!(val && typeof val === 'object' && val.ts && serverNow - val.ts < PRESENCE_TTL_MS);
+  }
+
+  // ---------- 订单平台 ----------
+  // 5 开头 → TikTok，2 开头 → Shopee
+  function platformOf(orderNo) {
+    const c = String(orderNo || '').trim().charAt(0);
+    return c === '5' ? 'T' : c === '2' ? 'S' : '';
+  }
 
   // 抽组后前台动画时长：洗牌转场 1.6 秒 + 倒计时 N 秒 + 名字滚动 3 秒 + 0.4 秒缓冲
   // 这段时间内不能设定票选号（观众还没看到这一组是谁）
@@ -574,7 +589,7 @@
 
   global.DrawLogic = {
     MARQUEE_STEPS, MARQUEE_MS, REVEAL_SETTLE_MS, marqueeDelays, marqueeSequence, beginReveal, settleReveal, progressInfo,
-    bumpRev, pollSignature, PRESENCE_PATH, animationLockMs, lockRemainingMs,
+    bumpRev, pollSignature, PRESENCE_PATH, PRESENCE_BEAT_MS, presenceActive, platformOf, animationLockMs, lockRemainingMs,
     PODIUM_THIRD_LABEL, PODIUM_FINAL_LABEL, MAX_GROUP, randomInt, shuffle,
     modeOn, isMode2, consolationN, targetOf, countConsolation, consolationDone,
     getRoundStage, isPodiumDecided, isTournamentFinished,

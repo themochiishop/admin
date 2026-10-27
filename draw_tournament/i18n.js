@@ -11,6 +11,8 @@
 
   // ---------- ① 整句规则（整段文字完全符合才使用，名字等变量原样保留）----------
   const SENTENCES = [
+    [/^⚠️ 晋级人数不足，暂时不能推进。\n模式2 需要晋级区至少 (\d+) 位（安慰奖 (\d+) \+ 冠亚季 3），目前只有 (\d+) 位。\n\n请继续盲抽名单池里的买家。$/, '⚠️ Not enough advanced buyers to continue.\nMode 2 needs at least $1 advanced ($2 consolation + top 3); only $3 so far.\n\nKeep drawing from the pool.', '⚠️ Pembeli mara belum cukup untuk diteruskan.\nMod 2 perlu sekurang-kurangnya $1 orang mara ($2 saguhati + 3 teratas); baru $3 orang.\n\nTeruskan cabutan dari senarai.'],
+    [/^⚠️ 晋级人数不足，暂时不能推进。\n需要晋级区至少 (\d+) 位（冠亚季 3），目前只有 (\d+) 位。\n\n请继续盲抽名单池里的买家。$/, '⚠️ Not enough advanced buyers to continue.\nNeeds at least $1 advanced (top 3); only $2 so far.\n\nKeep drawing from the pool.', '⚠️ Pembeli mara belum cukup untuk diteruskan.\nPerlu sekurang-kurangnya $1 orang mara (3 teratas); baru $2 orang.\n\nTeruskan cabutan dari senarai.'],
     [/^🎲 名单池剩 (\d+) 人 · 已晋级 (\d+) 人 · 下一组(?:建议)? (\d+) 人$/, '🎲 Pool: $1 left · Advanced: $2 · Next group: $3', '🎲 Baki: $1 orang · Mara: $2 · Kumpulan seterusnya: $3 orang'],
     [/^✅ 本轮已抽完，共晋级 (\d+) 人$/, '✅ Round complete — $1 advanced', '✅ Pusingan selesai — $1 orang mara'],
     [/^🎁 安慰奖阶段：已抽出 (\d+)\/(\d+) 位（每组 (\d+) 人，命中者得安慰奖，其余回名单池）$/, '🎁 Consolation stage: $1/$2 drawn\n(groups of $3 — the hit wins a consolation prize, the rest return to the pool)', '🎁 Peringkat saguhati: $1/$2 dicabut\n(kumpulan $3 orang — yang terkena menang hadiah saguhati, yang lain kembali ke senarai)'],
@@ -23,9 +25,20 @@
   ];
 
   // ---------- ② 数字 + 单位 ----------
+  // 「十月」→ October / Oktober（自定义标题常用）
+  const MONTH_NAMES = [null, ['January','Januari'],['February','Februari'],['March','Mac'],['April','April'],['May','Mei'],['June','Jun'],['July','Julai'],['August','Ogos'],['September','September'],['October','Oktober'],['November','November'],['December','Disember']];
+  function MONTHS(x, col) {
+    const zh = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 十二: 12 };
+    const n = /^\d+$/.test(x) ? parseInt(x, 10) : zh[x];
+    const m = MONTH_NAMES[n];
+    return m ? m[col - 1] + ' ' : x + '月';
+  }
   const UNITS = [
     [/第\s*(\d+)\s*轮/g, 'Round $1', 'Pusingan $1'],
     [/共\s*(\d+)\s*人/g, '$1 in total', '$1 orang kesemuanya'],
+    [/[（(]\s*剩\s*(\d+)\s*人\s*[)）]/g, '($1 left)', '(tinggal $1)'],
+    [/[（(]\s*(\d+)\s*选\s*1\s*[)）]/g, '(1 of $1)', '(1 daripada $1)'],
+    [/([一二三四五六七八九十]{1,3}|\d{1,2})\s*月(?=\s*(?:抽奖|份|晋级|决赛|直播))/g, (m, x) => MONTHS(x, 1), (m, x) => MONTHS(x, 2)],
     [/(\d+)\s*张订单/g, '$1 orders', '$1 pesanan'],
     [/(\d+)\s*条记录/g, '$1 records', '$1 rekod'],
     [/(\d+)\s*位买家/g, '$1 buyers', '$1 pembeli'],
@@ -89,6 +102,8 @@
     ['本轮抽奖名单同步中，请关注直播间...', 'Syncing this round\'s list — watch the live stream…', 'Menyegerak senarai pusingan ini — ikuti siaran langsung…'],
     ['暂无淘汰人员', 'No one eliminated yet', 'Belum ada yang tersingkir'],
     ['淘汰区', 'Eliminated', 'Tersingkir'],
+    ['⤢ 放大', '⤢ Expand', '⤢ Besarkan'],
+    ['放大查看淘汰名单', 'Expand the eliminated list', 'Besarkan senarai tersingkir'],
     ['已淘汰', 'Eliminated', 'Tersingkir'],
     ['已晋级', 'Advanced', 'Mara'],
     ['待PK', 'Waiting', 'Menunggu'],
@@ -131,6 +146,11 @@
     ['票选号 #', 'Vote no. #', 'Nombor undian #'],
     ['🥉 季军得主是：', '🥉 3rd place goes to:', '🥉 Tempat ketiga:'],
     ['(🔥 👑 冠亚军决战 2 选 1 开启中！)', '(🔥 👑 Final: 1 of 2 — now live!)', '(🔥 👑 Final: 1 daripada 2 — sedang berlangsung!)'],
+    ['🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐', '🔥 Top-3 showdown! 3 left —', '🔥 Pertarungan 3 teratas! Tinggal 3 orang —'],
+    ['🥉 即将在直播间选出季军得主！', '🥉 3rd place will be drawn live!', '🥉 Tempat ketiga akan dicabut secara langsung!'],
+    ['🔥 👑 冠亚军终极决战 2 选 1 开启中！', '🔥 👑 Grand final — 1 of 2!', '🔥 👑 Final besar — 1 daripada 2!'],
+    ['🥈 即将选出冠军与亚军！', '🥈 Champion and runner-up coming up!', '🥈 Johan dan naib johan akan dipilih!'],
+    ['抽奖晋级榜', 'Draw Leaderboard', 'Papan Pendahulu Cabutan'],
     ['🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐，即将在直播间选出 🥉 季军得主！', '🔥 Top-3 showdown! 3 left — 🥉 3rd place will be drawn live!', '🔥 Pertarungan 3 teratas! Tinggal 3 orang — 🥉 tempat ketiga akan dicabut secara langsung!'],
     ['🔥 👑 冠亚军终极决战 2 选 1 开启中！即将选出冠军与亚军！', '🔥 👑 Grand final — 1 of 2! Champion and runner-up coming up!', '🔥 👑 Final besar — 1 daripada 2! Johan dan naib johan akan dipilih!'],
     ['【安慰奖遴选阶段】已选出', '[Consolation stage] Drawn', '[Peringkat saguhati] Dicabut'],
@@ -308,6 +328,7 @@
     ['🔄 重抽本组名单', '🔄 Redraw this group', '🔄 Cabut semula kumpulan ini'],
     ['清空盲抽组', 'Clear group', 'Kosongkan kumpulan'],
     ['票选号:', 'Vote no.:', 'No. undian:'],
+    ['前台未控盘，可在后台按【揭晓】', 'Host screen not in control — reveal here', 'Skrin hos tidak mengawal — dedah di sini'],
     ['🚫 前台已登入管理员', '🚫 Host screen has control', '🚫 Skrin hos sedang mengawal'],
     ['🏆 晋级', '🏆 Advance', '🏆 Mara'],
     ['🔥 抽奖流程', '🔥 How it works', '🔥 Cara cabutan'],
@@ -343,6 +364,8 @@
     ['模式 1：冠亚季排位模式', 'Mode 1: Top 3', 'Mod 1: 3 Teratas'],
     ['模式 2：冠亚季 + 安慰奖模式', 'Mode 2: Top 3 + Consolation', 'Mod 2: 3 Teratas + Saguhati'],
     ['剩3人时盲抽（或手动）选出【季军】，剩2人时盲抽（或手动）选出【冠军】，另一位为亚军。', 'At 3 left draw (or pick) [3rd], at 2 left draw (or pick) [Champion]; the other is runner-up.', 'Bila tinggal 3 cabut (atau pilih) [Ketiga], bila tinggal 2 cabut (atau pilih) [Johan]; seorang lagi naib johan.'],
+    ['晋级区需至少', 'Advanced list needs at least', 'Senarai mara perlu sekurang-kurangnya'],
+    ['位（安慰奖 N + 冠亚季 3）才能推进到安慰奖阶段。', '(N consolation + top 3) before the consolation stage.', 'orang (N saguhati + 3 teratas) sebelum peringkat saguhati.'],
     ['晋级区需至少包含 (N + 3) 人才能开启。', 'Needs at least N + 3 people.', 'Perlu sekurang-kurangnya N + 3 orang.'],
     ['安慰奖名额:', 'Consolation prizes:', 'Hadiah saguhati:'],
     ['PDF 报告导出内容与模板设置', 'PDF report content', 'Kandungan laporan PDF'],
@@ -573,8 +596,8 @@
     }
     return lead + phrases(body, col) + trail;
   }
-  const PRE_UNITS = UNITS.slice(0, 2);    // 第 N 轮、共 N 人：先处理
-  const POST_UNITS = UNITS.slice(2);      // 其他数字单位：词组之后
+  const PRE_UNITS = UNITS.slice(0, 5);    // 第 N 轮、共 N 人：先处理
+  const POST_UNITS = UNITS.slice(5);      // 其他数字单位：词组之后
   const PUNCT = [[/（/g, ' ('], [/）/g, ') '], [/，/g, ', '], [/。/g, '. '], [/：/g, ': '], [/！/g, '! '], [/？/g, '? '], [/【/g, '['], [/】/g, ']'], [/、/g, ', '], [/ {2,}/g, ' '], [/ ([).,:!?\]])/g, '$1'], [/\( /g, '(']];
   function phrases(body, col) {
     if (MAP.has(body.trim())) return MAP.get(body.trim())[col];
