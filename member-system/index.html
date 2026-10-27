@@ -144,15 +144,20 @@
           !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return;
 
       // 优惠券：从券码库取一组未使用的
-      let couponCode = null;
+           let couponCode = null, fromPool = false;
       if (reward && reward.type === "coupon") {
-        const cs = await getDocs(query(collection(db, "coupons"),
-          where("rewardId", "==", r.rewardId), where("used", "==", false), limit(1)));
-        if (cs.empty) {
-          alert("这个优惠券奖品的券码已经用完，请先到「奖品管理」补充券码，再回来批准。");
-          return;
+        if (reward.couponCode) {
+          couponCode = reward.couponCode;   // 共用优惠码，例如 THEMMSDIS
+        } else {
+          const cs = await getDocs(query(collection(db, "coupons"),
+            where("rewardId", "==", r.rewardId), where("used", "==", false), limit(1)));
+          if (cs.empty) {
+            alert("这个优惠券奖品还没设定优惠码，券码库也用完了。请先到「奖品管理」设定优惠码。");
+            return;
+          }
+          couponCode = cs.docs[0].id;
+          fromPool = true;
         }
-        couponCode = cs.docs[0].id;
       }
 
       const batch = writeBatch(db);
@@ -171,7 +176,7 @@
         createdAt: serverTimestamp()
       });
 
-      if (couponCode) {
+      if (fromPool) {
         batch.update(doc(db, "coupons", couponCode), {
           used: true, usedBy: r.uid, redemptionId: r.id, usedAt: serverTimestamp()
         });
