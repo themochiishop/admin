@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>奖品管理 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>奖品管理</h2>
+          <p class="muted">新增 / 编辑奖品、上下架，以及补充优惠券码</p>
+        </div>
+        <button id="newBtn" class="btn btn-primary">＋ 新增奖品</button>
+      </div>
+
+      <!-- 编辑表单 -->
+      <div id="formPanel" class="panel hidden">
+        <h3 id="formTitle">新增奖品</h3>
+        <form id="rewardForm">
+          <input type="hidden" id="rid">
+          <label>奖品名称
+            <input id="rname" required maxlength="60" placeholder="例如：RM5 优惠券 / Mochii 手链一条">
+          </label>
+          <label>说明（会员看得到）
+            <textarea id="rdesc" rows="2" maxlength="200" placeholder="例如：Shopee 店铺优惠券，满 RM30 可用，有效期 30 天"></textarea>
+          </label>
+          <div class="grid2">
+            <label>所需积分
+              <input type="number" id="rcost" required min="1" step="1">
+            </label>
+            <label>类型
+              <select id="rtype">
+                <option value="coupon">🎫 优惠券（批准时自动分配券码）</option>
+                <option value="gift">🎁 实体奖品（你手动寄出）</option>
+              </select>
+            </label>
+            <label>库存（留空 = 不限）
+              <input type="number" id="rstock" min="0" step="1">
+            </label>
+            <label>排序（数字小的排前面）
+              <input type="number" id="rsort" step="1" value="10">
+            </label>
+          </div>
+          <label class="inline"><input type="checkbox" id="ractive" checked> 上架（会员看得到）</label>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
+            <button type="button" class="btn btn-ghost" id="cancelBtn">取消</button>
+          </div>
+          <p class="muted" style="font-size:.8rem;margin-top:8px">
+            ⚠️ 修改名称或积分后，会员已提交但还没审核的申请仍按旧资料处理；新申请会用新资料。
+          </p>
+          <p id="formMsg" class="msg"></p>
+        </form>
+      </div>
+
+      <div id="list"><p class="empty">载入中…</p></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, getDocs, doc, addDoc, updateDoc, writeBatch, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("rewards");
+
+    let rewards = [];
+    let coupons = {};   // code → 资料
+
+    async function load() {
+      const [rs, cs] = await Promise.all([
+        getDocs(collection(db, "rewards")),
+        getDocs(collection(db, "coupons"))
+      ]);
+      rewards = rs.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || a.cost - b.cost);
+      coupons = {};
+      cs.docs.forEach(d => coupons[d.id] = d.data());
+      render();
+    }
+
+    function couponStats(rewardId) {
+      let total = 0, unused = 0;
+      Object.values(coupons).forEach(c => {
+        if (c.rewardId !== rewardId) return;
+        total++;
+        if (!c.used) unused++;
+      });
+      return { total, unused };
+    }
+
+    function render() {
+      $("list").innerHTML = rewards.length ? rewards.map(r => {
+        const isCoupon = r.type === "coupon";
+        const cs = isCoupon ? couponStats(r.id) : null;
+        return `
+          <div class="item" data-id="${esc(r.id)}">
+            <div class="item-head">
+              <div>
+                <div class="item-title">${isCoupon ? "🎫" : "🎁"} ${esc(r.name)} · ${r.cost} 分
+                  ${r.active ? '<span class="tag tag-ok">上架中</span>' : '<span class="tag">已下架</span>'}
+                </div>
+                ${r.description ? `<div class="meta">${esc(r.description)}</div>` : ""}
+                <div class="meta">
+                  库存：${typeof r.stock === "number" ? r.stock : "不限"} · 排序 ${r.sortOrder ?? "-"}
+                  ${isCoupon ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
+                    ${cs.unused === 0 ? '<span class="tag tag-bad">需补充</span>' : cs.unused < 5 ? '<span class="tag tag-warn">快用完</span>' : ""}` : ""}
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost" data-act="edit">编辑</button>
+              <button class="btn btn-ghost" data-act="toggle">${r.active ? "下架" : "上架"}</button>
+              ${isCoupon ? `<button class="btn btn-ghost" data-act="codes">＋ 补充券码</button>` : ""}
+            </div>
+            ${isCoupon ? `
+              <div class="codes-box hidden" style="margin-top:10px">
+                <label>每行一组券码（从 Shopee / TikTok 后台复制）
+                  <textarea rows="5" class="codes-input" placeholder="MOCHII5A1B2&#10;MOCHII5C3D4"></textarea>
+                </label>
+                <button class="btn btn-primary" data-act="saveCodes">加入券码库</button>
+                <p class="msg codes-msg"></p>
+              </div>` : ""}
+          </div>`;
+      }).join("") : `<p class="empty">还没有奖品，按右上角「新增奖品」开始</p>`;
+    }
+
+    function openForm(r) {
+      $("formPanel").classList.remove("hidden");
+      $("formTitle").textContent = r ? "编辑奖品" : "新增奖品";
+      $("rid").value = r ? r.id : "";
+      $("rname").value = r ? r.name : "";
+      $("rdesc").value = r ? (r.description || "") : "";
+      $("rcost").value = r ? r.cost : "";
+      $("rtype").value = r ? r.type : "coupon";
+      $("rstock").value = r && typeof r.stock === "number" ? r.stock : "";
+      $("rsort").value = r ? (r.sortOrder ?? 10) : 10;
+      $("ractive").checked = r ? !!r.active : true;
+      $("formMsg").textContent = "";
+      $("formPanel").scrollIntoView({ behavior: "smooth" });
+    }
+
+    $("newBtn").addEventListener("click", () => openForm(null));
+    $("cancelBtn").addEventListener("click", () => $("formPanel").classList.add("hidden"));
+
+    $("rewardForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const stockText = $("rstock").value.trim();
+      const data = {
+        name: $("rname").value.trim(),
+        description: $("rdesc").value.trim(),
+        cost: parseInt($("rcost").value, 10),
+        type: $("rtype").value,
+        stock: stockText === "" ? null : parseInt(stockText, 10),
+        sortOrder: parseInt($("rsort").value, 10) || 0,
+        active: $("ractive").checked,
+        updatedAt: serverTimestamp()
+      };
+      if (!data.name || !(data.cost > 0)) {
+        $("formMsg").textContent = "请填写名称和正确的积分";
+        $("formMsg").className = "msg err";
+        return;
+      }
+      $("saveBtn").disabled = true;
+      try {
+        const id = $("rid").value;
+        if (id) await updateDoc(doc(db, "rewards", id), data);
+        else await addDoc(collection(db, "rewards"), { ...data, createdAt: serverTimestamp() });
+        $("formPanel").classList.add("hidden");
+        await load();
+      } catch (err) {
+        $("formMsg").textContent = "保存失败：" + err.message;
+        $("formMsg").className = "msg err";
+      } finally {
+        $("saveBtn").disabled = false;
+      }
+    });
+
+    $("list").addEventListener("click", async e => {
+      const act = e.target.dataset.act;
+      if (!act) return;
+      const item = e.target.closest(".item");
+      const r = rewards.find(x => x.id === item.dataset.id);
+      if (!r) return;
+
+      if (act === "edit") openForm(r);
+
+      if (act === "toggle") {
+        e.target.disabled = true;
+        try {
+          await updateDoc(doc(db, "rewards", r.id), { active: !r.active, updatedAt: serverTimestamp() });
+          await load();
+        } catch (err) { alert("失败：" + err.message); e.target.disabled = false; }
+      }
+
+      if (act === "codes") item.querySelector(".codes-box").classList.toggle("hidden");
+
+      if (act === "saveCodes") {
+        const msg = item.querySelector(".codes-msg");
+        const lines = item.querySelector(".codes-input").value
+          .split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        const fresh = [], skipped = [];
+        new Set(lines).forEach(code => {
+          if (code.includes("/") || coupons[code]) skipped.push(code); else fresh.push(code);
+        });
+        if (!fresh.length) {
+          msg.textContent = "没有新券码可加入" + (skipped.length ? `（${skipped.length} 组已存在或格式不对）` : "");
+          msg.className = "msg codes-msg err";
+          return;
+        }
+        e.target.disabled = true;
+        try {
+          for (let i = 0; i < fresh.length; i += 400) {
+            const batch = writeBatch(db);
+            fresh.slice(i, i + 400).forEach(code => batch.set(doc(db, "coupons", code), {
+              rewardId: r.id, used: false, createdAt: serverTimestamp()
+            }));
+            await batch.commit();
+          }
+          await load();
+          alert(`已加入 ${fresh.length} 组券码` + (skipped.length ? `，跳过 ${skipped.length} 组（已存在或含有 /）` : ""));
+        } catch (err) {
+          msg.textContent = "加入失败：" + err.message;
+          msg.className = "msg codes-msg err";
+          e.target.disabled = false;
+        }
+      }
+    });
+
+    requireAdmin(() => load().catch(e => {
+      $("list").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`;
+    }));
+  </script>
+</body>
+</html>

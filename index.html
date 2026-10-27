@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/jpeg" href="logo.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <title>The Mochii Shop - Admin 管理控制台</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,20 +25,20 @@
     .brand { font-size: 1.00rem; font-weight: 700; display: flex; align-items: center; gap: 12px; }
     .nav-links a { color: #cbd5e1; text-decoration: none; font-size: 0.88rem; }
     .nav-links a:hover { color: #fff; }
-    .admin-container { max-width: 1050px; margin: 30px auto; padding: 0 15px; }
+    .admin-container { max-width: 1050px; margin: 30px auto; padding: 0 20px; }
     .dashboard-header {
       background: #ffffff;
-      padding: 15px 30px;
+      padding: 24px 30px;
       border-radius: 12px;
       border: 1px solid #e2e8f0;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      margin-bottom: 15px;
+      margin-bottom: 24px;
     }
-    .dashboard-header h3 { font-size: 1.35rem; color: #0f172a; margin-bottom: 2px; }
-    .dashboard-header p { color: #64748b; font-size: 0.85rem; }
-    
+    .dashboard-header h3 { font-size: 1.55rem; color: #0f172a; margin-bottom: 6px; }
+    .dashboard-header p { color: #64748b; font-size: 0.92rem; }
+
     .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
-    
+
     .card {
       background: #ffffff;
       border-radius: 12px;
@@ -57,13 +56,16 @@
     .card-wheel .card-icon { background: #eff6ff; color: #2563eb; }
     .card-search .card-icon { background: #f0fdf4; color: #16a34a; }
     .card-status .card-icon { background: #faf5ff; color: #9333ea; }
-    
-    /* 新增：图库卡片的图标颜色 */
+
+    /* 图库卡片的图标颜色 */
     .card-gallery .card-icon { background: #e0f2fe; color: #0284c7; }
+
+    /* 新增：会员系统卡片的图标颜色 */
+    .card-member .card-icon { background: #fdf2f8; color: #db2777; }
 
     .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
     .card-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 18px; line-height: 1.5; }
-    
+
     .card-btn {
       width: 100%;
       padding: 10px 14px;
@@ -80,7 +82,7 @@
       border: none;
       cursor: pointer;
     }
-    
+
     .btn-amber { background: #d97706; }
     .btn-amber:hover { background: #b45309; }
     .btn-orange, .btn-cod { background: #ff5722; }
@@ -91,10 +93,14 @@
     .btn-green:hover { background: #15803d; }
     .btn-purple { background: #9333ea; }
     .btn-purple:hover { background: #7e22ce; }
-    
-    /* 新增：图库按钮颜色 */
+
+    /* 图库按钮颜色 */
     .btn-gallery { background: #0284c7; }
     .btn-gallery:hover { background: #0369a1; }
+
+    /* 新增：会员系统按钮颜色 */
+    .btn-member { background: #db2777; }
+    .btn-member:hover { background: #be185d; }
 
     /* 弹窗 Modal 样式 */
     .modal-overlay {
@@ -144,20 +150,6 @@
     .btn-admin-portal:hover { background: #1e293b; }
     .btn-public-portal { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
     .btn-public-portal:hover { background: #e2e8f0; }
-    .btn-test-portal { background: #fdf4ff; color: #a21caf; border: 1px dashed #e879f9; }
-    .btn-test-portal:hover { background: #fae8ff; }
-    /* 每月抽奖卡片：图标右边的【领奖追踪】 */
-    .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-    .claim-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: #e0f2fe; border: 1px solid #7dd3fc;
-      color: #0369a1; font-size: 0.8rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all .2s; }
-    .claim-link:hover { background: #bae6fd; }
-    .claim-link.has-todo { background: #fff1f2; border-color: #fda4af; color: #be123c; animation: claimBlink 1.2s ease-in-out infinite; }
-    .claim-link.has-todo .claim-count { animation: claimDot 1.2s ease-in-out infinite; }
-    @keyframes claimBlink { 0%, 100% { box-shadow: 0 0 0 0 rgba(225,29,72,.5); } 50% { box-shadow: 0 0 0 7px rgba(225,29,72,0); background: #ffe4e6; } }
-    @keyframes claimDot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
-    @media (prefers-reduced-motion: reduce) { .claim-link.has-todo, .claim-link.has-todo .claim-count { animation: none; } }
-    .claim-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #e11d48; color: #fff; font-size: 0.72rem; display: inline-flex; align-items: center; justify-content: center; }
-    .claim-count[hidden] { display: none; }
 
     footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 0.85rem; }
   </style>
@@ -172,7 +164,7 @@
 
   <div class="admin-container">
     <div class="dashboard-header">
-      <h3>工具与控制台 Dashboard</h3>
+      <h3>管理控制台 Dashboard</h3>
       <p>欢迎回来！处理 COD 手动 AWB 打印、直播大转盘、每月抽奖晋级控盘、买家订单查询与动态更新。</p>
     </div>
 
@@ -197,7 +189,17 @@
         <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
       </div>
 
-      <!-- 3. 新增：图库管理 Gallery (插在订单查询之后) -->
+      <!-- 3. 新增：会员系统 member-system -->
+      <div class="card card-member">
+        <div>
+          <div class="card-icon">🎫</div>
+          <div class="card-title">会员系统 Member System</div>
+          <div class="card-desc">审核会员积分兑换、管理奖品与优惠券码库。</div>
+        </div>
+        <a href="member-system/" class="card-btn btn-member">进入会员系统 🎫</a>
+      </div>
+
+      <!-- 4. 图库管理 Gallery -->
       <div class="card card-gallery">
         <div>
           <div class="card-icon">🖼️</div>
@@ -207,7 +209,7 @@
         <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
       </div>
 
-      <!-- 4. 社交圈动态 my-admin-status -->
+      <!-- 5. 社交圈动态 my-admin-status -->
       <div class="card card-status">
         <div>
           <div class="card-icon">⚙️</div>
@@ -217,7 +219,7 @@
         <a href="my-admin-status/admin.html" class="card-btn btn-purple">状态动态管理 ⚙️</a>
       </div>
 
-      <!-- 5. COD 面单打印系统 -->
+      <!-- 6. COD 面单打印系统 -->
       <div class="card card-cod">
         <div>
           <div class="card-icon">📦</div>
@@ -226,14 +228,11 @@
         </div>
         <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
       </div>
-     
-      <!-- 6. 每月抽奖 Monthly Draw -->
+
+      <!-- 7. 每月抽奖 Monthly Draw -->
       <div class="card card-draw">
         <div>
-          <div class="card-head">
-            <div class="card-icon">🎁</div>
-            <a id="drawClaimLink" class="claim-link" href="./draw_tournament/claims.html" target="_blank" title="得奖者联系与寄送进度">🎁 领奖追踪<span id="drawClaimCount" class="claim-count" hidden></span></a>
-          </div>
+          <div class="card-icon">🎁</div>
           <div class="card-title">每月抽奖 Monthly Draw</div>
           <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
         </div>
@@ -255,11 +254,8 @@
         <a href="./draw_tournament/admin.html" class="modal-link-btn btn-admin-portal" target="_blank">
           🎬 进入抽奖控制台 (Admin)
         </a>
-        <a href="https://www.themochiishop.com/live-draw/" class="modal-link-btn btn-public-portal" target="_blank">
+        <a href="./draw_tournament/index.html" class="modal-link-btn btn-public-portal" target="_blank">
           🏆 打开买家公开普及大屏 (Public)
-        </a>
-        <a href="https://www.themochiishop.com/live-draw/?test=1" class="modal-link-btn btn-test-portal" target="_blank">
-          🧪 测试大屏 (Test)
         </a>
       </div>
     </div>
@@ -284,45 +280,6 @@
     </div>
   </div>
 
-  <!-- 领奖提醒：读取抽奖系统的领奖清单（在本机登录过抽奖后台就会显示） -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script>
-    (function () {
-      try {
-        firebase.initializeApp({
-          apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
-          authDomain: "draw-tournament.firebaseapp.com",
-          databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
-          projectId: "draw-tournament",
-          storageBucket: "draw-tournament.firebasestorage.app",
-          messagingSenderId: "803720903757",
-          appId: "1:803720903757:web:8b561daabc0d69af9e7004"
-        });
-        const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
-        let started = false;
-        firebase.auth().onAuthStateChanged(u => {
-          const ok = u && !u.isAnonymous && ALLOWED.includes(String(u.email || '').toLowerCase());
-          const link = document.getElementById('drawClaimLink'), count = document.getElementById('drawClaimCount');
-          if (!ok) { count.hidden = true; link.classList.remove('has-todo'); return; }
-          if (started) return;
-          started = true;
-          firebase.database().ref('draw_private/claimBatches').on('value', snap => {
-            let left = 0, months = 0;
-            Object.values(snap.val() || {}).forEach(b => {
-              const n = Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.shipped).length;
-              if (n) { left += n; months++; }
-            });
-            count.hidden = !left;
-            count.textContent = left;
-            link.classList.toggle('has-todo', !!left);
-            link.title = left ? `${left} 位得主未寄出${months > 1 ? `（${months} 场）` : ''}` : '得奖者联系与寄送进度（全部已寄出）';
-          }, () => { count.hidden = true; });
-        });
-      } catch (e) { console.warn('领奖提醒载入失败', e); }
-    })();
-  </script>
   <script>
     // 每月抽奖弹窗逻辑
     function openDrawModal() {
