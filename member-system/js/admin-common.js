@@ -23,8 +23,16 @@ export const COUPON_FORMATS = [
 
 // 会员等级（显示用；规则以 Google 表格同步脚本的 MS_TIERS 为准）
 export const TIER_LABELS = {
-  mochii: "🍡 Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石"
+   mochii: "Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石"
 };
+
+// 列表用：Mochii 会员显示会员俱乐部 logo
+export function tierHTML(tier) {
+  const label = TIER_LABELS[tier] || TIER_LABELS.mochii;
+  return (tier || "mochii") === "mochii"
+    ? `<img src="https://www.themochiishop.com/member-system/img/member.jpg" alt="" style="width:18px;height:18px;border-radius:4px;vertical-align:-4px"> ${label}`
+    : label;
+}
 export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3 };
 
 export function platformTag(p) {
