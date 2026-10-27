@@ -77,8 +77,8 @@
     import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, platformTag,
-      TIER_LABELS, TIER_ORDER, fmtPhone, waLink
-    } from "./js/admin-common.js";
+      TIER_LABELS, TIER_ORDER, fmtPhone, waLink, tierHTML
+  } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("members");
@@ -153,7 +153,7 @@
       $("rows").innerHTML = list.length ? list.map(r => `
         <tr data-uid="${esc(r.uid)}">
           <td><b>${esc(r.name)}</b></td>
-          <td>${TIER_LABELS[r.tier] || esc(r.tier)}</td>
+          <td>${tierHTML(r.tier)}</td>
           <td class="num">RM ${r.spend12m.toFixed(2)}</td>
           <td>${r.phone
             ? `<a href="${waLink(r.phone)}" target="_blank" class="wa-link" title="打开 WhatsApp">💬 ${esc(fmtPhone(r.phone))}</a>${r.waOptIn ? ' <span class="tag tag-ok" title="同意接收优惠通知">📣</span>' : ""}`
@@ -186,7 +186,7 @@
       const head = ["UID", "称呼", "等级", "近一年消费", "WhatsApp", "同意接收优惠", "电子邮件", "绑定账号", "可用积分", "待确认积分", "生日", "加入日期"];
       const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
       const lines = [head.map(csvCell).join(",")].concat(filtered().map(r => [
-        r.uid, r.name, (TIER_LABELS[r.tier] || r.tier).replace(/^\S+\s/, ""), r.spend12m.toFixed(2), r.phone, r.waOptIn ? "是" : "否", r.email,
+        r.uid, r.name, (TIER_LABELS[r.tier] || r.tier).replace(/^[^\w\u4e00-\u9fff]+\s*/, ""), r.spend12m.toFixed(2), r.phone, r.waOptIn ? "是" : "否", r.email,
         r.bindings.map(b => b.platform + ":" + b.username).join(" / "),
         r.spendable, r.pending, r.birthday, fmtDate(r.createdAt)
       ].map(csvCell).join(",")));
