@@ -89,3 +89,8 @@ code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; font-size: .85
 .gate-card ol li { margin-bottom: 6px; }
 
 @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* 俱乐部开关 */
+header nav a.club-switch { font-weight: 700; }
+header nav a.club-open { background: #16a34a; color: #fff; }
+header nav a.club-closed { background: #dc2626; color: #fff; }
