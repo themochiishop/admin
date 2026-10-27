@@ -11,7 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="logic.js?v=9"></script>
-  <script src="i18n.js?v=1"></script>
+  <script src="i18n.js?v=3"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -64,7 +64,18 @@
       border-bottom: 6px solid #f59e0b;
     }
     .rule-tooltip:hover .rule-tooltip-content { visibility: visible; opacity: 1; }
-  </style>
+      .lang-flag { width: 18px; height: 12px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,.15); flex-shrink: 0; display: inline-block; }
+    /* 轮次标签：文件夹标签样式 */
+    .round-tabs { display: flex; align-items: flex-end; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+    .round-tabs::-webkit-scrollbar { display: none; }
+    .round-tab { position: relative; flex-shrink: 0; white-space: nowrap; padding: 5px 14px 4px; font-size: 12px; font-weight: 700; line-height: 1.35;
+      color: #cbd5e1; background: #1e293b; border: 1px solid #334155; border-bottom: none; border-radius: 10px 10px 0 0; transition: background .15s, color .15s; }
+    .round-tab:hover { background: #334155; color: #fff; }
+    .round-tab.active { color: #0f172a; background: linear-gradient(180deg, #fbbf24, #f59e0b); border-color: #f59e0b; padding-top: 7px; font-weight: 900; box-shadow: 0 -3px 12px rgba(245,158,11,.35); }
+    .round-tab-bar { border-bottom: 2px solid #f59e0b; }
+    @media (min-width: 640px) { .round-tab { font-size: 14px; padding: 6px 16px 5px; } .round-tab.active { padding-top: 8px; } }
+    .folder-tab.tab-pick { background: linear-gradient(135deg, #0ea5e9, #2563eb) !important; color: #fff !important; }
+</style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
   <div id="loginGate" class="fixed inset-0 z-[200] bg-slate-950 flex items-center justify-center p-6">
@@ -86,7 +97,7 @@
           <p class="text-[11px] text-slate-400">香水盲抽 · Shopee直播分组PK控盘系统</p>
         </div>
       </div>
-      <div class="flex items-center flex-wrap gap-2">
+      <div class="flex items-center flex-wrap gap-2 [&>*]:whitespace-nowrap">
         <div class="relative group cursor-pointer">
           <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-2.5 py-1 rounded-lg text-xs shadow-inner hover:border-amber-400/60 transition">
             <span id="currentModeBadge" class="text-amber-400 font-bold">模式: 冠亚季模式</span>
@@ -94,15 +105,15 @@
           </div>
         </div>
         <div class="flex items-center space-x-0.5 bg-slate-900 border border-slate-700 p-0.5 rounded-lg">
-          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px]">ZH</span></button>
-          <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px]">EN</span></button>
-          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[10px]">MS</span></button>
+          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#DE2910"/><path fill="#FFDE00" d="M5 2l1.18 3.62h3.8l-3.08 2.24 1.18 3.62L5 9.24 1.92 11.48 3.1 7.86.02 5.62h3.8z"/><circle cx="10" cy="2" r=".9" fill="#FFDE00"/><circle cx="12" cy="4" r=".9" fill="#FFDE00"/><circle cx="12" cy="7" r=".9" fill="#FFDE00"/><circle cx="10" cy="9" r=".9" fill="#FFDE00"/></svg><span class="text-[10px]">ZH</span></button>
+          <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukc"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#ukc)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg><span class="text-[10px]">EN</span></button>
+          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 28 14" aria-hidden="true"><rect width="28" height="14" fill="#fff"/><rect y="0" width="28" height="1" fill="#CC0001"/><rect y="2" width="28" height="1" fill="#CC0001"/><rect y="4" width="28" height="1" fill="#CC0001"/><rect y="6" width="28" height="1" fill="#CC0001"/><rect y="8" width="28" height="1" fill="#CC0001"/><rect y="10" width="28" height="1" fill="#CC0001"/><rect y="12" width="28" height="1" fill="#CC0001"/><rect width="14" height="8" fill="#010066"/><circle cx="5.2" cy="4" r="2.9" fill="#FC0"/><circle cx="6.1" cy="4" r="2.45" fill="#010066"/><path fill="#FC0" d="M10.2 1.9l.45 1.4 1.4-.6-.75 1.3 1.45.35-1.45.35.75 1.3-1.4-.6-.45 1.4-.45-1.4-1.4.6.75-1.3-1.45-.35 1.45-.35-.75-1.3 1.4.6z"/></svg><span class="text-[10px]">MS</span></button>
         </div>
         <button onclick="openRecordsModal()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow" title="开奖记录与历史存档">📋 记录</button>
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-lg transition shadow-lg animate-pulse flex items-center space-x-1">
           <span>📄</span><span>Export PDF</span>
         </button>
-        <button id="adminUserBadge" onclick="adminSignOut()" class="hidden px-2 py-1 bg-slate-900 border border-slate-700 text-[10px] text-slate-400 rounded-lg hover:text-rose-300 hover:border-rose-500/50 transition" title="点击退出登录"></button>
+        <button id="adminUserBadge" onclick="adminSignOut()" class="hidden max-w-[200px] truncate whitespace-nowrap px-2 py-1 bg-slate-900 border border-slate-700 text-[10px] text-slate-400 rounded-lg hover:text-rose-300 hover:border-rose-500/50 transition" title="点击退出登录"></button>
         <button onclick="goToPrevRound()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg border border-slate-600 transition shadow">🔙 上一轮</button>
         <button id="advanceNextRoundBtn" onclick="createNewRound()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center space-x-1">
           <span>⏩ 锁定晋级并推进</span>
@@ -240,11 +251,11 @@
     </div>
   </div>
 
-  <main class="max-w-[1600px] mx-auto px-4 py-3 flex-1 w-full flex flex-col">
+  <main class="max-w-[1600px] mx-auto px-4 py-2 flex-1 w-full flex flex-col">
 
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-      <div id="roundTabsContainer" class="flex flex-wrap gap-1.5 overflow-x-auto"></div>
-      <div class="flex items-center gap-2">
+    <div class="round-tab-bar mb-2 flex flex-wrap items-end justify-between gap-2">
+      <div id="roundTabsContainer" class="round-tabs pt-1"></div>
+      <div class="flex items-center gap-2 pb-1.5">
         <div class="rule-tooltip">
           <span class="px-2.5 py-1.5 bg-sky-900/40 border border-sky-500/50 text-sky-300 text-[11px] font-bold rounded-lg cursor-help">❓ 玩法说明</span>
           <div class="rule-tooltip-content">
@@ -1407,8 +1418,7 @@
       const container = document.getElementById('roundTabsContainer');
       if (!container) return;
       container.innerHTML = state.rounds.map((r, idx) => {
-        const activeClass = (idx === currentRoundIndex) ? "bg-amber-500 text-slate-950 font-bold border-amber-400" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
-        return `<button onclick="switchRound(${idx})" class="px-3 py-1 rounded-lg text-xs border transition ${activeClass} whitespace-nowrap">${escapeHtml(getRoundTitle(idx))}</button>`;
+        return `<button onclick="switchRound(${idx})" class="round-tab ${idx === currentRoundIndex ? 'active' : ''}">${escapeHtml(getRoundTitle(idx))}</button>`;
       }).join('');
     }
     function switchRound(idx) {
@@ -1487,7 +1497,7 @@
       });
       passedContainer.innerHTML = passedList.length === 0 ? `<span class="text-xs text-slate-500 italic">本轮暂无胜出买家...</span>` : passedList.map(c => {
         const rankText = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] ml-1">${c.rankTitle}</span>` : '';
-        const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
+        const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
         return `<div class="relative px-2.5 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-1.5 text-xs shadow-sm mt-1.5">` + folderTabHtml +
           '<span class="font-bold text-emerald-300 mt-0.5">' + nameHtml(c.name) + '</span>' +
           '<span class="text-slate-400 font-mono text-[10px] mt-0.5">' + escapeHtml(c.orderNo || '无订单号') + '</span>' + rankText +
@@ -1512,7 +1522,7 @@
           if (isConsolationStage) { passBtnLabel = '🎁 安慰奖'; passBtnClass = "bg-emerald-600 text-white font-bold hover:bg-emerald-500"; }
           else if (isMode1ThreeLeft) { passBtnLabel = '🥉 季军'; passBtnClass = "bg-amber-500 text-slate-950 font-black hover:bg-amber-400 animate-bounce"; }
           else if (isMode1TwoLeft) { passBtnLabel = '👑 冠军'; passBtnClass = "bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 animate-pulse"; }
-          const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
+          const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
           return `<div class="relative p-2 rounded-lg border ${borderStyle} flex flex-col justify-between shadow transition min-w-0 mt-1.5">` + folderTabHtml +
             '<div>' +
               '<div class="flex justify-between items-center mb-0.5"><span class="text-[9px] font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +

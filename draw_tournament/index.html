@@ -10,7 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="logic.js?v=9"></script>
-  <script src="i18n.js?v=1"></script>
+  <script src="i18n.js?v=3"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -64,6 +64,10 @@
       50% { transform: scale(1.1); box-shadow: 0 0 50px #34d399, 0 0 80px #10b981; } 
       100% { transform: scale(1.05); box-shadow: 0 0 30px #10b981, 0 0 60px #34d399; } 
     }
+    @keyframes winnerHold { 0%, 100% { box-shadow: 0 0 22px rgba(52,211,153,.75), 0 0 0 3px rgba(52,211,153,.35); } 50% { box-shadow: 0 0 40px rgba(52,211,153,1), 0 0 0 7px rgba(52,211,153,.15); } }
+    .winner-hold { animation: winnerHold 1.6s ease-in-out infinite; }
+    .card-missed { opacity: .5; filter: grayscale(.85); }
+    .card-missed .pk-card-name { color: #cbd5e1 !important; }
     .winner-glow { animation: winnerBlast 1s infinite alternate; border: 4px solid #34d399 !important; background-color: #064e3b !important; }
     @keyframes modalPop { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
     .animate-pop { animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
@@ -101,6 +105,11 @@
     .passed-zoom #passedListContainer { max-height: none !important; gap: 14px; }
     .passed-zoom #passedListContainer > div { padding: 12px 16px !important; }
     .out-panel { max-width: 100%; }
+    /* 电脑：统计放在进度条下方，标题左、数值右，一排四格 */
+    #statsBar.stats-compact { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0 0; }
+    #statsBar.stats-compact > div { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; border-radius: 10px; }
+    #statsBar.stats-compact > div > span:first-child { display: inline; font-size: 12px; }
+    #statsBar.stats-compact > div > span:last-child { font-size: 20px; line-height: 1.2; }
     /* PK 组：框架高度跟着内容，四格名单在框架内垂直置中 */
     #publicActiveGroupDisplay { display: flex; flex-direction: column; }
     #pkPanelBody { flex: 1 1 auto; }
@@ -110,6 +119,12 @@
     }
     @media (max-width: 1023px) {
       #pkIndicatorArea { height: 44px; }   /* 手机：票选号上方的提示区缩小 */
+    }
+    /* 电脑 + 英文/马来文：「等待票选号」分两行显示 */
+    @media (min-width: 1024px) {
+      html[lang="en"] #pkIndicatorArea, html[lang="ms"] #pkIndicatorArea { height: 104px; }
+      html[lang="en"] #awaitVoteIndicator > span:first-child, html[lang="ms"] #awaitVoteIndicator > span:first-child { white-space: normal; max-width: 15em; text-align: center; line-height: 1.15; font-size: 1.35rem; }
+      html[lang="en"] #countdownIndicator > span:first-child, html[lang="ms"] #countdownIndicator > span:first-child { white-space: normal; max-width: 18em; text-align: center; }
     }
     /* 淘汰区：高度跟旁边内容一样，名单在框内滚动（显示细滚动条） */
     .thin-scroll { scrollbar-width: thin; scrollbar-color: #475569 transparent; }
@@ -184,7 +199,18 @@
       to { transform: rotate(360deg); }
     }
     .animate-spin-slow { animation: spinSlow 1s linear infinite; }
-  </style>
+      .lang-flag { width: 18px; height: 12px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,.15); flex-shrink: 0; display: inline-block; }
+    /* 轮次标签：文件夹标签样式 */
+    .round-tabs { display: flex; align-items: flex-end; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+    .round-tabs::-webkit-scrollbar { display: none; }
+    .round-tab { position: relative; flex-shrink: 0; white-space: nowrap; padding: 5px 14px 4px; font-size: 12px; font-weight: 700; line-height: 1.35;
+      color: #cbd5e1; background: #1e293b; border: 1px solid #334155; border-bottom: none; border-radius: 10px 10px 0 0; transition: background .15s, color .15s; }
+    .round-tab:hover { background: #334155; color: #fff; }
+    .round-tab.active { color: #0f172a; background: linear-gradient(180deg, #fbbf24, #f59e0b); border-color: #f59e0b; padding-top: 7px; font-weight: 900; box-shadow: 0 -3px 12px rgba(245,158,11,.35); }
+    .round-tab-bar { border-bottom: 2px solid #f59e0b; }
+    @media (min-width: 640px) { .round-tab { font-size: 14px; padding: 6px 16px 5px; } .round-tab.active { padding-top: 8px; } }
+    .folder-tab.tab-pick { background: linear-gradient(135deg, #0ea5e9, #2563eb) !important; color: #fff !important; }
+</style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden pb-12">
 
@@ -251,10 +277,10 @@
       </div>
       <div class="flex flex-wrap items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-4">
         <div class="mode-tooltip-wrap">
-          <span id="publicModeBadge" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-help">模式: 加载中</span>
+          <span id="publicModeBadge" translate="no" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-help">模式: 加载中</span>
           <div class="mode-tooltip-box">
             <div class="mt-title">📋 当前模式规则与晋级流程</div>
-            <div id="modeTooltipBody" class="space-y-2 text-slate-300">
+            <div id="modeTooltipBody" translate="no" class="space-y-2 text-slate-300">
               <div class="text-slate-400">模式规则加载中...</div>
             </div>
             <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">💡 电脑：鼠标悬停查看 · 手机：点标签打开 / 关闭</div>
@@ -265,9 +291,9 @@
           <span>云端毫秒级同步中...</span>
         </div>
         <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded-lg">
-          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇨🇳</span><span class="text-[10px] sm:text-[11px]">ZH</span></button>
-          <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇬🇧</span><span class="text-[10px] sm:text-[11px]">EN</span></button>
-          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><span>🇲🇾</span><span class="text-[10px] sm:text-[11px]">MS</span></button>
+          <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#DE2910"/><path fill="#FFDE00" d="M5 2l1.18 3.62h3.8l-3.08 2.24 1.18 3.62L5 9.24 1.92 11.48 3.1 7.86.02 5.62h3.8z"/><circle cx="10" cy="2" r=".9" fill="#FFDE00"/><circle cx="12" cy="4" r=".9" fill="#FFDE00"/><circle cx="12" cy="7" r=".9" fill="#FFDE00"/><circle cx="10" cy="9" r=".9" fill="#FFDE00"/></svg><span class="text-[10px] sm:text-[11px]">ZH</span></button>
+          <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukc"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#ukc)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg><span class="text-[10px] sm:text-[11px]">EN</span></button>
+          <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 28 14" aria-hidden="true"><rect width="28" height="14" fill="#fff"/><rect y="0" width="28" height="1" fill="#CC0001"/><rect y="2" width="28" height="1" fill="#CC0001"/><rect y="4" width="28" height="1" fill="#CC0001"/><rect y="6" width="28" height="1" fill="#CC0001"/><rect y="8" width="28" height="1" fill="#CC0001"/><rect y="10" width="28" height="1" fill="#CC0001"/><rect y="12" width="28" height="1" fill="#CC0001"/><rect width="14" height="8" fill="#010066"/><circle cx="5.2" cy="4" r="2.9" fill="#FC0"/><circle cx="6.1" cy="4" r="2.45" fill="#010066"/><path fill="#FC0" d="M10.2 1.9l.45 1.4 1.4-.6-.75 1.3 1.45.35-1.45.35.75 1.3-1.4-.6-.45 1.4-.45-1.4-1.4.6.75-1.3-1.45-.35 1.45-.35-.75-1.3 1.4.6z"/></svg><span class="text-[10px] sm:text-[11px]">MS</span></button>
         </div>
       </div>
     </div>
@@ -300,10 +326,10 @@
       </button>
     </div>
 
-    <div id="collapsibleProcessSection" class="space-y-4 sm:space-y-6 transition-all duration-300 flex-1 flex flex-col">
-      <div class="flex flex-col gap-3">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div id="roundTabsContainer" class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5"></div>
+    <div id="collapsibleProcessSection" class="space-y-3 sm:space-y-4 transition-all duration-300 flex-1 flex flex-col">
+      <div class="flex flex-col gap-2">
+        <div class="round-tab-bar flex items-end justify-between">
+          <div id="roundTabsContainer" class="round-tabs pt-1"></div>
         </div>
         <div id="winnerAnnouncementBanner" class="hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
           <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
@@ -380,6 +406,7 @@
           <div id="publicProgressTitle" class="text-xs sm:text-base font-black text-amber-300 leading-snug"></div>
           <div id="publicProgressSub" class="text-[10px] sm:text-xs text-amber-100/90 mt-1 leading-relaxed"></div>
         </div>
+          <div id="statsSlotDesktop" class="pk-progress-banner"></div>
        </div>
 
         <div id="rightPassedPanel" class="w-full flex flex-col gap-4 transition-all duration-300">
@@ -405,7 +432,8 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
         <div class="flex flex-col justify-end min-w-0">
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
+          <div id="statsSlotMobile"></div>
+          <div id="statsBar" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
             <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">待PK</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
@@ -916,6 +944,8 @@
           localStorage.setItem('mochii_tournament_state', JSON.stringify(state));
           if (!userManuallySelectedRound && state.rounds && state.rounds.length > 0) currentRoundIndex = state.rounds.length - 1;
 
+          if (__lastReveal && (state.activeGroupIds || []).length && DrawLogic.pollSignature(state) !== __lastReveal.sig) __lastReveal = null;
+          if (__lastReveal && !state.pollCount) __lastReveal = null;
           // 🎰 同步跑马灯（刚打开页面时如果已经在揭晓中，直接显示结果）
           if (state.pkStage === 'revealing' && __marqueeSig !== DrawLogic.pollSignature(state)) {
             startSyncedMarquee(!__firstSnapshotHandled);
@@ -953,8 +983,13 @@
               }
             } 
             else if (!state.triggerNumber) {
-              centerTriggerNumberBox.innerHTML = `#?`;
-              centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md";
+              if (__lastReveal && !(state.activeGroupIds || []).length) {
+                centerTriggerNumberBox.innerHTML = `#${__lastReveal.trigger}`;
+                centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-emerald-400 tracking-widest drop-shadow-md pixel-hit";
+              } else {
+                centerTriggerNumberBox.innerHTML = `#?`;
+                centerTriggerNumberBox.className = "pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md";
+              }
               publicRevealButtonBox.classList.add('hidden');
               if (triggerLoadingTimer) clearTimeout(triggerLoadingTimer);
             }
@@ -1161,6 +1196,20 @@
       if (Date.now() - __revealSeenAt[sig] > DrawLogic.REVEAL_SETTLE_MS + 6000) settleRevealFromPublic(sig);
     }, 1000);
 
+    // 统计四格：电脑放在进度条下方（紧凑），手机留在原位
+    function placeStatsBar() {
+      const bar = document.getElementById('statsBar');
+      const desk = document.getElementById('statsSlotDesktop');
+      const mob = document.getElementById('statsSlotMobile');
+      if (!bar || !desk || !mob) return;
+      const isDesk = window.matchMedia('(min-width: 1024px)').matches;
+      const target = isDesk ? desk : mob;
+      if (bar.parentElement !== target) target.appendChild(bar);
+      bar.classList.toggle('stats-compact', isDesk);
+    }
+    window.addEventListener('resize', placeStatsBar);
+    document.addEventListener('DOMContentLoaded', placeStatsBar);
+
     function updateProgressBanner() {
       const box = document.getElementById('publicProgressBanner');
       if (!box) return;
@@ -1172,14 +1221,90 @@
       box.classList.remove('hidden');
     }
 
+    // 模式标签 + 悬停说明：直接用所选语言生成（不靠事后翻译，句子才完整）
+    const MODE_TX = {
+      zh: {
+        off: '模式: 未启用规则', offTip: '当前未启用模式规则，由后台手动控盘。',
+        badge: (m2) => m2 ? '模式2: 冠亚季+安慰奖' : '模式1: 冠亚季', done: '🏁 已结束',
+        stage: { consolation: '🎁 安慰奖阶段', third: '🏆 冠亚季争夺战', final: '👑 冠亚军决战' },
+        title: (m2, N) => m2 ? `🎁 模式2：冠亚季 + ${N} 名安慰奖` : '🥇 模式1：冠亚季排位',
+        progress: '📍 当前进度', finishedNow: '🏁 比赛已结束，恭喜所有得奖买家！',
+        third: '3 人全员上台盲抽，命中者获得 <b class="text-amber-300">🥉 季军</b>，其余 2 人进入冠亚军决战',
+        final: '2 人全员上台盲抽，命中者获得 <b class="text-amber-300">👑 冠军</b>，另一位为 🥈 亚军',
+        cons: (got, N, size) => `已抽出 <b class="text-emerald-300">${got}/${N}</b> 位安慰奖 · 每组 ${size} 人，命中者得安慰奖，其余回名单池`,
+        normal: (pend, won, size) => `名单池剩 <b class="text-amber-300">${pend}</b> 人 · 已晋级 <b class="text-emerald-300">${won}</b> 人${pend ? ` · 下一组 ${size} 人` : ' · 本轮已抽完'}`,
+        unit: n => `${n}人`, how: '📖 抽奖流程',
+        steps: (m2, N, got) => [
+          ['📥', '全部订单进入名单池（一张订单 = 一次机会）'],
+          ['🎲', '每个 POLL 盲抽 <b>3~4 人</b>一组（Shopee 投票最多 4 个选项）'],
+          ['🗳️', '直播间投票选号码 → 后台设定票选号 → 主播点【揭晓】'],
+          ['🏆', '命中者<b class="text-emerald-300">晋级</b>，同组其他人淘汰'],
+          ['⏩', '名单池抽完 → <b>自动进入下一轮</b>，晋级者成为新名单池'],
+          ...(m2 ? [['🎁', `人数到 ${N + 3} 人左右 → 安慰奖阶段：命中者得安慰奖，其余回池，抽满 <b>${N}</b> 位（已抽 ${got}）`]] : []),
+          ['🥉', '剩 3 人 → 全员盲抽，命中者为 <b>季军</b>'],
+          ['👑', '剩 2 人 → 全员盲抽，命中者为 <b>冠军</b>，另一位为 <b>亚军</b>'],
+        ],
+        fair: '🔒 号码在揭晓时才随机分配，后台无法预先指定命中者',
+      },
+      en: {
+        off: 'Mode: rules off', offTip: 'No mode rules — the host controls the draw manually.',
+        badge: (m2) => m2 ? 'Mode 2: Top 3 + Consolation' : 'Mode 1: Top 3', done: '🏁 Finished',
+        stage: { consolation: '🎁 Consolation stage', third: '🏆 Top-3 showdown', final: '👑 Grand final' },
+        title: (m2, N) => m2 ? `🎁 Mode 2: Top 3 + ${N} consolation prizes` : '🥇 Mode 1: Top 3',
+        progress: '📍 Progress', finishedNow: '🏁 The event is over — congratulations to all winners!',
+        third: 'All 3 are drawn — the hit wins <b class="text-amber-300">🥉 3rd place</b>, the other 2 go to the final',
+        final: 'Both are drawn — the hit wins <b class="text-amber-300">👑 Champion</b>, the other is 🥈 runner-up',
+        cons: (got, N, size) => `<b class="text-emerald-300">${got}/${N}</b> consolation prizes drawn · groups of ${size} — the hit wins, the rest return to the pool`,
+        normal: (pend, won, size) => `<b class="text-amber-300">${pend}</b> left in the pool · <b class="text-emerald-300">${won}</b> advanced${pend ? ` · next group: ${size}` : ' · round complete'}`,
+        unit: n => `${n} pax`, how: '📖 How it works',
+        steps: (m2, N, got) => [
+          ['📥', 'Every order enters the pool (1 order = 1 chance)'],
+          ['🎲', 'Each POLL draws a group of <b>3–4 people</b> (Shopee polls allow up to 4 options)'],
+          ['🗳️', 'Viewers vote for a number → the vote number is set → the host presses [Reveal]'],
+          ['🏆', 'The hit <b class="text-emerald-300">advances</b>; the rest of the group is eliminated'],
+          ['⏩', 'When the pool is finished, <b>the next round starts automatically</b> with the winners'],
+          ...(m2 ? [['🎁', `At about ${N + 3} left → consolation stage: the hit wins a prize, the rest return, until <b>${N}</b> are drawn (drawn: ${got})`]] : []),
+          ['🥉', '3 left → all drawn, the hit is <b>3rd place</b>'],
+          ['👑', '2 left → all drawn, the hit is <b>Champion</b>, the other is <b>runner-up</b>'],
+        ],
+        fair: '🔒 Numbers are assigned randomly only at reveal — nobody can pre-select the winner',
+      },
+      ms: {
+        off: 'Mod: peraturan dimatikan', offTip: 'Tiada peraturan mod — hos mengawal cabutan secara manual.',
+        badge: (m2) => m2 ? 'Mod 2: 3 Teratas + Saguhati' : 'Mod 1: 3 Teratas', done: '🏁 Tamat',
+        stage: { consolation: '🎁 Peringkat saguhati', third: '🏆 Pertarungan 3 teratas', final: '👑 Final besar' },
+        title: (m2, N) => m2 ? `🎁 Mod 2: 3 Teratas + ${N} hadiah saguhati` : '🥇 Mod 1: 3 Teratas',
+        progress: '📍 Kemajuan', finishedNow: '🏁 Pertandingan tamat — tahniah kepada semua pemenang!',
+        third: 'Ketiga-tiga dicabut — yang terkena menang <b class="text-amber-300">🥉 tempat ketiga</b>, 2 lagi ke final',
+        final: 'Kedua-duanya dicabut — yang terkena menang <b class="text-amber-300">👑 Johan</b>, seorang lagi 🥈 naib johan',
+        cons: (got, N, size) => `<b class="text-emerald-300">${got}/${N}</b> hadiah saguhati dicabut · kumpulan ${size} orang — yang terkena menang, yang lain kembali ke senarai`,
+        normal: (pend, won, size) => `Baki <b class="text-amber-300">${pend}</b> orang · <b class="text-emerald-300">${won}</b> mara${pend ? ` · kumpulan seterusnya: ${size}` : ' · pusingan selesai'}`,
+        unit: n => `${n} orang`, how: '📖 Cara cabutan',
+        steps: (m2, N, got) => [
+          ['📥', 'Setiap pesanan masuk senarai (1 pesanan = 1 peluang)'],
+          ['🎲', 'Setiap POLL mencabut kumpulan <b>3–4 orang</b> (undian Shopee maksimum 4 pilihan)'],
+          ['🗳️', 'Penonton undi nombor → nombor undian ditetapkan → hos tekan [Dedahkan]'],
+          ['🏆', 'Yang terkena <b class="text-emerald-300">mara</b>; yang lain dalam kumpulan tersingkir'],
+          ['⏩', 'Bila senarai habis, <b>pusingan seterusnya bermula automatik</b> dengan pemenang'],
+          ...(m2 ? [['🎁', `Pada kira-kira ${N + 3} orang → peringkat saguhati: yang terkena menang, yang lain kembali, sehingga <b>${N}</b> dicabut (sudah: ${got})`]] : []),
+          ['🥉', 'Tinggal 3 → semua dicabut, yang terkena dapat <b>tempat ketiga</b>'],
+          ['👑', 'Tinggal 2 → semua dicabut, yang terkena ialah <b>Johan</b>, seorang lagi <b>naib johan</b>'],
+        ],
+        fair: '🔒 Nombor diberi secara rawak hanya semasa pendedahan — tiada siapa boleh memilih pemenang lebih awal',
+      },
+    };
+
     function updateModeBadge() {
       try { updateProgressBanner(); } catch (e) {}
       const badge = document.getElementById('publicModeBadge');
       const tooltip = document.getElementById('modeTooltipBody');
       if (!badge) return;
+      const lang = (window.I18N && I18N.lang) || 'zh';
+      const T = MODE_TX[lang] || MODE_TX.zh;
+      const tr = x => (window.I18N ? I18N.translate(x, lang) : x);
       if (!state.modeConfig || !state.modeConfig.enabled) {
-        badge.innerText = "模式: 未启用规则";
-        if (tooltip) tooltip.innerHTML = '<div class="text-slate-400">当前未启用模式规则，由后台手动控盘。</div>';
+        badge.innerText = T.off;
+        if (tooltip) tooltip.innerHTML = `<div class="text-slate-400">${T.offTip}</div>`;
         return;
       }
       const isM2 = state.modeConfig.selectedMode === 'mode2';
@@ -1193,42 +1318,30 @@
       const consGot = DrawLogic.countConsolation(state);
       const nextSize = DrawLogic.plannedGroupSize(state, ri);
       const finished = DrawLogic.isTournamentFinished(state);
-      const stageName = { normal: `第 ${ri + 1} 轮`, consolation: '🎁 安慰奖阶段', third: '🏆 冠亚季争夺战', final: '👑 冠亚军决战' }[stage];
+      const stageName = T.stage[stage] || tr(`第 ${ri + 1} 轮`);
 
-      badge.innerText = `${isM2 ? '模式2: 冠亚季+安慰奖' : '模式1: 冠亚季'} · ${finished ? '🏁 已结束' : stageName}`;
+      badge.innerText = `${T.badge(isM2)} · ${finished ? T.done : stageName}`;
       if (!tooltip) return;
 
-      // —— 实时进度 ——
       let now;
-      if (finished) now = '🏁 比赛已结束，恭喜所有得奖买家！';
-      else if (stage === 'third') now = `3 人全员上台盲抽，命中者获得 <b class="text-amber-300">🥉 季军</b>，其余 2 人进入冠亚军决战`;
-      else if (stage === 'final') now = `2 人全员上台盲抽，命中者获得 <b class="text-amber-300">👑 冠军</b>，另一位为 🥈 亚军`;
-      else if (stage === 'consolation') now = `已抽出 <b class="text-emerald-300">${cs.filter(c => c.rankKey === 'rankConsolation').length}/${N}</b> 位安慰奖 · 每组 ${nextSize || 4} 人，命中者得安慰奖，其余回名单池`;
-      else now = `名单池剩 <b class="text-amber-300">${pend}</b> 人 · 已晋级 <b class="text-emerald-300">${won}</b> 人${pend ? ` · 下一组 ${nextSize} 人` : ' · 本轮已抽完'}`;
-      const route = finished ? '' : DrawLogic.roadmap(state, ri).map(x => `<span class="whitespace-nowrap">${escapeHtml(x.label)} <b>${x.n}人</b></span>`).join(' <span class="text-slate-500">→</span> ');
-
-      // —— 规则讲解 ——
-      const steps = [
-        ['📥', '全部订单进入名单池（一张订单 = 一次机会）'],
-        ['🎲', '每个 POLL 盲抽 <b>3~4 人</b>一组（Shopee 投票最多 4 个选项）'],
-        ['🗳️', '直播间投票选号码 → 后台设定票选号 → 主播点【揭晓】'],
-        ['🏆', '命中者<b class="text-emerald-300">晋级</b>，同组其他人淘汰'],
-        ['⏩', '名单池抽完 → <b>自动进入下一轮</b>，晋级者成为新名单池'],
-      ];
-      if (isM2) steps.push(['🎁', `人数到 ${N + 3} 人左右 → 安慰奖阶段：命中者得安慰奖，其余回池，抽满 <b>${N}</b> 位（已抽 ${consGot}）`]);
-      steps.push(['🥉', '剩 3 人 → 全员盲抽，命中者为 <b>季军</b>']);
-      steps.push(['👑', '剩 2 人 → 全员盲抽，命中者为 <b>冠军</b>，另一位为 <b>亚军</b>']);
+      if (finished) now = T.finishedNow;
+      else if (stage === 'third') now = T.third;
+      else if (stage === 'final') now = T.final;
+      else if (stage === 'consolation') now = T.cons(cs.filter(c => c.rankKey === 'rankConsolation').length, N, nextSize || 4);
+      else now = T.normal(pend, won, nextSize);
+      const route = finished ? '' : DrawLogic.roadmap(state, ri)
+        .map(x => `<span class="whitespace-nowrap">${escapeHtml(tr(x.label))} <b>${T.unit(x.n)}</b></span>`).join(' <span class="text-slate-500">→</span> ');
 
       tooltip.innerHTML = `
-        <div class="mt-row"><b>${isM2 ? `🎁 模式2：冠亚季 + ${N} 名安慰奖` : '🥇 模式1：冠亚季排位'}</b></div>
+        <div class="mt-row"><b>${T.title(isM2, N)}</b></div>
         <div class="rounded-lg border border-amber-500/40 bg-amber-950/30 p-2">
-          <div class="text-[10px] font-black text-amber-400 mb-1">📍 当前进度 · ${finished ? '已结束' : stageName}</div>
+          <div class="text-[10px] font-black text-amber-400 mb-1">${T.progress} · ${finished ? T.done : stageName}</div>
           <div class="text-[11px] leading-relaxed">${now}</div>
           ${route ? `<div class="text-[10px] text-slate-300 mt-1.5 leading-relaxed">${route}</div>` : ''}
         </div>
-        <div class="text-[10px] font-black text-slate-400 mt-1">📖 抽奖流程</div>
-        ${steps.map(([i, t]) => `<div class="mt-row text-[11px] leading-snug"><span class="mr-1">${i}</span>${t}</div>`).join('')}
-        <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">🔒 号码在揭晓时才随机分配，后台无法预先指定命中者</div>`;
+        <div class="text-[10px] font-black text-slate-400 mt-1">${T.how}</div>
+        ${T.steps(isM2, N, consGot).map(([i, t]) => `<div class="mt-row text-[11px] leading-snug"><span class="mr-1">${i}</span>${t}</div>`).join('')}
+        <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">${T.fair}</div>`;
     }
 
     function setAdminUnlocked(on) {
@@ -1312,6 +1425,7 @@ function revealPKWinnerFromPublic() {
 
     // ===== 🎰 同步跑马灯：任何一方点揭晓，所有画面（大屏、手机）都播放同一段，停在同一位命中者 =====
     let __marqueeSig = '';
+    let __lastReveal = null;   // 揭晓后保留在画面上，直到下一组出现
     let __revealDoneSig = '';
     let __marqueeHighlightId = '';
     let __firstSnapshotHandled = false;
@@ -1329,6 +1443,16 @@ function revealPKWinnerFromPublic() {
         isMarqueeRunning = false;
         __marqueeHighlightId = '';
         __revealDoneSig = sig;
+        {
+          const rr = (state.rounds || [])[state.drawRoundIndex ?? 0] || { candidates: [] };
+          __lastReveal = {
+            sig, trigger: state.triggerNumber, poll: state.currentPollNumber,
+            members: (state.activeGroupMembers || []).map(m => {
+              const c = (rr.candidates || []).find(x => String(x.id) === String(m.id)) || m;
+              return { id: String(m.id), name: c.name || m.name || '', orderNo: c.orderNo || m.orderNo || '', displayNumber: m.displayNumber };
+            })
+          };
+        }
         renderPublicView();
         const box = document.getElementById('centerTriggerNumberBox');
         if (box) { box.innerHTML = `#${state.triggerNumber}`; box.className = "pixel-number text-3xl sm:text-4xl font-black text-emerald-400 tracking-widest drop-shadow-md pixel-hit"; }
@@ -1391,9 +1515,8 @@ function revealPKWinnerFromPublic() {
       if (!container) return;
       container.innerHTML = state.rounds.map((r, idx) => {
         const isActive = (idx === currentRoundIndex);
-        const activeClass = isActive ? "bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-md" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
         const passedCount = (r.candidates || []).filter(c => c.status === 'pass').length;
-        return `<button onclick="switchRound(${idx})" class="px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-[11px] sm:text-xs border transition flex-shrink-0 ${activeClass}">${escapeHtml(getRoundTitle(idx))} (${passedCount})</button>`;
+        return `<button onclick="switchRound(${idx})" class="round-tab ${isActive ? 'active' : ''}">${escapeHtml(getRoundTitle(idx))} (${passedCount})</button>`;
       }).join('');
     }
     function switchRound(idx) {
@@ -1418,10 +1541,11 @@ function revealPKWinnerFromPublic() {
       document.getElementById('passedBadgeCount').innerText = passedCount;
     }
 
-    function getCardHtml(c, idx, isRevealed) {
+    function getCardHtml(c, idx, isRevealed, triggerOverride) {
       const realNum = c.displayNumber;
       const hasNumber = realNum !== null && realNum !== undefined;
-      const isWinner = isRevealed && hasNumber && (realNum === state.triggerNumber);
+      const trig = triggerOverride != null ? triggerOverride : state.triggerNumber;
+      const isWinner = isRevealed && hasNumber && (realNum === trig);
       const isReverse = state.isReverseElimination === true; // ★ 获取淘汰赛状态
       
       let header = `<span class="text-sm font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span>`;
@@ -1440,11 +1564,12 @@ function revealPKWinnerFromPublic() {
         } else {
           // 常规赛：命中=晋级（绿色），未命中=淘汰（红/灰）
           if (isWinner) {
-            header = `<span class="text-sm font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg animate-bounce">🏆 #${realNum} 命中</span>`;
-            border = "border-4 border-emerald-400 bg-emerald-900 shadow-[0_0_30px_rgba(52,211,153,0.8)] transform scale-105 z-10 transition-all duration-700 ease-out";
+            header = `<span class="text-sm sm:text-base font-black bg-emerald-400 text-slate-950 px-3 py-0.5 rounded-full shadow-lg">🏆 #${realNum} 命中</span>`;
+            border = "border-4 border-emerald-400 bg-emerald-900 winner-hold transform scale-105 z-10 transition-all duration-700 ease-out";
           } else {
-            header = `<span class="text-sm font-black bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">#${realNum}</span>`;
-            border = "border-2 border-slate-700 bg-slate-900/50 opacity-60 transition-all duration-300";
+            // 没中：浅色，但号码放大，一眼看出自己是几号
+            header = `<span class="text-base sm:text-lg font-black bg-slate-600 text-white px-3 py-0.5 rounded-full">#${realNum} <span class="text-[10px] sm:text-xs font-bold text-slate-300">未中</span></span>`;
+            border = "border-2 border-slate-600 bg-slate-900/40 card-missed transition-all duration-500";
           }
         }
       }
@@ -1486,7 +1611,8 @@ function revealPKWinnerFromPublic() {
       const stripPoll = document.getElementById('pkStripPoll');
       if (stripPoll) stripPoll.innerText = state.currentPollNumber ? `POLL #${state.currentPollNumber}` : 'POLL #-';
       const pollBadge = document.getElementById('publicPollBadge');
-      if (pollBadge) pollBadge.innerText = state.currentPollNumber ? `POLL #${state.currentPollNumber}` : 'POLL #-';
+      const shownPoll = state.currentPollNumber || (__lastReveal && __lastReveal.poll) || 0;
+      if (pollBadge) pollBadge.innerText = shownPoll ? `POLL #${shownPoll}` : 'POLL #-';
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
       if (pkPanel) pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
 
@@ -1548,6 +1674,13 @@ function revealPKWinnerFromPublic() {
             else areaR.innerHTML += cardHtml;
           });
         }
+      } else if (__lastReveal && __lastReveal.members.length && !isTransitionPlaying) {
+        areaL.innerHTML = ''; areaR.innerHTML = '';
+        __lastReveal.members.forEach((c, idx) => {
+          const cardHtml = getCardHtml(c, idx, true, __lastReveal.trigger);
+          if (window.innerWidth < 1024 || idx % 2 === 0) areaL.innerHTML += cardHtml;
+          else areaR.innerHTML += cardHtml;
+        });
       } else {
         const placeholders = getPlaceholderCardsHtml();
         if (window.innerWidth < 1024) { areaL.innerHTML = placeholders.join(''); areaR.innerHTML = ''; }
@@ -1578,7 +1711,7 @@ function revealPKWinnerFromPublic() {
           let labelHtml = '';
           if (c.pollLabel) {
             const isPick = c.pollLabel.startsWith('PICK');
-            const bgClass = isPick ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md' : '';
+            const bgClass = isPick ? 'tab-pick' : '';
             labelHtml = `<div class="folder-tab ${bgClass}">${escapeHtml(c.pollLabel)}</div>`;
           } else if (c.isSafe) {
             labelHtml = `<div class="folder-tab bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md">安全过关</div>`;
@@ -1627,7 +1760,7 @@ function revealPKWinnerFromPublic() {
             extraStyle = 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50';
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
-          const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
+          const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
           cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` + folderTabHtml +
             '<div>' +
               '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
