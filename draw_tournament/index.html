@@ -9,7 +9,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=8"></script>
+  <script src="logic.js?v=9"></script>
+  <script src="i18n.js?v=1"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -100,6 +101,26 @@
     .passed-zoom #passedListContainer { max-height: none !important; gap: 14px; }
     .passed-zoom #passedListContainer > div { padding: 12px 16px !important; }
     .out-panel { max-width: 100%; }
+    /* PK 组：框架高度跟着内容，四格名单在框架内垂直置中 */
+    #publicActiveGroupDisplay { display: flex; flex-direction: column; }
+    #pkPanelBody { flex: 1 1 auto; }
+    @media (min-width: 1024px) {
+      #pkPanelBody { align-items: center; }
+      #pk-area-left, #pk-area-right { justify-content: center !important; align-self: center; }
+    }
+    @media (max-width: 1023px) {
+      #pkIndicatorArea { height: 44px; }   /* 手机：票选号上方的提示区缩小 */
+    }
+    /* 淘汰区：高度跟旁边内容一样，名单在框内滚动（显示细滚动条） */
+    .thin-scroll { scrollbar-width: thin; scrollbar-color: #475569 transparent; }
+    .thin-scroll::-webkit-scrollbar { width: 6px; }
+    .thin-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 6px; }
+    .out-panel-fit { min-height: 260px; }
+    .out-panel-fit .out-list-fit { flex: none; max-height: 60vh; overflow-y: auto; }
+    @media (min-width: 1024px) {
+      .out-panel-fit { height: 0; min-height: 100%; }
+      .out-panel-fit .out-list-fit { flex: 1 1 0; min-height: 0; max-height: none; }
+    }
     .out-card { padding: 6px 8px; font-size: 12px; line-height: 1.3; }
     .passed-zoom .passed-card-name { font-size: 1.5rem !important; }
     .passed-zoom .passed-card-order { font-size: 0.875rem !important; }
@@ -228,7 +249,7 @@
           </div>
         </div>
       </div>
-      <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 sm:space-x-4">
+      <div class="flex flex-wrap items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-4">
         <div class="mode-tooltip-wrap">
           <span id="publicModeBadge" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-help">模式: 加载中</span>
           <div class="mode-tooltip-box">
@@ -239,7 +260,7 @@
             <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">💡 电脑：鼠标悬停查看 · 手机：点标签打开 / 关闭</div>
           </div>
         </div>
-        <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
+        <div class="flex items-center justify-center space-x-2 text-[11px] sm:text-xs text-slate-400 order-last w-full sm:order-none sm:w-auto">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span>云端毫秒级同步中...</span>
         </div>
@@ -308,11 +329,11 @@
             </div>
           </div>
 
-          <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6 w-full h-full py-2">
+          <div id="pkPanelBody" class="pk-layout-wrapper flex-1 flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6 w-full py-2">
             <div id="pk-area-left" class="flex flex-wrap lg:flex-col gap-3 items-center justify-center lg:justify-end w-full lg:w-[35%] order-2 lg:order-1 mt-2 lg:mt-0"></div>
 
             <div class="flex flex-col items-center justify-center flex-shrink-0 z-10 order-1 lg:order-2 relative w-full lg:w-auto">
-              <div class="h-[60px] sm:h-[70px] w-full flex flex-col items-center justify-center mb-1 relative z-30">
+              <div id="pkIndicatorArea" class="h-[60px] sm:h-[70px] w-full flex flex-col items-center justify-center mb-1 relative z-30">
                 <div id="blindDrawingIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
                   <span class="blind-drawing-text whitespace-nowrap text-xl sm:text-3xl font-black text-amber-400 tracking-widest drop-shadow-[0_0_16px_rgba(245,158,11,0.8)]">🔍 盲抽中…</span>
                 </div>
@@ -405,12 +426,12 @@
             <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
           </div>
         </div>
-        <div class="bg-slate-800/30 rounded-2xl p-2.5 border border-slate-800 min-h-[200px] flex flex-col out-panel">
+        <div class="bg-slate-800/30 rounded-2xl p-2.5 border border-slate-800 flex flex-col out-panel out-panel-fit">
           <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
             <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
           </div>
-          <div id="outListContainer" class="space-y-2 flex-1 overflow-y-auto no-scrollbar max-h-[400px] pr-0.5"></div>
+          <div id="outListContainer" class="space-y-2 out-list-fit thin-scroll pr-1"></div>
         </div>
       </div>
     </div>
@@ -466,6 +487,7 @@
     ['click', 'touchstart'].forEach(ev => document.addEventListener(ev, keepScreenOn, { passive: true }));
     keepScreenOn();
 
+    I18N.init('mochii_lang_public');
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -580,17 +602,17 @@
         bodyContainer.innerHTML = `
           <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
             <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${escapeHtml(eventData.winnerName)}</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${nameHtml(eventData.winnerName)}</span>
           </div>`;
       } else if (eventData.winnerNamesKey === 'final') {
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
             <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
-            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${escapeHtml(eventData.championName)}</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${nameHtml(eventData.championName)}</span>
           </div>
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
-            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${escapeHtml(eventData.runnerUpName)}</span>
+            <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${nameHtml(eventData.runnerUpName)}</span>
           </div>`;
       } else if (eventData.winnerNamesKey === 'pkHit') {
         const isElimination = eventData.isElimination;
@@ -602,7 +624,7 @@
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r ${bgGrad} p-4 sm:p-5 rounded-2xl border-2 ${borderColor} text-center shadow-lg transform scale-105">
             <span class="text-xs sm:text-base font-black ${textColor} uppercase tracking-widest block mb-0.5 sm:mb-1">${badgeText}</span>
-            <span class="text-xl sm:text-2xl font-black ${textColor} tracking-wider drop-shadow-md">${escapeHtml(eventData.winnerName)}</span>
+            <span class="text-xl sm:text-2xl font-black ${textColor} tracking-wider drop-shadow-md">${nameHtml(eventData.winnerName)}</span>
           </div>
           <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
@@ -752,19 +774,19 @@
         <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
           <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / 亚军</span>
-          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</div>
+          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? nameHtml(runnerUp.name) : 'N/A'}</div>
           <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(maskOrder(runnerUp.orderNo) || '无订单号') : '-'}</div>
         </div>
         <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
           <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
-          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${escapeHtml(champion.name)}</div>
+          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${nameHtml(champion.name)}</div>
           <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(maskOrder(champion.orderNo) || '无订单号')}</div>
         </div>
         <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
-          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</div>
+          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? nameHtml(thirdPlace.name) : 'N/A'}</div>
           <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(maskOrder(thirdPlace.orderNo) || '无订单号') : '-'}</div>
         </div>`;
 
@@ -775,7 +797,7 @@
           <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
             <div>
               <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}安慰奖</span>
-              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${escapeHtml(c.name)}</div>
+              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${nameHtml(c.name)}</div>
             </div>
             <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div>
           </div>`).join('');
@@ -819,7 +841,7 @@
       const hasChampion = (state.rounds || []).some(r => (r.candidates || []).some(c => c.rankKey === 'rankChampion'));
       if (thirdPlaceName && !hasChampion) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${escapeHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${nameHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
         return;
       }
       const isConsolationStage = DrawLogic.getRoundStage(state, currentRoundIndex) === 'consolation';
@@ -1380,7 +1402,7 @@ function revealPKWinnerFromPublic() {
       renderRoundTabs(); renderPublicView(); updateStats();
       updateWinnerBannerUI();
     }
-    function setLanguage(lang) { renderRoundTabs(); renderPublicView(); updateStats(); }
+    function setLanguage(lang) { I18N.setLang(lang); renderRoundTabs(); renderPublicView(); updateStats(); }
     function updateStats() {
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const candidates = activeRound.candidates || [];
@@ -1430,7 +1452,7 @@ function revealPKWinnerFromPublic() {
       const currentGroupSig = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
       const namesRevealed = (currentGroupSig === localNamesRevealedGroupSig);
       const isScrambling = !isRevealed && (!namesRevealed || localScrambleActive || scramblingMemberIds.has(String(c.id)));
-      const displayName = isScrambling ? '??' : escapeHtml(c.name);
+      const displayName = isScrambling ? '??' : nameHtml(c.name);
       const displayOrder = isScrambling ? '###' : escapeHtml(maskOrder(c.orderNo) || '');
       const nameClass = isScrambling ? 'scramble-text' : '';
       const orderClass = isScrambling ? 'scramble-text' : '';
@@ -1566,7 +1588,7 @@ function revealPKWinnerFromPublic() {
           const highlightClass = isHighlight ? 'passed-highlight' : '';
           
           return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + labelHtml +
-            '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + escapeHtml(c.name) + '</span>' +
+            '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + nameHtml(c.name) + '</span>' +
             '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</span>' +
           '</div>';
         }).join('');
@@ -1582,7 +1604,7 @@ function revealPKWinnerFromPublic() {
         if (cons.length > 0) {
           cPanel.classList.remove('hidden');
           cBadge.innerText = cons.length;
-          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${escapeHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
+          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${nameHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
         } else cPanel.classList.add('hidden');
       }
 
@@ -1609,7 +1631,7 @@ function revealPKWinnerFromPublic() {
           cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` + folderTabHtml +
             '<div>' +
               '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + escapeHtml(c.name) + '</div>' +
+              '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + nameHtml(c.name) + '</div>' +
               '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</div>' +
             '</div>' +
           '</div>';
@@ -1642,7 +1664,7 @@ function revealPKWinnerFromPublic() {
           const candidatesInGroup = grouped[rIdxKey];
           const groupRowsHtml = candidatesInGroup.map(c => `
             <div class="out-card bg-slate-900/80 border border-slate-800 rounded-md truncate">
-              <span class="font-bold text-slate-300 text-[11px] truncate block">${escapeHtml(c.name)}</span>
+              <span class="font-bold text-slate-300 text-[11px] truncate block">${nameHtml(c.name)}</span>
             </div>`).join('');
           return `<div class="bg-slate-900/40 p-1.5 rounded-lg border border-slate-800">
             <div class="text-[9px] font-bold text-rose-400/90 mb-1 border-b border-slate-800 pb-0.5 flex justify-between items-center">
@@ -1658,6 +1680,8 @@ function revealPKWinnerFromPublic() {
 
     // 前台订单号只显示前 6 位日期（搜索仍可用完整订单号）
     function maskOrder(o) { return DrawLogic.maskOrder(o); }
+    // 买家名字：不翻译
+    function nameHtml(x) { return `<span translate="no">${escapeHtml(x)}</span>`; }
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>

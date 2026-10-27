@@ -10,7 +10,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=8"></script>
+  <script src="logic.js?v=9"></script>
+  <script src="i18n.js?v=1"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -22,6 +23,16 @@
       border-top-left-radius: 6px; border-top-right-radius: 6px;
       box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
       letter-spacing: 0.5px; z-index: 10;
+    }
+    /* 淘汰区：高度跟左边内容一样，名单在框内滚动（显示细滚动条） */
+    .thin-scroll { scrollbar-width: thin; scrollbar-color: #475569 transparent; }
+    .thin-scroll::-webkit-scrollbar { width: 6px; }
+    .thin-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 6px; }
+    .out-panel-fit { min-height: 300px; }
+    .out-panel-fit .out-list-fit { flex: none; max-height: 60vh; overflow-y: auto; }
+    @media (min-width: 1281px) {
+      .out-panel-fit { height: 0; min-height: 100%; }
+      .out-panel-fit .out-list-fit { flex: 1 1 0; min-height: 0; max-height: none; }
     }
     .main-grid {
       display: grid;
@@ -106,6 +117,7 @@
         <h3 class="text-base font-bold text-amber-400">📋 开奖记录</h3>
         <div class="flex items-center gap-2">
           <button onclick="downloadCurrentLogCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg">⬇️ 下载本场 CSV</button>
+          <button id="deleteSelectedLogsBtn" onclick="deleteSelectedLogs()" disabled class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">🗑 删除选中</button>
           <button onclick="clearAllLogEntries()" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/50 text-xs font-bold rounded-lg">🗑 清空本场记录</button>
           <button onclick="closeRecordsModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
         </div>
@@ -338,12 +350,12 @@
         </div>
       </div>
 
-      <div class="bg-slate-800/30 rounded-xl p-2 border border-slate-800 flex flex-col min-h-[300px]">
+      <div class="bg-slate-800/30 rounded-xl p-2 border border-slate-800 flex flex-col out-panel-fit">
         <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
           <div class="flex items-center space-x-1.5"><span class="text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
           <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
         </div>
-        <div id="adminOutListContainer" class="space-y-1.5 flex-1 overflow-y-auto no-scrollbar max-h-[600px] pr-0.5"></div>
+        <div id="adminOutListContainer" class="space-y-1.5 out-list-fit thin-scroll pr-1"></div>
       </div>
     </div>
   </main>
@@ -393,6 +405,7 @@
     ['click', 'touchstart'].forEach(ev => document.addEventListener(ev, keepScreenOn, { passive: true }));
     keepScreenOn();
 
+    I18N.init('mochii_lang_admin');
     const firebaseConfig = {
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -649,16 +662,18 @@
     // ===== 📋 开奖记录 / 历史存档 =====
     function recordsTableHtml(log) {
       if (!log || !log.length) return '<p class="text-slate-500 italic py-4 text-center">本场还没有开奖记录</p>';
-      const rows = log.slice().reverse().map(e => `<tr class="border-b border-slate-700/60 align-top">
+      const rows = log.slice().reverse().map(e => `<tr class="border-b border-slate-700/60 align-top hover:bg-slate-700/30">
+        <td class="py-1.5 pr-2"><input type="checkbox" class="log-check w-4 h-4 accent-rose-500 cursor-pointer" value="${escapeHtml(String(e.id || e.ts))}" onchange="updateLogSelection()"></td>
         <td class="py-1.5 pr-2 whitespace-nowrap text-slate-400 font-mono">${escapeHtml(DrawLogic.fmtTime(e.ts).slice(5))}</td>
         <td class="py-1.5 pr-2 whitespace-nowrap">${e.round ? '第 ' + e.round + ' 轮' : ''}${e.poll ? '<br><span class="text-amber-400 font-bold">POLL #' + e.poll + '</span>' : ''}</td>
         <td class="py-1.5 pr-2 whitespace-nowrap">${escapeHtml(DrawLogic.TYPE_TEXT[e.type] || e.type)}${e.trigger ? '<br><span class="text-sky-300">票选号 #' + e.trigger + '</span>' : ''}</td>
         <td class="py-1.5 pr-2 text-slate-300">${escapeHtml(DrawLogic.membersText(e))}</td>
-        <td class="py-1.5 pr-2 whitespace-nowrap font-bold text-emerald-300">${escapeHtml(e.result || '')}${e.winner ? '<br><span class="text-slate-100">' + escapeHtml(e.winner.name) + '</span> <span class="text-slate-400 font-mono">' + escapeHtml(e.winner.orderNo || '') + '</span>' : ''}${e.runnerUp ? '<br><span class="text-slate-300">🥈 ' + escapeHtml(e.runnerUp.name) + '</span>' : ''}</td>
+        <td class="py-1.5 pr-2 whitespace-nowrap font-bold text-emerald-300">${escapeHtml(e.result || '')}${e.winner ? '<br><span class="text-slate-100">' + nameHtml(e.winner.name) + '</span> <span class="text-slate-400 font-mono">' + escapeHtml(e.winner.orderNo || '') + '</span>' : ''}${e.runnerUp ? '<br><span class="text-slate-300">🥈 ' + nameHtml(e.runnerUp.name) + '</span>' : ''}</td>
         <td class="py-1.5 pr-2 whitespace-nowrap text-slate-400">${escapeHtml(DrawLogic.BY_TEXT[e.by] || e.by || '')}</td>
         <td class="py-1.5 text-right"><button onclick="deleteLogEntry(${Number(e.ts) || 0})" class="px-1.5 py-0.5 rounded text-rose-400 hover:bg-rose-600 hover:text-white" title="删除这条记录">🗑</button></td>
       </tr>`).join('');
       return `<table class="w-full text-left"><thead><tr class="text-slate-400 border-b border-slate-600">
+        <th class="py-1.5 pr-2"><input type="checkbox" id="logCheckAll" class="w-4 h-4 accent-rose-500 cursor-pointer" title="全选" onchange="toggleAllLogs(this.checked)"></th>
         <th class="py-1.5 pr-2">时间</th><th class="py-1.5 pr-2">轮次</th><th class="py-1.5 pr-2">类型</th><th class="py-1.5 pr-2">组员（号码）</th><th class="py-1.5 pr-2">结果</th><th class="py-1.5 pr-2">操作端</th><th class="py-1.5"></th>
       </tr></thead><tbody>${rows}</tbody></table>`;
     }
@@ -680,7 +695,7 @@
 
     let __archiveCache = {};
     function openRecordsModal() {
-      document.getElementById('recordsTableBox').innerHTML = recordsTableHtml(state.drawLog ? Object.values(state.drawLog) : []);
+      refreshRecordsTable();
       document.getElementById('recordsModal').classList.remove('hidden');
       const box = document.getElementById('archiveListBox');
       box.innerText = '载入中…';
@@ -707,6 +722,30 @@
     }
     function refreshRecordsTable() {
       document.getElementById('recordsTableBox').innerHTML = recordsTableHtml(state.drawLog ? Object.values(state.drawLog) : []);
+      updateLogSelection();
+    }
+    // 多选删除
+    function selectedLogTs() { return Array.from(document.querySelectorAll('.log-check:checked')).map(x => String(x.value)); }
+    function updateLogSelection() {
+      const n = selectedLogTs().length;
+      const total = document.querySelectorAll('.log-check').length;
+      const btn = document.getElementById('deleteSelectedLogsBtn');
+      if (btn) { btn.disabled = n === 0; btn.textContent = n ? `🗑 删除选中 (${n})` : '🗑 删除选中'; }
+      const all = document.getElementById('logCheckAll');
+      if (all) { all.checked = total > 0 && n === total; all.indeterminate = n > 0 && n < total; }
+    }
+    function toggleAllLogs(on) {
+      document.querySelectorAll('.log-check').forEach(x => { x.checked = on; });
+      updateLogSelection();
+    }
+    function deleteSelectedLogs() {
+      const picked = new Set(selectedLogTs());
+      if (!picked.size) { alert('请先勾选要删除的记录'); return; }
+      if (!confirm(`🗑 删除选中的 ${picked.size} 条开奖记录？\n\n（只删除记录，不会改变比赛结果）`)) return;
+      const log = state.drawLog ? Object.values(state.drawLog) : [];
+      state.drawLog = log.filter(e => !picked.has(String(e.id || e.ts)));
+      saveState();
+      refreshRecordsTable();
     }
     // 只删除记录，不会改变比赛结果
     function deleteLogEntry(ts) {
@@ -1166,7 +1205,7 @@
         
         let cardHeaderTag = `<span class="text-xs font-black bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full shadow animate-pulse">#？</span>`;
         let cardBorder = "border-amber-500/40 bg-slate-900/90";
-        const displayName = escapeHtml(c.name);
+        const displayName = nameHtml(c.name);
         const displayOrder = escapeHtml(c.orderNo || '无订单号');
         if (isRevealed && hasNumber) {
           if (isWinner) {
@@ -1307,7 +1346,7 @@
 
     // 普通轮 PK 后的进度提示
 
-    function setLanguage(lang) { currentLang = lang; localStorage.setItem('mochii_lang', lang); renderRoundTabs(); renderAdminView(); updateStats(); updateModeBadgeUI(); updateHeaderTitle(); }
+    function setLanguage(lang) { currentLang = lang; I18N.setLang(lang); renderRoundTabs(); renderAdminView(); updateStats(); updateModeBadgeUI(); updateHeaderTitle(); }
     function updateHeaderTitle() { document.getElementById('adminHeaderTitle').innerText = state.customAdminTitle || 'Mochiishop 每月抽奖 - 直播控制台'; }
     function getRoundTitle(idx) {
       const st = DrawLogic.getRoundStage(state, idx);
@@ -1450,7 +1489,7 @@
         const rankText = c.rankTitle ? `<span class="bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] ml-1">${c.rankTitle}</span>` : '';
         const folderTabHtml = c.pollLabel ? `<div class="folder-tab">${escapeHtml(c.pollLabel)}</div>` : '';
         return `<div class="relative px-2.5 py-1.5 bg-emerald-950/70 border border-emerald-500/50 rounded-lg flex items-center space-x-1.5 text-xs shadow-sm mt-1.5">` + folderTabHtml +
-          '<span class="font-bold text-emerald-300 mt-0.5">' + escapeHtml(c.name) + '</span>' +
+          '<span class="font-bold text-emerald-300 mt-0.5">' + nameHtml(c.name) + '</span>' +
           '<span class="text-slate-400 font-mono text-[10px] mt-0.5">' + escapeHtml(c.orderNo || '无订单号') + '</span>' + rankText +
           '<button onclick="undoEliminatedCandidate(\'' + c.id + '\')" class="ml-1 text-emerald-400 hover:text-rose-400 font-bold px-0.5 rounded mt-0.5">✕</button>' +
         '</div>';
@@ -1477,7 +1516,7 @@
           return `<div class="relative p-2 rounded-lg border ${borderStyle} flex flex-col justify-between shadow transition min-w-0 mt-1.5">` + folderTabHtml +
             '<div>' +
               '<div class="flex justify-between items-center mb-0.5"><span class="text-[9px] font-mono text-slate-400">#' + (index + 1) + '</span>' + statusBadge + '</div>' +
-              '<div class="font-bold text-slate-100 text-sm truncate mt-0.5">' + escapeHtml(c.name) + '</div>' +
+              '<div class="font-bold text-slate-100 text-sm truncate mt-0.5">' + nameHtml(c.name) + '</div>' +
               '<div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(c.orderNo || '无订单号') + '</div>' +
             '</div>' +
             '<div class="mt-1.5 pt-1 border-t border-slate-700/60 flex space-x-1">' +
@@ -1516,7 +1555,7 @@
         const candidatesInGroup = grouped[rIdxKey];
         const rowsHtml = candidatesInGroup.map(c => `
           <div class="out-card flex items-center justify-between gap-1 bg-slate-900/60 border border-slate-800 rounded-md px-1.5 py-1 mt-0.5">
-            <span class="font-bold text-slate-300 text-[10px] truncate flex-1">${escapeHtml(c.name)}</span>
+            <span class="font-bold text-slate-300 text-[10px] truncate flex-1">${nameHtml(c.name)}</span>
             <button onclick="undoEliminatedCandidate('${c.id}')" class="undo-btn text-rose-400 hover:text-rose-300 text-[11px] font-black px-1 rounded hover:bg-rose-900/30 transition" title="撤回至当前待PK池">✕</button>
           </div>`).join('');
         return `<div class="bg-slate-900/30 p-1.5 rounded-lg border border-slate-800">
@@ -1630,17 +1669,17 @@
               <tbody>
                 <tr style="background-color:#fffbeb;border-bottom:1px solid #fef3c7;">
                   <td style="padding:14px 16px;font-weight:900;color:#b45309;">👑 CHAMPION</td>
-                  <td style="padding:14px 16px;font-weight:900;color:#78350f;">${champion ? escapeHtml(champion.name) : 'N/A'}</td>
+                  <td style="padding:14px 16px;font-weight:900;color:#78350f;">${champion ? nameHtml(champion.name) : 'N/A'}</td>
                   <td style="padding:14px 16px;font-family:monospace;font-weight:700;color:#b45309;">${champion ? escapeHtml(DrawLogic.maskOrder(champion.orderNo)) : '-'}</td>
                 </tr>
                 <tr style="border-bottom:1px solid #f1f5f9;">
                   <td style="padding:12px 16px;font-weight:800;color:#475569;">🥈 RUNNER-UP</td>
-                  <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${runnerUp ? escapeHtml(runnerUp.name) : 'N/A'}</td>
+                  <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${runnerUp ? nameHtml(runnerUp.name) : 'N/A'}</td>
                   <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${runnerUp ? escapeHtml(DrawLogic.maskOrder(runnerUp.orderNo)) : '-'}</td>
                 </tr>
                 <tr>
                   <td style="padding:12px 16px;font-weight:800;color:#b45309;">🥉 3RD PLACE</td>
-                  <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${thirdPlace ? escapeHtml(thirdPlace.name) : 'N/A'}</td>
+                  <td style="padding:12px 16px;font-weight:800;color:#1e293b;">${thirdPlace ? nameHtml(thirdPlace.name) : 'N/A'}</td>
                   <td style="padding:12px 16px;font-family:monospace;color:#64748b;">${thirdPlace ? escapeHtml(DrawLogic.maskOrder(thirdPlace.orderNo)) : '-'}</td>
                 </tr>
               </tbody>
@@ -1650,7 +1689,7 @@
           <div style="margin-bottom:26px;">
             <div style="font-size:14px;font-weight:800;color:#1e293b;border-left:5px solid #10b981;padding-left:10px;margin-bottom:12px;text-transform:uppercase;">🎁 Consolation Prize Winners (${consolations.length})</div>
             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12px;">
-              ${consolations.map((c, i) => `<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;"><div><span style="font-weight:800;color:#166534;font-size:11px;margin-right:8px;background:#dcfce7;padding:2px 6px;border-radius:4px;">#${i+1}</span><span style="font-weight:700;color:#065f46;font-size:13px;">${escapeHtml(c.name)}</span></div><span style="color:#64748b;font-family:monospace;font-size:11px;">${escapeHtml(DrawLogic.maskOrder(c.orderNo) || '-')}</span></div>`).join('')}
+              ${consolations.map((c, i) => `<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;"><div><span style="font-weight:800;color:#166534;font-size:11px;margin-right:8px;background:#dcfce7;padding:2px 6px;border-radius:4px;">#${i+1}</span><span style="font-weight:700;color:#065f46;font-size:13px;">${nameHtml(c.name)}</span></div><span style="color:#64748b;font-family:monospace;font-size:11px;">${escapeHtml(DrawLogic.maskOrder(c.orderNo) || '-')}</span></div>`).join('')}
             </div>
           </div>` : ''}
           <div style="border-top:1px solid #e2e8f0;padding-top:14px;margin-top:20px;font-size:10px;color:#94a3b8;text-align:center;"><p style="margin:0;">${escapeHtml(pdfFooter)}</p></div>
@@ -1678,7 +1717,7 @@
                 <td style="padding:5px 6px;white-space:nowrap;">${escapeHtml(DrawLogic.TYPE_TEXT[e.type] || e.type)}</td>
                 <td style="padding:5px 6px;color:#334155;">${escapeHtml(DrawLogic.membersText(e, true))}</td>
                 <td style="padding:5px 6px;white-space:nowrap;font-weight:700;">${e.trigger ? '#' + e.trigger : ''}</td>
-                <td style="padding:5px 6px;font-weight:700;color:#065f46;">${escapeHtml(e.result || '')}${e.winner ? '<br>' + escapeHtml(e.winner.name) + ' <span style="color:#64748b;font-family:monospace;font-weight:400;">' + escapeHtml(DrawLogic.maskOrder(e.winner.orderNo) || '') + '</span>' : ''}${e.runnerUp ? '<br>🥈 ' + escapeHtml(e.runnerUp.name) : ''}</td>
+                <td style="padding:5px 6px;font-weight:700;color:#065f46;">${escapeHtml(e.result || '')}${e.winner ? '<br>' + nameHtml(e.winner.name) + ' <span style="color:#64748b;font-family:monospace;font-weight:400;">' + escapeHtml(DrawLogic.maskOrder(e.winner.orderNo) || '') + '</span>' : ''}${e.runnerUp ? '<br>🥈 ' + nameHtml(e.runnerUp.name) : ''}</td>
               </tr>`).join('')}</tbody>
             </table>
           </div>`;
@@ -1712,6 +1751,8 @@
       }
     }
 
+    // 买家名字：不翻译
+    function nameHtml(x) { return `<span translate="no">${escapeHtml(x)}</span>`; }
     function escapeHtml(str) { return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
   </script>
 </body>

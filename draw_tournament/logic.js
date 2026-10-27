@@ -307,6 +307,7 @@
     const clean = {};
     Object.keys(entry).forEach(k => { if (entry[k] !== undefined) clean[k] = entry[k]; });
     clean.ts = Date.now();
+    clean.id = clean.ts.toString(36) + Math.random().toString(36).slice(2, 7);
     st.drawLog.push(clean);
   }
   const STAGE_TEXT = { normal: '普通轮', consolation: '安慰奖阶段', third: '冠亚季争夺战', final: '冠亚军决战' };
