@@ -10,7 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="logic.js?v=9"></script>
-  <script src="i18n.js?v=3"></script>
+  <script src="i18n.js?v=5"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -97,7 +97,7 @@
       .layout-grid.collapsed #pkPanelBody,
       .layout-grid.collapsed .pk-progress-banner { display: none !important; }
       .layout-grid.collapsed .pk-collapsed-strip { display: flex; flex-direction: column; align-items: center; gap: 14px; height: 100%; padding-top: 6px; }
-      .pk-strip-btn { width: 36px; height: 36px; border-radius: 10px; background: #1e293b; border: 1px solid #f59e0b; color: #fbbf24; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+      .pk-strip-btn { width: 36px; height: 36px; border-radius: 6px; background: #1e293b; border: 1px solid #f59e0b; color: #fbbf24; display: flex; align-items: center; justify-content: center; font-weight: 900; }
       .pk-strip-text { writing-mode: vertical-rl; letter-spacing: 4px; color: #fbbf24; font-weight: 900; font-size: 15px; }
       .pk-strip-poll { writing-mode: vertical-rl; font-size: 11px; font-weight: 900; color: #0f172a; background: #f59e0b; border-radius: 8px; padding: 8px 3px; }
     }
@@ -105,9 +105,18 @@
     .passed-zoom #passedListContainer { max-height: none !important; gap: 14px; }
     .passed-zoom #passedListContainer > div { padding: 12px 16px !important; }
     .out-panel { max-width: 100%; }
+    /* 手机：语言按钮只显示当前一个，点一下展开选择 */
+    @media (max-width: 639px) {
+      #langGroup:not(.open) button:not(.lang-active) { display: none; }
+      #langGroup:not(.open) button.lang-active::after { content: '▾'; margin-left: 3px; font-size: 10px; }
+      #publicModeBadge { white-space: normal; line-height: 1.3; }
+    }
+    /* 名单池：按宽度自动排满，顶部留位给文件夹标签 */
+    .pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px 10px; padding-top: 14px; }
+    @media (max-width: 639px) { .pool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     /* 电脑：统计放在进度条下方，标题左、数值右，一排四格 */
     #statsBar.stats-compact { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0 0; }
-    #statsBar.stats-compact > div { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; border-radius: 10px; }
+    #statsBar.stats-compact > div { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; border-radius: 6px; }
     #statsBar.stats-compact > div > span:first-child { display: inline; font-size: 12px; }
     #statsBar.stats-compact > div > span:last-child { font-size: 20px; line-height: 1.2; }
     /* PK 组：框架高度跟着内容，四格名单在框架内垂直置中 */
@@ -123,7 +132,9 @@
     /* 电脑 + 英文/马来文：「等待票选号」分两行显示 */
     @media (min-width: 1024px) {
       html[lang="en"] #pkIndicatorArea, html[lang="ms"] #pkIndicatorArea { height: 104px; }
-      html[lang="en"] #awaitVoteIndicator > span:first-child, html[lang="ms"] #awaitVoteIndicator > span:first-child { white-space: normal; max-width: 15em; text-align: center; line-height: 1.15; font-size: 1.35rem; }
+      html[lang="en"] #awaitVoteIndicator .await-main, html[lang="ms"] #awaitVoteIndicator .await-main { white-space: normal; gap: 10px; }
+      html[lang="en"] #awaitVoteIndicator .await-icon, html[lang="ms"] #awaitVoteIndicator .await-icon { font-size: 2.6rem; line-height: 1; }
+      html[lang="en"] #awaitVoteIndicator .await-text, html[lang="ms"] #awaitVoteIndicator .await-text { display: block; white-space: pre; text-align: left; line-height: 1.12; font-size: 1.4rem; }
       html[lang="en"] #countdownIndicator > span:first-child, html[lang="ms"] #countdownIndicator > span:first-child { white-space: normal; max-width: 18em; text-align: center; }
     }
     /* 淘汰区：高度跟旁边内容一样，名单在框内滚动（显示细滚动条） */
@@ -167,7 +178,7 @@
       visibility: hidden; opacity: 0;
       position: absolute; top: 100%; right: 0; margin-top: 10px;
       width: 340px; max-width: 90vw; padding: 14px 16px;
-      background: #0f172a; border: 1.5px solid #f59e0b; border-radius: 12px;
+      background: #0f172a; border: 1.5px solid #f59e0b; border-radius: 8px;
       color: #e2e8f0; font-size: 12px; line-height: 1.7;
       box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px rgba(245,158,11,0.2);
       z-index: 999; transition: all 0.25s ease; pointer-events: none; text-align: left;
@@ -204,7 +215,7 @@
     .round-tabs { display: flex; align-items: flex-end; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
     .round-tabs::-webkit-scrollbar { display: none; }
     .round-tab { position: relative; flex-shrink: 0; white-space: nowrap; padding: 5px 14px 4px; font-size: 12px; font-weight: 700; line-height: 1.35;
-      color: #cbd5e1; background: #1e293b; border: 1px solid #334155; border-bottom: none; border-radius: 10px 10px 0 0; transition: background .15s, color .15s; }
+      color: #cbd5e1; background: #1e293b; border: 1px solid #334155; border-bottom: none; border-radius: 6px 6px 0 0; transition: background .15s, color .15s; }
     .round-tab:hover { background: #334155; color: #fff; }
     .round-tab.active { color: #0f172a; background: linear-gradient(180deg, #fbbf24, #f59e0b); border-color: #f59e0b; padding-top: 7px; font-weight: 900; box-shadow: 0 -3px 12px rgba(245,158,11,.35); }
     .round-tab-bar { border-bottom: 2px solid #f59e0b; }
@@ -216,7 +227,7 @@
 
   <!-- 遮罩层 -->
   <div id="publicOverlayMask" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
-    <div class="bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
+    <div class="bg-slate-900/80 border border-amber-500/40 rounded-xl p-8 sm:p-10 max-w-lg w-full shadow-2xl relative overflow-hidden backdrop-blur-md border-2">
       <div class="text-5xl sm:text-6xl mb-4 animate-spin inline-block" style="animation-duration: 3s;">⏳</div>
       <h2 class="text-xl sm:text-2xl font-black text-amber-400 mb-2 leading-snug">网页正在计算与更新中，敬请期待...</h2>
       <p class="text-xs sm:text-sm text-slate-400 font-medium">系统正在实时同步与整理买家数据，请留意直播间提示</p>
@@ -225,12 +236,12 @@
 
   <!-- 轮次切换弹窗 -->
   <div id="roundTransitionModal" class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-300" onclick="closeRoundModal()">
-    <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
+    <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-xl p-8 sm:p-12 max-w-xl w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative overflow-hidden animate-pop cursor-pointer" onclick="event.stopPropagation()">
       <div class="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
       <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl"></div>
       <div class="text-6xl sm:text-7xl mb-6 inline-block animate-bounce">🚀</div>
       <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 mb-3 tracking-widest drop-shadow-sm">新一轮对决开启</h2>
-      <div id="roundTransitionTitle" class="text-xl sm:text-2xl font-bold text-white mb-6 bg-slate-800/80 py-3 px-6 rounded-2xl border border-slate-700 inline-block">第 2 轮</div>
+      <div id="roundTransitionTitle" style="white-space: pre-line;" class="text-xl sm:text-2xl font-bold text-white mb-6 bg-slate-800/80 py-3 px-6 rounded-lg border border-slate-700 inline-block">第 2 轮</div>
       <p class="text-sm sm:text-base text-amber-200/80 mb-8 font-medium">🔥 请各位买家/观众做好准备，激烈的角逐即将开始！</p>
       <div class="w-full bg-slate-700/50 rounded-full h-2 mb-4 overflow-hidden border border-slate-600/50 flex justify-start">
         <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-2 rounded-full animate-bar"></div>
@@ -241,7 +252,7 @@
 
   <!-- 恭喜中奖弹窗 -->
   <div id="congratModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-500">
-    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
+    <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-lg sm:rounded-xl p-5 sm:p-8 max-w-2xl w-full text-center shadow-2xl relative overflow-hidden transform scale-95 transition-all">
       <div class="text-5xl sm:text-7xl mb-2 sm:mb-3 animate-bounce">👑</div>
       <h2 id="congratBadge" class="text-[10px] sm:text-xs font-black tracking-widest text-amber-400 uppercase mb-1">WINNER ANNOUNCEMENT</h2>
       <h3 id="congratModalTitle" class="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-emerald-300 to-amber-400 mb-3 sm:mb-4">热烈祝贺！成功获得荣誉！</h3>
@@ -254,11 +265,11 @@
   </div>
 
   <!-- 浮动按钮 -->
-  <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shadow-2xl backdrop-blur-md">
-    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-xl border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
+  <div id="floatingActionButtons" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 hidden flex-row items-center space-x-2 bg-slate-950/90 p-1.5 sm:p-2 rounded-lg border border-slate-700/80 shadow-2xl backdrop-blur-md">
+    <button onclick="shareSummaryImage()" class="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] sm:text-xs font-bold rounded-md border border-slate-600 transition shadow flex items-center space-x-1 sm:space-x-1.5">
       <span>🔗</span><span>分享结果</span>
     </button>
-    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-xl transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
+    <button onclick="saveSummaryAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-black rounded-md transition shadow-lg flex items-center space-x-1 sm:space-x-1.5">
       <span>💾</span><span>保存为图片</span>
     </button>
   </div>
@@ -276,8 +287,8 @@
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-4">
-        <div class="mode-tooltip-wrap">
-          <span id="publicModeBadge" translate="no" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-inner block transition hover:border-amber-400/60 cursor-help">模式: 加载中</span>
+        <div class="mode-tooltip-wrap min-w-0 flex-1 sm:flex-none">
+          <span id="publicModeBadge" translate="no" class="text-[11px] sm:text-xs font-bold text-amber-400 bg-slate-900 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded shadow-inner block transition hover:border-amber-400/60 cursor-help">模式: 加载中</span>
           <div class="mode-tooltip-box">
             <div class="mt-title">📋 当前模式规则与晋级流程</div>
             <div id="modeTooltipBody" translate="no" class="space-y-2 text-slate-300">
@@ -290,7 +301,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
           <span>云端毫秒级同步中...</span>
         </div>
-        <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded-lg">
+        <div id="langGroup" class="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 sm:p-1 rounded flex-shrink-0">
           <button onclick="setLanguage('zh')" id="langBtn-zh" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#DE2910"/><path fill="#FFDE00" d="M5 2l1.18 3.62h3.8l-3.08 2.24 1.18 3.62L5 9.24 1.92 11.48 3.1 7.86.02 5.62h3.8z"/><circle cx="10" cy="2" r=".9" fill="#FFDE00"/><circle cx="12" cy="4" r=".9" fill="#FFDE00"/><circle cx="12" cy="7" r=".9" fill="#FFDE00"/><circle cx="10" cy="9" r=".9" fill="#FFDE00"/></svg><span class="text-[10px] sm:text-[11px]">ZH</span></button>
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukc"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#ukc)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg><span class="text-[10px] sm:text-[11px]">EN</span></button>
           <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 28 14" aria-hidden="true"><rect width="28" height="14" fill="#fff"/><rect y="0" width="28" height="1" fill="#CC0001"/><rect y="2" width="28" height="1" fill="#CC0001"/><rect y="4" width="28" height="1" fill="#CC0001"/><rect y="6" width="28" height="1" fill="#CC0001"/><rect y="8" width="28" height="1" fill="#CC0001"/><rect y="10" width="28" height="1" fill="#CC0001"/><rect y="12" width="28" height="1" fill="#CC0001"/><rect width="14" height="8" fill="#010066"/><circle cx="5.2" cy="4" r="2.9" fill="#FC0"/><circle cx="6.1" cy="4" r="2.45" fill="#010066"/><path fill="#FC0" d="M10.2 1.9l.45 1.4 1.4-.6-.75 1.3 1.45.35-1.45.35.75 1.3-1.4-.6-.45 1.4-.45-1.4-1.4.6.75-1.3-1.45-.35 1.45-.35-.75-1.3 1.4.6z"/></svg><span class="text-[10px] sm:text-[11px]">MS</span></button>
@@ -300,8 +311,8 @@
   </header>
 
   <!-- 主体内容 -->
-  <main class="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 sm:py-6 flex-1 w-full flex flex-col">
-    <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-2xl p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden w-full">
+  <main class="max-w-[1600px] mx-auto px-3 sm:px-4 pt-2 pb-4 sm:pt-2.5 sm:pb-6 flex-1 w-full flex flex-col">
+    <div id="finalTournamentSummaryPanel" class="mb-4 sm:mb-6 hidden bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-amber-400 rounded-lg p-4 sm:p-6 pb-8 sm:pb-12 shadow-2xl relative overflow-hidden w-full">
       <div class="text-center mb-4 sm:mb-6 pb-3 border-b border-amber-500/30">
         <h2 class="text-lg sm:text-2xl font-black text-amber-400 flex items-center justify-center space-x-1.5 sm:space-x-2">
           <span>🏆</span><span>全场抽奖比赛 - 终极荣誉汇总榜</span><span>🏆</span>
@@ -309,7 +320,7 @@
         <p class="text-[11px] sm:text-xs text-slate-400 mt-1">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
       <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end max-w-4xl mx-auto"></div>
-      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-xl border border-emerald-500/40 w-full max-w-5xl mx-auto">
+      <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-md border border-emerald-500/40 w-full max-w-5xl mx-auto">
         <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
           <span class="text-base sm:text-lg">🎁</span>
           <h3 class="text-xs sm:text-sm font-bold text-emerald-400">安慰奖得主全名单</h3>
@@ -319,7 +330,7 @@
       </div>
     </div>
 
-    <div id="processSectionToggleBar" class="hidden mb-4 flex justify-between items-center bg-slate-800/60 p-2.5 rounded-xl border border-slate-700">
+    <div id="processSectionToggleBar" class="hidden mb-4 flex justify-between items-center bg-slate-800/60 p-2.5 rounded-md border border-slate-700">
       <span class="text-[11px] sm:text-xs text-slate-400 font-bold">📋 抽奖比赛全程选拔细节记录</span>
       <button onclick="toggleProcessArea()" class="text-[11px] sm:text-xs text-amber-400 hover:underline font-bold flex items-center space-x-1">
         <span id="processToggleBtnText">展开选拔过程 ▼</span>
@@ -331,14 +342,14 @@
         <div class="round-tab-bar flex items-end justify-between">
           <div id="roundTabsContainer" class="round-tabs pt-1"></div>
         </div>
-        <div id="winnerAnnouncementBanner" class="hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
+        <div id="winnerAnnouncementBanner" class="hidden bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400 rounded-lg p-3 sm:p-4 text-center shadow-xl shadow-amber-500/10 animate-pulse">
           <div id="winnerBannerContent" class="text-sm sm:text-lg font-black text-amber-300 tracking-wide"></div>
         </div>
       </div>
 
       <div id="main-layout-grid" class="layout-grid w-full flex flex-col gap-4 sm:gap-6">
        <div id="pkColumn" class="w-full min-w-0 flex flex-col">
-       <div id="publicActiveGroupDisplay" class="w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
+       <div id="publicActiveGroupDisplay" class="w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-lg p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]">
           <div class="pk-collapsed-strip" onclick="togglePkPanel()" title="展开 PK 组">
             <span class="pk-strip-btn">▶</span>
             <span class="pk-strip-text">🔥 盲抽 PK 组</span>
@@ -350,8 +361,8 @@
   <h3 class="text-xs sm:text-base font-black text-amber-400 truncate">Shopee 直播间盲抽 PK 组</h3>
 </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
-              <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-black shadow">POLL #-</span>
-              <button type="button" id="togglePkPanelBtn" onclick="togglePkPanel()" class="hidden text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold transition">◀ 折叠</button>
+              <span id="publicPollBadge" class="text-[10px] sm:text-xs bg-amber-500 text-slate-950 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded font-black shadow">POLL #-</span>
+              <button type="button" id="togglePkPanelBtn" onclick="togglePkPanel()" class="hidden text-[10px] sm:text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-bold transition">◀ 折叠</button>
             </div>
           </div>
 
@@ -372,7 +383,7 @@
                   </div>
                 </div>
                 <div id="awaitVoteIndicator" class="hidden absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="whitespace-nowrap text-base sm:text-2xl font-black text-sky-300 tracking-wide animate-pulse drop-shadow-[0_0_14px_rgba(56,189,248,0.6)]">⏳ 正在等待票选号…</span>
+                  <span class="await-main whitespace-nowrap text-base sm:text-2xl font-black text-sky-300 tracking-wide animate-pulse drop-shadow-[0_0_14px_rgba(56,189,248,0.6)] flex items-center gap-1.5"><span class="await-icon">⏳</span><span class="await-text">正在等待票选号…</span></span>
                   <span class="whitespace-nowrap text-[10px] sm:text-xs text-slate-400 mt-1">请在直播间投票，选出你支持的号码</span>
                 </div>
                 <div id="nextRoundHint" class="hidden absolute inset-0 flex flex-col items-center justify-center">
@@ -381,12 +392,12 @@
                 </div>
               </div>
 
-              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-4 sm:px-10 sm:py-5 rounded-2xl border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)] z-20">
+              <div class="flex flex-col items-center justify-center bg-slate-950/90 px-8 py-4 sm:px-10 sm:py-5 rounded-lg border-2 border-amber-500/60 shadow-[0_0_30px_rgba(245,158,11,0.3)] z-20">
                 <span class="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">🎯 本轮票选号</span>
 <span id="centerTriggerNumberBox" class="pixel-number text-3xl sm:text-4xl font-black text-amber-400 tracking-widest drop-shadow-md">#?</span>              </div>
               
               <div id="publicRevealButtonBox" class="hidden mt-4 z-20">
-                <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+                <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black text-sm sm:text-base rounded-md transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
                   <span class="reveal-icon">🎯</span><span class="reveal-text">点击揭晓</span>
                 </button>
               </div>
@@ -402,15 +413,16 @@
           </div>
         </div>
 
-        <div id="publicProgressBanner" class="hidden w-full mt-3 sm:mt-4 pk-progress-banner bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border-2 border-amber-400/70 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-center">
-          <div id="publicProgressTitle" class="text-xs sm:text-base font-black text-amber-300 leading-snug"></div>
+        <div id="publicProgressBanner" class="hidden w-full mt-3 sm:mt-4 pk-progress-banner bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border-2 border-amber-400/70 rounded-md px-3 py-2.5 sm:px-4 sm:py-3 text-center">
+          <div id="publicProgressTitle" style="white-space: pre-line;" class="text-xs sm:text-base font-black text-amber-300 leading-snug"></div>
           <div id="publicProgressSub" class="text-[10px] sm:text-xs text-amber-100/90 mt-1 leading-relaxed"></div>
         </div>
           <div id="statsSlotDesktop" class="pk-progress-banner"></div>
+          <div id="lowerSlotDesktop" class="pk-progress-banner"></div>
        </div>
 
         <div id="rightPassedPanel" class="w-full flex flex-col gap-4 transition-all duration-300">
-          <div class="bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
+          <div class="bg-slate-800/90 p-4 sm:p-5 rounded-lg border border-emerald-500/30 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🏆</span>
               <h2 class="text-sm font-bold text-emerald-400">本轮胜出/已晋级名单</h2>
@@ -418,7 +430,7 @@
             </div>
             <div id="passedListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
           </div>
-          <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/40 shadow-lg flex-1 flex flex-col min-h-[200px]">
+          <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-lg border border-emerald-500/40 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🎁</span>
               <h2 class="text-sm font-bold text-emerald-300">已胜出安慰奖名单</h2>
@@ -430,23 +442,24 @@
       </div>
 
 
-      <div class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
+      <div id="lowerSlotOrig"></div>
+      <div id="lowerSection" class="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4 sm:gap-6 opacity-80 mt-2">
         <div class="flex flex-col justify-end min-w-0">
           <div id="statsSlotMobile"></div>
           <div id="statsBar" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">待PK</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
-            <div class="bg-slate-800/60 rounded-xl p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已淘汰</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
+            <div class="bg-slate-800/60 rounded-md p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">本轮参选</span><span id="statTotalCandidates" class="text-lg sm:text-2xl font-black text-blue-400">0</span></div>
+            <div class="bg-slate-800/60 rounded-md p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已晋级</span><span id="statPassedCount" class="text-lg sm:text-2xl font-black text-emerald-400">0</span></div>
+            <div class="bg-slate-800/60 rounded-md p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">待PK</span><span id="statPendingCount" class="text-lg sm:text-2xl font-black text-amber-400">0</span></div>
+            <div class="bg-slate-800/60 rounded-md p-2 sm:p-3 border border-slate-700"><span class="text-[10px] sm:text-xs text-slate-400 block">已淘汰</span><span id="statOutCount" class="text-lg sm:text-2xl font-black text-slate-400">0</span></div>
           </div>
-          <div class="bg-slate-800/50 rounded-2xl p-4 sm:p-6 border border-slate-700 flex-1">
+          <div class="bg-slate-800/50 rounded-lg p-4 sm:p-6 border border-slate-700 flex-1">
             <div class="flex items-center justify-between mb-3 sm:mb-4 border-b border-slate-700/80 pb-2.5 sm:pb-3">
               <div class="flex items-center space-x-2">
                 <span class="text-base sm:text-lg">⚡</span>
                 <h2 class="text-xs sm:text-md font-bold text-amber-400">本轮待定买家池</h2>
                 <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> 人</span>
               </div>
-              <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
+              <div class="flex items-center bg-slate-900 border border-slate-700 rounded px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
                 <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
                 <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
               </div>
@@ -454,7 +467,7 @@
             <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
           </div>
         </div>
-        <div class="bg-slate-800/30 rounded-2xl p-2.5 border border-slate-800 flex flex-col out-panel out-panel-fit">
+        <div class="bg-slate-800/30 rounded-lg p-2.5 border border-slate-800 flex flex-col out-panel out-panel-fit">
           <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
             <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
@@ -491,7 +504,7 @@
         : isWarn ? 'background:#451a03;border:1px solid #f59e0b;color:#fef3c7;'
         : 'background:#022c22;border:1px solid #10b981;color:#d1fae5;';
       const el = document.createElement('div');
-      el.style.cssText = theme + 'pointer-events:auto;cursor:pointer;white-space:pre-line;font-size:13px;font-weight:600;line-height:1.5;padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);width:100%;transition:opacity .3s,transform .3s;opacity:0;transform:translateY(-6px);';
+      el.style.cssText = theme + 'pointer-events:auto;cursor:pointer;white-space:pre-line;font-size:13px;font-weight:600;line-height:1.5;padding:10px 14px;border-radius: 8px;box-shadow:0 10px 30px rgba(0,0,0,.45);width:100%;transition:opacity .3s,transform .3s;opacity:0;transform:translateY(-6px);';
       el.textContent = msg;
       el.title = '点击关闭';
       const close = () => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); };
@@ -628,17 +641,17 @@
 
       if (eventData.winnerNamesKey === 'third') {
         bodyContainer.innerHTML = `
-          <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-2xl border border-amber-500/40 text-center shadow-inner">
+          <div class="bg-amber-950/80 p-3.5 sm:p-4 rounded-lg border border-amber-500/40 text-center shadow-inner">
             <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
             <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${nameHtml(eventData.winnerName)}</span>
           </div>`;
       } else if (eventData.winnerNamesKey === 'final') {
         bodyContainer.innerHTML = `
-          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-2xl border-2 border-amber-400 text-center shadow-lg transform scale-105">
+          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-lg border-2 border-amber-400 text-center shadow-lg transform scale-105">
             <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
             <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${nameHtml(eventData.championName)}</span>
           </div>
-          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
+          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-md border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-wider block mb-0.5">🥈 亚军得主 / RUNNER-UP</span>
             <span class="text-lg sm:text-xl font-bold text-slate-200 tracking-wide">${nameHtml(eventData.runnerUpName)}</span>
           </div>`;
@@ -650,11 +663,11 @@
         const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : (eventData.isConsolation ? '🎁 安慰奖 / CONSOLATION' : '🎯 成功晋级 / ADVANCED');
         
         bodyContainer.innerHTML = `
-          <div class="bg-gradient-to-r ${bgGrad} p-4 sm:p-5 rounded-2xl border-2 ${borderColor} text-center shadow-lg transform scale-105">
+          <div class="bg-gradient-to-r ${bgGrad} p-4 sm:p-5 rounded-lg border-2 ${borderColor} text-center shadow-lg transform scale-105">
             <span class="text-xs sm:text-base font-black ${textColor} uppercase tracking-widest block mb-0.5 sm:mb-1">${badgeText}</span>
             <span class="text-xl sm:text-2xl font-black ${textColor} tracking-wider drop-shadow-md">${nameHtml(eventData.winnerName)}</span>
           </div>
-          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-xl border border-slate-600 text-center shadow">
+          <div class="bg-slate-800/90 p-3 sm:p-3.5 rounded-md border border-slate-600 text-center shadow">
             <span class="text-xs sm:text-sm font-bold text-slate-300 block mb-0.5">票选号 #${eventData.triggerNumber} 命中！</span>
             <span class="text-xs text-slate-400">${escapeHtml(maskOrder(eventData.orderNo) || '')}</span>
           </div>`;
@@ -682,7 +695,7 @@
       if (__roundModalTimer) clearTimeout(__roundModalTimer);
       modal.classList.add('hidden');
       __roundModalTimer = setTimeout(() => {
-        titleEl.innerText = roundTitle;
+        titleEl.innerText = String(roundTitle || '').replace(/\s*\(/, '\n(');   // 括号说明放第二行
         modal.classList.remove('hidden');
         __roundModalTimer = setTimeout(() => { closeRoundModal(); }, 5000);
       }, delayMs);
@@ -694,32 +707,133 @@
       if (__roundModalTimer) clearTimeout(__roundModalTimer);
     }
 
+    // ===== 🏆 荣誉汇总图：直接绘制（不截图，文字不会被切），语言跟随当前选择 =====
+    const SUMMARY_TX = {
+      zh: { title: '全场抽奖比赛 · 终极荣誉汇总榜', sub: '祝贺所有获奖买家！感谢大家的参与与支持！', champ: '冠军', ru: '亚军', third: '季军', cons: '安慰奖得主', consTag: n => `#${n} 安慰奖`, none: '—',
+            shareTitle: 'Mochiishop 每月抽奖结果', shareText: (c, r, t, n) => `🏆 Mochiishop 每月抽奖结果\n👑 冠军：${c}\n🥈 亚军：${r}\n🥉 季军：${t}${n ? `\n🎁 安慰奖：${n} 位` : ''}\n祝贺所有获奖买家！`,
+            noShare: '⚠️ 您的浏览器不支持一键分享，已改为下载图片', fail: '❌ 生成图片失败，请重试！' },
+      en: { title: 'Final Results · Hall of Fame', sub: 'Congratulations to all winners! Thank you for joining and supporting us!', champ: 'CHAMPION', ru: 'RUNNER-UP', third: '3RD PLACE', cons: 'Consolation winners', consTag: n => `#${n} Consolation`, none: '—',
+            shareTitle: 'Mochiishop Monthly Draw Results', shareText: (c, r, t, n) => `🏆 Mochiishop Monthly Draw Results\n👑 Champion: ${c}\n🥈 Runner-up: ${r}\n🥉 3rd place: ${t}${n ? `\n🎁 Consolation prizes: ${n}` : ''}\nCongratulations to all winners!`,
+            noShare: '⚠️ Your browser can\'t share directly — the image has been downloaded instead', fail: '❌ Failed to create the image, please try again!' },
+      ms: { title: 'Keputusan Akhir · Dewan Kemasyhuran', sub: 'Tahniah kepada semua pemenang! Terima kasih atas sokongan anda!', champ: 'JOHAN', ru: 'NAIB JOHAN', third: 'TEMPAT KETIGA', cons: 'Pemenang saguhati', consTag: n => `#${n} Saguhati`, none: '—',
+            shareTitle: 'Keputusan Cabutan Bulanan Mochiishop', shareText: (c, r, t, n) => `🏆 Keputusan Cabutan Bulanan Mochiishop\n👑 Johan: ${c}\n🥈 Naib johan: ${r}\n🥉 Tempat ketiga: ${t}${n ? `\n🎁 Hadiah saguhati: ${n} orang` : ''}\nTahniah kepada semua pemenang!`,
+            noShare: '⚠️ Pelayar anda tidak boleh berkongsi terus — imej telah dimuat turun', fail: '❌ Gagal mencipta imej, cuba lagi!' },
+    };
+    function summaryLang() { return (window.I18N && I18N.lang) || 'zh'; }
+    function getSummaryData() {
+      let champion = null, runnerUp = null, third = null; const cons = [];
+      (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => {
+        if (c.rankKey === 'rankChampion') champion = c;
+        else if (c.rankKey === 'rankRunnerUp') runnerUp = c;
+        else if (c.rankKey === 'rankThird') third = c;
+        else if (c.rankKey === 'rankConsolation') cons.push(c);
+      }));
+      return { champion, runnerUp, third, cons };
+    }
+
+    function drawSummaryCanvas() {
+      const T = SUMMARY_TX[summaryLang()] || SUMMARY_TX.zh;
+      const d = getSummaryData();
+      const FONT = '"Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", Arial, sans-serif';
+      const MONO = '"Consolas", "SFMono-Regular", "Menlo", monospace';
+      const W = 1200, PAD = 48, COLS = 5;
+      const consRows = Math.ceil(d.cons.length / COLS);
+      const H = 250 + 300 + (d.cons.length ? 90 + consRows * 118 : 0) + 70;
+      const SCALE = 2;
+      const cv = document.createElement('canvas');
+      cv.width = W * SCALE; cv.height = H * SCALE;
+      const x = cv.getContext('2d');
+      x.scale(SCALE, SCALE);
+      x.textBaseline = 'middle';
+
+      const rr = (px, py, w, h, r) => { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); };
+      const fit = (text, max, font) => { x.font = font; let t = String(text || ''); if (x.measureText(t).width <= max) return t; while (t.length > 1 && x.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; };
+      const text = (t, cx, cy, font, color, max) => { x.font = font; x.fillStyle = color; x.textAlign = 'center'; x.fillText(max ? fit(t, max, font) : t, cx, cy); };
+
+      // 背景与外框
+      const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#1e293b'); bg.addColorStop(1, '#020617');
+      x.fillStyle = bg; x.fillRect(0, 0, W, H);
+      rr(16, 16, W - 32, H - 32, 14); x.lineWidth = 3; x.strokeStyle = '#fbbf24'; x.stroke();
+
+      // 标题
+      text('🏆  ' + (state.customPublicTitle || 'Mochiishop'), W / 2, 70, `800 26px ${FONT}`, '#fde68a', W - 2 * PAD);
+      text(T.title, W / 2, 120, `900 42px ${FONT}`, '#fbbf24', W - 2 * PAD);
+      text(T.sub, W / 2, 170, `500 20px ${FONT}`, '#cbd5e1', W - 2 * PAD);
+      x.strokeStyle = 'rgba(251,191,36,.35)'; x.lineWidth = 1; x.beginPath(); x.moveTo(PAD, 210); x.lineTo(W - PAD, 210); x.stroke();
+
+      // 领奖台：亚军 | 冠军 | 季军
+      const cardW = 330, gap = 30, baseY = 245;
+      const slots = [
+        { c: d.runnerUp, label: T.ru, icon: '🥈', y: baseY + 30, h: 220, fill: ['#334155', '#1e293b'], stroke: '#94a3b8', nameColor: '#f1f5f9' },
+        { c: d.champion, label: T.champ, icon: '👑', y: baseY, h: 250, fill: ['#78350f', '#1c1917'], stroke: '#fbbf24', nameColor: '#fde68a' },
+        { c: d.third, label: T.third, icon: '🥉', y: baseY + 30, h: 220, fill: ['#431407', '#1c1917'], stroke: '#c2410c', nameColor: '#fdba74' },
+      ];
+      const startX = (W - (cardW * 3 + gap * 2)) / 2;
+      slots.forEach((sl, i) => {
+        const px = startX + i * (cardW + gap);
+        const g = x.createLinearGradient(0, sl.y, 0, sl.y + sl.h); g.addColorStop(0, sl.fill[0]); g.addColorStop(1, sl.fill[1]);
+        rr(px, sl.y, cardW, sl.h, 12); x.fillStyle = g; x.fill(); x.lineWidth = i === 1 ? 3 : 1.5; x.strokeStyle = sl.stroke; x.stroke();
+        const cx = px + cardW / 2;
+        text(sl.icon, cx, sl.y + 52, `56px ${FONT}`, '#fff');
+        text(sl.label, cx, sl.y + 112, `800 18px ${FONT}`, sl.stroke === '#94a3b8' ? '#cbd5e1' : sl.stroke, cardW - 30);
+        text(sl.c ? sl.c.name : T.none, cx, sl.y + 156, `900 ${i === 1 ? 34 : 30}px ${FONT}`, sl.nameColor, cardW - 30);
+        text(sl.c ? (maskOrder(sl.c.orderNo) || '') : '', cx, sl.y + 196, `600 16px ${MONO}`, '#94a3b8', cardW - 30);
+      });
+
+      // 安慰奖
+      let y = baseY + 300;
+      if (d.cons.length) {
+        x.font = `800 22px ${FONT}`; x.fillStyle = '#6ee7b7'; x.textAlign = 'left';
+        x.fillText(`🎁 ${T.cons}  (${d.cons.length})`, PAD, y + 20);
+        y += 54;
+        const cw = (W - 2 * PAD - (COLS - 1) * 14) / COLS, ch = 104;
+        d.cons.forEach((c, i) => {
+          const col = i % COLS, row = Math.floor(i / COLS);
+          const px = PAD + col * (cw + 14), py = y + row * (ch + 14);
+          rr(px, py, cw, ch, 10); x.fillStyle = '#022c22'; x.fill(); x.lineWidth = 1.2; x.strokeStyle = '#10b981'; x.stroke();
+          const tag = T.consTag(i + 1);
+          x.font = `800 13px ${FONT}`; const tw = Math.min(cw - 20, x.measureText(tag).width + 16);
+          rr(px + (cw - tw) / 2, py + 12, tw, 24, 6); x.fillStyle = '#10b981'; x.fill();
+          text(tag, px + cw / 2, py + 24, `800 13px ${FONT}`, '#022c22', cw - 28);
+          text(c.name, px + cw / 2, py + 58, `800 18px ${FONT}`, '#a7f3d0', cw - 16);
+          text(maskOrder(c.orderNo) || '', px + cw / 2, py + 84, `600 13px ${MONO}`, '#94a3b8', cw - 16);
+        });
+        y += consRows * (ch + 14);
+      }
+      // 页脚
+      const dt = new Date(); const p2 = n => String(n).padStart(2, '0');
+      text(`Mochiishop · ${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`, W / 2, H - 46, `600 15px ${FONT}`, '#64748b');
+      return cv;
+    }
+    function canvasToFile(cv) {
+      return new Promise((resolve, reject) => cv.toBlob(b => b ? resolve(new File([b], 'Mochiishop_Winners.png', { type: 'image/png' })) : reject(new Error('toBlob')), 'image/png'));
+    }
+    function downloadFile(file) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file); a.download = file.name;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    }
+
     async function shareSummaryImage() {
-      const panel = document.getElementById('finalTournamentSummaryPanel');
-      if (!panel) return;
+      const T = SUMMARY_TX[summaryLang()] || SUMMARY_TX.zh;
       try {
-        const canvas = await html2canvas(panel, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
-        const imgData = canvas.toDataURL('image/png');
-        if (navigator.share) {
-          const blob = await (await fetch(imgData)).blob();
-          const file = new File([blob], 'Mochiishop_Winners.png', { type: 'image/png' });
-          await navigator.share({ title: '全场抽奖比赛荣誉汇总', text: '祝贺所有获奖买家！', files: [file] });
-        } else {
-          alert("⚠️ 您的浏览器不支持一键分享，请使用【保存为图片】");
-        }
-      } catch (err) { alert("❌ 分享失败，请重试！"); }
+        const d = getSummaryData();
+        const file = await canvasToFile(drawSummaryCanvas());
+        const data = { title: T.shareTitle, text: T.shareText(d.champion ? d.champion.name : T.none, d.runnerUp ? d.runnerUp.name : T.none, d.third ? d.third.name : T.none, d.cons.length), files: [file] };
+        if (navigator.canShare && navigator.canShare(data)) { await navigator.share(data); return; }
+        if (navigator.share) { await navigator.share({ title: data.title, text: data.text }); downloadFile(file); return; }
+        downloadFile(file); alert(T.noShare);
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;   // 用户取消分享
+        alert(T.fail);
+      }
     }
 
     async function saveSummaryAsImage() {
-      const panel = document.getElementById('finalTournamentSummaryPanel');
-      if (!panel) return;
-      try {
-        const canvas = await html2canvas(panel, { scale: 2, useCORS: true, backgroundColor: '#0f172a' });
-        const link = document.createElement('a');
-        link.download = 'Mochiishop_Winners.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } catch (err) { alert("❌ 生成图片失败，请重试！"); }
+      const T = SUMMARY_TX[summaryLang()] || SUMMARY_TX.zh;
+      try { downloadFile(await canvasToFile(drawSummaryCanvas())); }
+      catch (err) { alert(T.fail); }
     }
 
     function toggleProcessArea() {
@@ -744,6 +858,7 @@
       const mainLayout = document.getElementById('main-layout-grid');
       const rightPanel = document.getElementById('rightPassedPanel');
       const toggleBtn = document.getElementById('togglePkPanelBtn');
+      setTimeout(placeStatsBar, 0);
       const strip = document.getElementById('pkStripPoll');
       if (strip) strip.innerText = state.currentPollNumber ? `POLL #${state.currentPollNumber}` : 'POLL #-';
       if (isPkPanelCollapsed) {
@@ -799,19 +914,19 @@
       document.getElementById('winnerAnnouncementBanner').classList.add('hidden');
 
       podiumGrid.innerHTML = `
-        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
+        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
           <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / 亚军</span>
           <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? nameHtml(runnerUp.name) : 'N/A'}</div>
           <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(maskOrder(runnerUp.orderNo) || '无订单号') : '-'}</div>
         </div>
-        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-2xl border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
+        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-lg border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
           <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
           <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${nameHtml(champion.name)}</div>
           <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(maskOrder(champion.orderNo) || '无订单号')}</div>
         </div>
-        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-2xl border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
+        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
           <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? nameHtml(thirdPlace.name) : 'N/A'}</div>
@@ -822,7 +937,7 @@
         consolationBox.classList.remove('hidden');
         consolationBadge.innerText = consolations.length;
         consolationGrid.innerHTML = consolations.map((c, i) => `
-          <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
+          <div class="p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-md text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">
             <div>
               <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}安慰奖</span>
               <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${nameHtml(c.name)}</div>
@@ -869,7 +984,7 @@
       const hasChampion = (state.rounds || []).some(r => (r.candidates || []).some(c => c.rankKey === 'rankChampion'));
       if (thirdPlaceName && !hasChampion) {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded-lg border border-amber-500 mx-1 font-black">${nameHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
+        content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded border border-amber-500 mx-1 font-black">${nameHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
         return;
       }
       const isConsolationStage = DrawLogic.getRoundStage(state, currentRoundIndex) === 'consolation';
@@ -973,7 +1088,7 @@
                       const isRank = rl.text !== '点击揭晓';
                       const grad = isRank ? 'from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300' : 'from-emerald-500 via-emerald-400 to-emerald-500 hover:from-emerald-400 hover:to-emerald-300';
                       publicRevealButtonBox.innerHTML = `
-                        <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r ${grad} text-slate-950 font-black text-sm sm:text-base rounded-xl transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
+                        <button onclick="revealPKWinnerFromPublic()" class="px-8 py-3 bg-gradient-to-r ${grad} text-slate-950 font-black text-sm sm:text-base rounded-md transition shadow-xl animate-bounce transform active:scale-95 flex items-center justify-center space-x-2">
                           <span class="text-lg sm:text-xl">${rl.icon}</span><span>${rl.text}</span>
                         </button>`;
                       publicRevealButtonBox.classList.remove('hidden');
@@ -1158,6 +1273,24 @@
     }
 
     // 名单已出现、还没设定票选号 → 显示「正在等待票选号」；设定后自动消失
+    // 手机：语言按钮先收起，点当前语言才展开选择
+    (function () {
+      const g = () => document.getElementById('langGroup');
+      const isMobile = () => window.matchMedia('(max-width: 639px)').matches;
+      document.addEventListener('click', (e) => {
+        const grp = g();
+        if (!grp || !isMobile()) return;
+        if (grp.contains(e.target)) {
+          if (!grp.classList.contains('open')) { e.stopPropagation(); e.preventDefault(); grp.classList.add('open'); }
+        }
+      }, true);   // 捕获阶段：收起时点按钮只是展开，不切换语言
+      document.addEventListener('click', (e) => {
+        const grp = g();
+        if (!grp || !grp.classList.contains('open')) return;
+        if (!grp.contains(e.target) || e.target.closest('button')) setTimeout(() => grp.classList.remove('open'), 0);
+      });
+    })();
+
     // 手机点模式标签：打开/关闭说明；点其他地方关闭
     document.addEventListener('click', (e) => {
       const wrap = document.querySelector('.mode-tooltip-wrap');
@@ -1206,6 +1339,18 @@
       const target = isDesk ? desk : mob;
       if (bar.parentElement !== target) target.appendChild(bar);
       bar.classList.toggle('stats-compact', isDesk);
+      // 名单池 + 淘汰区：电脑（且 PK 组未折叠）放到左栏，贴在统计下方
+      const low = document.getElementById('lowerSection');
+      const lowDesk = document.getElementById('lowerSlotDesktop');
+      const lowOrig = document.getElementById('lowerSlotOrig');
+      if (low && lowDesk && lowOrig) {
+        const inLeft = isDesk && !isPkPanelCollapsed;
+        const t2 = inLeft ? lowDesk : lowOrig;
+        if (inLeft ? low.parentElement !== lowDesk : low.previousElementSibling !== lowOrig) {
+          if (inLeft) lowDesk.appendChild(low); else lowOrig.after(low);
+        }
+        low.classList.toggle('mt-3', inLeft);
+      }
     }
     window.addEventListener('resize', placeStatsBar);
     document.addEventListener('DOMContentLoaded', placeStatsBar);
@@ -1334,7 +1479,7 @@
 
       tooltip.innerHTML = `
         <div class="mt-row"><b>${T.title(isM2, N)}</b></div>
-        <div class="rounded-lg border border-amber-500/40 bg-amber-950/30 p-2">
+        <div class="rounded border border-amber-500/40 bg-amber-950/30 p-2">
           <div class="text-[10px] font-black text-amber-400 mb-1">${T.progress} · ${finished ? T.done : stageName}</div>
           <div class="text-[11px] leading-relaxed">${now}</div>
           ${route ? `<div class="text-[10px] text-slate-300 mt-1.5 leading-relaxed">${route}</div>` : ''}
@@ -1582,10 +1727,10 @@ function revealPKWinnerFromPublic() {
       const nameClass = isScrambling ? 'scramble-text' : '';
       const orderClass = isScrambling ? 'scramble-text' : '';
       return `
-        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card ${isMarqueeRunning && __marqueeHighlightId === String(c.id) ? 'marquee-flash' : ''} relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
+        <div id="pk-card-${idx}" data-member-id="${escapeHtml(String(c.id))}" class="pk-card ${isMarqueeRunning && __marqueeHighlightId === String(c.id) ? 'marquee-flash' : ''} relative w-32 h-32 sm:w-36 sm:h-36 lg:w-44 lg:h-40 rounded-md border-2 ${border} overflow-hidden shadow-xl transition-all duration-300 flex flex-col justify-center items-center p-3">
           <div class="mb-2">${header}</div>
-          <div class="pk-card-name font-bold text-amber-300 text-base truncate w-full text-center ${nameClass}">${displayName}</div>
-          <div class="pk-card-order text-[11px] text-slate-400 font-mono truncate w-full text-center mt-1 ${orderClass}">${displayOrder}</div>
+          <div class="pk-card-name font-bold text-amber-300 text-base lg:text-xl truncate w-full text-center ${nameClass}">${displayName}</div>
+          <div class="pk-card-order text-[11px] lg:text-xs text-slate-400 font-mono truncate w-full text-center mt-1 ${orderClass}">${displayOrder}</div>
         </div>`;
     }
 
@@ -1597,7 +1742,7 @@ function revealPKWinnerFromPublic() {
         const nameTxt = scramblePool[i % scramblePool.length];
         const orderTxt = orderPool[i % orderPool.length];
         html.push(`
-          <div class="pk-card-placeholder relative w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-2 border-amber-500/30 bg-slate-900/60 overflow-hidden shadow-lg flex flex-col justify-center items-center p-3">
+          <div class="pk-card-placeholder relative w-32 h-32 sm:w-36 sm:h-36 lg:w-44 lg:h-40 rounded-md border-2 border-amber-500/30 bg-slate-900/60 overflow-hidden shadow-lg flex flex-col justify-center items-center p-3">
             <div class="mb-2"><span class="text-sm font-black bg-amber-500/60 text-slate-950 px-2.5 py-0.5 rounded-full shadow">#？</span></div>
             <div class="font-bold text-amber-300/60 text-base truncate w-full text-center scramble-text">${nameTxt}</div>
             <div class="text-[11px] text-slate-500 font-mono truncate w-full text-center mt-1 scramble-text">${orderTxt}</div>
@@ -1614,7 +1759,7 @@ function revealPKWinnerFromPublic() {
       const shownPoll = state.currentPollNumber || (__lastReveal && __lastReveal.poll) || 0;
       if (pollBadge) pollBadge.innerText = shownPoll ? `POLL #${shownPoll}` : 'POLL #-';
       const pkPanel = document.getElementById('publicActiveGroupDisplay');
-      if (pkPanel) pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
+      if (pkPanel) pkPanel.className = "w-full transition-colors duration-500 bg-gradient-to-r from-amber-950/40 via-slate-800/80 to-amber-950/40 border-2 border-amber-500/50 rounded-lg p-4 sm:p-6 shadow-2xl relative overflow-hidden flex-col min-h-[400px]";
 
       let activeRound = { candidates: [] };
       if (state.rounds && state.rounds.length > 0) {
@@ -1720,7 +1865,7 @@ function revealPKWinnerFromPublic() {
           const isHighlight = c.pollLabel && state.pkStage === 'revealed' && state.activeGroupIds && state.activeGroupIds.some(id => String(id) === String(c.id));
           const highlightClass = isHighlight ? 'passed-highlight' : '';
           
-          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + labelHtml +
+          return `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded flex items-center space-x-2 shadow-sm mt-1.5 passed-card ${highlightClass}">` + labelHtml +
             '<span class="passed-card-name font-bold text-emerald-300 text-base mt-1">' + nameHtml(c.name) + '</span>' +
             '<span class="passed-card-order text-slate-400 font-mono text-xs mt-1">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</span>' +
           '</div>';
@@ -1737,7 +1882,7 @@ function revealPKWinnerFromPublic() {
         if (cons.length > 0) {
           cPanel.classList.remove('hidden');
           cBadge.innerText = cons.length;
-          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px]">#${i+1}安慰奖</span><span class="font-bold text-emerald-300">${nameHtml(c.name)}</span><span class="text-slate-400 font-mono text-[10px]">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
+          cList.innerHTML = cons.map((c, i) => `<div class="relative px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded flex items-center space-x-2 text-xs shadow-sm mt-1.5"><span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap flex-shrink-0">#${i+1}安慰奖</span><span class="passed-card-name font-bold text-emerald-300 text-base">${nameHtml(c.name)}</span><span class="passed-card-order text-slate-400 font-mono text-xs">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
         } else cPanel.classList.add('hidden');
       }
 
@@ -1761,7 +1906,7 @@ function revealPKWinnerFromPublic() {
             pkBadge = '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded ml-1">🔥 PK中</span>';
           }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
-          cardsHtml += `<div class="relative p-3 rounded-xl border ${extraStyle} shadow mt-2 w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(20%-10px)] min-w-0 flex flex-col justify-between">` + folderTabHtml +
+          cardsHtml += `<div class="relative p-3 rounded-md border ${extraStyle} shadow min-w-0 flex flex-col justify-between">` + folderTabHtml +
             '<div>' +
               '<div class="text-[10px] font-mono text-slate-400 mb-1 flex justify-between items-center"><span>#' + (index + 1) + '</span>' + pkBadge + '</div>' +
               '<div class="font-bold text-slate-100 text-xs sm:text-sm truncate mt-1.5">' + nameHtml(c.name) + '</div>' +
@@ -1769,7 +1914,7 @@ function revealPKWinnerFromPublic() {
             '</div>' +
           '</div>';
         });
-        pendingContainer.innerHTML = '<div class="flex flex-wrap gap-2.5 sm:gap-3">' + cardsHtml + '</div>';
+        pendingContainer.innerHTML = '<div class="pool-grid">' + cardsHtml + '</div>';
       }
 
       const outContainer = document.getElementById('outListContainer');
@@ -1796,10 +1941,10 @@ function revealPKWinnerFromPublic() {
           const rNum = Number(rIdxKey) + 1;
           const candidatesInGroup = grouped[rIdxKey];
           const groupRowsHtml = candidatesInGroup.map(c => `
-            <div class="out-card bg-slate-900/80 border border-slate-800 rounded-md truncate">
+            <div class="out-card bg-slate-900/80 border border-slate-800 rounded-sm truncate">
               <span class="font-bold text-slate-300 text-[11px] truncate block">${nameHtml(c.name)}</span>
             </div>`).join('');
-          return `<div class="bg-slate-900/40 p-1.5 rounded-lg border border-slate-800">
+          return `<div class="bg-slate-900/40 p-1.5 rounded border border-slate-800">
             <div class="text-[9px] font-bold text-rose-400/90 mb-1 border-b border-slate-800 pb-0.5 flex justify-between items-center">
               <span>❌ 第 ${rNum} 轮</span>
               <span class="text-[8px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded">${candidatesInGroup.length}</span>

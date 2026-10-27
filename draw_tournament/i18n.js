@@ -13,7 +13,7 @@
   const SENTENCES = [
     [/^🎲 名单池剩 (\d+) 人 · 已晋级 (\d+) 人 · 下一组(?:建议)? (\d+) 人$/, '🎲 Pool: $1 left · Advanced: $2 · Next group: $3', '🎲 Baki: $1 orang · Mara: $2 · Kumpulan seterusnya: $3 orang'],
     [/^✅ 本轮已抽完，共晋级 (\d+) 人$/, '✅ Round complete — $1 advanced', '✅ Pusingan selesai — $1 orang mara'],
-    [/^🎁 安慰奖阶段：已抽出 (\d+)\/(\d+) 位（每组 (\d+) 人，命中者得安慰奖，其余回名单池）$/, '🎁 Consolation stage: $1/$2 drawn (groups of $3 — the hit wins a consolation prize, the rest return to the pool)', '🎁 Peringkat hadiah saguhati: $1/$2 dicabut (kumpulan $3 orang — yang terkena menang hadiah saguhati, yang lain kembali ke senarai)'],
+    [/^🎁 安慰奖阶段：已抽出 (\d+)\/(\d+) 位（每组 (\d+) 人，命中者得安慰奖，其余回名单池）$/, '🎁 Consolation stage: $1/$2 drawn\n(groups of $3 — the hit wins a consolation prize, the rest return to the pool)', '🎁 Peringkat saguhati: $1/$2 dicabut\n(kumpulan $3 orang — yang terkena menang hadiah saguhati, yang lain kembali ke senarai)'],
     [/^🏁 比赛结束！👑 冠军：(.*)$/, '🏁 Event over! 👑 Champion: $1', '🏁 Pertandingan tamat! 👑 Johan: $1'],
     [/^🥉 季军已锁定：(.*)$/, '🥉 3rd place confirmed: $1', '🥉 Tempat ketiga disahkan: $1'],
     [/^模式1: 冠亚季 · (.*)$/, 'Mode 1: Top 3 · $1', 'Mod 1: 3 Teratas · $1', true],
@@ -60,6 +60,7 @@
     ['当前直播盲抽 PK 组', 'Current live PK group', 'Kumpulan PK semasa'],
     ['🎯 本轮票选号', '🎯 Winning vote no.', '🎯 Nombor undian'],
     ['⏳ 正在等待票选号…', '⏳ Waiting for the vote number…', '⏳ Menunggu nombor undian…'],
+    ['正在等待票选号…', 'Waiting for the\nvote number…', 'Menunggu\nnombor undian…'],
     ['请在直播间投票，选出你支持的号码', 'Vote in the live room for the number you support', 'Undi di siaran langsung untuk nombor pilihan anda'],
     ['盲抽即将在', 'Draw starts in', 'Cabutan bermula dalam'],
     ['秒后开始', '', ''],
@@ -657,6 +658,7 @@
       b.style.background = l === lang ? '#f59e0b' : '';
       b.style.color = l === lang ? '#0f172a' : '';
       b.style.fontWeight = l === lang ? '800' : '';
+      b.classList.toggle('lang-active', l === lang);
     });
   }
 
