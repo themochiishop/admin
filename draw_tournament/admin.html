@@ -168,7 +168,22 @@
     </div>
   </div>
 
-  <div id="drawSettingsModal" class=""fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <!-- 🏁 比赛结束：更新领奖追踪（只能按【更新】）-->
+  <div id="claimUpdateModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 90;">
+    <div class="bg-slate-800 border-2 border-sky-500 rounded-lg w-full max-w-4xl shadow-2xl flex flex-col" style="max-height: 90vh;">
+      <div class="p-4 border-b border-slate-700">
+        <h3 class="text-lg font-bold text-sky-300">🏁 比赛结束 · 更新领奖追踪</h3>
+        <p class="text-xs text-slate-400 mt-1">确认得主后按【更新】，领奖追踪页面就会记录这一场，之前月份的记录都会保留。联系和寄出可以现在勾，也可以之后在领奖追踪页面再填。</p>
+        <label class="mt-3 flex items-center gap-2 text-sm"><span class="text-slate-300">这一场的月份：</span><input type="month" id="claimMonth" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-100"></label>
+      </div>
+      <div id="claimUpdateList" class="flex-1 overflow-y-auto p-4 text-xs"></div>
+      <div class="p-4 border-t border-slate-700 flex justify-end">
+        <button id="claimUpdateBtn" onclick="publishClaims()" class="px-6 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black rounded shadow-lg disabled:opacity-50" style="background:#0ea5e9;">✅ 更新到领奖追踪</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="drawSettingsModal" class="""fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-lg p-6 w-full max-w-md shadow-2xl relative">
       <button onclick="closeDrawSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
       <h3 class="text-lg font-bold text-amber-400 mb-2 flex items-center space-x-2"><span>🎲</span><span>盲抽参数设置</span></h3>
@@ -834,33 +849,86 @@
       const ts = Object.values(state.drawLog || {}).map(e => e && e.ts).filter(Boolean);
       return ts.length ? DrawLogic.fmtTime(Math.min(...ts)).replace(/[-: ]/g, '').slice(0, 14) : null;
     }
-    let __claimSyncSig = '';
-    function syncClaimBatch() {
-      if (IS_TEST || !DrawLogic.isTournamentFinished(state)) return;
-      const ws = getWinners(), id = tournamentKey();
-      if (!ws.length || !id) return;
-      const sig = id + '|' + ws.map(w => w.key + ':' + rankLabel(w)).join(',');
-      if (sig === __claimSyncSig) return;
-      __claimSyncSig = sig;
+    // 比赛结束 → 跳出【更新领奖追踪】弹窗（只能按【更新】）→ 写入领奖追踪页面（以前月份的记录都保留）
+    function claimSig() { return tournamentKey() + '|' + getWinners().map(w => w.key + ':' + rankLabel(w)).join(','); }
+    let __claimAskSig = '', __claimAskTimer = null;
+    function maybeAskClaimUpdate() {
+      if (IS_TEST || !DrawLogic.isTournamentFinished(state) || !getWinners().length || !tournamentKey()) return;
+      const sig = claimSig();
+      if (state.claimsPublishedSig === sig || __claimAskSig === sig) return;
+      __claimAskSig = sig;
+      clearTimeout(__claimAskTimer);
+      __claimAskTimer = setTimeout(openClaimUpdateModal, 1500);     // 先让结果提示显示一下
+    }
+    async function openClaimUpdateModal() {
+      const id = tournamentKey(), ws = getWinners();
+      if (!id || !ws.length) return;
+      let cur = {};
+      try { cur = (await db.ref(`${CLAIM_BATCHES}/${id}`).once('value')).val() || {}; } catch (e) {}
+      const items = cur.items || {};
+      const now = new Date();
+      document.getElementById('claimMonth').value = cur.month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const escA = x => escapeHtml(x).replace(/"/g, '&quot;');
+      document.getElementById('claimUpdateList').innerHTML = `<table class="w-full text-left">
+        <thead><tr class="text-slate-400 border-b border-slate-600"><th class="py-1.5 pr-3">名次</th><th class="py-1.5 pr-3">名字</th><th class="py-1.5 pr-3">订单号</th><th class="py-1.5 pr-3 text-center">已联系</th><th class="py-1.5 pr-3 text-center">已寄出</th><th class="py-1.5">备注</th></tr></thead>
+        <tbody>${ws.map(w => {
+          const it = items[w.key] || {};
+          return `<tr class="border-b border-slate-700/60" data-k="${escA(w.key)}">
+            <td class="py-2 pr-3 whitespace-nowrap font-bold text-amber-300">${escapeHtml(rankLabel(w))}</td>
+            <td class="py-2 pr-3 font-bold text-slate-100">${nameHtml(w.c.name)}</td>
+            <td class="py-2 pr-3 font-mono text-slate-300 whitespace-nowrap">${escapeHtml(w.c.orderNo || '-')}</td>
+            <td class="py-2 pr-3 text-center"><input type="checkbox" class="cu-contacted w-4 h-4" ${it.contacted ? 'checked' : ''}></td>
+            <td class="py-2 pr-3 text-center"><input type="checkbox" class="cu-shipped w-4 h-4" ${it.shipped ? 'checked' : ''}></td>
+            <td class="py-2 min-w-[160px]"><input type="text" class="cu-note w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-200" value="${escA(it.note || '')}" placeholder="可留空，之后再填"></td>
+          </tr>`; }).join('')}</tbody></table>`;
+      document.getElementById('claimUpdateBtn').disabled = false;
+      document.getElementById('claimUpdateModal').classList.remove('hidden');
+    }
+    function publishClaims() {
+      const id = tournamentKey(), ws = getWinners();
+      if (!id || !ws.length) return;
+      const btn = document.getElementById('claimUpdateBtn');
+      btn.disabled = true;
+      const mv = document.getElementById('claimMonth').value || '';
+      const m = /^(\d{4})-(\d{2})$/.exec(mv);
+      const now = new Date();
+      const month = m ? mv : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const [yy, mm] = month.split('-');
+      const input = {};
+      document.querySelectorAll('#claimUpdateList tr[data-k]').forEach(tr => {
+        input[tr.dataset.k] = { contacted: tr.querySelector('.cu-contacted').checked, shipped: tr.querySelector('.cu-shipped').checked, note: tr.querySelector('.cu-note').value.trim() };
+      });
+      const sig = claimSig();
       const ref = db.ref(`${CLAIM_BATCHES}/${id}`);
       ref.once('value').then(snap => {
-        const cur = snap.val() || {}, items = cur.items || {}, now = Date.now(), d = new Date(now), up = {};
-        if (!cur.createdAt) { up.createdAt = now; up.label = `${d.getFullYear()}年${d.getMonth() + 1}月`; up.title = state.customPublicTitle || ''; }
+        const cur = snap.val() || {}, items = cur.items || {}, up = {};
+        if (!cur.createdAt) up.createdAt = Date.now();
+        Object.assign(up, { month, label: `${yy}年${Number(mm)}月`, title: state.customPublicTitle || '', updatedAt: Date.now() });
         const keep = new Set();
         ws.forEach((w, i) => {
           keep.add(w.key);
-          Object.assign(up, { [`items/${w.key}/name`]: w.c.name || '', [`items/${w.key}/orderNo`]: w.c.orderNo || '', [`items/${w.key}/rank`]: rankLabel(w), [`items/${w.key}/rankKey`]: w.c.rankKey, [`items/${w.key}/sort`]: i });
-          if (items[w.key] && items[w.key].removed) up[`items/${w.key}/removed`] = null;
+          const v = input[w.key] || {}, base = `items/${w.key}/`;
+          Object.assign(up, { [base + 'name']: w.c.name || '', [base + 'orderNo']: w.c.orderNo || '', [base + 'rank']: rankLabel(w), [base + 'rankKey']: w.c.rankKey, [base + 'sort']: i,
+            [base + 'contacted']: !!v.contacted, [base + 'shipped']: !!v.shipped, [base + 'note']: v.note || '' });
+          if (items[w.key] && items[w.key].removed) up[base + 'removed'] = null;
         });
         // 名次被撤销的人：没动过就删掉，已经联系 / 寄出 / 有备注的保留并标记
         Object.keys(items).forEach(k => { if (!keep.has(k)) { const it = items[k] || {}; if (it.contacted || it.shipped || it.note) up[`items/${k}/removed`] = true; else up[`items/${k}`] = null; } });
         return ref.update(up);
-      }).catch(e => { __claimSyncSig = ''; console.warn('领奖清单同步失败', e); });
+      }).then(() => {
+        state.claimsPublishedSig = sig;
+        saveState();
+        document.getElementById('claimUpdateModal').classList.add('hidden');
+        alert(`✅ 已更新到领奖追踪（${yy}年${Number(mm)}月 · ${ws.length} 位得主）\n\n之后可以在【🎁 领奖】或控制台首页处理联系与寄送。`);
+      }).catch(e => {
+        btn.disabled = false;
+        alert('❌ 更新失败：' + (e.code || e.message) + '\n请检查网络后再按一次【更新】。');
+      });
     }
     function updateClaimsBtn() {
       const b = document.getElementById('claimsBtn');
       if (b) b.classList.toggle('hidden', IS_TEST || !getWinners().length);
-      syncClaimBatch();
+      maybeAskClaimUpdate();
     }
 
     // ===================== 💾 备份 / ♻️ 还原 =====================
