@@ -32,7 +32,10 @@
           <h2 id="mName">会员详情</h2>
           <p class="muted" id="mSub"></p>
         </div>
-        <a href="members.html" class="btn btn-ghost">← 会员列表</a>
+        <div class="actions" style="margin:0">
+          <a id="waBtn" href="#" target="_blank" class="btn btn-ok hidden">💬 WhatsApp 联系</a>
+          <a href="members.html" class="btn btn-ghost">← 会员列表</a>
+        </div>
       </div>
       <p id="pageError" class="msg err hidden"></p>
 
@@ -68,6 +71,8 @@
             <h3>资料</h3>
             <form id="profileForm">
               <label>称呼 <input id="pName" required maxlength="40"></label>
+              <label>WhatsApp 手机 <input type="tel" id="pPhone" placeholder="例如 012-345 6789"></label>
+              <label class="inline"><input type="checkbox" id="pWa"> 同意通过 WhatsApp 接收优惠和直播通知</label>
               <label>生日 <input type="date" id="pBirthday"></label>
               <p class="meta" id="pMeta"></p>
               <div class="actions"><button type="submit" class="btn btn-ghost" id="pBtn">保存资料</button></div>
@@ -121,7 +126,8 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance,
-      platformTag, normalizeUsername, TIER_LABELS
+      platformTag, normalizeUsername, TIER_LABELS,
+      normalizePhone, isValidPhone, fmtPhone, waLink
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -157,6 +163,14 @@
       $("mName").textContent = m.name || "(未填称呼)";
       $("mSub").textContent = `${TIER_LABELS[m.tier] || TIER_LABELS.mochii} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
       $("pName").value = m.name || "";
+      $("pPhone").value = m.phone ? fmtPhone(m.phone) : "";
+      $("pWa").checked = !!m.waOptIn;
+      if (m.phone) {
+        $("waBtn").href = waLink(m.phone, `Hi ${m.name || ""}, ini The Mochii Shop 🍡`);
+        $("waBtn").classList.remove("hidden");
+      } else {
+        $("waBtn").classList.add("hidden");
+      }
       $("pBirthday").value = m.birthday || "";
       $("pMeta").textContent = "UID：" + uid;
 
@@ -248,7 +262,13 @@
     // ---------- 更正资料 ----------
     $("profileForm").addEventListener("submit", async e => {
       e.preventDefault();
-      const data = { name: $("pName").value.trim() };
+      const data = { name: $("pName").value.trim(), waOptIn: $("pWa").checked };
+      const phoneText = $("pPhone").value.trim();
+      if (phoneText) {
+        const phone = normalizePhone(phoneText);
+        if (!isValidPhone(phone)) { setMsg($("pMsg"), "手机号码格式不正确，例如 012-345 6789", "err"); return; }
+        data.phone = phone;
+      }
       const b = $("pBirthday").value;
       if (b) data.birthday = b;
       $("pBtn").disabled = true;

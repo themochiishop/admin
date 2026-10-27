@@ -27,6 +27,36 @@ export function normalizeUsername(s) {
   return String(s || "").trim().replace(/^@/, "").toLowerCase();
 }
 
+// ---------- 手机号码（与会员前台 common.js 规则一致） ----------
+export function normalizePhone(s) {
+  let d = String(s || "").trim();
+  if (d.startsWith("+")) return "+" + d.slice(1).replace(/\D/g, "");
+  d = d.replace(/\D/g, "");
+  if (!d) return "";
+  if (d.startsWith("60")) return "+" + d;
+  if (d.startsWith("0")) return "+60" + d.slice(1);
+  if (d.startsWith("1")) return "+60" + d;
+  return "+" + d;
+}
+
+export function isValidPhone(p) {
+  if (p.startsWith("+60")) return /^\+601\d{8,9}$/.test(p);
+  return /^\+[1-9]\d{7,14}$/.test(p);
+}
+
+// +60123456789 → 012-345 6789（马来西亚号码），其他照原样
+export function fmtPhone(p) {
+  if (!p) return "";
+  const m = String(p).match(/^\+60(1\d)(\d{3,4})(\d{4})$/);
+  return m ? `0${m[1]}-${m[2]} ${m[3]}` : p;
+}
+
+// WhatsApp 聊天链接
+export function waLink(p, text) {
+  const digits = String(p || "").replace(/\D/g, "");
+  return "https://wa.me/" + digits + (text ? "?text=" + encodeURIComponent(text) : "");
+}
+
 export function toDate(v) {
   if (!v) return null;
   if (typeof v.toDate === "function") return v.toDate();
