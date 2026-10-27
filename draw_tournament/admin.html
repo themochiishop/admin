@@ -131,7 +131,7 @@
         </div>
         <button id="testModeBtn" onclick="toggleTestMode()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-fuchsia-300 text-xs font-bold rounded border border-slate-600 transition shadow" title="测试场：观众完全看不到">🧪 测试场</button>
         <button onclick="openRecordsModal()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded border border-slate-600 transition shadow" title="开奖记录、备份与历史存档">📋 记录</button>
-        <button id="claimsBtn" onclick="openClaimsModal()" class="hidden px-2.5 py-1 bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold rounded border border-sky-500 transition shadow" title="得奖者联系与寄送进度">🎁 领奖</button>
+        <button id="claimsBtn" onclick="window.open('claims.html', '_blank')" class="hidden px-2.5 py-1 bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold rounded border border-sky-500 transition shadow" title="得奖者联系与寄送进度（独立页面，也可从控制台首页进入）">🎁 领奖</button>
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded transition shadow-lg animate-pulse flex items-center space-x-1">
           <span>📄</span><span>Export PDF</span>
         </button>
@@ -164,25 +164,6 @@
           <h4 class="text-sm font-bold text-amber-300 mb-2">📚 历史存档 <span class="text-[10px] text-slate-400 font-normal">（每次【重置所有轮次】前自动保存）</span></h4>
           <div id="archiveListBox" class="text-slate-400">载入中…</div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="claimsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="if (event.target === this) closeClaimsModal()">
-    <div class="bg-slate-800 border border-slate-700 rounded-lg w-full max-w-5xl shadow-2xl relative flex flex-col" style="max-height: 88vh;">
-      <div class="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-slate-700">
-        <div>
-          <h3 class="text-base font-bold text-sky-300">🎁 领奖追踪</h3>
-          <div id="claimsSummary" class="text-[11px] text-slate-400 mt-0.5"></div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="downloadClaimsCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded">⬇️ 下载 CSV</button>
-          <button onclick="closeClaimsModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
-        </div>
-      </div>
-      <div class="flex-1 overflow-y-auto p-4 text-xs">
-        <div id="claimsTableBox"></div>
-        <p class="text-[10px] text-slate-500 mt-3">勾选和备注会自动保存（离开输入框即保存），只有后台账号看得到。</p>
       </div>
     </div>
   </div>
@@ -832,12 +813,11 @@
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
-    // ===================== 🎁 领奖追踪 =====================
-    // 存在 draw_private/claims/{订单号}：{ contacted, shipped, note, name, rank, orderNo, ts }
-    const CLAIMS_PATH = 'draw_private/claims';
+    // ===================== 🎁 领奖清单（按月保存）=====================
+    // 比赛结束后自动写入 draw_private/claimBatches/{场次}：{ label, createdAt, title, items: { 订单号: { name, orderNo, rank, rankKey, sort, contacted, shipped, note } } }
+    //   重置下一场也不会影响；联系 / 寄出进度在 claims.html 处理（控制台首页也有入口和提醒）
+    const CLAIM_BATCHES = 'draw_private/claimBatches';
     const CLAIM_RANKS = ['rankChampion', 'rankRunnerUp', 'rankThird', 'rankFinalist', 'rankConsolation'];
-    let claimsData = {}, claimsListening = false;
-    const escAttr = x => escapeHtml(x).replace(/"/g, '&quot;');
     function claimKey(c) { return String(c.orderNo || ('name_' + (c.name || c.id))).replace(/[.#$\[\]\/]/g, '_'); }
     function getWinners() {
       const list = [];
@@ -847,71 +827,46 @@
       list.forEach(c => { total[c.rankKey] = (total[c.rankKey] || 0) + 1; });
       return list.map(c => { cnt[c.rankKey] = (cnt[c.rankKey] || 0) + 1; return { c, no: cnt[c.rankKey], many: total[c.rankKey] > 1, key: claimKey(c) }; });
     }
+    function rankLabel(w) { return (w.c.rankTitle || '') + (w.many ? ` #${w.no}` : ''); }
+    // 这一场的编号：重置时写入 tournamentId；旧数据用第一条开奖记录的时间
+    function tournamentKey() {
+      if (state.tournamentId) return String(state.tournamentId);
+      const ts = Object.values(state.drawLog || {}).map(e => e && e.ts).filter(Boolean);
+      return ts.length ? DrawLogic.fmtTime(Math.min(...ts)).replace(/[-: ]/g, '').slice(0, 14) : null;
+    }
+    let __claimSyncSig = '';
+    function syncClaimBatch() {
+      if (IS_TEST || !DrawLogic.isTournamentFinished(state)) return;
+      const ws = getWinners(), id = tournamentKey();
+      if (!ws.length || !id) return;
+      const sig = id + '|' + ws.map(w => w.key + ':' + rankLabel(w)).join(',');
+      if (sig === __claimSyncSig) return;
+      __claimSyncSig = sig;
+      const ref = db.ref(`${CLAIM_BATCHES}/${id}`);
+      ref.once('value').then(snap => {
+        const cur = snap.val() || {}, items = cur.items || {}, now = Date.now(), d = new Date(now), up = {};
+        if (!cur.createdAt) { up.createdAt = now; up.label = `${d.getFullYear()}年${d.getMonth() + 1}月`; up.title = state.customPublicTitle || ''; }
+        const keep = new Set();
+        ws.forEach((w, i) => {
+          keep.add(w.key);
+          Object.assign(up, { [`items/${w.key}/name`]: w.c.name || '', [`items/${w.key}/orderNo`]: w.c.orderNo || '', [`items/${w.key}/rank`]: rankLabel(w), [`items/${w.key}/rankKey`]: w.c.rankKey, [`items/${w.key}/sort`]: i });
+          if (items[w.key] && items[w.key].removed) up[`items/${w.key}/removed`] = null;
+        });
+        // 名次被撤销的人：没动过就删掉，已经联系 / 寄出 / 有备注的保留并标记
+        Object.keys(items).forEach(k => { if (!keep.has(k)) { const it = items[k] || {}; if (it.contacted || it.shipped || it.note) up[`items/${k}/removed`] = true; else up[`items/${k}`] = null; } });
+        return ref.update(up);
+      }).catch(e => { __claimSyncSig = ''; console.warn('领奖清单同步失败', e); });
+    }
     function updateClaimsBtn() {
       const b = document.getElementById('claimsBtn');
       if (b) b.classList.toggle('hidden', IS_TEST || !getWinners().length);
-      renderClaims();
-    }
-    function openClaimsModal() {
-      document.getElementById('claimsModal').classList.remove('hidden');
-      if (!claimsListening) {
-        claimsListening = true;
-        db.ref(CLAIMS_PATH).on('value', snap => { claimsData = snap.val() || {}; renderClaims(); },
-          e => { claimsListening = false; document.getElementById('claimsTableBox').innerHTML = `<p class="text-rose-300 py-4">❌ 读取失败：${escapeHtml(e.code || e.message)}<br>请确认 Firebase 规则已加入 draw_private。</p>`; });
-      }
-      renderClaims();
-    }
-    function closeClaimsModal() { document.getElementById('claimsModal').classList.add('hidden'); }
-    function rankLabel(w) { return (w.c.rankTitle || '') + (w.many ? ` #${w.no}` : ''); }
-    function renderClaims() {
-      const modal = document.getElementById('claimsModal'), box = document.getElementById('claimsTableBox');
-      if (!modal || modal.classList.contains('hidden') || !box) return;
-      const a = document.activeElement;
-      if (a && box.contains(a) && a.type === 'text') return;           // 正在输入备注时先不刷新
-      const ws = getWinners();
-      const sum = document.getElementById('claimsSummary');
-      if (!ws.length) { box.innerHTML = '<p class="text-slate-500 italic py-8 text-center">还没有得奖者</p>'; if (sum) sum.textContent = ''; return; }
-      let contacted = 0, shipped = 0;
-      const rows = ws.map(w => {
-        const d = claimsData[w.key] || {};
-        if (d.contacted) contacted++;
-        if (d.shipped) shipped++;
-        const p = DrawLogic.platformOf(w.c.orderNo);
-        return `<tr class="border-b border-slate-700/60 ${d.shipped ? 'opacity-55' : ''}">
-          <td class="py-2 pr-3 whitespace-nowrap font-bold text-amber-300">${escapeHtml(rankLabel(w))}</td>
-          <td class="py-2 pr-3 font-bold text-slate-100">${nameHtml(w.c.name)}</td>
-          <td class="py-2 pr-3 font-mono text-slate-300 whitespace-nowrap">${escapeHtml(w.c.orderNo || '-')}${p ? ` <span class="text-[10px] px-1 rounded ${p === 'T' ? 'bg-slate-600 text-slate-100' : 'bg-orange-600/80 text-white'}">${p === 'T' ? 'TikTok' : 'Shopee'}</span>` : ''}</td>
-          <td class="py-2 pr-3 text-center"><input type="checkbox" class="w-4 h-4 cursor-pointer" data-k="${escAttr(w.key)}" ${d.contacted ? 'checked' : ''} onchange="setClaim(this.dataset.k, 'contacted', this.checked)"></td>
-          <td class="py-2 pr-3 text-center"><input type="checkbox" class="w-4 h-4 cursor-pointer" data-k="${escAttr(w.key)}" ${d.shipped ? 'checked' : ''} onchange="setClaim(this.dataset.k, 'shipped', this.checked)"></td>
-          <td class="py-2 min-w-[180px]"><input type="text" data-k="${escAttr(w.key)}" value="${escAttr(d.note || '')}" placeholder="例：已私讯 / 运单号…" onchange="setClaim(this.dataset.k, 'note', this.value.trim())" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-sky-400"></td>
-        </tr>`;
-      }).join('');
-      if (sum) sum.innerHTML = `共 ${ws.length} 位得主 · 已联系 <b class="text-sky-300">${contacted}/${ws.length}</b> · 已寄出 <b class="text-emerald-300">${shipped}/${ws.length}</b>`;
-      box.innerHTML = `<table class="w-full text-left">
-        <thead><tr class="text-slate-400 border-b border-slate-600"><th class="py-1.5 pr-3">名次</th><th class="py-1.5 pr-3">名字</th><th class="py-1.5 pr-3">订单号</th><th class="py-1.5 pr-3 text-center">已联系</th><th class="py-1.5 pr-3 text-center">已寄出</th><th class="py-1.5">备注</th></tr></thead>
-        <tbody>${rows}</tbody></table>`;
-    }
-    function setClaim(key, field, value) {
-      const w = getWinners().find(x => x.key === key);
-      const patch = { [field]: value, ts: firebase.database.ServerValue.TIMESTAMP };
-      if (w) Object.assign(patch, { name: w.c.name || '', orderNo: w.c.orderNo || '', rank: rankLabel(w) });
-      db.ref(`${CLAIMS_PATH}/${key}`).update(patch).catch(e => alert('❌ 保存失败：' + (e.code || e.message) + '\n请确认 Firebase 规则已加入 draw_private。'));
-    }
-    function downloadClaimsCSV() {
-      const ws = getWinners();
-      if (!ws.length) { alert('还没有得奖者'); return; }
-      const esc = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-      const lines = [['名次', '名字', '订单号', '已联系', '已寄出', '备注'].join(',')].concat(ws.map(w => {
-        const d = claimsData[w.key] || {};
-        return [rankLabel(w), w.c.name, w.c.orderNo, d.contacted ? '✔' : '', d.shipped ? '✔' : '', d.note || ''].map(esc).join(',');
-      }));
-      downloadText(logFileName('Mochiishop_Claims', Date.now()), '\ufeff' + lines.join('\r\n'));
+      syncClaimBatch();
     }
 
     // ===================== 💾 备份 / ♻️ 还原 =====================
     function backupFileName(ts) { return `Mochiishop_${IS_TEST ? 'TEST_' : ''}Backup_${DrawLogic.fmtTime(ts).replace(/[-: ]/g, '').slice(0, 14)}.json`; }
     async function makeBackup() {
-      const [s1, s2] = await Promise.all([db.ref(PATHS.state).once('value'), IS_TEST ? null : db.ref(CLAIMS_PATH).once('value').catch(() => null)]);
+      const [s1, s2] = await Promise.all([db.ref(PATHS.state).once('value'), IS_TEST ? null : db.ref(CLAIM_BATCHES).once('value').catch(() => null)]);
       return { type: 'mochii-draw-backup', version: 1, test: IS_TEST || undefined, savedAt: Date.now(), state: s1.val(), claims: s2 ? s2.val() : null };
     }
     async function downloadBackup() {
@@ -943,7 +898,7 @@
           return next;
         }, (error, committed, snap) => {
           if (error) { reportWriteError(error); return; }
-          if (b.claims && !IS_TEST) db.ref(CLAIMS_PATH).update(b.claims).catch(() => {});
+          if (b.claims && !IS_TEST) db.ref(CLAIM_BATCHES).update(b.claims).catch(() => {});
           activeGroup4Ids = [];
           if (snap) applyServerState(snap.val());
           currentRoundIndex = Math.max(0, (state.rounds || []).length - 1);
@@ -1927,7 +1882,7 @@
         customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
         isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
         drawRoundIndex: 0, activeGroupMembers: [], activeGroupIds: [], passHistory: [], settled: false, isDrawingScramble: false, pkLocked: false,
-        antiCheatVoucherHash: null, pollGroupHistory: {}, drawLog: [],
+        antiCheatVoucherHash: null, pollGroupHistory: {}, drawLog: [], tournamentId: DrawLogic.fmtTime(Date.now()).replace(/[-: ]/g, '').slice(0, 14),
         pdfConfig: state.pdfConfig || {}, modeConfig: state.modeConfig || {},
         rounds: [{ roundName: "第 1 轮", candidates: listRes.candidates }]
       }), (error, committed, snap) => {

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎁 领奖追踪 - Mochiishop</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../logo.png">
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    .chk { width: 22px; height: 22px; cursor: pointer; accent-color: #0ea5e9; }
+    .item-done { opacity: .55; }
+    .tag-T { background: #334155; color: #f1f5f9; }
+    .tag-S { background: #ea580c; color: #fff; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- 登录 -->
+  <div id="gate" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-6">
+    <div class="w-full max-w-sm text-center">
+      <div class="text-5xl mb-3">🎁</div>
+      <h1 class="text-lg font-bold text-sky-300 mb-1">领奖追踪</h1>
+      <p id="gateMsg" class="text-xs text-slate-400 mb-6">正在检查登录状态…</p>
+      <button id="gateLogin" onclick="login()" class="hidden w-full py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-md">🔐 使用 Google 登录</button>
+      <button id="gateSwitch" onclick="firebase.auth().signOut()" class="hidden w-full mt-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-bold rounded-md">切换账号</button>
+    </div>
+  </div>
+
+  <header class="sticky top-0 z-30 bg-slate-800/95 backdrop-blur border-b border-slate-700">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <a href="../" class="text-slate-400 hover:text-white text-sm" title="回到控制台首页">←</a>
+      <h1 class="text-base sm:text-lg font-bold text-sky-300">🎁 领奖追踪</h1>
+      <select id="batchSel" onchange="selectBatch(this.value)" class="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100 max-w-[220px]"></select>
+      <div class="flex items-center gap-2 ml-auto">
+        <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none"><input type="checkbox" id="onlyTodo" onchange="render()" class="w-4 h-4"> 只看未寄出</label>
+        <button onclick="downloadCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded">⬇️ CSV</button>
+        <button id="userBtn" onclick="if (confirm('确认退出登录？')) firebase.auth().signOut()" class="px-2 py-1.5 bg-slate-900 border border-slate-700 text-[10px] text-slate-400 rounded max-w-[150px] truncate" title="点击退出登录"></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-4">
+    <div id="summary" class="flex flex-wrap gap-2 mb-4"></div>
+    <div id="list" class="space-y-2"></div>
+    <div id="footerTools" class="hidden mt-8 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+      <span>勾选和备注会自动保存（离开输入框即保存），只有后台账号看得到。</span>
+      <button onclick="deleteBatch()" class="px-2.5 py-1 border border-rose-500/40 text-rose-300 hover:bg-rose-600 hover:text-white rounded">🗑 删除这一场的清单</button>
+    </div>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
+      authDomain: "draw-tournament.firebaseapp.com",
+      databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "draw-tournament",
+      storageBucket: "draw-tournament.firebasestorage.app",
+      messagingSenderId: "803720903757",
+      appId: "1:803720903757:web:8b561daabc0d69af9e7004"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
+    const BATCHES = 'draw_private/claimBatches';
+    let batches = {}, curId = null, started = false;
+
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const isAllowed = u => !!(u && !u.isAnonymous && (u.providerData || []).some(p => p && p.providerId === 'google.com') && ALLOWED.includes(String(u.email || '').toLowerCase()));
+    const platformOf = o => { const c = String(o || '').trim().charAt(0); return c === '5' ? 'T' : c === '2' ? 'S' : ''; };
+
+    function login() {
+      const p = new firebase.auth.GoogleAuthProvider();
+      p.setCustomParameters({ prompt: 'select_account' });
+      firebase.auth().signInWithPopup(p).catch(e => {
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') return firebase.auth().signInWithRedirect(p);
+        if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+        alert('❌ 登录失败：' + (e.code || e.message));
+      });
+    }
+    firebase.auth().onAuthStateChanged(u => {
+      const ok = isAllowed(u);
+      $('gate').classList.toggle('hidden', ok);
+      $('gateLogin').classList.toggle('hidden', !!u);
+      $('gateSwitch').classList.toggle('hidden', !(u && !ok));
+      $('gateMsg').textContent = !u ? '请用后台 Google 账号登录' : ok ? '' : `账号 ${u.email || ''} 没有权限，请切换账号`;
+      if (!ok) return;
+      $('userBtn').textContent = '👤 ' + (u.email || '');
+      if (started) return;
+      started = true;
+      db.ref(BATCHES).on('value', snap => { batches = snap.val() || {}; fillSelect(); render(); },
+        e => { $('list').innerHTML = `<p class="text-rose-300 py-8 text-center">❌ 读取失败：${esc(e.code || e.message)}<br><span class="text-xs text-slate-400">请确认 Firebase 规则已加入 draw_private。</span></p>`; });
+    });
+
+    function itemsOf(id) {
+      const b = batches[id] || {};
+      return Object.entries(b.items || {}).map(([key, v]) => ({ key, ...v })).sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999));
+    }
+    function stats(id) {
+      const it = itemsOf(id).filter(x => !x.removed);
+      return { total: it.length, contacted: it.filter(x => x.contacted).length, shipped: it.filter(x => x.shipped).length };
+    }
+    function batchName(id) {
+      const b = batches[id] || {};
+      // 同一个月有两场以上时，加上日期时间区分
+      const dup = Object.keys(batches).some(k => k !== id && (batches[k] || {}).label === b.label);
+      const d = new Date(b.createdAt || 0), p = n => String(n).padStart(2, '0');
+      return (b.label || id) + (dup && b.createdAt ? ` ${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}` : '') + (b.title ? ` · ${b.title}` : '');
+    }
+    function fillSelect() {
+      const ids = Object.keys(batches).sort().reverse();
+      if (!ids.length) { $('batchSel').innerHTML = '<option>还没有清单</option>'; curId = null; return; }
+      if (!curId || !batches[curId]) {
+        const want = new URLSearchParams(location.search).get('id');
+        curId = (want && batches[want]) ? want : (ids.find(id => { const s = stats(id); return s.shipped < s.total; }) || ids[0]);
+      }
+      $('batchSel').innerHTML = ids.map(id => {
+        const s = stats(id), left = s.total - s.shipped;
+        return `<option value="${esc(id)}" ${id === curId ? 'selected' : ''}>${esc(batchName(id))}${left ? `（${left} 位未寄出）` : '（✅ 全部寄出）'}</option>`;
+      }).join('');
+    }
+    function selectBatch(id) { curId = id; render(); }
+
+    function render() {
+      const list = $('list');
+      const a = document.activeElement;
+      if (a && list.contains(a) && a.type === 'text') return;            // 正在输入备注时先不刷新
+      if (!curId || !batches[curId]) {
+        $('summary').innerHTML = '';
+        $('footerTools').classList.add('hidden');
+        list.innerHTML = `<div class="text-center text-slate-500 py-16"><div class="text-4xl mb-2">🎁</div><p class="text-sm">还没有领奖清单</p><p class="text-xs mt-1">每月抽奖比赛结束后，得主会自动出现在这里。</p></div>`;
+        return;
+      }
+      const s = stats(curId);
+      $('summary').innerHTML = `
+        <span class="px-3 py-1.5 rounded bg-slate-800 border border-slate-700 text-xs">共 <b>${s.total}</b> 位得主</span>
+        <span class="px-3 py-1.5 rounded bg-sky-950 border border-sky-700 text-xs text-sky-200">已联系 <b>${s.contacted}/${s.total}</b></span>
+        <span class="px-3 py-1.5 rounded bg-emerald-950 border border-emerald-700 text-xs text-emerald-200">已寄出 <b>${s.shipped}/${s.total}</b></span>
+        ${s.total - s.shipped ? `<span class="px-3 py-1.5 rounded bg-rose-950 border border-rose-700 text-xs text-rose-200">还有 <b>${s.total - s.shipped}</b> 位未寄出</span>` : '<span class="px-3 py-1.5 rounded bg-emerald-600 text-xs font-bold">✅ 全部寄出</span>'}`;
+      $('footerTools').classList.remove('hidden');
+      let items = itemsOf(curId);
+      if ($('onlyTodo').checked) items = items.filter(x => !x.shipped && !x.removed);
+      if (!items.length) { list.innerHTML = '<p class="text-center text-slate-500 py-12 text-sm">🎉 没有未寄出的得主</p>'; return; }
+      list.innerHTML = items.map(x => {
+        const p = platformOf(x.orderNo);
+        return `<div class="rounded-lg border ${x.removed ? 'border-rose-800 bg-rose-950/30' : 'border-slate-700 bg-slate-800/70'} p-3 ${x.shipped ? 'item-done' : ''}">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="text-amber-300 font-bold text-sm whitespace-nowrap">${esc(x.rank || '')}</span>
+            <span class="font-bold text-slate-100">${esc(x.name || '')}</span>
+            <span class="font-mono text-xs text-slate-300 break-all">${esc(x.orderNo || '-')}</span>
+            ${p ? `<span class="text-[10px] px-1.5 py-0.5 rounded tag-${p}">${p === 'T' ? 'TikTok' : 'Shopee'}</span>` : ''}
+            ${x.removed ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-700 text-white">名次已撤销</span>' : ''}
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.contacted ? 'checked' : ''} onchange="setItem(this.dataset.k, 'contacted', this.checked)"> 已联系</label>
+            <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.shipped ? 'checked' : ''} onchange="setItem(this.dataset.k, 'shipped', this.checked)"> 已寄出</label>
+            <input type="text" data-k="${esc(x.key)}" value="${esc(x.note || '')}" placeholder="备注：已私讯 / 运单号…" onchange="setItem(this.dataset.k, 'note', this.value.trim())"
+              class="flex-1 min-w-[180px] bg-slate-900 border border-slate-600 rounded px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-400">
+          </div>
+        </div>`;
+      }).join('');
+    }
+    function setItem(key, field, value) {
+      if (!curId) return;
+      db.ref(`${BATCHES}/${curId}/items/${key}`).update({ [field]: value, ts: firebase.database.ServerValue.TIMESTAMP })
+        .catch(e => alert('❌ 保存失败：' + (e.code || e.message)));
+    }
+    function downloadCSV() {
+      if (!curId) return;
+      const q = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+      const rows = [['名次', '名字', '订单号', '平台', '已联系', '已寄出', '备注']].concat(itemsOf(curId).map(x =>
+        [x.rank + (x.removed ? '（已撤销）' : ''), x.name, x.orderNo, { T: 'TikTok', S: 'Shopee' }[platformOf(x.orderNo)] || '', x.contacted ? '✔' : '', x.shipped ? '✔' : '', x.note || '']));
+      const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = `Mochiishop_Claims_${curId}.csv`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+    function deleteBatch() {
+      if (!curId) return;
+      const s = stats(curId);
+      if (!confirm(`🗑 删除【${batchName(curId)}】的领奖清单？\n\n共 ${s.total} 位得主（已寄出 ${s.shipped} 位）。删除后无法恢复，建议先下载 CSV。`)) return;
+      const id = curId; curId = null;
+      db.ref(`${BATCHES}/${id}`).remove().catch(e => alert('❌ 删除失败：' + (e.code || e.message)));
+    }
+  </script>
+</body>
+</html>
