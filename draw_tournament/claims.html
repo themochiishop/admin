@@ -113,7 +113,7 @@
       return (b.label || id) + (dup && b.createdAt ? ` ${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}` : '') + (b.title ? ` · ${b.title}` : '');
     }
     function fillSelect() {
-      const ids = Object.keys(batches).sort().reverse();
+      const ids = Object.keys(batches).sort((a, b) => (((batches[b] || {}).month || '') + b).localeCompare(((batches[a] || {}).month || '') + a));   // 月份新的在前
       if (!ids.length) { $('batchSel').innerHTML = '<option>还没有清单</option>'; curId = null; return; }
       if (!curId || !batches[curId]) {
         const want = new URLSearchParams(location.search).get('id');
