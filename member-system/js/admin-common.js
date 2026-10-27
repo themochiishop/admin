@@ -3,8 +3,7 @@ import { auth, db } from "./firebase-config.js";
 import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-
+import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -114,6 +113,7 @@ export function renderAdminNav(active) {
     <div class="brand">Mochiishop/admin · 会员系统</div>
     <nav>
       ${links.map(([k, href, t]) => `<a href="${href}" class="${k === active ? "active" : ""}">${t}</a>`).join("")}
+            <a href="#" id="clubSwitch" class="club-switch">俱乐部…</a>
       <a href="#" id="adminLogout">登出</a>
     </nav>`;
   document.getElementById("adminLogout").addEventListener("click", e => {
@@ -177,5 +177,32 @@ export function requireAdmin(onReady) {
     gate.classList.add("hidden");
     app.classList.remove("hidden");
     onReady(user);
+        initClubSwitch(user);
+  });
+}
+
+// ---------- 前台俱乐部开关（开放 / 维修中） ----------
+function initClubSwitch(user) {
+  const btn = document.getElementById("clubSwitch");
+  if (!btn) return;
+  const ref = doc(db, "settings", "club");
+  let open = false;
+  onSnapshot(ref, s => {
+    open = s.exists() && s.data().open === true;
+    btn.textContent = open ? "🟢 俱乐部开放中" : "🔴 俱乐部维修中";
+    btn.className = "club-switch " + (open ? "club-open" : "club-closed");
+    btn.title = open ? "点击关闭前台会员俱乐部" : "点击开放前台会员俱乐部";
+  });
+  btn.addEventListener("click", async e => {
+    e.preventDefault();
+    const msg = open
+      ? "关闭会员俱乐部？\n关闭后会员无法登录，首页会显示「正在装修俱乐部」。"
+      : "开放会员俱乐部？\n开放后所有人都可以注册和登录。";
+    if (!confirm(msg)) return;
+    try {
+      await setDoc(ref, { open: !open, updatedAt: serverTimestamp(), updatedBy: user.email || "" }, { merge: true });
+    } catch (err) {
+      alert("切换失败：" + err.message);
+    }
   });
 }
