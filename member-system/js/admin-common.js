@@ -13,6 +13,12 @@ export function esc(s) {
 
 export const PLATFORM_LABELS = { tiktok: "TikTok", shopee: "Shopee" };
 
+// 会员等级（显示用；规则以 Google 表格同步脚本的 MS_TIERS 为准）
+export const TIER_LABELS = {
+  mochii: "🍡 Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石"
+};
+export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3 };
+
 export function platformTag(p) {
   return `<span class="tag tag-${p === "shopee" ? "warn" : "pink"}">${esc(PLATFORM_LABELS[p] || p)}</span>`;
 }

@@ -53,6 +53,8 @@
           <thead>
             <tr>
               <th data-sort="name">称呼</th>
+              <th data-sort="tierRank">等级</th>
+              <th data-sort="spend12m" class="num">近一年消费</th>
               <th data-sort="email">电子邮件</th>
               <th>绑定账号</th>
               <th data-sort="spendable" class="num">可用积分</th>
@@ -61,7 +63,7 @@
               <th data-sort="createdAt">加入日期</th>
             </tr>
           </thead>
-          <tbody id="rows"><tr><td colspan="7" class="empty">载入中…</td></tr></tbody>
+          <tbody id="rows"><tr><td colspan="9" class="empty">载入中…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -71,7 +73,8 @@
     import { db } from "./js/firebase-config.js";
     import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, platformTag
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, platformTag,
+      TIER_LABELS, TIER_ORDER
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -106,6 +109,9 @@
           name: m.name || "",
           email: m.email || "",
           birthday: m.birthday || "",
+          tier: m.tier || "mochii",
+          tierRank: TIER_ORDER[m.tier] || 0,
+          spend12m: Number(m.spend12m || 0),
           createdAt: toDate(m.createdAt),
           bindings: bindings[d.id] || [],
           spendable: bal.spendable,
@@ -140,13 +146,15 @@
       $("rows").innerHTML = list.length ? list.map(r => `
         <tr data-uid="${esc(r.uid)}">
           <td><b>${esc(r.name)}</b></td>
+          <td>${TIER_LABELS[r.tier] || esc(r.tier)}</td>
+          <td class="num">RM ${r.spend12m.toFixed(2)}</td>
           <td>${esc(r.email)}</td>
           <td>${r.bindings.map(b => `${platformTag(b.platform)} ${esc(b.username)}`).join("<br>") || '<span class="muted">未绑定</span>'}</td>
           <td class="num"><b>${r.spendable.toLocaleString()}</b></td>
           <td class="num">${r.pending.toLocaleString()}</td>
           <td>${esc(r.birthday) || '<span class="muted">-</span>'}</td>
           <td>${fmtDate(r.createdAt)}</td>
-        </tr>`).join("") : `<tr><td colspan="7" class="empty">没有符合的会员</td></tr>`;
+        </tr>`).join("") : `<tr><td colspan="9" class="empty">没有符合的会员</td></tr>`;
     }
 
     $("search").addEventListener("input", render);
@@ -165,10 +173,10 @@
     });
 
     $("exportBtn").addEventListener("click", () => {
-      const head = ["UID", "称呼", "电子邮件", "绑定账号", "可用积分", "待确认积分", "生日", "加入日期"];
+      const head = ["UID", "称呼", "等级", "近一年消费", "电子邮件", "绑定账号", "可用积分", "待确认积分", "生日", "加入日期"];
       const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
       const lines = [head.map(csvCell).join(",")].concat(filtered().map(r => [
-        r.uid, r.name, r.email,
+        r.uid, r.name, (TIER_LABELS[r.tier] || r.tier).replace(/^\S+\s/, ""), r.spend12m.toFixed(2), r.email,
         r.bindings.map(b => b.platform + ":" + b.username).join(" / "),
         r.spendable, r.pending, r.birthday, fmtDate(r.createdAt)
       ].map(csvCell).join(",")));
@@ -181,7 +189,7 @@
     });
 
     requireAdmin(() => load().catch(e => {
-      $("rows").innerHTML = `<tr><td colspan="7" class="empty">载入失败：${esc(e.message)}</td></tr>`;
+      $("rows").innerHTML = `<tr><td colspan="9" class="empty">载入失败：${esc(e.message)}</td></tr>`;
     }));
   </script>
 </body>

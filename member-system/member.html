@@ -121,7 +121,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance,
-      platformTag, normalizeUsername
+      platformTag, normalizeUsername, TIER_LABELS
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -155,7 +155,7 @@
 
       const m = mSnap.data();
       $("mName").textContent = m.name || "(未填称呼)";
-      $("mSub").textContent = `${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
+      $("mSub").textContent = `${TIER_LABELS[m.tier] || TIER_LABELS.mochii} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
       $("pName").value = m.name || "";
       $("pBirthday").value = m.birthday || "";
       $("pMeta").textContent = "UID：" + uid;
