@@ -10,6 +10,10 @@
  *        模式 1：剩 3 人 → 盲抽 🥉 季军 → 剩 2 人 → 盲抽 👑 冠军（另一位 🥈 亚军）
  *        模式 2：剩 N+3 人 → 🎁 安慰奖阶段（命中者得安慰奖，其余回池，抽满 N 位）
  *               → 剩 3 人 → 季军 → 冠亚军
+ *        模式 3：冠亚季 + 入围奖 F + 安慰奖 C：剩 C+F+3 → 安慰奖阶段 → 剩 F+3 → 🎖️ 入围奖阶段 → 季军 → 冠亚军
+ *        模式 4：全部名额自定义（冠军 / 亚军 / 季军 / 入围 / 安慰），逻辑同上
+ *   奖项阶段（安慰 → 入围 → 季军）：每组命中者得奖，其余回名单池，直到该奖项抽满；
+ *   冠亚军决战：命中者为冠军，冠军抽满后其余为亚军。
  *   系统会自动计算每轮分几组，保证刚好落在目标人数，不会剩下 1 个人抽不了。
  * ========================================================================= */
 (function (global) {
@@ -41,54 +45,109 @@
 
   // ---------- 基本读取 ----------
   const modeOn = st => !!(st.modeConfig && st.modeConfig.enabled);
-  const isMode2 = st => modeOn(st) && st.modeConfig.selectedMode === 'mode2';
-  const consolationN = st => Math.max(1, parseInt((st.modeConfig && st.modeConfig.mode2ConsolationCount) || 10, 10));
+  const modeOf = st => (st.modeConfig && st.modeConfig.selectedMode) || 'mode1';
   const cands = r => (r && r.candidates) || [];
   const pendingOf = r => cands(r).filter(c => c.status === 'pending');
   const passedOf = r => cands(r).filter(c => c.status === 'pass');
 
-  function countConsolation(st) {
+  // ---------- 奖项名额 ----------
+  // 奖项阶段由低到高；最后是冠亚军决战（final）
+  const TIERS = ['consolation', 'finalist', 'third'];
+  const RANK_KEY = { consolation: 'rankConsolation', finalist: 'rankFinalist', third: 'rankThird', champion: 'rankChampion', runnerUp: 'rankRunnerUp' };
+  const RANK_TITLE = { consolation: '🎁 安慰奖', finalist: '🎖️ 入围奖', third: '🥉 季军', champion: '👑 冠军', runnerUp: '🥈 亚军' };
+  const num = (v, d, min) => { const n = parseInt(v, 10); return Math.max(min, isNaN(n) ? d : n); };
+  // 每个奖项几人
+  function prizePlan(st) {
+    const mc = st.modeConfig || {};
+    const m = modeOf(st);
+    if (m === 'mode2') return { consolation: num(mc.mode2ConsolationCount, 10, 1), finalist: 0, third: 1, runnerUp: 1, champion: 1 };
+    if (m === 'mode3') return { consolation: num(mc.mode3ConsolationCount, 10, 1), finalist: num(mc.mode3FinalistCount, 5, 1), third: 1, runnerUp: 1, champion: 1 };
+    if (m === 'mode4') return { consolation: num(mc.mode4ConsolationCount, 10, 0), finalist: num(mc.mode4FinalistCount, 5, 0), third: num(mc.mode4ThirdCount, 1, 0), runnerUp: num(mc.mode4RunnerUpCount, 1, 1), champion: num(mc.mode4ChampionCount, 1, 1) };
+    return { consolation: 0, finalist: 0, third: 1, runnerUp: 1, champion: 1 };
+  }
+  const isClassicPodium = P => P.third === 1 && P.runnerUp === 1 && P.champion === 1;
+  const finalSize = st => { const P = prizePlan(st); return P.runnerUp + P.champion; };
+  // 已发出的某奖项人数（exceptRi：不算这一轮）
+  function countRank(st, key, exceptRi) {
     let n = 0;
-    (st.rounds || []).forEach(r => cands(r).forEach(c => { if (c.rankKey === 'rankConsolation') n++; }));
+    (st.rounds || []).forEach((r, i) => { if (i !== exceptRi) cands(r).forEach(c => { if (c.rankKey === key) n++; }); });
     return n;
   }
+  function tierLeft(st, tier, exceptRi) { return Math.max(0, prizePlan(st)[tier] - countRank(st, RANK_KEY[tier], exceptRi)); }
+  // 从第 idx 个奖项开始（含冠亚军）还需要多少人
+  function remainingFrom(st, idx, exceptRi) {
+    let n = finalSize(st);
+    for (let i = idx; i < TIERS.length; i++) n += tierLeft(st, TIERS[i], exceptRi);
+    return n;
+  }
+  // 下一个要抽的奖项（全部抽完 → 'final'）
+  function nextTierIndex(st, exceptRi) {
+    for (let i = 0; i < TIERS.length; i++) if (tierLeft(st, TIERS[i], exceptRi) > 0) return i;
+    return TIERS.length;
+  }
+
+  // 兼容旧版本
+  const isMode2 = st => modeOn(st) && prizePlan(st).consolation > 0;
+  const consolationN = st => prizePlan(st).consolation;
+  function countConsolation(st) { return countRank(st, 'rankConsolation'); }
   function consolationDone(st) { return countConsolation(st) >= consolationN(st); }
 
-  // 当前要达到的人数：模式2 先到 N+3（安慰奖阶段），之后是 3（冠亚季）
+  // 普通轮要减到几人：所有还没发的奖项 + 冠亚军
   function targetOf(st) {
     if (!modeOn(st)) return null;
-    if (isMode2(st) && !consolationDone(st)) return consolationN(st) + 3;
-    return 3;
+    return remainingFrom(st, 0);
   }
 
-  // 模式2：名单池 N+3 ~ 2(N+3)-1 人时，已经没法用 2~4 人一组刚好减到 N+3，直接开始安慰奖阶段
-  function shouldStartConsolation(st, n) {
-    if (!isMode2(st) || consolationDone(st)) return false;
-    const T = consolationN(st) + 3;
-    return n >= T && n < 2 * T;
+  // n 人的新一轮是哪个阶段（null = 普通轮）
+  //   奖项阶段：人数在 T ~ 2T-1 之间（已经没法用 2~4 人一组刚好减到 T）就直接开始
+  function freshStage(st, n, exceptRi) {
+    if (!modeOn(st)) return null;
+    const idx = nextTierIndex(st, exceptRi);
+    if (idx >= TIERS.length) return (n >= 2 && n <= finalSize(st)) ? 'final' : null;
+    const T = remainingFrom(st, idx, exceptRi);
+    return (n >= T && n < 2 * T) ? TIERS[idx] : null;
   }
+  function shouldStartConsolation(st, n) { return freshStage(st, n) === 'consolation'; }
 
-  // 'normal' | 'consolation' | 'third' | 'final'
+  // 'normal' | 'consolation' | 'finalist' | 'third' | 'final'
   function getRoundStage(st, ri) {
     const r = st.rounds && st.rounds[ri];
     if (!r || !modeOn(st)) return 'normal';
-    if (r.isConsolationStage && isMode2(st)) return 'consolation';
-    // 还没开始抽的轮次，按人数判断是否直接进入安慰奖阶段
-    if (cands(r).every(c => c.status === 'pending') && shouldStartConsolation(st, cands(r).length)) return 'consolation';
-    const n = cands(r).length;
-    if (n === 3) return 'third';
-    if (n === 2) return 'final';
-    return 'normal';
+    if (r.awardTier) return r.awardTier;                     // 开始抽之后固定下来
+    if (r.isConsolationStage) return 'consolation';          // 旧数据
+    return freshStage(st, cands(r).length, ri) || 'normal';
   }
+  // 这一轮的奖项还差几位（tier 阶段 / 冠军）
+  function stageNeed(st, ri) {
+    const stage = getRoundStage(st, ri);
+    if (stage === 'final') return Math.max(0, prizePlan(st).champion - countRank(st, 'rankChampion', ri));
+    if (TIERS.includes(stage)) return tierLeft(st, stage, ri);
+    return 0;
+  }
+  function stageGot(st, ri) {
+    const stage = getRoundStage(st, ri);
+    const key = stage === 'final' ? 'rankChampion' : RANK_KEY[stage];
+    return key ? cands(st.rounds[ri]).filter(c => c.rankKey === key).length : 0;
+  }
+  // 季军 / 冠军这一轮是否已经抽满
   function isPodiumDecided(st, ri) {
     const stage = getRoundStage(st, ri);
-    const r = st.rounds[ri];
-    if (stage === 'third') return cands(r).some(c => c.rankKey === 'rankThird');
-    if (stage === 'final') return cands(r).some(c => c.rankKey === 'rankChampion');
-    return false;
+    if (stage !== 'third' && stage !== 'final') return false;
+    return stageGot(st, ri) >= stageNeed(st, ri);
   }
   function isTournamentFinished(st) {
-    return (st.rounds || []).some(r => cands(r).some(c => c.rankKey === 'rankChampion'));
+    const champs = countRank(st, 'rankChampion');
+    if (!champs) return false;
+    return !modeOn(st) || champs >= prizePlan(st).champion;
+  }
+  // 名额说明，例：安慰奖 10 + 入围奖 5 + 冠亚季 3
+  function planText(st) {
+    const P = prizePlan(st), out = [];
+    if (P.consolation) out.push(`安慰奖 ${P.consolation}`);
+    if (P.finalist) out.push(`入围奖 ${P.finalist}`);
+    if (isClassicPodium(P)) out.push('冠亚季 3');
+    else { if (P.third) out.push(`季军 ${P.third}`); out.push(`亚军 ${P.runnerUp}`, `冠军 ${P.champion}`); }
+    return out.join(' + ');
   }
 
   // ---------- 分组规划 ----------
@@ -148,8 +207,7 @@
     const stage = getRoundStage(st, ri);
     const pending = pendingOf(r).length;
     if (pending === 0) return 0;
-    if (stage === 'third' || stage === 'final') return pending;     // 决赛全员上台
-    if (stage === 'consolation') return Math.min(MAX_GROUP, pending);
+    if (stage !== 'normal') return Math.min(MAX_GROUP, pending);    // 奖项阶段 / 决赛：最多 4 人一组（3 人季军、2 人决赛 = 全员上台）
     const plan = bestRemainingGroups(pending, passedOf(r).length, targetOf(st));
     if (!plan.g) return Math.min(MAX_GROUP, pending);
     return Math.ceil(pending / plan.g);
@@ -167,6 +225,21 @@
     return bestRemainingGroups(pending - s, passedOf(r).length + 1, T).cost < Infinity;
   }
 
+  function tierStepLabel(tier, k) {
+    if (tier === 'consolation') return `🎁 安慰奖 ×${k}`;
+    if (tier === 'finalist') return `🎖️ 入围奖 ×${k}`;
+    return k === 1 ? '🥉 季军' : `🥉 季军 ×${k}`;
+  }
+  // 从第 idx 个奖项开始的路线（含冠亚军决战）
+  function tailSteps(st, idx, exceptRi) {
+    const out = [];
+    for (let i = idx; i < TIERS.length; i++) {
+      const k = tierLeft(st, TIERS[i], exceptRi);
+      if (k > 0) out.push({ n: remainingFrom(st, i, exceptRi), label: tierStepLabel(TIERS[i], k) });
+    }
+    out.push({ n: finalSize(st), label: '👑 冠亚军' });
+    return out;
+  }
   // 路线图，例如 [87, 22, 6, 3] + 说明
   function roadmap(st, ri) {
     const r = st.rounds[ri];
@@ -174,14 +247,15 @@
     const steps = [];
     if (!r) return steps;
     const total = cands(r).length;
-    const N = consolationN(st);
-    if (stage === 'final') return [{ n: 2, label: '👑 冠亚军' }];
-    if (stage === 'third') return [{ n: 3, label: '🥉 季军' }, { n: 2, label: '👑 冠亚军' }];
-    if (stage === 'consolation') {
-      const left = pendingOf(r).length - (N - cands(r).filter(c => c.rankKey === 'rankConsolation').length);
-      const out = [{ n: total, label: `🎁 安慰奖 ×${N}` }];
-      if (left > 3) out.push({ n: left, label: '加赛' });
-      return out.concat([{ n: 3, label: '🥉 季军' }, { n: 2, label: '👑 冠亚军' }]);
+    if (stage === 'final') return [{ n: total, label: '👑 冠亚军' }];
+    if (TIERS.includes(stage)) {
+      const idx = TIERS.indexOf(stage);
+      const k = tierLeft(st, stage, ri);
+      const out = [{ n: total, label: tierStepLabel(stage, k) }];
+      const left = pendingOf(r).length - (k - stageGot(st, ri));
+      const nextT = remainingFrom(st, idx + 1, ri);
+      if (left > nextT && freshStage(st, left) == null) out.push({ n: left, label: '加赛' });
+      return out.concat(tailSteps(st, idx + 1, ri));
     }
     steps.push({ n: total, label: `第 ${ri + 1} 轮` });
     const T = targetOf(st);
@@ -195,14 +269,13 @@
       m = planTable(T).choice[m];
       if (!m) break;
     }
-    if (isMode2(st) && !consolationDone(st)) steps.push({ n: T, label: `🎁 安慰奖 ×${N}` });
-    steps.push({ n: 3, label: '🥉 季军' }, { n: 2, label: '👑 冠亚军' });
-    return steps;
+    return steps.concat(tailSteps(st, 0));
   }
 
   function minimumBuyers(st) {
     if (!modeOn(st)) return 2;
-    return isMode2(st) ? consolationN(st) + 3 : 3;
+    const P = prizePlan(st);
+    return P.consolation + P.finalist + P.third + P.runnerUp + P.champion;
   }
 
   // ---------- 名单导入 ----------
@@ -297,6 +370,7 @@
     if (stage === 'third') return { icon: '🥉', text: '揭晓季军' };
     if (stage === 'final') return { icon: '👑', text: '揭晓冠军' };
     if (stage === 'consolation') return { icon: '🎁', text: '揭晓安慰奖' };
+    if (stage === 'finalist') return { icon: '🎖️', text: '揭晓入围奖' };
     return { icon: '🎯', text: '点击揭晓' };
   }
 
@@ -310,8 +384,8 @@
     clean.id = clean.ts.toString(36) + Math.random().toString(36).slice(2, 7);
     st.drawLog.push(clean);
   }
-  const STAGE_TEXT = { normal: '普通轮', consolation: '安慰奖阶段', third: '冠亚季争夺战', final: '冠亚军决战' };
-  const RESULT_TEXT = { normal: '晋级', consolation: '🎁 安慰奖', third: '🥉 季军', final: '👑 冠军' };
+  const STAGE_TEXT = { normal: '普通轮', consolation: '安慰奖阶段', finalist: '入围奖阶段', third: '冠亚季争夺战', final: '冠亚军决战' };
+  const RESULT_TEXT = { normal: '晋级', consolation: '🎁 安慰奖', finalist: '🎖️ 入围奖', third: '🥉 季军', final: '👑 冠军' };
   function personOf(c) { return { name: c.name || '', orderNo: c.orderNo || '' }; }
 
   const TYPE_TEXT = { poll: '盲抽揭晓', manual: '手动判定', bye: '轮空晋级', out: '手动淘汰', redraw: '重抽', cleared: '清空组', undo: '撤销' };
@@ -346,21 +420,28 @@
     st.isReverseElimination = false; st.antiCheatVoucherHash = null;
   }
 
-  function nextRoundLabel(st, n, isCons) {
-    if (isCons) return `🎁 安慰奖遴选阶段 (${n}人，选${consolationN(st)}名安慰奖)`;
-    if (n === 3) return PODIUM_THIRD_LABEL;
-    if (n === 2) return PODIUM_FINAL_LABEL;
-    return `第 ${st.rounds.length + 1} 轮 (${n}人角逐)`;
+  // 轮次名称；need = 这一阶段要抽几位
+  function nextRoundLabel(st, n, stage, need, roundNo) {
+    const P = prizePlan(st);
+    if (stage === true) stage = 'consolation';               // 旧调用
+    if (stage === 'consolation') return `🎁 安慰奖遴选阶段 (${n}人，选${need == null ? P.consolation : need}名安慰奖)`;
+    if (stage === 'finalist') return `🎖️ 入围奖遴选阶段 (${n}人，选${need == null ? P.finalist : need}名入围奖)`;
+    if (stage === 'third') {
+      const k = need == null ? P.third : need;
+      return (k === 1 && n === 3) ? PODIUM_THIRD_LABEL : `🥉 季军遴选阶段 (${n}人，选${k}名季军)`;
+    }
+    if (stage === 'final') return (isClassicPodium(P) && n === 2) ? PODIUM_FINAL_LABEL : `👑 冠亚军决战 (${n}人，选${need == null ? P.champion : need}名冠军)`;
+    return `第 ${roundNo || st.rounds.length + 1} 轮 (${n}人角逐)`;
   }
 
   // 用 list 建立下一轮；返回新轮次 index
   function pushNextRound(st, list, delayMs) {
     const n = list.length;
-    const isCons = shouldStartConsolation(st, n);
-    const label = nextRoundLabel(st, n, isCons);
     const idx = st.rounds.length;
+    const stage = freshStage(st, n, idx);
+    const label = nextRoundLabel(st, n, stage);
     st.rounds.push({
-      roundName: label, stageName: label, isConsolationStage: isCons,
+      roundName: label, stageName: label,
       candidates: list.map((c, i) => ({ id: `R${idx + 1}_${i}`, name: c.name, orderNo: c.orderNo || '', pollLabel: c.pollLabel || '', status: 'pending' }))
     });
     resetPoll(st);
@@ -374,13 +455,13 @@
     if (!modeOn(st) || ri !== st.rounds.length - 1) return null;
     const r = st.rounds[ri];
     const stage = getRoundStage(st, ri);
-    if (stage === 'third' || stage === 'final') return null; // 决赛由 applyPodium 处理
-    if (stage === 'consolation') {
-      const awarded = cands(r).filter(c => c.rankKey === 'rankConsolation').length;
-      if (awarded < consolationN(st)) return null;
+    if (stage === 'final') return null;                       // 决赛由 applyFinal 处理
+    if (TIERS.includes(stage)) {
+      if (stageGot(st, ri) < stageNeed(st, ri)) return null;
       const rest = pendingOf(r);
+      if (rest.length < 2) return null;
       rest.forEach(c => { c.status = 'pass'; });
-      return rest.length >= 2 ? pushNextRound(st, rest, delayMs) : null;
+      return pushNextRound(st, rest, delayMs);
     }
     if (pendingOf(r).length > 0) return null;
     const winners = passedOf(r);
@@ -390,28 +471,30 @@
     return pushNextRound(st, winners, delayMs);
   }
 
-  function applyPodium(st, ri, winnerId, pollLabel) {
+  // 冠亚军决战：命中者为冠军；冠军抽满后，其余全部为亚军
+  function applyFinal(st, ri, winnerId, pollLabel) {
     const r = st.rounds[ri];
-    const list = cands(r);
-    const win = list.find(c => String(c.id) === String(winnerId));
+    const win = cands(r).find(c => String(c.id) === String(winnerId));
     if (!win) return null;
     const now = Date.now();
-    const others = list.filter(c => c !== win);
-    win.status = 'pass'; win.manualPassed = true; win.passTimestamp = now;
+    const setRank = (c, k) => { c.status = 'pass'; c.passTimestamp = now; c.rankKey = RANK_KEY[k]; c.rankTitle = RANK_TITLE[k]; };
+    setRank(win, 'champion'); win.manualPassed = true;
     if (pollLabel) win.pollLabel = pollLabel;
-    if (list.length === 3) {
-      win.rankTitle = "🥉 季军"; win.rankKey = "rankThird";
-      others.forEach(c => { c.status = 'pass'; c.passTimestamp = now; });
-      st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'third', winnerName: win.name };
-      const idx = pushNextRound(st, others, 5000); // 前台先播 5 秒季军祝贺
-      return { stage: 'third', name: win.name, newRoundIndex: idx };
+    const need = stageNeed(st, ri);
+    let got = stageGot(st, ri);
+    let rest = pendingOf(r);
+    if (got < need && rest.length <= need - got) { rest.forEach(c => setRank(c, 'champion')); got = need; rest = []; }   // 剩下的刚好都是冠军
+    if (got < need) {
+      st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'champion', winnerName: win.name };
+      resetPoll(st);
+      return { stage: 'final', name: win.name, partial: true };
     }
-    const ru = others[0];
-    win.rankTitle = "👑 冠军"; win.rankKey = "rankChampion";
-    if (ru) { ru.status = 'pass'; ru.rankTitle = "🥈 亚军"; ru.rankKey = "rankRunnerUp"; ru.passTimestamp = now; }
-    st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'final', championName: win.name, runnerUpName: ru ? ru.name : '' };
+    rest.forEach(c => setRank(c, 'runnerUp'));
+    const champs = cands(r).filter(c => c.rankKey === 'rankChampion').map(c => c.name);
+    const rus = cands(r).filter(c => c.rankKey === 'rankRunnerUp').map(c => c.name);
+    st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'final', championName: champs.join(' / '), runnerUpName: rus.join(' / ') };
     resetPoll(st);
-    return { stage: 'final', name: win.name, runnerUp: ru ? ru.name : '' };
+    return { stage: 'final', name: champs.join(' / '), runnerUp: rus.join(' / ') };
   }
 
   /**
@@ -441,16 +524,17 @@
         return { name: c.name || '', orderNo: c.orderNo || '', no: m.displayNumber == null ? null : m.displayNumber };
       });
     }
-    if (stage === 'final') {
-      const ru = cands(r).find(c => String(c.id) !== String(winnerId));
-      if (ru) entry.runnerUp = personOf(ru);
+    if (stage === 'final' && stageGot(st, ri) + 1 >= stageNeed(st, ri)) {
+      const ru = cands(r).filter(c => String(c.id) !== String(winnerId) && c.status === 'pending');
+      if (ru.length === 1) entry.runnerUp = personOf(ru[0]);
+      else if (ru.length > 1) entry.runnerUp = { name: ru.map(c => c.name).join(' / '), orderNo: ru.map(c => c.orderNo || '').join(' / ') };
     }
     logDraw(st, entry);
-    if (stage === 'third' || stage === 'final') return applyPodium(st, ri, winnerId, pollLabel);
-    if (stage === 'consolation' && !r.isConsolationStage) {     // 固定下来
-      r.isConsolationStage = true;
-      r.roundName = r.stageName = nextRoundLabel(st, cands(r).length, true);
+    if (!r.awardTier && modeOn(st)) {                         // 开始抽了：阶段固定下来
+      if (stage !== 'normal') r.roundName = r.stageName = nextRoundLabel(st, cands(r).length, stage, stageNeed(st, ri), ri + 1);
+      r.awardTier = stage;
     }
+    if (stage === 'final') return applyFinal(st, ri, winnerId, pollLabel);
 
     const now = Date.now();
     const ids = (groupIds && groupIds.length ? groupIds : [winnerId]).map(String);
@@ -463,8 +547,8 @@
       if (!c) return;
       if (c === win) {
         c.status = 'pass'; c.pollLabel = pollLabel || c.pollLabel || ''; c.passTimestamp = now;
-        if (stage === 'consolation') { c.rankTitle = "🎁 安慰奖"; c.rankKey = "rankConsolation"; }
-      } else if (stage === 'consolation') {
+        if (TIERS.includes(stage)) { c.rankTitle = RANK_TITLE[stage]; c.rankKey = RANK_KEY[stage]; }
+      } else if (TIERS.includes(stage)) {
         c.status = 'pending';                       // 没中的回到名单池
       } else {
         c.status = 'out'; c.eliminatedRoundIndex = ri;
@@ -473,6 +557,7 @@
     if (!st.passHistory.some(p => String(p.id) === String(win.id))) {
       st.passHistory.push({ id: win.id, name: win.name, orderNo: win.orderNo || '', pollLabel: win.pollLabel || '', roundIndex: ri, passTimestamp: now });
     }
+    if (stage === 'third') st.latestEvent = { type: 'finalCongrat', timestamp: now, winnerNamesKey: 'third', winnerName: win.name };
     resetPoll(st);
     const newIdx = maybeAutoAdvance(st, ri, 5000);
     return { stage, name: win.name, newRoundIndex: newIdx };
@@ -565,10 +650,21 @@
       (st.rounds || []).forEach(x => cands(x).forEach(c => { if (c.rankKey === 'rankChampion') champ = c.name; }));
       return { kind: 'done', title: `🏁 比赛结束！👑 冠军：${champ}`, sub: pub ? '恭喜所有得奖买家，感谢大家参与！' : '如需更改，点【🔙 上一轮】撤销本轮判定。' };
     }
-    if (stage === 'consolation') {
-      const N = consolationN(st);
-      const got = list.filter(c => c.rankKey === 'rankConsolation').length;
-      return { kind: 'consolation', title: `🎁 安慰奖阶段：已抽出 ${got}/${N} 位（每组 ${nextSize || 4} 人，命中者得安慰奖，其余回名单池）`, sub: `📍 ${route}` };
+    const P = prizePlan(st);
+    if (stage === 'consolation' || stage === 'finalist') {
+      const need = stageNeed(st, ri), got = stageGot(st, ri);
+      const title = stage === 'consolation'
+        ? `🎁 安慰奖阶段：已抽出 ${got}/${need} 位（每组 ${nextSize || 4} 人，命中者得安慰奖，其余回名单池）`
+        : `🎖️ 入围奖阶段：已抽出 ${got}/${need} 位（每组 ${nextSize || 4} 人，命中者得入围奖，其余回名单池）`;
+      return { kind: stage, title, sub: `📍 ${route}` };
+    }
+    if (stage === 'third' && !(stageNeed(st, ri) === 1 && list.length === 3)) {
+      const need = stageNeed(st, ri), got = stageGot(st, ri);
+      return { kind: 'third', title: `🥉 季军阶段：已抽出 ${got}/${need} 位（每组 ${nextSize || 4} 人，命中者得季军，其余回名单池）`, sub: `📍 ${route}` };
+    }
+    if (stage === 'final' && !(isClassicPodium(P) && list.length === 2)) {
+      const need = stageNeed(st, ri), got = stageGot(st, ri);
+      return { kind: 'final', title: `👑 冠亚军决战：已抽出 ${got}/${need} 位冠军（每组 ${nextSize || 4} 人，命中者为冠军）`, sub: `冠军抽满后，其余 ${Math.max(0, pendingOf(r).length - (need - got))} 位为 🥈 亚军` };
     }
     if (stage === 'third') {
       const decided = list.find(c => c.rankKey === 'rankThird');
@@ -592,6 +688,7 @@
     bumpRev, pollSignature, PRESENCE_PATH, PRESENCE_BEAT_MS, presenceActive, platformOf, animationLockMs, lockRemainingMs,
     PODIUM_THIRD_LABEL, PODIUM_FINAL_LABEL, MAX_GROUP, randomInt, shuffle,
     modeOn, isMode2, consolationN, targetOf, countConsolation, consolationDone,
+    TIERS, RANK_KEY, RANK_TITLE, prizePlan, isClassicPodium, planText, countRank, tierLeft, stageNeed, stageGot, nextRoundLabel,
     getRoundStage, isPodiumDecided, isTournamentFinished,
     plannedGroupSize, isGroupSizeFeasible, roadmap, minimumBuyers,
     resetPoll, pushNextRound, maybeAutoAdvance, applyWinner, logDraw, personOf, STAGE_TEXT,

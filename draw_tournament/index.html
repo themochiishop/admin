@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 抽奖实时晋级大屏</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&text=TS&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,900&text=TS&display=swap">
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=11"></script>
-  <script src="i18n.js?v=7"></script>
+  <script src="logic.js?v=12"></script>
+  <script src="i18n.js?v=8"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -154,9 +154,12 @@
     .zoom-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; font-size: 14px; line-height: 1;
       color: #cbd5e1; background: #1e293b; border: 1px solid #475569; border-radius: 4px; flex-shrink: 0; transition: all .15s; }
     .zoom-btn:hover { color: #fff; background: #334155; border-color: #fbbf24; }
+    /* 名单池：单号的最后一个字对齐名字的最后一个字 */
+    .pool-id { display: inline-flex; flex-direction: column; max-width: 100%; min-width: 0; vertical-align: top; }
+    .pool-id .pool-order { align-self: flex-end; text-align: right; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pool-pk-badge { position: absolute; top: -9px; right: 6px; z-index: 2; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
     .plat-mark { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: -1; pointer-events: none; user-select: none;
-      font-family: 'Pacifico', 'Brush Script MT', 'Segoe Script', cursive; font-weight: 400; font-style: normal; line-height: 1; font-size: 2.6rem; opacity: .10; }
+      font-family: 'Playfair Display', 'Didot', 'Bodoni 72', Georgia, 'Times New Roman', serif; font-weight: 900; font-style: italic; line-height: 1; font-size: 2.6rem; opacity: .10; }
     .plat-mark.plat-T { color: #e2e8f0; opacity: .06; }
     .plat-mark.plat-S { color: #fb923c; opacity: .09; }
     .plat-mark.sm { font-size: 1.15rem; right: 6px; }
@@ -334,6 +337,14 @@
         <p class="text-[11px] sm:text-xs text-slate-400 mt-1">祝贺所有获奖买家！感谢大家的参与与支持！</p>
       </div>
       <div id="podiumSummaryGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 mb-6 items-end max-w-4xl mx-auto"></div>
+      <div id="finalistSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-md border border-sky-500/40 w-full max-w-5xl mx-auto mb-4">
+        <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
+          <span class="text-base sm:text-lg">🎖️</span>
+          <h3 class="text-xs sm:text-sm font-bold text-sky-300">入围奖得主全名单</h3>
+          <span id="finalistTotalBadge" class="text-[10px] sm:text-xs bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <div id="finalistSummaryGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3.5"></div>
+      </div>
       <div id="consolationSummaryBox" class="hidden bg-slate-900/90 p-3.5 sm:p-4 pb-6 sm:pb-8 rounded-md border border-emerald-500/40 w-full max-w-5xl mx-auto">
         <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
           <span class="text-base sm:text-lg">🎁</span>
@@ -444,6 +455,14 @@
             </div>
             <div id="passedListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
           </div>
+          <div id="publicFinalistWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-lg border border-sky-500/40 shadow-lg flex-1 flex flex-col min-h-[160px]">
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="text-lg">🎖️</span>
+              <h2 class="text-sm font-bold text-sky-300">已胜出入围奖名单</h2>
+              <span id="publicFinalistCountBadge" class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+            </div>
+            <div id="publicFinalistListContainer" class="flex flex-wrap gap-2.5 max-h-[500px] overflow-y-auto no-scrollbar pr-1 pt-2 content-start"></div>
+          </div>
           <div id="publicConsolationWinnerPanel" class="hidden bg-slate-800/90 p-4 sm:p-5 rounded-lg border border-emerald-500/40 shadow-lg flex-1 flex flex-col min-h-[200px]">
             <div class="flex items-center space-x-2 mb-3">
               <span class="text-lg">🎁</span>
@@ -474,11 +493,11 @@
                 <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> 人</span>
               </div>
               <div class="flex items-center gap-1.5">
-              <button type="button" onclick="openListModal('pool')" title="放大查看全部待定买家" aria-label="放大查看全部待定买家" class="zoom-btn">⤢</button>
               <div class="flex items-center bg-slate-900 border border-slate-700 rounded px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
                 <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
                 <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
               </div>
+              <button type="button" onclick="openListModal('pool')" title="放大查看全部待定买家" aria-label="放大查看全部待定买家" class="zoom-btn">⤢</button>
               </div>
             </div>
             <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
@@ -656,6 +675,13 @@
         }
         if (badgeEl) badgeEl.innerText = 'ELIMINATED ANNOUNCEMENT';
         
+      } else if (eventData.winnerNamesKey === 'pkHit' && eventData.isFinalist) {
+        if (iconEl) iconEl.innerText = '🎖️';
+        if (titleEl) {
+          titleEl.innerText = '恭喜！获得入围奖';
+          titleEl.className = 'text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-amber-300 to-sky-400 mb-3 sm:mb-4';
+        }
+        if (badgeEl) badgeEl.innerText = 'FINALIST PRIZE';
       } else if (eventData.winnerNamesKey === 'pkHit' && eventData.isConsolation) {
         if (iconEl) iconEl.innerText = '🎁';
         if (titleEl) {
@@ -682,6 +708,12 @@
             <span class="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider block mb-1">🥉 季军得主 / 3RD PLACE</span>
             <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">${nameHtml(eventData.winnerName)}</span>
           </div>`;
+      } else if (eventData.winnerNamesKey === 'champion') {
+        bodyContainer.innerHTML = `
+          <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-lg border-2 border-amber-400 text-center shadow-lg">
+            <span class="text-xs sm:text-base font-black text-amber-300 uppercase tracking-widest block mb-0.5 sm:mb-1">👑 冠军得主 / CHAMPION</span>
+            <span class="text-xl sm:text-2xl font-black text-amber-300 tracking-wider drop-shadow-md">${nameHtml(eventData.winnerName)}</span>
+          </div>`;
       } else if (eventData.winnerNamesKey === 'final') {
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 p-4 sm:p-5 rounded-lg border-2 border-amber-400 text-center shadow-lg transform scale-105">
@@ -697,7 +729,7 @@
         const borderColor = isElimination ? 'border-rose-400' : 'border-emerald-400';
         const bgGrad = isElimination ? 'from-rose-500/20 via-rose-400/30 to-rose-500/20' : 'from-emerald-500/20 via-emerald-400/30 to-emerald-500/20';
         const textColor = isElimination ? 'text-rose-300' : 'text-emerald-300';
-        const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : (eventData.isConsolation ? '🎁 安慰奖 / CONSOLATION' : '🎯 成功晋级 / ADVANCED');
+        const badgeText = isElimination ? '💥 淘汰出局 / ELIMINATED' : (eventData.isFinalist ? '🎖️ 入围奖 / FINALIST' : eventData.isConsolation ? '🎁 安慰奖 / CONSOLATION' : '🎯 成功晋级 / ADVANCED');
         
         bodyContainer.innerHTML = `
           <div class="bg-gradient-to-r ${bgGrad} p-4 sm:p-5 rounded-lg border-2 ${borderColor} text-center shadow-lg transform scale-105">
@@ -746,26 +778,27 @@
 
     // ===== 🏆 荣誉汇总图：直接绘制（不截图，文字不会被切），语言跟随当前选择 =====
     const SUMMARY_TX = {
-      zh: { title: '全场抽奖比赛 · 终极荣誉汇总榜', sub: '祝贺所有获奖买家！感谢大家的参与与支持！', champ: '冠军', ru: '亚军', third: '季军', cons: '安慰奖得主', consTag: n => `#${n} 安慰奖`, none: '—',
-            shareTitle: 'Mochiishop 每月抽奖结果', shareText: (c, r, t, n) => `🏆 Mochiishop 每月抽奖结果\n👑 冠军：${c}\n🥈 亚军：${r}\n🥉 季军：${t}${n ? `\n🎁 安慰奖：${n} 位` : ''}\n祝贺所有获奖买家！`,
+      zh: { title: '全场抽奖比赛 · 终极荣誉汇总榜', sub: '祝贺所有获奖买家！感谢大家的参与与支持！', champ: '冠军', ru: '亚军', third: '季军', cons: '安慰奖得主', consTag: n => `#${n} 安慰奖`, fin: '入围奖得主', finTag: n => `#${n} 入围奖`, none: '—',
+            shareTitle: 'Mochiishop 每月抽奖结果', shareText: (c, r, t, n, f) => `🏆 Mochiishop 每月抽奖结果\n👑 冠军：${c}\n🥈 亚军：${r}${t ? `\n🥉 季军：${t}` : ''}${f ? `\n🎖️ 入围奖：${f} 位` : ''}${n ? `\n🎁 安慰奖：${n} 位` : ''}\n祝贺所有获奖买家！`,
             noShare: '⚠️ 您的浏览器不支持一键分享，已改为下载图片', fail: '❌ 生成图片失败，请重试！' },
-      en: { title: 'Final Results · Hall of Fame', sub: 'Congratulations to all winners! Thank you for joining and supporting us!', champ: 'CHAMPION', ru: 'RUNNER-UP', third: '3RD PLACE', cons: 'Consolation winners', consTag: n => `#${n} Consolation`, none: '—',
-            shareTitle: 'Mochiishop Monthly Draw Results', shareText: (c, r, t, n) => `🏆 Mochiishop Monthly Draw Results\n👑 Champion: ${c}\n🥈 Runner-up: ${r}\n🥉 3rd place: ${t}${n ? `\n🎁 Consolation prizes: ${n}` : ''}\nCongratulations to all winners!`,
+      en: { title: 'Final Results · Hall of Fame', sub: 'Congratulations to all winners! Thank you for joining and supporting us!', champ: 'CHAMPION', ru: 'RUNNER-UP', third: '3RD PLACE', cons: 'Consolation winners', consTag: n => `#${n} Consolation`, fin: 'Finalist winners', finTag: n => `#${n} Finalist`, none: '—',
+            shareTitle: 'Mochiishop Monthly Draw Results', shareText: (c, r, t, n, f) => `🏆 Mochiishop Monthly Draw Results\n👑 Champion: ${c}\n🥈 Runner-up: ${r}${t ? `\n🥉 3rd place: ${t}` : ''}${f ? `\n🎖️ Finalist prizes: ${f}` : ''}${n ? `\n🎁 Consolation prizes: ${n}` : ''}\nCongratulations to all winners!`,
             noShare: '⚠️ Your browser can\'t share directly — the image has been downloaded instead', fail: '❌ Failed to create the image, please try again!' },
-      ms: { title: 'Keputusan Akhir · Dewan Kemasyhuran', sub: 'Tahniah kepada semua pemenang! Terima kasih atas sokongan anda!', champ: 'JOHAN', ru: 'NAIB JOHAN', third: 'TEMPAT KETIGA', cons: 'Pemenang saguhati', consTag: n => `#${n} Saguhati`, none: '—',
-            shareTitle: 'Keputusan Cabutan Bulanan Mochiishop', shareText: (c, r, t, n) => `🏆 Keputusan Cabutan Bulanan Mochiishop\n👑 Johan: ${c}\n🥈 Naib johan: ${r}\n🥉 Tempat ketiga: ${t}${n ? `\n🎁 Hadiah saguhati: ${n} orang` : ''}\nTahniah kepada semua pemenang!`,
+      ms: { title: 'Keputusan Akhir · Dewan Kemasyhuran', sub: 'Tahniah kepada semua pemenang! Terima kasih atas sokongan anda!', champ: 'JOHAN', ru: 'NAIB JOHAN', third: 'TEMPAT KETIGA', cons: 'Pemenang saguhati', consTag: n => `#${n} Saguhati`, fin: 'Pemenang finalis', finTag: n => `#${n} Finalis`, none: '—',
+            shareTitle: 'Keputusan Cabutan Bulanan Mochiishop', shareText: (c, r, t, n, f) => `🏆 Keputusan Cabutan Bulanan Mochiishop\n👑 Johan: ${c}\n🥈 Naib johan: ${r}${t ? `\n🥉 Tempat ketiga: ${t}` : ''}${f ? `\n🎖️ Hadiah finalis: ${f} orang` : ''}${n ? `\n🎁 Hadiah saguhati: ${n} orang` : ''}\nTahniah kepada semua pemenang!`,
             noShare: '⚠️ Pelayar anda tidak boleh berkongsi terus — imej telah dimuat turun', fail: '❌ Gagal mencipta imej, cuba lagi!' },
     };
     function summaryLang() { return (window.I18N && I18N.lang) || 'zh'; }
     function getSummaryData() {
-      let champion = null, runnerUp = null, third = null; const cons = [];
+      const champions = [], runnerUps = [], thirds = [], finalists = [], cons = [];
       (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => {
-        if (c.rankKey === 'rankChampion') champion = c;
-        else if (c.rankKey === 'rankRunnerUp') runnerUp = c;
-        else if (c.rankKey === 'rankThird') third = c;
-        else if (c.rankKey === 'rankConsolation') cons.push(c);
+        if (c.rankKey === 'rankChampion' || c.rankTitle === '👑 冠军') champions.push(c);
+        else if (c.rankKey === 'rankRunnerUp' || c.rankTitle === '🥈 亚军') runnerUps.push(c);
+        else if (c.rankKey === 'rankThird' || c.rankTitle === '🥉 季军') thirds.push(c);
+        else if (c.rankKey === 'rankFinalist') finalists.push(c);
+        else if (c.rankKey === 'rankConsolation' || c.rankTitle === '🎁 安慰奖') cons.push(c);
       }));
-      return { champion, runnerUp, third, cons };
+      return { champion: champions[0] || null, runnerUp: runnerUps[0] || null, third: thirds[0] || null, champions, runnerUps, thirds, finalists, cons };
     }
 
     // 图片里的标题：自定义标题也跟着当前语言翻译（例：十月抽奖晋级榜 → October Draw Leaderboard）
@@ -779,8 +812,12 @@
       const FONT = '"Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", Arial, sans-serif';
       const MONO = '"Consolas", "SFMono-Regular", "Menlo", monospace';
       const W = 1200, PAD = 48, COLS = 5;
-      const consRows = Math.ceil(d.cons.length / COLS);
-      const H = 250 + 300 + (d.cons.length ? 90 + consRows * 118 : 0) + 70;
+      const showThird = d.thirds.length > 0 || DrawLogic.prizePlan(state).third > 0;
+      const maxPod = Math.max(1, d.champions.length, d.runnerUps.length, d.thirds.length);
+      const PER = 62;                                         // 每多一位得主，卡片加高
+      const podH = 300 + (maxPod - 1) * PER;
+      const gridH = list => list.length ? 90 + Math.ceil(list.length / COLS) * 118 : 0;
+      const H = 250 + podH + gridH(d.finalists) + gridH(d.cons) + 70;
       const SCALE = 2;
       const cv = document.createElement('canvas');
       cv.width = W * SCALE; cv.height = H * SCALE;
@@ -803,45 +840,52 @@
       text(T.sub, W / 2, 170, `500 20px ${FONT}`, '#cbd5e1', W - 2 * PAD);
       x.strokeStyle = 'rgba(251,191,36,.35)'; x.lineWidth = 1; x.beginPath(); x.moveTo(PAD, 210); x.lineTo(W - PAD, 210); x.stroke();
 
-      // 领奖台：亚军 | 冠军 | 季军
-      const cardW = 330, gap = 30, baseY = 245;
+      // 领奖台：亚军 | 冠军 | 季军（每个名次可有多人）
+      const cardW = 330, gap = 30, baseY = 245, extra = (maxPod - 1) * PER;
       const slots = [
-        { c: d.runnerUp, label: T.ru, icon: '🥈', y: baseY + 30, h: 220, fill: ['#334155', '#1e293b'], stroke: '#94a3b8', nameColor: '#f1f5f9' },
-        { c: d.champion, label: T.champ, icon: '👑', y: baseY, h: 250, fill: ['#78350f', '#1c1917'], stroke: '#fbbf24', nameColor: '#fde68a' },
-        { c: d.third, label: T.third, icon: '🥉', y: baseY + 30, h: 220, fill: ['#431407', '#1c1917'], stroke: '#c2410c', nameColor: '#fdba74' },
+        { list: d.runnerUps, label: T.ru, icon: '🥈', y: baseY + 30, h: 220 + extra, fill: ['#334155', '#1e293b'], stroke: '#94a3b8', nameColor: '#f1f5f9' },
+        { list: d.champions, label: T.champ, icon: '👑', y: baseY, h: 250 + extra, fill: ['#78350f', '#1c1917'], stroke: '#fbbf24', nameColor: '#fde68a', main: true },
+        ...(showThird ? [{ list: d.thirds, label: T.third, icon: '🥉', y: baseY + 30, h: 220 + extra, fill: ['#431407', '#1c1917'], stroke: '#c2410c', nameColor: '#fdba74' }] : []),
       ];
-      const startX = (W - (cardW * 3 + gap * 2)) / 2;
+      const startX = (W - (cardW * slots.length + gap * (slots.length - 1))) / 2;
       slots.forEach((sl, i) => {
         const px = startX + i * (cardW + gap);
         const g = x.createLinearGradient(0, sl.y, 0, sl.y + sl.h); g.addColorStop(0, sl.fill[0]); g.addColorStop(1, sl.fill[1]);
-        rr(px, sl.y, cardW, sl.h, 12); x.fillStyle = g; x.fill(); x.lineWidth = i === 1 ? 3 : 1.5; x.strokeStyle = sl.stroke; x.stroke();
+        rr(px, sl.y, cardW, sl.h, 12); x.fillStyle = g; x.fill(); x.lineWidth = sl.main ? 3 : 1.5; x.strokeStyle = sl.stroke; x.stroke();
         const cx = px + cardW / 2;
         text(sl.icon, cx, sl.y + 52, `56px ${FONT}`, '#fff');
         text(sl.label, cx, sl.y + 112, `800 18px ${FONT}`, sl.stroke === '#94a3b8' ? '#cbd5e1' : sl.stroke, cardW - 30);
-        text(sl.c ? sl.c.name : T.none, cx, sl.y + 156, `900 ${i === 1 ? 34 : 30}px ${FONT}`, sl.nameColor, cardW - 30);
-        text(sl.c ? (maskOrder(sl.c.orderNo) || '') : '', cx, sl.y + 196, `600 16px ${MONO}`, '#94a3b8', cardW - 30);
+        const many = sl.list.length > 1;
+        (sl.list.length ? sl.list : [null]).forEach((c, k) => {
+          const y0 = sl.y + 156 + k * PER;
+          text(c ? c.name : T.none, cx, y0, `900 ${many ? 24 : (sl.main ? 34 : 30)}px ${FONT}`, sl.nameColor, cardW - 30);
+          if (c) text(maskOrder(c.orderNo) || '', cx, y0 + (many ? 28 : 40), `600 ${many ? 14 : 16}px ${MONO}`, '#94a3b8', cardW - 30);
+        });
       });
 
-      // 安慰奖
-      let y = baseY + 300;
-      if (d.cons.length) {
-        x.font = `800 22px ${FONT}`; x.fillStyle = '#6ee7b7'; x.textAlign = 'left';
-        x.fillText(`🎁 ${T.cons}  (${d.cons.length})`, PAD, y + 20);
+      // 入围奖 / 安慰奖名单
+      let y = baseY + podH;
+      const drawGrid = (list, title, tagFn, c) => {
+        if (!list.length) return;
+        x.font = `800 22px ${FONT}`; x.fillStyle = c.title; x.textAlign = 'left';
+        x.fillText(`${title}  (${list.length})`, PAD, y + 20);
         y += 54;
         const cw = (W - 2 * PAD - (COLS - 1) * 14) / COLS, ch = 104;
-        d.cons.forEach((c, i) => {
+        list.forEach((p, i) => {
           const col = i % COLS, row = Math.floor(i / COLS);
           const px = PAD + col * (cw + 14), py = y + row * (ch + 14);
-          rr(px, py, cw, ch, 10); x.fillStyle = '#022c22'; x.fill(); x.lineWidth = 1.2; x.strokeStyle = '#10b981'; x.stroke();
-          const tag = T.consTag(i + 1);
+          rr(px, py, cw, ch, 10); x.fillStyle = c.bg; x.fill(); x.lineWidth = 1.2; x.strokeStyle = c.accent; x.stroke();
+          const tag = tagFn(i + 1);
           x.font = `800 13px ${FONT}`; const tw = Math.min(cw - 20, x.measureText(tag).width + 16);
-          rr(px + (cw - tw) / 2, py + 12, tw, 24, 6); x.fillStyle = '#10b981'; x.fill();
-          text(tag, px + cw / 2, py + 24, `800 13px ${FONT}`, '#022c22', cw - 28);
-          text(c.name, px + cw / 2, py + 58, `800 18px ${FONT}`, '#a7f3d0', cw - 16);
-          text(maskOrder(c.orderNo) || '', px + cw / 2, py + 84, `600 13px ${MONO}`, '#94a3b8', cw - 16);
+          rr(px + (cw - tw) / 2, py + 12, tw, 24, 6); x.fillStyle = c.accent; x.fill();
+          text(tag, px + cw / 2, py + 24, `800 13px ${FONT}`, c.bg, cw - 28);
+          text(p.name, px + cw / 2, py + 58, `800 18px ${FONT}`, c.name, cw - 16);
+          text(maskOrder(p.orderNo) || '', px + cw / 2, py + 84, `600 13px ${MONO}`, '#94a3b8', cw - 16);
         });
-        y += consRows * (ch + 14);
-      }
+        y += Math.ceil(list.length / COLS) * (ch + 14) + 22;
+      };
+      drawGrid(d.finalists, '🎖️ ' + T.fin, T.finTag, { title: '#7dd3fc', bg: '#082f49', accent: '#38bdf8', name: '#bae6fd' });
+      drawGrid(d.cons, '🎁 ' + T.cons, T.consTag, { title: '#6ee7b7', bg: '#022c22', accent: '#10b981', name: '#a7f3d0' });
       // 页脚
       const dt = new Date(); const p2 = n => String(n).padStart(2, '0');
       text(`Mochiishop · ${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`, W / 2, H - 46, `600 15px ${FONT}`, '#64748b');
@@ -862,7 +906,7 @@
       try {
         const d = getSummaryData();
         const file = await canvasToFile(drawSummaryCanvas());
-        const data = { title: T.shareTitle, text: T.shareText(d.champion ? d.champion.name : T.none, d.runnerUp ? d.runnerUp.name : T.none, d.third ? d.third.name : T.none, d.cons.length), files: [file] };
+        const data = { title: T.shareTitle, text: T.shareText(d.champions.map(c => c.name).join(' / ') || T.none, d.runnerUps.map(c => c.name).join(' / ') || T.none, d.thirds.map(c => c.name).join(' / '), d.cons.length, d.finalists.length), files: [file] };
         if (navigator.canShare && navigator.canShare(data)) { await navigator.share(data); return; }
         if (navigator.share) { await navigator.share({ title: data.title, text: data.text }); downloadFile(file); return; }
         downloadFile(file); alert(T.noShare);
@@ -924,21 +968,9 @@
       const collapsibleSection = document.getElementById('collapsibleProcessSection');
       const floatingBtns = document.getElementById('floatingActionButtons');
       const podiumGrid = document.getElementById('podiumSummaryGrid');
-      const consolationBox = document.getElementById('consolationSummaryBox');
-      const consolationGrid = document.getElementById('consolationSummaryGrid');
-      const consolationBadge = document.getElementById('consolationTotalBadge');
+      const d = getSummaryData();
 
-      let champion = null, runnerUp = null, thirdPlace = null, consolations = [];
-      (state.rounds || []).forEach(r => {
-        (r.candidates || []).forEach(c => {
-          if (c.rankKey === "rankChampion" || c.rankTitle === "👑 冠军") champion = c;
-          if (c.rankKey === "rankRunnerUp" || c.rankTitle === "🥈 亚军") runnerUp = c;
-          if (c.rankKey === "rankThird" || c.rankTitle === "🥉 季军") thirdPlace = c;
-          if (c.rankKey === "rankConsolation" || c.rankTitle === "🎁 安慰奖") consolations.push(c);
-        });
-      });
-
-      if (!champion) {
+      if (!d.champions.length || !DrawLogic.isTournamentFinished(state)) {
         summaryPanel.classList.add('hidden');
         toggleBar.classList.add('hidden');
         if (floatingBtns) floatingBtns.classList.add('hidden');
@@ -955,41 +987,50 @@
       }
       document.getElementById('winnerAnnouncementBanner').classList.add('hidden');
 
+      // 每个名次可能有多人（模式4）：名字一行一位
+      const people = (list, nameCls, orderCls) => list.length ? list.map(c => `
+          <div class="plat-host py-1">${platMark(c.orderNo, list.length > 1 ? '' : 'xl')}
+            <div class="${nameCls} truncate">${nameHtml(c.name)}</div>
+            <div class="${orderCls} font-mono truncate leading-tight">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div>
+          </div>`).join('') : `<div class="${nameCls} py-1">N/A</div>`;
+      const showThird = d.thirds.length > 0 || DrawLogic.prizePlan(state).third > 0;
+      podiumGrid.className = `grid grid-cols-1 ${showThird ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-3.5 sm:gap-4 mb-6 items-end max-w-4xl mx-auto`;
       podiumGrid.innerHTML = `
-        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition plat-host">${runnerUp ? platMark(runnerUp.orderNo, 'xl') : ''}
+        <div class="order-2 md:order-1 bg-gradient-to-b from-slate-700/40 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-slate-500/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥈</span>
           <span class="text-[10px] sm:text-[11px] font-black text-slate-300 tracking-wider block mb-1 uppercase">RUNNER-UP / 亚军</span>
-          <div class="text-lg sm:text-xl font-bold text-slate-100 truncate py-1">${runnerUp ? nameHtml(runnerUp.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${runnerUp ? escapeHtml(maskOrder(runnerUp.orderNo) || '无订单号') : '-'}</div>
+          ${people(d.runnerUps, 'text-lg sm:text-xl font-bold text-slate-100', 'text-[11px] sm:text-xs text-slate-400')}
         </div>
-        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-lg border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2 plat-host">${platMark(champion.orderNo, 'xl')}
+        <div class="order-1 md:order-2 bg-gradient-to-b from-amber-500/30 via-amber-900/40 to-slate-950/90 p-5 sm:p-6 pb-7 sm:pb-9 rounded-lg border-2 border-amber-400 text-center shadow-2xl shadow-amber-500/20 transform hover:scale-105 transition z-10 md:-mt-2">
           <span class="text-4xl sm:text-5xl block mb-1.5 sm:mb-2 animate-bounce">👑</span>
           <span class="text-[11px] sm:text-xs font-black text-amber-400 tracking-widest block mb-1 uppercase">CHAMPION / 冠军</span>
-          <div class="text-xl sm:text-2xl font-black text-amber-300 truncate py-1">${nameHtml(champion.name)}</div>
-          <div class="text-[11px] sm:text-xs text-amber-200/90 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${escapeHtml(maskOrder(champion.orderNo) || '无订单号')}</div>
+          ${people(d.champions, 'text-xl sm:text-2xl font-black text-amber-300', 'text-[11px] sm:text-xs text-amber-200/90')}
         </div>
-        <div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition plat-host">${thirdPlace ? platMark(thirdPlace.orderNo, 'xl') : ''}
+        ${showThird ? `<div class="order-3 md:order-3 bg-gradient-to-b from-amber-900/30 to-slate-900/80 p-4 sm:p-5 pb-6 sm:pb-7 rounded-lg border border-amber-700/80 text-center shadow-lg transform hover:scale-105 transition">
           <span class="text-2xl sm:text-3xl block mb-1">🥉</span>
           <span class="text-[10px] sm:text-[11px] font-black text-amber-500 tracking-wider block mb-1 uppercase">3RD PLACE / 季军</span>
-          <div class="text-lg sm:text-xl font-bold text-amber-300 truncate py-1">${thirdPlace ? nameHtml(thirdPlace.name) : 'N/A'}</div>
-          <div class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5 sm:mt-1 truncate leading-tight">${thirdPlace ? escapeHtml(maskOrder(thirdPlace.orderNo) || '无订单号') : '-'}</div>
-        </div>`;
+          ${people(d.thirds, 'text-lg sm:text-xl font-bold text-amber-300', 'text-[11px] sm:text-xs text-slate-400')}
+        </div>` : ''}`;
 
-      if (consolations.length > 0) {
-        consolationBox.classList.remove('hidden');
-        consolationBadge.innerText = consolations.length;
-        consolationGrid.innerHTML = consolations.map((c, i) => `
-          <div class="plat-host p-2.5 sm:p-3 pb-3 sm:pb-4 bg-emerald-950/80 border border-emerald-500/50 rounded-md text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">${platMark(c.orderNo)}
+      const grid = (boxId, gridId, badgeId, list, tag, card, tagCls, nameCls) => {
+        const box = document.getElementById(boxId);
+        if (!box) return;
+        if (!list.length) { box.classList.add('hidden'); return; }
+        box.classList.remove('hidden');
+        document.getElementById(badgeId).innerText = list.length;
+        document.getElementById(gridId).innerHTML = list.map((c, i) => `
+          <div class="plat-host p-2.5 sm:p-3 pb-3 sm:pb-4 ${card} rounded-md text-center shadow-sm flex flex-col justify-between min-h-[64px] sm:min-h-[72px]">${platMark(c.orderNo)}
             <div>
-              <span class="text-[9px] sm:text-[10px] font-black bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}安慰奖</span>
-              <div class="font-bold text-emerald-300 text-xs truncate leading-normal">${nameHtml(c.name)}</div>
+              <span class="text-[9px] sm:text-[10px] font-black ${tagCls} px-1.5 py-0.5 rounded inline-block mb-1">#${i+1}${tag}</span>
+              <div class="font-bold ${nameCls} text-xs truncate leading-normal">${nameHtml(c.name)}</div>
             </div>
             <div class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate mt-0.5 sm:mt-1 leading-normal">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div>
           </div>`).join('');
-      } else {
-        consolationBox.classList.add('hidden');
-      }
+      };
+      grid('finalistSummaryBox', 'finalistSummaryGrid', 'finalistTotalBadge', d.finalists, '入围奖', 'bg-sky-950/80 border border-sky-500/50', 'bg-sky-400 text-slate-950', 'text-sky-200');
+      grid('consolationSummaryBox', 'consolationSummaryGrid', 'consolationTotalBadge', d.cons, '安慰奖', 'bg-emerald-950/80 border border-emerald-500/50', 'bg-emerald-500 text-slate-950', 'text-emerald-300');
     }
+
 
     function updateWinnerBannerUI() {
       const banner = document.getElementById('winnerAnnouncementBanner');
@@ -1013,8 +1054,10 @@
 
       const activeRound = (state.rounds && state.rounds[currentRoundIndex]) ? state.rounds[currentRoundIndex] : { candidates: [] };
       const isModeEnabled = state.modeConfig && state.modeConfig.enabled;
-      const selectedMode = state.modeConfig ? state.modeConfig.selectedMode : 'mode1';
-      const N = state.modeConfig ? (state.modeConfig.mode2ConsolationCount || 10) : 10;
+      const P = DrawLogic.prizePlan(state);
+      const classic = DrawLogic.isClassicPodium(P);
+      const stageNow = DrawLogic.getRoundStage(state, currentRoundIndex);
+      const roundTotal = (activeRound.candidates || []).length;
 
       let thirdPlaceName = "";
       (state.rounds || []).forEach(r => {
@@ -1024,27 +1067,41 @@
       });
 
       const hasChampion = (state.rounds || []).some(r => (r.candidates || []).some(c => c.rankKey === 'rankChampion'));
-      if (thirdPlaceName && !hasChampion) {
+      if (classic && stageNow === 'final' && thirdPlaceName && !hasChampion) {
         banner.classList.remove('hidden');
         content.innerHTML = `🎉 <span class="text-amber-400">🥉 季军得主是：</span><span class="text-white bg-amber-600/30 px-2.5 py-0.5 rounded border border-amber-500 mx-1 font-black">${nameHtml(thirdPlaceName)}</span> <span class="text-xs text-amber-200/80 font-normal block sm:inline mt-1 sm:mt-0">(🔥 👑 冠亚军决战 2 选 1 开启中！)</span>`;
         return;
       }
-      const isConsolationStage = DrawLogic.getRoundStage(state, currentRoundIndex) === 'consolation';
-      if (isConsolationStage) {
-        const picked = (activeRound.candidates || []).filter(c => c.rankKey === 'rankConsolation').length;
+      if (!isModeEnabled || DrawLogic.isTournamentFinished(state)) { banner.classList.add('hidden'); return; }
+      const picked = DrawLogic.stageGot(state, currentRoundIndex), need = DrawLogic.stageNeed(state, currentRoundIndex);
+      if (stageNow === 'consolation') {
         banner.classList.remove('hidden');
-        content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${N} 位安慰奖得主 🎁</span>`;
+        content.innerHTML = `🎁 <span class="text-emerald-300 font-bold">【安慰奖遴选阶段】已选出 ${picked}/${need} 位安慰奖得主 🎁</span>`;
         return;
       }
-      const roundTotal = (activeRound.candidates || []).length;
-      if (isModeEnabled && roundTotal === 3 && !activeRound.isConsolationStage) {
+      if (stageNow === 'finalist') {
+        banner.classList.remove('hidden');
+        content.innerHTML = `🎖️ <span class="text-sky-300 font-bold">【入围奖遴选阶段】已选出 ${picked}/${need} 位入围奖得主 🎖️</span>`;
+        return;
+      }
+      if (stageNow === 'third' && need === 1 && roundTotal === 3) {
         banner.classList.remove('hidden');
         content.innerHTML = `<span class="text-amber-300 font-bold"><span class="block sm:inline">🔥 冠亚季军争夺战开启！当前仅剩 3 人角逐</span> <span class="block sm:inline">🥉 即将在直播间选出季军得主！</span></span>`;
         return;
       }
-      if (isModeEnabled && roundTotal === 2 && !activeRound.isConsolationStage) {
+      if (stageNow === 'third') {
+        banner.classList.remove('hidden');
+        content.innerHTML = `🥉 <span class="text-amber-300 font-bold">【季军遴选阶段】已选出 ${picked}/${need} 位季军 🥉</span>`;
+        return;
+      }
+      if (stageNow === 'final' && classic && roundTotal === 2) {
         banner.classList.remove('hidden');
         content.innerHTML = `<span class="text-amber-300 font-bold"><span class="block sm:inline">🔥 👑 冠亚军终极决战 2 选 1 开启中！</span> <span class="block sm:inline">🥈 即将选出冠军与亚军！</span></span>`;
+        return;
+      }
+      if (stageNow === 'final') {
+        banner.classList.remove('hidden');
+        content.innerHTML = `<span class="text-amber-300 font-bold"><span class="block sm:inline">🔥 👑 冠亚军决战开启！已选出 ${picked}/${need} 位冠军</span> <span class="block sm:inline">🥈 冠军抽满后其余为亚军</span></span>`;
         return;
       }
       banner.classList.add('hidden');
@@ -1076,7 +1133,7 @@
           }
           
           // ★ 判断当前是否是“决战轮”或“刚刚打完决战”
-          const isFinalEvent = state.latestEvent && (state.latestEvent.winnerNamesKey === 'third' || state.latestEvent.winnerNamesKey === 'final');
+          const isFinalEvent = state.latestEvent && ['third', 'final', 'champion'].includes(state.latestEvent.winnerNamesKey) && state.latestEvent.timestamp > Date.now() - 15000;
           const __st = DrawLogic.getRoundStage(state, state.drawRoundIndex ?? 0);
           const isCurrentRoundFinal = __st === 'third' || __st === 'final';
 
@@ -1091,8 +1148,9 @@
                 const cand = (round.candidates || []).find(c => String(c.id) === String(winnerMember.id));
                 const winnerName = cand ? cand.name : (winnerMember.name || '幸运买家');
                 const winnerOrderNo = cand ? cand.orderNo : (winnerMember.orderNo || '');
-                const isConsolation = DrawLogic.getRoundStage(state, roundIdx) === 'consolation';
-                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination: false, isConsolation }, 5);
+                const hitStage = DrawLogic.getRoundStage(state, roundIdx);
+                const isConsolation = hitStage === 'consolation', isFinalist = hitStage === 'finalist';
+                showWinnerPopup({ winnerNamesKey: 'pkHit', winnerName, orderNo: winnerOrderNo, triggerNumber: state.triggerNumber, isElimination: false, isConsolation, isFinalist }, 5);
               }
             }
           } else {
@@ -1409,74 +1467,93 @@
     }
 
     // 模式标签 + 悬停说明：直接用所选语言生成（不靠事后翻译，句子才完整）
+    // 模式说明（按语言生成；P = 各奖项名额）
     const MODE_TX = {
       zh: {
         off: '模式: 未启用规则', offTip: '当前未启用模式规则，由后台手动控盘。',
-        badge: (m2) => m2 ? '模式2: 冠亚季+安慰奖' : '模式1: 冠亚季', done: '🏁 已结束',
-        stage: { consolation: '🎁 安慰奖阶段', third: '🏆 冠亚季争夺战', final: '👑 冠亚军决战' },
-        title: (m2, N) => m2 ? `🎁 模式2：冠亚季 + ${N} 名安慰奖` : '🥇 模式1：冠亚季排位',
+        badge: m => ({ mode1: '模式1: 冠亚季', mode2: '模式2: 冠亚季+安慰奖', mode3: '模式3: 冠亚季+入围+安慰', mode4: '模式4: 自定义名额' }[m] || '模式1: 冠亚季'), done: '🏁 已结束',
+        stage: { consolation: '🎁 安慰奖阶段', finalist: '🎖️ 入围奖阶段', third: '🏆 冠亚季争夺战', thirdN: '🥉 季军阶段', final: '👑 冠亚军决战' },
+        title: (m, P) => ({ mode1: '🥇 模式1：冠亚季排位', mode2: `🎁 模式2：冠亚季 + ${P.consolation} 名安慰奖`, mode3: `🎖️ 模式3：冠亚季 + ${P.finalist} 名入围奖 + ${P.consolation} 名安慰奖`,
+          mode4: `⚙️ 模式4：冠军 ${P.champion} · 亚军 ${P.runnerUp} · 季军 ${P.third} · 入围 ${P.finalist} · 安慰 ${P.consolation}` }[m]),
         progress: '📍 当前进度', finishedNow: '🏁 比赛已结束，恭喜所有得奖买家！',
         third: '3 人全员上台盲抽，命中者获得 <b class="text-amber-300">🥉 季军</b>，其余 2 人进入冠亚军决战',
         final: '2 人全员上台盲抽，命中者获得 <b class="text-amber-300">👑 冠军</b>，另一位为 🥈 亚军',
-        cons: (got, N, size) => `已抽出 <b class="text-emerald-300">${got}/${N}</b> 位安慰奖 · 每组 ${size} 人，命中者得安慰奖，其余回名单池`,
+        tier: (k, got, N, size) => `已抽出 <b class="text-emerald-300">${got}/${N}</b> 位${{ consolation: '安慰奖', finalist: '入围奖', third: '季军', final: '冠军' }[k]} · 每组 ${size} 人，命中者得奖，其余回名单池`,
         normal: (pend, won, size) => `名单池剩 <b class="text-amber-300">${pend}</b> 人 · 已晋级 <b class="text-emerald-300">${won}</b> 人${pend ? ` · 下一组 ${size} 人` : ' · 本轮已抽完'}`,
         unit: n => `${n}人`, how: '📖 抽奖流程',
-        steps: (m2, N, got) => [
-          ['📥', '全部订单进入名单池（一张订单 = 一次机会）'],
-          ['🎲', '每个 POLL 盲抽 <b>3~4 人</b>一组（Shopee 投票最多 4 个选项）'],
-          ['🗳️', '直播间投票选号码 → 后台设定票选号 → 主播点【揭晓】'],
-          ['🏆', '命中者<b class="text-emerald-300">晋级</b>，同组其他人淘汰'],
-          ['⏩', '名单池抽完 → <b>自动进入下一轮</b>，晋级者成为新名单池'],
-          ...(m2 ? [['🎁', `人数到 ${N + 3} 人左右 → 安慰奖阶段：命中者得安慰奖，其余回池，抽满 <b>${N}</b> 位（已抽 ${got}）`]] : []),
-          ['🥉', '剩 3 人 → 全员盲抽，命中者为 <b>季军</b>'],
-          ['👑', '剩 2 人 → 全员盲抽，命中者为 <b>冠军</b>，另一位为 <b>亚军</b>'],
-        ],
+        steps: (P, got) => {
+          const sum = P.consolation + P.finalist + P.third + P.runnerUp + P.champion, classic = P.third === 1 && P.runnerUp === 1 && P.champion === 1;
+          return [
+            ['📥', '全部订单进入名单池（一张订单 = 一次机会）'],
+            ['🎲', '每个 POLL 盲抽 <b>3~4 人</b>一组（Shopee 投票最多 4 个选项）'],
+            ['🗳️', '直播间投票选号码 → 后台设定票选号 → 主播点【揭晓】'],
+            ['🏆', '命中者<b class="text-emerald-300">晋级</b>，同组其他人淘汰'],
+            ['⏩', '名单池抽完 → <b>自动进入下一轮</b>，晋级者成为新名单池'],
+            ...(P.consolation ? [['🎁', `人数到 ${sum} 人左右 → 安慰奖阶段：命中者得安慰奖，其余回池，抽满 <b>${P.consolation}</b> 位（已抽 ${got.consolation}）`]] : []),
+            ...(P.finalist ? [['🎖️', `剩 ${P.finalist + P.third + P.runnerUp + P.champion} 人 → 入围奖阶段：命中者得入围奖，其余回池，抽满 <b>${P.finalist}</b> 位（已抽 ${got.finalist}）`]] : []),
+            ...(classic ? [['🥉', '剩 3 人 → 全员盲抽，命中者为 <b>季军</b>']] : P.third ? [['🥉', `剩 ${P.third + P.runnerUp + P.champion} 人 → 季军阶段：命中者得季军，其余回池，抽满 <b>${P.third}</b> 位`]] : []),
+            classic ? ['👑', '剩 2 人 → 全员盲抽，命中者为 <b>冠军</b>，另一位为 <b>亚军</b>']
+                    : ['👑', `剩 ${P.runnerUp + P.champion} 人 → 决赛：命中者为 <b>冠军</b>（共 ${P.champion} 位），其余为 <b>亚军</b>`],
+          ];
+        },
         fair: '🔒 号码在揭晓时才随机分配，后台无法预先指定命中者',
       },
       en: {
         off: 'Mode: rules off', offTip: 'No mode rules — the host controls the draw manually.',
-        badge: (m2) => m2 ? 'Mode 2: Top 3 + Consolation' : 'Mode 1: Top 3', done: '🏁 Finished',
-        stage: { consolation: '🎁 Consolation stage', third: '🏆 Top-3 showdown', final: '👑 Grand final' },
-        title: (m2, N) => m2 ? `🎁 Mode 2: Top 3 + ${N} consolation prizes` : '🥇 Mode 1: Top 3',
+        badge: m => ({ mode1: 'Mode 1: Top 3', mode2: 'Mode 2: Top 3 + Consolation', mode3: 'Mode 3: Top 3 + Finalists + Consolation', mode4: 'Mode 4: Custom prizes' }[m] || 'Mode 1: Top 3'), done: '🏁 Finished',
+        stage: { consolation: '🎁 Consolation stage', finalist: '🎖️ Finalist stage', third: '🏆 Top-3 showdown', thirdN: '🥉 3rd-place stage', final: '👑 Grand final' },
+        title: (m, P) => ({ mode1: '🥇 Mode 1: Top 3', mode2: `🎁 Mode 2: Top 3 + ${P.consolation} consolation prizes`, mode3: `🎖️ Mode 3: Top 3 + ${P.finalist} finalist prizes + ${P.consolation} consolation prizes`,
+          mode4: `⚙️ Mode 4: Champion ${P.champion} · Runner-up ${P.runnerUp} · 3rd ${P.third} · Finalist ${P.finalist} · Consolation ${P.consolation}` }[m]),
         progress: '📍 Progress', finishedNow: '🏁 The event is over — congratulations to all winners!',
         third: 'All 3 are drawn — the hit wins <b class="text-amber-300">🥉 3rd place</b>, the other 2 go to the final',
         final: 'Both are drawn — the hit wins <b class="text-amber-300">👑 Champion</b>, the other is 🥈 runner-up',
-        cons: (got, N, size) => `<b class="text-emerald-300">${got}/${N}</b> consolation prizes drawn · groups of ${size} — the hit wins, the rest return to the pool`,
+        tier: (k, got, N, size) => `<b class="text-emerald-300">${got}/${N}</b> ${{ consolation: 'consolation prizes', finalist: 'finalist prizes', third: '3rd places', final: 'champions' }[k]} drawn · groups of ${size} — the hit wins, the rest return to the pool`,
         normal: (pend, won, size) => `<b class="text-amber-300">${pend}</b> left in the pool · <b class="text-emerald-300">${won}</b> advanced${pend ? ` · next group: ${size}` : ' · round complete'}`,
         unit: n => `${n} pax`, how: '📖 How it works',
-        steps: (m2, N, got) => [
-          ['📥', 'Every order enters the pool (1 order = 1 chance)'],
-          ['🎲', 'Each POLL draws a group of <b>3–4 people</b> (Shopee polls allow up to 4 options)'],
-          ['🗳️', 'Viewers vote for a number → the vote number is set → the host presses [Reveal]'],
-          ['🏆', 'The hit <b class="text-emerald-300">advances</b>; the rest of the group is eliminated'],
-          ['⏩', 'When the pool is finished, <b>the next round starts automatically</b> with the winners'],
-          ...(m2 ? [['🎁', `At about ${N + 3} left → consolation stage: the hit wins a prize, the rest return, until <b>${N}</b> are drawn (drawn: ${got})`]] : []),
-          ['🥉', '3 left → all drawn, the hit is <b>3rd place</b>'],
-          ['👑', '2 left → all drawn, the hit is <b>Champion</b>, the other is <b>runner-up</b>'],
-        ],
+        steps: (P, got) => {
+          const sum = P.consolation + P.finalist + P.third + P.runnerUp + P.champion, classic = P.third === 1 && P.runnerUp === 1 && P.champion === 1;
+          return [
+            ['📥', 'Every order enters the pool (1 order = 1 chance)'],
+            ['🎲', 'Each POLL draws a group of <b>3–4 people</b> (Shopee polls allow up to 4 options)'],
+            ['🗳️', 'Viewers vote for a number → the vote number is set → the host presses [Reveal]'],
+            ['🏆', 'The hit <b class="text-emerald-300">advances</b>; the rest of the group is eliminated'],
+            ['⏩', 'When the pool is finished, <b>the next round starts automatically</b> with the winners'],
+            ...(P.consolation ? [['🎁', `At about ${sum} left → consolation stage: the hit wins a prize, the rest return, until <b>${P.consolation}</b> are drawn (drawn: ${got.consolation})`]] : []),
+            ...(P.finalist ? [['🎖️', `${P.finalist + P.third + P.runnerUp + P.champion} left → finalist stage: the hit wins a finalist prize, the rest return, until <b>${P.finalist}</b> are drawn (drawn: ${got.finalist})`]] : []),
+            ...(classic ? [['🥉', '3 left → all drawn, the hit is <b>3rd place</b>']] : P.third ? [['🥉', `${P.third + P.runnerUp + P.champion} left → 3rd-place stage: the hit wins 3rd place, the rest return, until <b>${P.third}</b> are drawn`]] : []),
+            classic ? ['👑', '2 left → all drawn, the hit is <b>Champion</b>, the other is <b>runner-up</b>']
+                    : ['👑', `${P.runnerUp + P.champion} left → final: the hit is <b>Champion</b> (${P.champion} in total), the rest are <b>runners-up</b>`],
+          ];
+        },
         fair: '🔒 Numbers are assigned randomly only at reveal — nobody can pre-select the winner',
       },
       ms: {
         off: 'Mod: peraturan dimatikan', offTip: 'Tiada peraturan mod — hos mengawal cabutan secara manual.',
-        badge: (m2) => m2 ? 'Mod 2: 3 Teratas + Saguhati' : 'Mod 1: 3 Teratas', done: '🏁 Tamat',
-        stage: { consolation: '🎁 Peringkat saguhati', third: '🏆 Pertarungan 3 teratas', final: '👑 Final besar' },
-        title: (m2, N) => m2 ? `🎁 Mod 2: 3 Teratas + ${N} hadiah saguhati` : '🥇 Mod 1: 3 Teratas',
+        badge: m => ({ mode1: 'Mod 1: 3 Teratas', mode2: 'Mod 2: 3 Teratas + Saguhati', mode3: 'Mod 3: 3 Teratas + Finalis + Saguhati', mode4: 'Mod 4: Hadiah suai' }[m] || 'Mod 1: 3 Teratas'), done: '🏁 Tamat',
+        stage: { consolation: '🎁 Peringkat saguhati', finalist: '🎖️ Peringkat finalis', third: '🏆 Pertarungan 3 teratas', thirdN: '🥉 Peringkat ketiga', final: '👑 Final besar' },
+        title: (m, P) => ({ mode1: '🥇 Mod 1: 3 Teratas', mode2: `🎁 Mod 2: 3 Teratas + ${P.consolation} hadiah saguhati`, mode3: `🎖️ Mod 3: 3 Teratas + ${P.finalist} hadiah finalis + ${P.consolation} hadiah saguhati`,
+          mode4: `⚙️ Mod 4: Johan ${P.champion} · Naib johan ${P.runnerUp} · Ketiga ${P.third} · Finalis ${P.finalist} · Saguhati ${P.consolation}` }[m]),
         progress: '📍 Kemajuan', finishedNow: '🏁 Pertandingan tamat — tahniah kepada semua pemenang!',
         third: 'Ketiga-tiga dicabut — yang terkena menang <b class="text-amber-300">🥉 tempat ketiga</b>, 2 lagi ke final',
         final: 'Kedua-duanya dicabut — yang terkena menang <b class="text-amber-300">👑 Johan</b>, seorang lagi 🥈 naib johan',
-        cons: (got, N, size) => `<b class="text-emerald-300">${got}/${N}</b> hadiah saguhati dicabut · kumpulan ${size} orang — yang terkena menang, yang lain kembali ke senarai`,
+        tier: (k, got, N, size) => `<b class="text-emerald-300">${got}/${N}</b> ${{ consolation: 'hadiah saguhati', finalist: 'hadiah finalis', third: 'tempat ketiga', final: 'johan' }[k]} dicabut · kumpulan ${size} orang — yang terkena menang, yang lain kembali ke senarai`,
         normal: (pend, won, size) => `Baki <b class="text-amber-300">${pend}</b> orang · <b class="text-emerald-300">${won}</b> mara${pend ? ` · kumpulan seterusnya: ${size}` : ' · pusingan selesai'}`,
         unit: n => `${n} orang`, how: '📖 Cara cabutan',
-        steps: (m2, N, got) => [
-          ['📥', 'Setiap pesanan masuk senarai (1 pesanan = 1 peluang)'],
-          ['🎲', 'Setiap POLL mencabut kumpulan <b>3–4 orang</b> (undian Shopee maksimum 4 pilihan)'],
-          ['🗳️', 'Penonton undi nombor → nombor undian ditetapkan → hos tekan [Dedahkan]'],
-          ['🏆', 'Yang terkena <b class="text-emerald-300">mara</b>; yang lain dalam kumpulan tersingkir'],
-          ['⏩', 'Bila senarai habis, <b>pusingan seterusnya bermula automatik</b> dengan pemenang'],
-          ...(m2 ? [['🎁', `Pada kira-kira ${N + 3} orang → peringkat saguhati: yang terkena menang, yang lain kembali, sehingga <b>${N}</b> dicabut (sudah: ${got})`]] : []),
-          ['🥉', 'Tinggal 3 → semua dicabut, yang terkena dapat <b>tempat ketiga</b>'],
-          ['👑', 'Tinggal 2 → semua dicabut, yang terkena ialah <b>Johan</b>, seorang lagi <b>naib johan</b>'],
-        ],
+        steps: (P, got) => {
+          const sum = P.consolation + P.finalist + P.third + P.runnerUp + P.champion, classic = P.third === 1 && P.runnerUp === 1 && P.champion === 1;
+          return [
+            ['📥', 'Setiap pesanan masuk senarai (1 pesanan = 1 peluang)'],
+            ['🎲', 'Setiap POLL mencabut kumpulan <b>3–4 orang</b> (undian Shopee maksimum 4 pilihan)'],
+            ['🗳️', 'Penonton undi nombor → nombor undian ditetapkan → hos tekan [Dedahkan]'],
+            ['🏆', 'Yang terkena <b class="text-emerald-300">mara</b>; yang lain dalam kumpulan tersingkir'],
+            ['⏩', 'Bila senarai habis, <b>pusingan seterusnya bermula automatik</b> dengan pemenang'],
+            ...(P.consolation ? [['🎁', `Pada kira-kira ${sum} orang → peringkat saguhati: yang terkena menang, yang lain kembali, sehingga <b>${P.consolation}</b> dicabut (sudah: ${got.consolation})`]] : []),
+            ...(P.finalist ? [['🎖️', `Tinggal ${P.finalist + P.third + P.runnerUp + P.champion} → peringkat finalis: yang terkena menang hadiah finalis, yang lain kembali, sehingga <b>${P.finalist}</b> dicabut (sudah: ${got.finalist})`]] : []),
+            ...(classic ? [['🥉', 'Tinggal 3 → semua dicabut, yang terkena dapat <b>tempat ketiga</b>']] : P.third ? [['🥉', `Tinggal ${P.third + P.runnerUp + P.champion} → peringkat ketiga: yang terkena dapat tempat ketiga, yang lain kembali, sehingga <b>${P.third}</b> dicabut`]] : []),
+            classic ? ['👑', 'Tinggal 2 → semua dicabut, yang terkena ialah <b>Johan</b>, seorang lagi <b>naib johan</b>']
+                    : ['👑', `Tinggal ${P.runnerUp + P.champion} → final: yang terkena ialah <b>Johan</b> (${P.champion} orang), selebihnya <b>naib johan</b>`],
+          ];
+        },
         fair: '🔒 Nombor diberi secara rawak hanya semasa pendedahan — tiada siapa boleh memilih pemenang lebih awal',
       },
     };
@@ -1494,40 +1571,41 @@
         if (tooltip) tooltip.innerHTML = `<div class="text-slate-400">${T.offTip}</div>`;
         return;
       }
-      const isM2 = state.modeConfig.selectedMode === 'mode2';
-      const N = DrawLogic.consolationN(state);
+      const mode = state.modeConfig.selectedMode || 'mode1';
+      const P = DrawLogic.prizePlan(state);
+      const classic = DrawLogic.isClassicPodium(P);
       const ri = Math.max(0, Math.min(currentRoundIndex, (state.rounds || []).length - 1));
       const round = (state.rounds || [])[ri] || { candidates: [] };
       const stage = DrawLogic.getRoundStage(state, ri);
       const cs = round.candidates || [];
       const pend = cs.filter(c => c.status === 'pending').length;
       const won = cs.filter(c => c.status === 'pass').length;
-      const consGot = DrawLogic.countConsolation(state);
+      const got = { consolation: DrawLogic.countRank(state, 'rankConsolation'), finalist: DrawLogic.countRank(state, 'rankFinalist') };
       const nextSize = DrawLogic.plannedGroupSize(state, ri);
       const finished = DrawLogic.isTournamentFinished(state);
-      const stageName = T.stage[stage] || tr(`第 ${ri + 1} 轮`);
+      const stageName = (stage === 'third' && !(classic && cs.length === 3) ? T.stage.thirdN : T.stage[stage]) || tr(`第 ${ri + 1} 轮`);
 
-      badge.innerText = `${T.badge(isM2)} · ${finished ? T.done : stageName}`;
+      badge.innerText = `${T.badge(mode)} · ${finished ? T.done : stageName}`;
       if (!tooltip) return;
 
       let now;
       if (finished) now = T.finishedNow;
-      else if (stage === 'third') now = T.third;
-      else if (stage === 'final') now = T.final;
-      else if (stage === 'consolation') now = T.cons(cs.filter(c => c.rankKey === 'rankConsolation').length, N, nextSize || 4);
+      else if (stage === 'third' && classic && cs.length === 3) now = T.third;
+      else if (stage === 'final' && classic && cs.length === 2) now = T.final;
+      else if (stage !== 'normal') now = T.tier(stage, DrawLogic.stageGot(state, ri), DrawLogic.stageNeed(state, ri), nextSize || 4);
       else now = T.normal(pend, won, nextSize);
       const route = finished ? '' : DrawLogic.roadmap(state, ri)
         .map(x => `<span class="whitespace-nowrap">${escapeHtml(tr(x.label))} <b>${T.unit(x.n)}</b></span>`).join(' <span class="text-slate-500">→</span> ');
 
       tooltip.innerHTML = `
-        <div class="mt-row"><b>${T.title(isM2, N)}</b></div>
+        <div class="mt-row"><b>${T.title(mode, P) || T.title('mode1', P)}</b></div>
         <div class="rounded border border-amber-500/40 bg-amber-950/30 p-2">
           <div class="text-[10px] font-black text-amber-400 mb-1">${T.progress} · ${finished ? T.done : stageName}</div>
           <div class="text-[11px] leading-relaxed">${now}</div>
           ${route ? `<div class="text-[10px] text-slate-300 mt-1.5 leading-relaxed">${route}</div>` : ''}
         </div>
         <div class="text-[10px] font-black text-slate-400 mt-1">${T.how}</div>
-        ${T.steps(isM2, N, consGot).map(([i, t]) => `<div class="mt-row text-[11px] leading-snug"><span class="mr-1">${i}</span>${t}</div>`).join('')}
+        ${T.steps(P, got).map(([i, t]) => `<div class="mt-row text-[11px] leading-snug"><span class="mr-1">${i}</span>${t}</div>`).join('')}
         <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400">${T.fair}</div>`;
     }
 
@@ -1720,9 +1798,11 @@ function revealPKWinnerFromPublic() {
       const r = state.rounds[idx];
       if (!r) return `第 ${idx + 1} 轮`;
       const st = DrawLogic.getRoundStage(state, idx);
+      const classic = DrawLogic.isClassicPodium(DrawLogic.prizePlan(state));
       if (st === 'consolation') return `🎁 安慰奖遴选阶段`;
-      if (st === 'final') return `👑 冠亚军终极决战`;
-      if (st === 'third') return `🏆 冠亚季争夺战`;
+      if (st === 'finalist') return `🎖️ 入围奖遴选阶段`;
+      if (st === 'final') return classic ? `👑 冠亚军终极决战` : `👑 冠亚军决战`;
+      if (st === 'third') return classic ? `🏆 冠亚季争夺战` : `🥉 季军遴选阶段`;
       return `第 ${idx + 1} 轮`;
     }
     function renderRoundTabs() {
@@ -1945,20 +2025,18 @@ function revealPKWinnerFromPublic() {
           '</div>';
         }).join('');
       }
-      const cPanel = document.getElementById('publicConsolationWinnerPanel');
-      const cList = document.getElementById('publicConsolationListContainer');
-      const cBadge = document.getElementById('publicConsolationCountBadge');
-      if (cPanel && cList && cBadge) {
-        const cons = [];
-        (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => {
-          if (c.rankKey === 'rankConsolation' || c.rankTitle === '🎁 安慰奖') cons.push(c);
-        }));
-        if (cons.length > 0) {
-          cPanel.classList.remove('hidden');
-          cBadge.innerText = cons.length;
-          cList.innerHTML = cons.map((c, i) => `<div class="plat-host px-3 py-2 bg-emerald-950/70 border border-emerald-500/40 rounded flex items-center space-x-2 text-xs shadow-sm mt-1.5">${platMark(c.orderNo)}<span class="bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap flex-shrink-0">#${i+1}安慰奖</span><span class="passed-card-name font-bold text-emerald-300 text-base">${nameHtml(c.name)}</span><span class="passed-card-order text-slate-400 font-mono text-xs">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
-        } else cPanel.classList.add('hidden');
-      }
+      const prizePanel = (panelId, listId, badgeId, key, tag, card, tagCls, nameCls) => {
+        const panel = document.getElementById(panelId), box = document.getElementById(listId), badge = document.getElementById(badgeId);
+        if (!panel || !box || !badge) return;
+        const list = [];
+        (state.rounds || []).forEach(r => (r.candidates || []).forEach(c => { if (c.rankKey === key || (key === 'rankConsolation' && c.rankTitle === '🎁 安慰奖')) list.push(c); }));
+        if (!list.length) { panel.classList.add('hidden'); return; }
+        panel.classList.remove('hidden');
+        badge.innerText = list.length;
+        box.innerHTML = list.map((c, i) => `<div class="plat-host px-3 py-2 ${card} rounded flex items-center space-x-2 text-xs shadow-sm mt-1.5">${platMark(c.orderNo)}<span class="${tagCls} font-black px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap flex-shrink-0">#${i+1}${tag}</span><span class="passed-card-name font-bold ${nameCls} text-base">${nameHtml(c.name)}</span><span class="passed-card-order text-slate-400 font-mono text-xs">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</span></div>`).join('');
+      };
+      prizePanel('publicFinalistWinnerPanel', 'publicFinalistListContainer', 'publicFinalistCountBadge', 'rankFinalist', '入围奖', 'bg-sky-950/70 border border-sky-500/40', 'bg-sky-400 text-slate-950', 'text-sky-200');
+      prizePanel('publicConsolationWinnerPanel', 'publicConsolationListContainer', 'publicConsolationCountBadge', 'rankConsolation', '安慰奖', 'bg-emerald-950/70 border border-emerald-500/40', 'bg-emerald-500 text-slate-950', 'text-emerald-300');
 
       const pendingContainer = document.getElementById('pendingGridContainer');
       const pendingList = list.filter(c => c.status === 'pending');
@@ -1982,9 +2060,11 @@ function revealPKWinnerFromPublic() {
           }
           const folderTabHtml = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
           cardsHtml += `<div class="plat-host pool-card px-2.5 pt-3 pb-2 rounded-md border ${extraStyle} shadow min-w-0">` + folderTabHtml + pkBadge + platMark(c.orderNo) +
-            '<div class="flex items-baseline min-w-0"><span class="text-[10px] font-mono text-slate-400 flex-shrink-0 mr-2">#' + (index + 1) + '</span>' +
+            '<div class="pool-id">' +
+              '<div class="flex items-baseline min-w-0 self-start max-w-full"><span class="text-[10px] font-mono text-slate-400 flex-shrink-0 mr-2">#' + (index + 1) + '</span>' +
               '<span class="font-bold text-slate-100 text-xs sm:text-sm truncate">' + nameHtml(c.name) + '</span></div>' +
-            '<div class="text-[10px] text-amber-400/80 font-mono mt-0.5 truncate">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</div>' +
+              '<div class="pool-order text-[10px] text-amber-400/80 font-mono mt-0.5">' + escapeHtml(maskOrder(c.orderNo) || '无订单号') + '</div>' +
+            '</div>' +
           '</div>';
         });
         pendingContainer.innerHTML = '<div class="pool-grid">' + cardsHtml + '</div>';
@@ -2067,8 +2147,8 @@ function revealPKWinnerFromPublic() {
                 const pk = __poolPkIds.has(String(c.id));
                 const tab = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
                 return `<div class="plat-host px-2.5 pt-3 pb-2 rounded-md border ${pk ? 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50' : 'border-slate-700 bg-slate-800/80'} min-w-0">${tab}${pk ? '<span class="pool-pk-badge text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded">🔥 PK中</span>' : ''}${platMark(c.orderNo)}
-                  <div class="flex items-baseline min-w-0"><span class="text-[11px] font-mono text-slate-400 flex-shrink-0 mr-2">#${no}</span><span class="font-bold text-slate-100 text-sm truncate">${nameHtml(c.name)}</span></div>
-                  <div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div>
+                  <div class="pool-id"><div class="flex items-baseline min-w-0 self-start max-w-full"><span class="text-[11px] font-mono text-slate-400 flex-shrink-0 mr-2">#${no}</span><span class="font-bold text-slate-100 text-sm truncate">${nameHtml(c.name)}</span></div>
+                  <div class="pool-order text-[11px] text-amber-400/80 font-mono mt-0.5">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div></div>
                 </div>`; }).join('')}
             </div>`;
         return;
