@@ -1,0 +1,14 @@
+{
+  "name": "Mochii Hub",
+  "short_name": "Hub",
+  "description": "The Mochii Shop admin hub",
+  "start_url": "/hub/",
+  "scope": "/hub/",
+  "display": "standalone",
+   "background_color": "#fff7f9",
+  "theme_color": "#1c1722",
+  "icons": [
+    { "src": "/assets/images/launchericon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/images/launchericon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

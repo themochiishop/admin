@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#1c1722">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mochii Hub">
+  <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+  <link rel="icon" href="/assets/images/logo.png">
+    <link rel="manifest" href="/hub/manifest.json">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <title>Mochii Hub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f4f1f5; color: #2b2430; line-height: 1.5; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+    .top { background: #1c1722; color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 2px solid #c9a45c; }
+    .top h1 { font-size: 1rem; }
+    .top .r { display: flex; gap: 10px; align-items: center; font-size: .78rem; color: #cfc6d4; min-width: 0; }
+    #who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+    .logout { background: none; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 16px 14px 40px; }
+    .card { background: #fff; border: 1px solid #e9e2e6; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+    .card h2 { font-size: .74rem; letter-spacing: 2px; text-transform: uppercase; color: #8b8190; margin-bottom: 12px; }
+
+    .st { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: #f4f1f5; border-left: 4px solid #9a909f; margin-bottom: 14px; }
+    .st.on { background: #fff5f6; border-left-color: #e11d48; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; background: #9a909f; flex-shrink: 0; }
+    .st.on .dot { background: #e11d48; animation: pulse 1.4s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(225,29,72,.55); } 70% { box-shadow: 0 0 0 10px rgba(225,29,72,0); } 100% { box-shadow: 0 0 0 0 rgba(225,29,72,0); } }
+    #stT { font-weight: 700; }
+    .st.on #stT { color: #e11d48; }
+    #stS { font-size: .82rem; color: #7a6f80; }
+
+    .plats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .plat { border: 2px solid #e9e2e6; background: #fff; border-radius: 12px; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; font: inherit; font-weight: 600; cursor: pointer; color: #2b2430; }
+    .plat img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #fff; border: 1px solid #e9e2e6; }
+    .plat .tag { font-size: .7rem; font-weight: 500; color: #8b8190; }
+    .plat.on { border-color: #e11d48; background: #fff5f6; }
+    .plat.on .tag { color: #e11d48; font-weight: 700; }
+
+    select, textarea, input[type=text], input[type=email], input[type=password] { width: 100%; padding: 12px; border: 1px solid #d8d0db; border-radius: 8px; font: inherit; background: #fff; }
+    textarea { min-height: 96px; resize: vertical; }
+    #dur { margin-bottom: 14px; }
+    #tpl { margin-bottom: 10px; }
+    .urlrow { margin-bottom: 10px; }
+    .urlrow label, .fld label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 4px; }
+    .urlrow .in { display: flex; gap: 8px; }
+    .urlrow input { flex: 1; min-width: 0; }
+    .pbtn { flex: 0 0 auto; padding: 0 14px; border: 1px solid #d8d0db; background: #fff; border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+    .fld { margin-top: 12px; }
+
+    .big { width: 100%; padding: 16px; border: 0; border-radius: 12px; font: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer; color: #fff; background: #e11d48; }
+    .big:disabled { opacity: .6; }
+    .sec { width: 100%; padding: 12px; border: 1px solid #d8d0db; border-radius: 10px; background: #fff; font: inherit; font-weight: 600; cursor: pointer; margin-top: 10px; color: #2b2430; text-align: center; text-decoration: none; display: block; }
+    .sec:disabled { opacity: .6; }
+    .sec.dark { background: #1c1722; border-color: #1c1722; color: #fff; }
+    .msg { font-size: .88rem; margin-top: 12px; min-height: 1.3em; }
+    .msg.ok { color: #1d8a38; } .msg.err { color: #c0392b; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .two .sec { margin-top: 10px; }
+
+    details.tplbox { margin-top: 14px; border-top: 1px solid #f0eaee; padding-top: 12px; }
+    details.tplbox summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
+    .tlist { margin-top: 10px; }
+    .trow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid #f0eaee; }
+    .trow:first-child { border-top: 0; }
+    .tname { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tsub { display: block; font-weight: 400; font-size: .74rem; color: #8b8190; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tuse { font-size: .68rem; color: #e11d48; font-weight: 700; margin-left: 6px; }
+    .tb { flex: 0 0 auto; padding: 6px 10px; border: 1px solid #d8d0db; background: #fff; border-radius: 8px; font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; }
+    .tb.del { color: #c0392b; border-color: #e8b4ad; }
+    .teditor { margin-top: 14px; padding: 14px; background: #faf7fb; border: 1px solid #ebe3ee; border-radius: 10px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .chip { border: 1px solid #d8d0db; background: #fff; border-radius: 999px; padding: 4px 10px; font: inherit; font-size: .78rem; cursor: pointer; }
+    .hint { font-size: .76rem; color: #8b8190; margin-top: 6px; }
+
+    .links a { display: flex; justify-content: space-between; align-items: center; padding: 14px 2px; border-top: 1px solid #f0eaee; color: #2b2430; text-decoration: none; font-weight: 600; }
+    .links a:first-of-type { border-top: 0; }
+    .links a span:last-child { color: #c9a45c; }
+
+    #loginView { max-width: 380px; margin: 90px auto; padding: 0 16px; }
+    #loginView .card { text-align: center; }
+    #loginView label { display: block; text-align: left; font-size: .85rem; font-weight: 600; margin: 14px 0 6px; }
+    #loginView .big { margin-top: 18px; background: #1c1722; }
+           body.loading { background: #1c1722; }
+    body.loading #loginView, body.loading #mainView { display: none; }
+        details.fold > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: .74rem; letter-spacing: 2px; text-transform: uppercase; color: #8b8190; font-weight: 700; }
+    details.fold > summary::-webkit-details-marker { display: none; }
+    details.fold > summary::after { content: "展开 ▾"; letter-spacing: 0; text-transform: none; font-weight: 600; font-size: .82rem; color: #2b2430; }
+    details.fold[open] > summary::after { content: "收起 ▴"; }
+    details.fold[open] > summary { margin-bottom: 12px; }
+
+    .cfm { position: fixed; inset: 0; z-index: 100; background: rgba(12,8,16,.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .cfm-card { width: 100%; max-width: 380px; background: #fff; border-radius: 14px; border-top: 3px solid #e11d48; padding: 20px; }
+    .cfm-card h3 { font-size: 1.1rem; margin-bottom: 10px; }
+    .cfm-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid #f0eaee; font-size: .88rem; }
+    .cfm-row span { color: #8b8190; flex-shrink: 0; }
+    .cfm-row strong { text-align: right; font-weight: 600; word-break: break-word; }
+    .cfm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  </style>
+</head>
+<body class="loading">
+
+<div id="loginView">
+  <div class="card">
+    <h1 style="font-size:1.3rem;margin-bottom:4px;">Mochii Hub</h1>
+    <p style="color:#8b8190;font-size:.85rem;">仅限管理员</p>
+    <label for="em">邮箱</label>
+    <input type="email" id="em" autocomplete="username">
+    <label for="pw">密码</label>
+    <input type="password" id="pw" autocomplete="current-password">
+    <button class="big" id="loginBtn">登录</button>
+    <div class="msg err" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="mainView" hidden>
+  <div class="top">
+    <h1>Mochii Hub</h1>
+    <div class="r"><span id="who"></span><button class="logout" id="logout">退出</button></div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>直播</h2>
+      <div class="st" id="st">
+        <div class="dot"></div>
+        <div><div id="stT">未直播</div><div id="stS"></div></div>
+      </div>
+
+      <div class="plats" id="plats"></div>
+      <div id="urls"></div>
+
+      <select id="dur" aria-label="自动下线时间">
+        <option value="120">2 小时后自动下线</option>
+        <option value="180">3 小时后自动下线</option>
+        <option value="240">4 小时后自动下线</option>
+        <option value="360">6 小时后自动下线</option>
+        <option value="0">不自动下线</option>
+      </select>
+
+      <button class="big" id="goBtn">开始直播</button>
+      <button class="sec" id="endBtn" hidden>结束直播</button>
+      <div class="msg" id="msg" aria-live="polite"></div>
+    </div>
+
+       <details class="card fold" id="noticeBox">
+      <summary>开播通知</summary>
+      <select id="tpl" aria-label="使用的通知模板"></select>
+
+      <div class="fld" id="fTitle" hidden>
+        <label for="title">临时改标题(留空 = 使用模板里的标题)</label>
+        <input type="text" id="title">
+      </div>
+      <div class="fld" id="fCode" hidden>
+        <label for="code">优惠码</label>
+        <input type="text" id="code" placeholder="只显示在通知里,不会放到网站">
+      </div>
+
+      <div class="fld">
+        <label for="notice">通知内容(可以再手动修改)</label>
+        <textarea id="notice" style="min-height:220px"></textarea>
+      </div>
+
+      <div class="two">
+        <button class="sec dark" id="copyBtn">复制通知</button>
+        <a class="sec" id="waLink" href="https://whatsapp.com/channel/0029Vb7zsqb8F2pABPvoOR2I" target="_blank" rel="noopener">打开 WhatsApp 频道</a>
+      </div>
+
+      <details class="tplbox" id="tplBox">
+        <summary>管理模板</summary>
+        <div class="tlist" id="tplList"></div>
+        <button class="sec" id="tplNew">＋ 新建空白模板</button>
+
+        <div class="teditor" id="tplEditor" hidden>
+          <div class="fld" style="margin-top:0">
+            <label for="tplName">模板名称</label>
+            <input type="text" id="tplName" maxlength="100" placeholder="例如 模板1">
+            <p class="hint">只用来在下拉菜单里选择,不会出现在通知内容里。</p>
+          </div>
+          <div class="fld">
+            <label for="tplTitle">标题(自动代入内容里的 {title})</label>
+            <input type="text" id="tplTitle" placeholder="例如 Gelang Premium Live">
+          </div>
+          <div class="fld">
+            <label for="tplBody">模板内容</label>
+            <div class="chips" id="chips"></div>
+            <textarea id="tplBody" style="min-height:220px"></textarea>
+            <p class="hint">点上面的占位符,会插入到光标位置。要点"保存模板"才会生效。</p>
+          </div>
+          <div class="two">
+            <button class="sec dark" id="tplSave">保存模板</button>
+            <button class="sec" id="tplCancel">取消</button>
+          </div>
+        </div>
+
+        <div class="msg" id="tplMsg" aria-live="polite"></div>
+        <p class="hint" id="tplNote" hidden>模板目前只保存在这台设备。要在手机和电脑同步,请先在 Firebase 规则里加上 hub。</p>
+        </details>
+    </details>
+
+
+    <div class="card links">
+      <h2>入口</h2>
+      <a href="https://admin.themochiishop.com/" target="_blank" rel="noopener"><span>工具与控制台 Dashboard</span><span>→</span></a>
+      <a href="/home-editor/"><span>网站后台编辑</span><span>→</span></a>
+      <a href="https://admin.themochiishop.com/member-system/index.html"><span>Mochiishop/admin · 会员系统</span><span>→</span></a>
+      <a href="/" target="_blank" rel="noopener"><span>查看网站</span><span>→</span></a>
+    </div>
+  </div>
+</div>
+<div class="cfm" id="cfm" hidden role="dialog" aria-modal="true" aria-labelledby="cfmT">
+  <div class="cfm-card">
+    <h3 id="cfmT">确认开始直播?</h3>
+    <div id="cfmBody"></div>
+    <div class="cfm-btns">
+      <button class="sec" id="cfmNo" style="margin-top:0">取消</button>
+      <button class="big" id="cfmYes" style="margin-top:0">确认开播</button>
+    </div>
+  </div>
+</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getDatabase, ref, onValue, update, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyDJrsKAjWqz0AmjEtBzz4CeswiskdQqASw",
+    authDomain: "admin-status-c3bdb.firebaseapp.com",
+    databaseURL: "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "admin-status-c3bdb",
+    storageBucket: "admin-status-c3bdb.firebasestorage.app",
+    messagingSenderId: "377694458194",
+    appId: "1:377694458194:web:71a78ba5dbed4df1b1aa8b"
+  });
+  const auth = getAuth(app), db = getDatabase(app);
+  const $ = s => document.querySelector(s);
+
+  const PLATS = {
+    shopee:   { name: 'Shopee',   img: '/assets/images/logo-shopee.png' },
+    tiktok:   { name: 'TikTok',   img: '/assets/images/tiktok.png' },
+    facebook: { name: 'Facebook', img: '/assets/images/Facebook_logo.png' }
+  };
+  const FALLBACK = 'https://www.themochiishop.com/live-stream/';
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  const DEFAULT_TPL = [{
+    id: 't1', name: 'Shopee Live 通知', title: 'Gelang Premium Live', ts: 0,
+    body: `{title}\n\nDon't miss out!\n\nJoin our Shopee Live here：\n{link}\n━━━━━━━━\nCustomer Support:\nhttps://wa.me/60177503767\nSee you there!`
+  }];
+
+  const sel = new Set(String(store.get('hubSel', 'shopee')).split(',').filter(k => PLATS[k]));
+  if (!sel.size) sel.add('shopee');
+  const chosen = () => Object.keys(PLATS).filter(k => sel.has(k));
+  $('#dur').value = store.get('hubDur', '180');
+  if (!$('#dur').value) $('#dur').value = '180';
+
+  let cfg = {}, remoteOk = true;
+  let tpls = DEFAULT_TPL.map(x => ({ ...x }));
+  let st = { tpl: 't1', title: '', code: '' };
+  const urls = { shopee: '', tiktok: '', facebook: '' };
+  let urlsAt = 0;
+  let editing = null, lastDel = null, undoT;
+  const curTpl = () => tpls.find(x => x.id === st.tpl) || tpls[0];
+  const newId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+  const normTpl = x => ({ id: String(x.id), name: String(x.name || '未命名'), title: String(x.title || ''), body: x.body, ts: Number(x.ts) || 0 });
+
+  const cleanUrl = u => { const m = String(u || '').match(/https?:\/\/[^\s]+/i); return m ? m[0].replace(/[)）\]】>,，。.!！、]+$/, '') : ''; };
+  const liveList = () => {
+    const until = Number(cfg.liveUntil) || 0;
+    if (until && Date.now() >= until) return [];
+    return String(cfg.livePlatforms || '').split(',').filter(k => PLATS[k]);
+  };
+  const fmtTime = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const left = ms => { const m = Math.max(0, Math.round(ms / 60000)), h = Math.floor(m / 60); return h ? h + ' 小时 ' + (m % 60) + ' 分' : m + ' 分'; };
+  const say = (t, ok = true) => { const m = $('#msg'); m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
+  const sayT = (t, ok = true) => { const m = $('#tplMsg'); m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
+
+  /* ---------- 保存 / 读取 ---------- */
+  const tplVal = t => ({ name: t.name, title: t.title || '', body: t.body, ts: t.ts || 0 });
+  const stateObj = () => ({ tpl: st.tpl, code: st.code, urls: { shopee: urls.shopee, tiktok: urls.tiktok, facebook: urls.facebook }, urlsAt });
+  const saveLocal = () => store.set('hubData', JSON.stringify({ templates: tpls, state: stateObj() }));
+  async function remote(fn) {
+    if (!auth.currentUser) return;
+    try { await fn(); remoteOk = true; } catch (e) { remoteOk = false; }
+    $('#tplNote').hidden = remoteOk;
+  }
+  let stT;
+  function persistState() {
+    saveLocal(); clearTimeout(stT);
+    stT = setTimeout(() => remote(() => set(ref(db, 'hub/state'), stateObj())), 600);
+  }
+  function applyState(s) {
+    s = s || {};
+    st.tpl = tpls.some(x => x.id === s.tpl) ? s.tpl : tpls[0].id;
+    st.code = typeof s.code === 'string' ? s.code : '';
+    urlsAt = Number(s.urlsAt) || 0;
+    const fresh = Date.now() - urlsAt < 12 * 3600 * 1000;
+    Object.keys(urls).forEach(k => { urls[k] = fresh && s.urls && typeof s.urls[k] === 'string' ? s.urls[k] : ''; });
+  }
+  let localTpls = [];
+  try {
+    const d = JSON.parse(store.get('hubData', 'null'));
+    if (d) {
+      const ok = (Array.isArray(d.templates) ? d.templates : []).filter(x => x && x.id && typeof x.body === 'string').map(normTpl);
+      if (ok.length) tpls = ok;
+      applyState(d.state);
+    }
+  } catch (e) {}
+  localTpls = tpls.map(x => ({ ...x }));
+
+  async function loadRemote() {
+    try {
+      const snap = await get(ref(db, 'hub'));
+      const v = snap.val() || {};
+      const raw = v.templates;
+      let list = [];
+      if (raw && typeof raw === 'object') {
+        list = Object.entries(raw).filter(([k, x]) => x && typeof x.body === 'string').map(([k, x]) => normTpl({ ...x, id: x.id || k }));
+      }
+      let write = Array.isArray(raw);
+      if (!list.length) { list = localTpls.map(x => ({ ...x })); write = true; }
+      list.sort((a, b) => a.ts - b.ts);
+      tpls = list;
+      if (write) { const o = {}; tpls.forEach(t => { o[t.id] = tplVal(t); }); await set(ref(db, 'hub/templates'), o); }
+      applyState(v.state || stateObj());
+      remoteOk = true;
+    } catch (e) { remoteOk = false; }
+    $('#tplNote').hidden = remoteOk;
+    saveLocal(); renderAll();
+  }
+
+  /* ---------- 通知文案 ---------- */
+  function fill(t) {
+    const names = chosen();
+    const u = k => (urls[k] || '').trim() || FALLBACK;
+    let link;
+    if (names.length <= 1) link = names.length ? u(names[0]) : FALLBACK;
+    else link = names.map(k => PLATS[k].name + ': ' + u(k)).join('\n');
+    const title = (st.title || '').trim() || (t.title || '').trim();
+    return String(t.body)
+      .replace(/\{title\}/g, title)
+      .replace(/\{link\}/g, link)
+      .replace(/\{shopee\}/g, u('shopee'))
+      .replace(/\{tiktok\}/g, u('tiktok'))
+      .replace(/\{facebook\}/g, u('facebook'))
+      .replace(/\{platform\}/g, names.map(k => PLATS[k].name).join(' + ') || 'our channels')
+      .replace(/\{code\}/g, (st.code || '').trim())
+      .replace(/^\s+/, '').replace(/\n{3,}/g, '\n\n');
+  }
+  function refreshNotice() { $('#notice').value = fill(curTpl()); }
+  function syncFields() {
+    const t = curTpl();
+    $('#fTitle').hidden = !t.body.includes('{title}');
+    $('#fCode').hidden = !t.body.includes('{code}');
+    $('#title').value = st.title;
+    $('#title').placeholder = t.title ? '使用模板标题:' + t.title : '这个模板还没填标题,可在这里临时填写';
+    $('#code').value = st.code;
+  }
+  $('#title').addEventListener('input', () => { st.title = $('#title').value; refreshNotice(); });
+  $('#code').addEventListener('input', () => { st.code = $('#code').value; persistState(); refreshNotice(); });
+
+  /* ---------- 平台、链接 ---------- */
+  function renderPlats() {
+    $('#plats').replaceChildren(...Object.keys(PLATS).map(k => {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'plat' + (sel.has(k) ? ' on' : '');
+      b.setAttribute('aria-pressed', sel.has(k) ? 'true' : 'false');
+      const im = document.createElement('img'); im.src = PLATS[k].img; im.alt = '';
+      const n = document.createElement('span'); n.textContent = PLATS[k].name;
+      const t = document.createElement('span'); t.className = 'tag'; t.textContent = sel.has(k) ? '已选择' : '点一下选择';
+      b.append(im, n, t);
+      b.onclick = () => {
+        if (sel.has(k)) sel.delete(k); else sel.add(k);
+        store.set('hubSel', chosen().join(','));
+        renderPlats(); renderUrls(); refreshNotice();
+      };
+      return b;
+    }));
+  }
+  function renderUrls() {
+    const box = $('#urls');
+    box.replaceChildren(...chosen().map(k => {
+      const row = document.createElement('div'); row.className = 'urlrow';
+      const lab = document.createElement('label'); lab.textContent = PLATS[k].name + ' 直播链接'; lab.htmlFor = 'u_' + k;
+      const wrap = document.createElement('div'); wrap.className = 'in';
+      const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'u_' + k; inp.inputMode = 'url';
+      inp.placeholder = '粘贴这场直播的链接 https://…'; inp.value = urls[k]; inp.autocomplete = 'off';
+      const set1 = () => {
+        const c = cleanUrl(inp.value);
+        if (c && c !== inp.value.trim()) inp.value = c;
+        urls[k] = c || inp.value.trim(); urlsAt = Date.now();
+        persistState(); refreshNotice();
+      };
+      inp.addEventListener('input', set1);
+      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'pbtn'; pb.textContent = '粘贴';
+      pb.onclick = async () => {
+        try {
+          const t = await navigator.clipboard.readText();
+          const c = cleanUrl(t);
+          if (!c) { say('剪贴板里没有找到链接', false); return; }
+          inp.value = c; set1(); say('已粘贴 ' + PLATS[k].name + ' 链接 ✓');
+        } catch (e) { say('无法读取剪贴板,请长按输入框手动粘贴', false); }
+      };
+      wrap.append(inp, pb); row.append(lab, wrap);
+      return row;
+    }));
+    box.hidden = !chosen().length;
+  }
+
+  /* ---------- 模板:使用 ---------- */
+  function renderTplSelect() {
+    $('#tpl').replaceChildren(...tpls.map(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; return o; }));
+    $('#tpl').value = st.tpl;
+  }
+  $('#tpl').addEventListener('change', () => { st.tpl = $('#tpl').value; st.title = ''; persistState(); renderTplList(); syncFields(); refreshNotice(); });
+
+  /* ---------- 模板:管理(要点"保存模板"才生效) ---------- */
+  function renderTplList() {
+    $('#tplList').replaceChildren(...tpls.map(t => {
+      const row = document.createElement('div'); row.className = 'trow';
+      const nm = document.createElement('div'); nm.className = 'tname'; nm.textContent = t.name;
+      if (t.id === st.tpl) { const u = document.createElement('span'); u.className = 'tuse'; u.textContent = '使用中'; nm.appendChild(u); }
+      if (t.title) { const s = document.createElement('span'); s.className = 'tsub'; s.textContent = '标题:' + t.title; nm.appendChild(s); }
+      const mk = (txt, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tb ' + cls; b.textContent = txt; b.onclick = fn; return b; };
+      row.append(nm,
+        mk('编辑', '', () => openEditor({ ...t }, false)),
+        mk('复制', '', () => openEditor({ id: newId(), name: t.name + ' 副本', title: t.title, body: t.body }, true)),
+        mk('删除', 'del', () => delTpl(t.id)));
+      return row;
+    }));
+  }
+  function openEditor(t, isNew) {
+    editing = { id: t.id, isNew };
+    $('#tplName').value = t.name; $('#tplTitle').value = t.title || ''; $('#tplBody').value = t.body;
+    $('#tplEditor').hidden = false; sayT('');
+    $('#tplEditor').scrollIntoView({ block: 'nearest' });
+    $('#tplName').focus();
+  }
+  function closeEditor() { editing = null; $('#tplEditor').hidden = true; }
+
+  $('#tplNew').onclick = () => openEditor({ id: newId(), name: '', title: '', body: '' }, true);
+  $('#tplCancel').onclick = () => { closeEditor(); sayT(''); };
+  $('#tplSave').onclick = () => {
+    if (!editing) return;
+    const name = $('#tplName').value.trim(), title = $('#tplTitle').value.trim(), body = $('#tplBody').value;
+    if (!name) { sayT('请先填写模板名称', false); return; }
+    if (!body.trim()) { sayT('模板内容不能为空', false); return; }
+    let t = tpls.find(x => x.id === editing.id);
+    if (t) { t.name = name; t.title = title; t.body = body; }
+    else { t = { id: editing.id, name, title, body, ts: Date.now() }; tpls.push(t); }
+    if (editing.isNew) { st.tpl = t.id; st.title = ''; }
+    saveLocal(); persistState();
+    remote(() => set(ref(db, 'hub/templates/' + t.id), tplVal(t)));
+    closeEditor();
+    renderTplSelect(); renderTplList(); syncFields(); refreshNotice();
+    sayT('已保存「' + name + '」✓');
+  };
+
+  function delTpl(id) {
+    if (tpls.length <= 1) { sayT('至少要保留一个模板', false); return; }
+    const t = tpls.find(x => x.id === id); if (!t) return;
+    if (!confirm('删除模板「' + t.name + '」?')) return;
+    tpls = tpls.filter(x => x.id !== id); lastDel = t;
+    if (st.tpl === id) { st.tpl = tpls[0].id; st.title = ''; }
+    if (editing && editing.id === id) closeEditor();
+    saveLocal(); persistState();
+    remote(() => set(ref(db, 'hub/templates/' + id), null));
+    renderTplSelect(); renderTplList(); syncFields(); refreshNotice();
+    const m = $('#tplMsg'); m.className = 'msg ok'; m.textContent = '已删除「' + t.name + '」 ';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = '撤销'; b.onclick = undoDel;
+    m.appendChild(b);
+    clearTimeout(undoT); undoT = setTimeout(() => { if (m.contains(b)) { m.textContent = ''; lastDel = null; } }, 12000);
+  }
+  function undoDel() {
+    if (!lastDel) return;
+    const t = lastDel; lastDel = null;
+    tpls.push(t); tpls.sort((a, b) => a.ts - b.ts);
+    saveLocal(); remote(() => set(ref(db, 'hub/templates/' + t.id), tplVal(t)));
+    renderTplSelect(); renderTplList();
+    sayT('已恢复「' + t.name + '」✓');
+  }
+  ['{title}', '{link}', '{shopee}', '{tiktok}', '{facebook}', '{platform}', '{code}'].forEach(p => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = p;
+    b.onclick = () => { const el = $('#tplBody'); el.setRangeText(p, el.selectionStart, el.selectionEnd, 'end'); el.focus(); };
+    $('#chips').appendChild(b);
+  });
+
+  /* ---------- 开播 / 结束 ---------- */
+  function renderStatus() {
+    const l = liveList(), until = Number(cfg.liveUntil) || 0;
+    $('#st').classList.toggle('on', l.length > 0);
+    $('#stT').textContent = l.length ? '正在直播 · ' + l.map(k => PLATS[k].name).join(' + ') : '未直播';
+    $('#stS').textContent = l.length
+      ? (until ? fmtTime(until) + ' 自动下线(还剩 ' + left(until - Date.now()) + ')' : '不会自动下线')
+      : '网站显示"Currently offline"';
+    $('#goBtn').textContent = l.length ? '更新直播' : '开始直播';
+    $('#endBtn').hidden = !l.length;
+  }
+  async function write(upd, okText) {
+    const btns = [$('#goBtn'), $('#endBtn')];
+    btns.forEach(b => b.disabled = true); say('保存中…');
+    try { await update(ref(db, 'homepage/config'), upd); say(okText + ' ' + fmtTime(Date.now())); return true; }
+    catch (e) { say(/permission/i.test(e.message) ? '没有权限:请确认这个账号的 UID 已写入 Firebase 规则' : '失败:' + e.message, false); return false; }
+    finally { btns.forEach(b => b.disabled = false); }
+  }
+    function ask(title, rows, yesText) {
+    return new Promise(resolve => {
+      $('#cfmT').textContent = title;
+      $('#cfmBody').replaceChildren(...rows.map(([k, v]) => {
+        const d = document.createElement('div'); d.className = 'cfm-row';
+        const a = document.createElement('span'); a.textContent = k;
+        const b = document.createElement('strong'); b.textContent = v;
+        d.append(a, b); return d;
+      }));
+      const yes = $('#cfmYes'), no = $('#cfmNo'), box = $('#cfm');
+      yes.textContent = yesText;
+      yes.disabled = true; setTimeout(() => { yes.disabled = false; }, 600);
+      box.hidden = false;
+      const onKey = e => { if (e.key === 'Escape') done(false); };
+      const done = v => {
+        box.hidden = true; document.removeEventListener('keydown', onKey);
+        yes.onclick = no.onclick = box.onclick = null; resolve(v);
+      };
+      document.addEventListener('keydown', onKey);
+      yes.onclick = () => done(true);
+      no.onclick = () => done(false);
+      box.onclick = e => { if (e.target === box) done(false); };
+    });
+  }
+
+  $('#goBtn').onclick = async () => {
+    const list = chosen();
+    if (!list.length) { say('请至少选择一个平台', false); return; }
+    const liveUrls = {};
+    for (const k of list) {
+      const u = (urls[k] || '').trim();
+      if (!u) continue;
+      if (!/^https:\/\//i.test(u)) { say(PLATS[k].name + ' 的链接要以 https:// 开头', false); return; }
+      liveUrls[k] = u;
+    }
+    const mins = Number($('#dur').value) || 0;
+    const already = liveList().length > 0;
+    const rows = [
+      ['平台', list.map(k => PLATS[k].name).join(' + ')],
+      ['直播链接', list.map(k => PLATS[k].name + (liveUrls[k] ? ' ✓' : ' 未粘贴')).join('、')],
+      ['自动下线', mins ? fmtTime(Date.now() + mins * 60000) + '(' + (mins / 60) + ' 小时后)' : '不自动下线']
+    ];
+    const ok = await ask(already ? '确认更新直播?' : '确认开始直播?', rows, already ? '确认更新' : '确认开播');
+    if (!ok) return;
+    store.set('hubDur', String(mins));
+       write({
+      livePlatforms: list.join(','), liveStatus: 'on',
+      liveUntil: mins ? Date.now() + mins * 60000 : null,
+      liveUrls: Object.keys(liveUrls).length ? liveUrls : null
+    }, '已开播 ✓').then(function (done) { if (done) $('#noticeBox').open = true; });
+  };
+  $('#endBtn').onclick = async () => {
+    const ok = await write({ livePlatforms: '', liveStatus: 'off', liveUntil: null, liveUrls: null }, '已结束直播 ✓');
+    if (ok) { Object.keys(urls).forEach(k => urls[k] = ''); urlsAt = 0; persistState(); renderUrls(); refreshNotice(); }
+  };
+
+  $('#copyBtn').onclick = async () => {
+    const t = $('#notice').value;
+    try { await navigator.clipboard.writeText(t); say('通知已复制 ✓'); }
+    catch (e) {
+      $('#notice').select();
+      try { document.execCommand('copy'); say('通知已复制 ✓'); } catch (e2) { say('请长按文字手动复制', false); }
+    }
+  };
+
+  onValue(ref(db, 'homepage/config'), snap => {
+    cfg = snap.val() || {};
+    if (/^https:\/\//i.test(cfg.whatsapp || '')) $('#waLink').href = cfg.whatsapp;
+    renderStatus();
+  });
+  setInterval(renderStatus, 30000);
+
+  function renderAll() { renderPlats(); renderUrls(); renderTplSelect(); renderTplList(); syncFields(); refreshNotice(); renderStatus(); }
+  renderAll();
+
+  /* ---------- 登录 ---------- */
+  $('#loginBtn').onclick = login;
+  $('#pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  async function login() {
+    const m = $('#loginMsg'); m.textContent = '';
+    try { await signInWithEmailAndPassword(auth, $('#em').value.trim(), $('#pw').value); }
+    catch (e) { m.textContent = '登录失败:邮箱或密码不正确'; }
+  }
+  $('#logout').onclick = () => signOut(auth);
+  onAuthStateChanged(auth, u => {
+    document.body.classList.remove('loading');    $('#loginView').hidden = !!u;
+    $('#mainView').hidden = !u;
+    $('#who').textContent = u ? (u.email || '') : '';
+    if (u) loadRemote();
+  });
+  setTimeout(() => document.body.classList.remove('loading'), 4000);</script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/hub/sw.js', { scope: '/hub/' }).catch(function () {});
+  }
+</script>
+</body>
+</html>
