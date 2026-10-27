@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 抽奖实时晋级大屏</title>
+    <meta name="description" content="Watch The Mochii Shop monthly draw live, in real time.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="The Mochii Shop">
+  <meta property="og:title" content="🔴 Live Draw - The Mochii Shop">
+  <meta property="og:description" content="Watch our monthly draw live, in real time.">
+  <meta property="og:image" content="https://www.themochiishop.com/assets/images/share-draw.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://admin.themochiishop.com/draw_tournament/index.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://www.themochiishop.com/assets/images/share-draw.jpg">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,900&text=TS&display=swap">
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -155,8 +166,10 @@
       color: #cbd5e1; background: #1e293b; border: 1px solid #475569; border-radius: 4px; flex-shrink: 0; transition: all .15s; }
     .zoom-btn:hover { color: #fff; background: #334155; border-color: #fbbf24; }
     /* 名单池：单号的最后一个字对齐名字的最后一个字 */
-    .pool-id { display: inline-flex; flex-direction: column; max-width: 100%; min-width: 0; vertical-align: top; }
-    .pool-id .pool-order { align-self: flex-end; text-align: right; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* 名单池：#N 在左，名字和单号上下左对齐 */
+    .pool-id { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; max-width: 100%; }
+    .pool-id > div:first-child { display: contents; }
+    .pool-id .pool-order { grid-column: 2; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pool-pk-badge { position: absolute; top: -9px; right: 6px; z-index: 2; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
     .plat-mark { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: -1; pointer-events: none; user-select: none;
       font-family: 'Playfair Display', 'Didot', 'Bodoni 72', Georgia, 'Times New Roman', serif; font-weight: 900; font-style: italic; line-height: 1; font-size: 2.6rem; opacity: .10; }
