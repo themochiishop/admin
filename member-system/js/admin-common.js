@@ -13,6 +13,14 @@ export function esc(s) {
 
 export const PLATFORM_LABELS = { tiktok: "TikTok", shopee: "Shopee" };
 
+// 优惠码格式：prefix 是平台固定的前缀；minLen / maxLen 是你要填的部分最少 / 最多几个字
+// 以后要加格式或改前缀，只改这里
+export const COUPON_FORMATS = [
+  { id: "shopee", label: "Shopee（THEM + 1–5 字）", prefix: "THEM", minLen: 1, maxLen: 5 },
+  { id: "tiktok", label: "TikTok（THEM + 2–8 字）", prefix: "THEM", minLen: 2, maxLen: 8 },
+  { id: "custom", label: "其他（填完整优惠码）",      prefix: "",     minLen: 1, maxLen: 30 },
+];
+
 // 会员等级（显示用；规则以 Google 表格同步脚本的 MS_TIERS 为准）
 export const TIER_LABELS = {
   mochii: "🍡 Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石"
