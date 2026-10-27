@@ -4,14 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mochiishop 每月抽奖 - 直播控制台</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&text=TS&display=swap">
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=10"></script>
-  <script src="i18n.js?v=6"></script>
+  <script src="logic.js?v=11"></script>
+  <script src="i18n.js?v=7"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -46,9 +47,9 @@
     /* 平台底纹字母：5 开头 TikTok → T，2 开头 Shopee → S */
     .plat-host { position: relative; isolation: isolate; }
     .plat-mark { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: -1; pointer-events: none; user-select: none;
-      font-family: 'Arial Black', 'Segoe UI Black', Impact, sans-serif; font-weight: 900; line-height: 1; font-size: 2.4rem; opacity: .10; }
-    .plat-mark.plat-T { color: #e2e8f0; }
-    .plat-mark.plat-S { color: #fb923c; opacity: .16; }
+      font-family: 'Pacifico', 'Brush Script MT', 'Segoe Script', cursive; font-weight: 400; font-style: normal; line-height: 1; font-size: 2.4rem; opacity: .10; }
+    .plat-mark.plat-T { color: #e2e8f0; opacity: .06; }
+    .plat-mark.plat-S { color: #fb923c; opacity: .09; }
     .plat-mark.sm { font-size: 1.05rem; right: 26px; }
     .plat-mark.lg { font-size: 3.6rem; }
     .pool-pk-badge { position: absolute; top: -9px; right: 6px; z-index: 2; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.4); }

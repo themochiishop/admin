@@ -4,13 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mochiishop 抽奖实时晋级大屏</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&text=TS&display=swap">
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=10"></script>
-  <script src="i18n.js?v=6"></script>
+  <script src="logic.js?v=11"></script>
+  <script src="i18n.js?v=7"></script>
   <style>
     @keyframes shuffleOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shuffleCardBurst {
@@ -150,11 +151,14 @@
     .out-card { padding: 6px 8px; font-size: 12px; line-height: 1.3; }
     /* 平台底纹字母 */
     .plat-host { position: relative; isolation: isolate; }
+    .zoom-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; font-size: 14px; line-height: 1;
+      color: #cbd5e1; background: #1e293b; border: 1px solid #475569; border-radius: 4px; flex-shrink: 0; transition: all .15s; }
+    .zoom-btn:hover { color: #fff; background: #334155; border-color: #fbbf24; }
     .pool-pk-badge { position: absolute; top: -9px; right: 6px; z-index: 2; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
     .plat-mark { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: -1; pointer-events: none; user-select: none;
-      font-family: 'Arial Black', 'Segoe UI Black', Impact, sans-serif; font-weight: 900; line-height: 1; font-size: 2.6rem; opacity: .10; }
-    .plat-mark.plat-T { color: #e2e8f0; }
-    .plat-mark.plat-S { color: #fb923c; opacity: .16; }
+      font-family: 'Pacifico', 'Brush Script MT', 'Segoe Script', cursive; font-weight: 400; font-style: normal; line-height: 1; font-size: 2.6rem; opacity: .10; }
+    .plat-mark.plat-T { color: #e2e8f0; opacity: .06; }
+    .plat-mark.plat-S { color: #fb923c; opacity: .09; }
     .plat-mark.sm { font-size: 1.15rem; right: 6px; }
     .plat-mark.lg { font-size: 4.5rem; right: 10px; }
     .plat-mark.xl { font-size: 5.5rem; right: 14px; }
@@ -469,9 +473,12 @@
                 <h2 class="text-xs sm:text-md font-bold text-amber-400">本轮待定买家池</h2>
                 <span class="text-[11px] sm:text-xs text-slate-300 ml-1 sm:ml-2">共 <span id="pendingNumberYellow" class="text-amber-400 font-bold text-xs sm:text-sm mx-0.5">0</span> 人</span>
               </div>
+              <div class="flex items-center gap-1.5">
+              <button type="button" onclick="openListModal('pool')" title="放大查看全部待定买家" aria-label="放大查看全部待定买家" class="zoom-btn">⤢</button>
               <div class="flex items-center bg-slate-900 border border-slate-700 rounded px-2 py-1 w-32 focus-within:w-48 focus-within:border-amber-400 transition-all duration-300 shadow-inner">
                 <span class="text-slate-400 text-xs flex-shrink-0">🔍</span>
                 <input type="search" id="searchInput" oninput="renderPublicView()" placeholder="搜索" class="bg-transparent border-none outline-none text-xs text-slate-200 w-full ml-1.5 focus:ring-0">
+              </div>
               </div>
             </div>
             <div id="pendingGridContainer" class="overflow-x-auto pb-2"></div>
@@ -482,7 +489,7 @@
             <div class="flex items-center space-x-1.5"><span class="text-xs sm:text-sm">❌</span><h3 class="text-xs font-bold text-slate-400">淘汰区</h3></div>
             <div class="flex items-center gap-1.5">
               <span id="outBadgeCount" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">0</span>
-              <button type="button" onclick="openOutModal()" title="放大查看淘汰名单" class="text-[11px] leading-none text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded px-1.5 py-1">⤢ 放大</button>
+              <button type="button" onclick="openListModal('out')" title="放大查看淘汰名单" aria-label="放大查看淘汰名单" class="zoom-btn">⤢</button>
             </div>
           </div>
           <div id="outListContainer" class="space-y-2 out-list-fit thin-scroll pr-1"></div>
@@ -495,8 +502,8 @@
   <div id="outModal" class="hidden fixed inset-0 z-[80] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6" onclick="if (event.target === this) closeOutModal()">
     <div class="bg-slate-900 border border-slate-600 rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
       <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-700">
-        <span class="text-lg">❌</span>
-        <h3 class="text-base sm:text-lg font-bold text-slate-200">淘汰区</h3>
+        <span id="listModalIcon" class="text-lg">❌</span>
+        <h3 id="listModalTitle" class="text-base sm:text-lg font-bold text-slate-200">淘汰区</h3>
         <span id="outModalCount" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">0</span>
         <div class="flex items-center bg-slate-950 border border-slate-700 rounded px-2 py-1 ml-auto w-40 sm:w-56 focus-within:border-amber-400">
           <span class="text-slate-400 text-xs">🔍</span>
@@ -1962,6 +1969,7 @@ function revealPKWinnerFromPublic() {
       } else {
         const currentGroupSigForPending = (state.activeGroupIds || []).map(id => String(id)).join(',') + '|' + (state.currentPollNumber || 0);
         const namesRevealedForPending = (currentGroupSigForPending === localNamesRevealedGroupSig) && (state.pkStage === 'revealed' || localScrambleDoneGroupSig === currentGroupSigForPending);
+        __poolPkIds = new Set(namesRevealedForPending ? (state.activeGroupIds || []).map(String) : []);
 
         let cardsHtml = '';
         pendingList.forEach((c, index) => {
@@ -2027,20 +2035,47 @@ function revealPKWinnerFromPublic() {
     // 买家名字：不翻译
     function nameHtml(x) { return `<span translate="no">${escapeHtml(x)}</span>`; }
     // —— 淘汰区放大 ——
-    function openOutModal() {
+    let __listModalKind = 'out';   // 'out' 淘汰区 | 'pool' 本轮待定买家池
+    let __poolPkIds = new Set();   // 名单池里已公开的 PK 中买家
+    function openListModal(kind) {
+      __listModalKind = kind;
+      const isPool = kind === 'pool';
+      document.getElementById('listModalIcon').textContent = isPool ? '⚡' : '❌';
+      document.getElementById('listModalTitle').textContent = isPool ? '本轮待定买家池' : '淘汰区';
+      document.getElementById('listModalTitle').className = 'text-base sm:text-lg font-bold ' + (isPool ? 'text-amber-400' : 'text-slate-200');
+      document.getElementById('outModalSearch').value = '';
       document.getElementById('outModal').classList.remove('hidden');
       renderOutModal();
     }
+    function openOutModal() { openListModal('out'); }
     function closeOutModal() { document.getElementById('outModal').classList.add('hidden'); }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOutModal(); });
     function renderOutModal() {
       const modal = document.getElementById('outModal');
       if (!modal || modal.classList.contains('hidden')) return;
       const q = (document.getElementById('outModalSearch').value || '').trim().toLowerCase();
+      const hit = c => !q || (c.name || '').toLowerCase().includes(q) || (c.orderNo || '').toLowerCase().includes(q);
+      if (__listModalKind === 'pool') {
+        const r = (state.rounds || [])[currentRoundIndex] || { candidates: [] };
+        const all = (r.candidates || []).filter(c => c.status === 'pending');
+        const list = all.map((c, i) => ({ c, no: i + 1 })).filter(x => hit(x.c));
+        document.getElementById('outModalCount').innerText = q ? `${list.length}/${all.length}` : all.length;
+        document.getElementById('outModalBody').innerHTML = list.length === 0
+          ? `<p class="text-sm text-slate-500 text-center py-10 italic">${all.length ? '没有符合的买家' : '本轮全员判定完毕'}</p>`
+          : `<div class="grid gap-x-2 gap-y-4 pt-2" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
+              ${list.map(({ c, no }) => {
+                const pk = __poolPkIds.has(String(c.id));
+                const tab = c.pollLabel ? `<div class="folder-tab ${String(c.pollLabel).startsWith('PICK') ? 'tab-pick' : ''}">${escapeHtml(c.pollLabel)}</div>` : '';
+                return `<div class="plat-host px-2.5 pt-3 pb-2 rounded-md border ${pk ? 'border-amber-400/80 bg-amber-950/30 ring-2 ring-amber-500/50' : 'border-slate-700 bg-slate-800/80'} min-w-0">${tab}${pk ? '<span class="pool-pk-badge text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded">🔥 PK中</span>' : ''}${platMark(c.orderNo)}
+                  <div class="flex items-baseline min-w-0"><span class="text-[11px] font-mono text-slate-400 flex-shrink-0 mr-2">#${no}</span><span class="font-bold text-slate-100 text-sm truncate">${nameHtml(c.name)}</span></div>
+                  <div class="text-[11px] text-amber-400/80 font-mono mt-0.5 truncate">${escapeHtml(maskOrder(c.orderNo) || '无订单号')}</div>
+                </div>`; }).join('')}
+            </div>`;
+        return;
+      }
       const grouped = {}; let total = 0;
       (state.rounds || []).forEach((r, rIdx) => (r.candidates || []).forEach(c => {
-        if (c.status !== 'out') return;
-        if (q && !(c.name || '').toLowerCase().includes(q) && !(c.orderNo || '').toLowerCase().includes(q)) return;
+        if (c.status !== 'out' || !hit(c)) return;
         const k = c.eliminatedRoundIndex !== undefined ? c.eliminatedRoundIndex : rIdx;
         (grouped[k] = grouped[k] || []).push(c); total++;
       }));
