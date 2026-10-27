@@ -11,8 +11,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="logic.js?v=13"></script>
-  <script src="i18n.js?v=9"></script>
+  <script src="logic.js?v=14"></script>
+  <script src="i18n.js?v=10"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -103,6 +103,12 @@
   </div>
 
   <header class="bg-slate-800 border-b border-slate-700 relative md:sticky md:top-0 z-40 shadow-lg">
+    <div id="testModeBar" class="hidden bg-fuchsia-700 text-white text-xs font-bold px-4 py-1.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+      <span>🧪 测试场 · 这里的所有操作观众都看不到</span>
+      <span class="font-normal opacity-90">测试大屏：<a href="https://www.themochiishop.com/live-draw/?test=1" target="_blank" rel="noopener" class="underline">www.themochiishop.com/live-draw/?test=1</a></span>
+      <button onclick="copyTestBoardUrl()" class="px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded">📋 复制</button>
+      <button onclick="toggleTestMode()" class="px-2 py-0.5 bg-white text-fuchsia-700 hover:bg-fuchsia-50 rounded">🏁 结束测试</button>
+    </div>
     <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🎬</span>
@@ -123,6 +129,7 @@
           <button onclick="setLanguage('en')" id="langBtn-en" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukc"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#ukc)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg><span class="text-[10px]">EN</span></button>
           <button onclick="setLanguage('ms')" id="langBtn-ms" class="px-2 py-1 text-xs rounded transition flex items-center space-x-1"><svg class="lang-flag" viewBox="0 0 28 14" aria-hidden="true"><rect width="28" height="14" fill="#fff"/><rect y="0" width="28" height="1" fill="#CC0001"/><rect y="2" width="28" height="1" fill="#CC0001"/><rect y="4" width="28" height="1" fill="#CC0001"/><rect y="6" width="28" height="1" fill="#CC0001"/><rect y="8" width="28" height="1" fill="#CC0001"/><rect y="10" width="28" height="1" fill="#CC0001"/><rect y="12" width="28" height="1" fill="#CC0001"/><rect width="14" height="8" fill="#010066"/><circle cx="5.2" cy="4" r="2.9" fill="#FC0"/><circle cx="6.1" cy="4" r="2.45" fill="#010066"/><path fill="#FC0" d="M10.2 1.9l.45 1.4 1.4-.6-.75 1.3 1.45.35-1.45.35.75 1.3-1.4-.6-.45 1.4-.45-1.4-1.4.6.75-1.3-1.45-.35 1.45-.35-.75-1.3 1.4.6z"/></svg><span class="text-[10px]">MS</span></button>
         </div>
+        <button id="testModeBtn" onclick="toggleTestMode()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-fuchsia-300 text-xs font-bold rounded border border-slate-600 transition shadow" title="测试场：观众完全看不到">🧪 测试场</button>
         <button onclick="openRecordsModal()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded border border-slate-600 transition shadow" title="开奖记录、备份与历史存档">📋 记录</button>
         <button id="claimsBtn" onclick="openClaimsModal()" class="hidden px-2.5 py-1 bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold rounded border border-sky-500 transition shadow" title="得奖者联系与寄送进度">🎁 领奖</button>
         <button id="exportPdfBtn" onclick="exportResultsToPDF()" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded transition shadow-lg animate-pulse flex items-center space-x-1">
@@ -490,6 +497,34 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    // 🧪 测试场：开关存在这台电脑，打开后所有读写都走测试那一格，观众的正式大屏不受影响
+    const IS_TEST = (() => { try { return localStorage.getItem('mochii_admin_test') === '1'; } catch (e) { return false; } })();
+    const PATHS = DrawLogic.pathsFor(IS_TEST);
+    const TEST_BOARD_URL = 'https://www.themochiishop.com/live-draw/?test=1';
+    function toggleTestMode() {
+      const msg = IS_TEST
+        ? '🏁 结束测试，回到【正式场】？\n\n测试场的数据会保留，下次进入测试场还在。'
+        : '🧪 进入【测试场】？\n\n• 所有操作只影响测试数据，观众的正式大屏完全看不到\n• 名单会用系统生成的假名单\n• 测试大屏网址：' + TEST_BOARD_URL;
+      if (!confirm(msg)) return;
+      try { localStorage.setItem('mochii_admin_test', IS_TEST ? '0' : '1'); } catch (e) {}
+      location.reload();
+    }
+    function copyTestBoardUrl() {
+      (navigator.clipboard ? navigator.clipboard.writeText(TEST_BOARD_URL) : Promise.reject())
+        .then(() => alert('✅ 已复制测试大屏网址'), () => prompt('复制测试大屏网址：', TEST_BOARD_URL));
+    }
+    function applyTestModeUI() {
+      const bar = document.getElementById('testModeBar'), btn = document.getElementById('testModeBtn');
+      if (btn) {
+        btn.innerHTML = IS_TEST ? '🏁 结束测试' : '🧪 测试场';
+        btn.className = IS_TEST
+          ? 'px-2.5 py-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs font-bold rounded border border-fuchsia-400 transition shadow'
+          : 'px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-fuchsia-300 text-xs font-bold rounded border border-slate-600 transition shadow';
+      }
+      if (bar) bar.classList.toggle('hidden', !IS_TEST);
+      if (IS_TEST && !/^🧪/.test(document.title)) document.title = '🧪 测试 · ' + document.title;
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyTestModeUI); else applyTestModeUI();
     // ===== 🔐 登录：只有这两个 Google 账号能写入（与 Firebase 规则一致）=====
     const ALLOWED_ADMIN_EMAILS = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
     let __adminListenersStarted = false;
@@ -597,9 +632,9 @@
     };
 
     function startAdminListeners() {
-      db.ref('tournament_state').on('value', (snapshot) => applyServerState(snapshot.val()),
+      db.ref(PATHS.state).on('value', (snapshot) => applyServerState(snapshot.val()),
         (err) => { console.error('读取失败:', err); alert('❌ 读取抽奖数据失败：' + (err.code || err.message) + '\n请重新登录后刷新页面。'); });
-      db.ref(DrawLogic.PRESENCE_PATH).on('value', (snap) => { presenceRaw = snap.val(); refreshPresence(); });
+      db.ref(PATHS.presence).on('value', (snap) => { presenceRaw = snap.val(); refreshPresence(); });
       db.ref('.info/serverTimeOffset').on('value', (snap) => { serverOffset = snap.val() || 0; });
       setInterval(() => { refreshPresence(); renderWorkflowStatus(); }, 1000);
     }
@@ -814,7 +849,7 @@
     }
     function updateClaimsBtn() {
       const b = document.getElementById('claimsBtn');
-      if (b) b.classList.toggle('hidden', !getWinners().length);
+      if (b) b.classList.toggle('hidden', IS_TEST || !getWinners().length);
       renderClaims();
     }
     function openClaimsModal() {
@@ -874,10 +909,10 @@
     }
 
     // ===================== 💾 备份 / ♻️ 还原 =====================
-    function backupFileName(ts) { return `Mochiishop_Backup_${DrawLogic.fmtTime(ts).replace(/[-: ]/g, '').slice(0, 14)}.json`; }
+    function backupFileName(ts) { return `Mochiishop_${IS_TEST ? 'TEST_' : ''}Backup_${DrawLogic.fmtTime(ts).replace(/[-: ]/g, '').slice(0, 14)}.json`; }
     async function makeBackup() {
-      const [s1, s2] = await Promise.all([db.ref('tournament_state').once('value'), db.ref(CLAIMS_PATH).once('value').catch(() => null)]);
-      return { type: 'mochii-draw-backup', version: 1, savedAt: Date.now(), state: s1.val(), claims: s2 ? s2.val() : null };
+      const [s1, s2] = await Promise.all([db.ref(PATHS.state).once('value'), IS_TEST ? null : db.ref(CLAIMS_PATH).once('value').catch(() => null)]);
+      return { type: 'mochii-draw-backup', version: 1, test: IS_TEST || undefined, savedAt: Date.now(), state: s1.val(), claims: s2 ? s2.val() : null };
     }
     async function downloadBackup() {
       try {
@@ -902,13 +937,13 @@
           const cur = await makeBackup();
           if (cur.state) downloadText(backupFileName(cur.savedAt).replace('Backup', 'Backup_before_restore'), JSON.stringify(cur), 'application/json');
         } catch (e) { if (!confirm('⚠️ 无法先备份目前的比赛：' + (e.code || e.message) + '\n\n仍然要还原吗？')) return; }
-        db.ref('tournament_state').transaction(curState => {
+        db.ref(PATHS.state).transaction(curState => {
           const next = JSON.parse(JSON.stringify(b.state));
           next.rev = ((curState && curState.rev) || 0) + 1;
           return next;
         }, (error, committed, snap) => {
           if (error) { reportWriteError(error); return; }
-          if (b.claims) db.ref(CLAIMS_PATH).update(b.claims).catch(() => {});
+          if (b.claims && !IS_TEST) db.ref(CLAIMS_PATH).update(b.claims).catch(() => {});
           activeGroup4Ids = [];
           if (snap) applyServerState(snap.val());
           currentRoundIndex = Math.max(0, (state.rounds || []).length - 1);
@@ -1201,6 +1236,13 @@
     
     // 读取最新买家名单（不改动数据），返回 CSV 文字
     function loadBuyerListText() {
+      if (IS_TEST) {
+        const input = prompt('🧪 测试场：要生成多少张假订单？（约 6 成 Shopee、4 成 TikTok，部分买家有多张订单）', String(window.__lastFakeCount || 50));
+        if (input === null) return Promise.reject(new Error('已取消'));
+        const n = Math.max(2, Math.min(2000, parseInt(input, 10) || 50));
+        window.__lastFakeCount = n;
+        return Promise.resolve(DrawLogic.fakeBuyerCSV(n));
+      }
       const cfg = state.modeConfig || {};
       const importMode = cfg.importMode || 'default';
       if (importMode === 'fileUpload') {
@@ -1228,10 +1270,10 @@
         if (isManual) alert("⚠️ 名单已导入且已锁定，如要换新名单请点【⚠️ 重置所有轮次】（会自动抓取最新名单）。");
         return;
       }
-      if (isManual) alert('⏳ 正在读取最新名单…');
+      if (isManual && !IS_TEST) alert('⏳ 正在读取最新名单…');
       loadBuyerListText()
         .then(text => alert(parseCSVToFirstRound(text)))
-        .catch(e => alert('❌ 导入失败：' + (e.message || e)));
+        .catch(e => { if (!(IS_TEST && e.message === '已取消')) alert('❌ 导入失败：' + (e.message || e)); });
     }
 
     function readLocalFileAndParse(file) {
@@ -1706,11 +1748,11 @@
     // ★ 比对版本号写入：只有服务器上的数据还是我们看到的那一版才写入；
     //   如果前台刚好揭晓/改动过（版本号变了），这次写入会放弃，并同步最新数据，不会覆盖前台的结果。
     function saveState() {
-      try { localStorage.setItem('mochii_tournament_state', JSON.stringify(state)); } catch (e) {}
+      try { localStorage.setItem(PATHS.cacheKey, JSON.stringify(state)); } catch (e) {}
       const baseRev = state.rev || 0;
       state.rev = baseRev + 1;
       const payload = JSON.parse(JSON.stringify(state));
-      db.ref('tournament_state').transaction((cur) => {
+      db.ref(PATHS.state).transaction((cur) => {
         if (((cur && cur.rev) || 0) !== baseRev) return;   // 数据已被别处更新：放弃
         return payload;
       }, (error, committed, snap) => {
@@ -1859,12 +1901,16 @@
     // 重置流程：① 先读取最新名单 → ② 存档本场 → ③ 一次写入「清空 + 新名单」
     //   （以前是先清空再另外导入，导入那一步有时会因为数据还没同步而被跳过，所以合并成一步）
     function resetRounds() {
-      if (!confirm("⚠️ 确认重置所有数据？\n\n系统会：① 读取谷歌表格最新名单 ② 本场结果自动存档（可在【📋 记录】查看下载）③ 清空所有轮次并放入新名单。")) return;
-      alert('⏳ 正在读取最新名单…');
+      if (IS_TEST) { if (!confirm("🧪 重置测试场？\n\n会清空测试数据并放入新的假名单（不会存档，正式场不受影响）。")) return; }
+      else {
+        if (!confirm("⚠️ 确认重置所有数据？\n\n系统会：① 读取谷歌表格最新名单 ② 本场结果自动存档（可在【📋 记录】查看下载）③ 清空所有轮次并放入新名单。")) return;
+        alert('⏳ 正在读取最新名单…');
+      }
       loadBuyerListText()
         .then(text => DrawLogic.parseBuyerCSV(text))
         .catch(e => ({ error: e }))
         .then(res => {
+          if (res.error && IS_TEST) return;                       // 测试场取消输入人数
           if (res.error) {
             if (!confirm(`⚠️ 读取最新名单失败：${res.error.message || res.error}\n\n仍然要重置吗？\n（名单会是空的，之后可点【🔄 刷新 / 导入名单】再导入）`)) return;
             res = { candidates: [], summary: '' };
@@ -1876,7 +1922,7 @@
     }
 
     function archiveThenReset(listRes) {
-      const doReset = () => db.ref('tournament_state').transaction((currentData) => ({
+      const doReset = () => db.ref(PATHS.state).transaction((currentData) => ({
         rev: ((currentData && currentData.rev) || 0) + 1,
         customAdminTitle: state.customAdminTitle || '', customPublicTitle: state.customPublicTitle || '',
         isPublicVisible: true, pollCount: 0, currentPollNumber: 0, currentPollFinished: false, pkStage: 'voting', triggerNumber: null,
@@ -1891,7 +1937,7 @@
         alert('✅ 已重置。' + (listRes.summary ? '\n' + listRes.summary : '\n名单为空，请点【🔄 刷新 / 导入名单】导入。'));
       });
 
-      if (!hasAnyData(state)) { doReset(); return; }
+      if (IS_TEST || !hasAnyData(state)) { doReset(); return; }     // 测试场不存档
       const now = Date.now();
       const key = DrawLogic.fmtTime(now).replace(/[-: ]/g, '').slice(0, 14);
       const snapshot = JSON.parse(JSON.stringify(state));

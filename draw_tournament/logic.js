@@ -595,6 +595,37 @@
     return `${st.currentPollNumber || 0}|${(st.activeGroupIds || []).map(String).join(',')}`;
   }
   const PRESENCE_PATH = 'draw_presence/publicAdminActive';
+  // ---------- 测试场 ----------
+  // 测试场用另一格数据：后台开【🧪 测试场】、大屏网址加 ?test=1，观众的正式大屏完全不受影响
+  const STATE_PATH = 'tournament_state', TEST_STATE_PATH = 'tournament_state_test';
+  function pathsFor(test) {
+    return test ? { state: TEST_STATE_PATH, presence: PRESENCE_PATH + '_test', cacheKey: 'mochii_tournament_state_test' }
+                : { state: STATE_PATH, presence: PRESENCE_PATH, cacheKey: 'mochii_tournament_state' };
+  }
+  // 假名单（CSV）：n 张订单，约 6 成 Shopee（2 开头）、4 成 TikTok（5 开头），部分买家有多张订单
+  function fakeBuyerCSV(n) {
+    const A = ['amira', 'siti', 'nurul', 'mei', 'jiaying', 'kelly', 'aina', 'farah', 'wani', 'yuki', 'hana', 'lily', 'zara', 'mira', 'ally', 'cherry', 'dina', 'ivy', 'nana', 'sofia', 'aisyah', 'grace', 'peiling', 'xinyi', 'lisa', 'fatin', 'emma', 'joyce', 'syaza', 'winnie'];
+    const B = ['', '_', '_my', '.cute', '_shop', '.love', '_kl', '.xo'];
+    const digits = k => Array.from({ length: k }, () => randomInt(10)).join('');
+    const alnum = k => Array.from({ length: k }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789'[randomInt(34)]).join('');
+    const names = [];
+    const buyers = Math.max(1, Math.round(n * 0.8));
+    for (let i = 0; names.length < buyers && i < buyers * 20; i++) {
+      const nm = A[randomInt(A.length)] + B[randomInt(B.length)] + (randomInt(3) ? digits(1 + randomInt(3)) : '');
+      if (!names.includes(nm)) names.push(nm);
+    }
+    while (names.length < buyers) names.push('test_buyer' + (names.length + 1));
+    const d = new Date(), yymmdd = String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    const rows = ['买家姓名,订单号'], seen = new Set();
+    for (let i = 0; i < n; i++) {
+      const name = i < names.length ? names[i] : names[randomInt(names.length)];
+      let o;
+      do { o = randomInt(10) < 6 ? yymmdd + alnum(8) : '5' + digits(17); } while (seen.has(o));
+      seen.add(o);
+      rows.push(name + ',' + o);
+    }
+    return rows.join('\n');
+  }
   // 前台控盘心跳：每 20 秒更新一次时间；超过 75 秒没更新（关掉、断网、睡眠）就当作已离开
   const PRESENCE_BEAT_MS = 20000, PRESENCE_TTL_MS = 75000;
   function presenceActive(val, serverNow) {
@@ -709,7 +740,7 @@
 
   global.DrawLogic = {
     MARQUEE_STEPS, MARQUEE_MS, REVEAL_SETTLE_MS, marqueeDelays, marqueeSequence, beginReveal, settleReveal, progressInfo,
-    bumpRev, pollSignature, PRESENCE_PATH, PRESENCE_BEAT_MS, presenceActive, platformOf, animationLockMs, lockRemainingMs,
+    bumpRev, pollSignature, PRESENCE_PATH, pathsFor, fakeBuyerCSV, PRESENCE_BEAT_MS, presenceActive, platformOf, animationLockMs, lockRemainingMs,
     PODIUM_THIRD_LABEL, PODIUM_FINAL_LABEL, MAX_GROUP, randomInt, shuffle,
     modeOn, isMode2, consolationN, targetOf, countConsolation, consolationDone,
     TIERS, RANK_KEY, RANK_TITLE, prizePlan, isClassicPodium, planText, countRank, tierLeft, stageNeed, stageGot, nextRoundLabel,

@@ -60,6 +60,13 @@
 
   // ---------- ③ 词组字典 [中文, English, Bahasa Melayu] ----------
   const DICT = [
+    ['🧪 测试场 · 这里的所有操作观众都看不到', '🧪 Test mode · viewers can\'t see anything here', '🧪 Mod ujian · penonton tidak nampak apa-apa di sini'],
+    ['🧪 测试场', '🧪 Test mode', '🧪 Mod ujian'],
+    ['🏁 结束测试', '🏁 End test', '🏁 Tamat ujian'],
+    ['测试场：观众完全看不到', 'Test mode: viewers can\'t see it', 'Mod ujian: penonton tidak nampak'],
+    ['测试大屏：', 'Test board:', 'Skrin ujian:'],
+    ['📋 复制', '📋 Copy', '📋 Salin'],
+    ['✅ 已复制测试大屏网址', '✅ Test board link copied', '✅ Pautan skrin ujian disalin'],
     ['🎁 领奖追踪', '🎁 Prize claims', '🎁 Tuntutan hadiah'],
     ['🎁 领奖', '🎁 Claims', '🎁 Tuntutan'],
     ['得奖者联系与寄送进度', 'Winner contact & shipping progress', 'Kemajuan hubungan & penghantaran pemenang'],
