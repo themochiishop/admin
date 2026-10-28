@@ -107,6 +107,7 @@ export function renderAdminNav(active) {
     ["redeem", "index.html", "兑换审核"],
     ["members", "members.html", "会员管理"],
     ["rewards", "rewards.html", "奖品管理"],
+    ["announce", "announcements.html", "📢 会员公告"],
     ["back", "../", "← 返回控制台"],
   ];
   document.getElementById("adminHeader").innerHTML = `
