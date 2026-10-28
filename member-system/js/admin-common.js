@@ -52,16 +52,16 @@ export function catOf(r, cats = DEFAULT_SHOP_CATS) {
   return cats[0] ? cats[0].id : "";
 }
 
-// 📦 实体奖品：运输公司（查询链接模板可在「兑换管理」页面底部修改）
+// 📦 实体奖品：运输公司（查询链接在每一笔发货时贴上）
 export const CARRIERS = [
   { id: "spx",   name: "SPX Express", label: "SPX Express" },
   { id: "jnt",   name: "J&T Express", label: "J&T Express" },
   { id: "other", name: "",            label: "其他（自己填写）" },
 ];
-export const DEFAULT_TRACK_TPL = {
-  spx: "https://spx.com.my/track?{no}",
-  jnt: "https://www.jtexpress.my/tracking/{no}",
-};
+// 兑换编号：#加上兑换 ID 前 6 码（和会员前台一样）
+export function redeemCode(id) {
+  return "#" + String(id || "").slice(0, 6).toUpperCase();
+}
 
 // 导航「兑换管理」旁边的红色数字：待审核 + 待发货（含配送异常）
 export async function refreshRedeemBadge() {

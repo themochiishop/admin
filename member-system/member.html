@@ -214,7 +214,7 @@
       $("tab-redemptions").innerHTML = redemptions.length ? redemptions.map(r => `
         <div class="list-row">
           <div>
-            <div><b>${esc(r.rewardName)}</b> <span class="tag ${ST[r.status] || ""}">${STT[r.status] || r.status}</span></div>
+            <div><b>${esc(r.rewardName)}</b> <span class="tag ${ST[r.status] || ""}">${STT[r.status] || r.status}</span> <code style="font-size:.72rem">#${esc(r.id.slice(0, 6).toUpperCase())}</code></div>
             <div class="meta">申请 ${fmtDate(toDate(r.createdAt))}${r.couponCode ? " · 券码 " + esc(r.couponCode) : ""}${r.note ? " · " + esc(r.note) : ""}</div>
           </div>
           <div>${r.cost} 分</div>

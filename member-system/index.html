@@ -22,7 +22,7 @@
     .kind { font-size: .7rem; }
     .tag-blue { background: #e0f2fe; color: #0369a1; }
     .problem { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
-    .track-cfg input { margin: 0; }
+    .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -48,18 +48,9 @@
         <button data-tab="closed">已拒绝 / 取消</button>
       </div>
 
+      <input id="search" placeholder="🔍 搜索兑换编号（例如 #A1B2C3）、会员名称或奖品" style="margin-bottom:12px">
       <div id="panel"><p class="empty">载入中…</p></div>
 
-      <details class="panel track-cfg" style="margin-top:20px">
-        <summary style="cursor:pointer;font-weight:700">🔗 运输公司查询链接</summary>
-        <p class="meta" style="margin:10px 0">填物流资料时会自动生成查询链接，<code>{no}</code> 会换成追踪单号。第一次请用真实单号测试一下链接能不能打开，不对的话在这里改。</p>
-        <div class="grid2">
-          <label>SPX Express <input id="tplSpx"></label>
-          <label>J&amp;T Express <input id="tplJnt"></label>
-        </div>
-        <div class="actions"><button class="btn btn-primary" id="tplSave">保存</button></div>
-        <p id="tplMsg" class="msg"></p>
-      </details>
     </div>
   </div>
 
@@ -71,7 +62,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
-      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge
+      fmtPhone, waLink, CARRIERS, refreshRedeemBadge, redeemCode
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -81,7 +72,6 @@
     const members = {};   // uid → 会员资料
     const ledgers = {};   // uid → 积分流水
     let tab = "pending";
-    let trackTpl = { ...DEFAULT_TRACK_TPL };
     let adminEmail = "";
     const shipPhotos = {};   // 兑换 ID → 待上传的包裹照片
 
@@ -149,8 +139,8 @@
       const s = r.shipping || {};
       return `
         <div class="addr-box">
-          🚚 <b>${esc(s.carrierName || "")}</b> · <code>${esc(s.trackingNo || "")}</code>
-          ${s.trackingUrl ? ` · <a href="${esc(s.trackingUrl)}" target="_blank">查询链接 ↗</a>` : ""}
+          🚚 <b>${esc(s.carrierName || "")}</b> · <code style="word-break:break-all">${esc(s.trackingNo || "")}</code>
+          ${s.trackingUrl ? `<div class="meta" style="word-break:break-all"><a href="${esc(s.trackingUrl)}" target="_blank">🔗 ${esc(s.trackingUrl)}</a></div>` : ""}
           <div class="meta">发货 ${fmtDate(toDate(r.shippedAt), true)}${s.weightKg ? ` · ${esc(s.weightKg)} kg` : ""}${s.dims && s.dims.l ? ` · ${esc(s.dims.l)}×${esc(s.dims.w)}×${esc(s.dims.h)} cm` : ""}${s.by ? " · " + esc(s.by) : ""}</div>
           ${s.note ? `<div class="meta">留言：${esc(s.note)}</div>` : ""}
           ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}">`).join("")}</div>` : ""}
@@ -160,10 +150,11 @@
       const m = members[r.uid] || {};
       return `
         <div class="item-head">
-          <div style="min-width:0">
+          <div style="min-width:0;flex:1">
             <div class="item-title">${kindTag(r)} ${esc(r.rewardName)} · ${r.cost} 分 ${extra}</div>
             <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a> · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
           </div>
+          <code class="rno">${redeemCode(r.id)}</code>
         </div>`;
     }
 
@@ -185,7 +176,7 @@
             <label class="other-name ${carrier === "other" ? "" : "hidden"}">公司名称 <input data-f="carrierName" value="${esc(carrier === "other" ? s.carrierName || "" : "")}" placeholder="例如 Pos Laju"></label>
             <label>追踪单号 <input data-f="trackingNo" value="${esc(s.trackingNo || "")}" autocomplete="off"></label>
           </div>
-          <label>查询链接（自动生成，可以改） <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
+          <label>查询链接（贴上运输公司给这一单的链接，选填） <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
           <div class="grid4">
             <label>重量 kg <input data-f="weightKg" type="number" step="0.01" min="0" value="${esc(s.weightKg || "")}"></label>
             <label>长 cm <input data-f="l" type="number" step="0.1" min="0" value="${esc((s.dims || {}).l || "")}"></label>
@@ -210,7 +201,11 @@
         b.innerHTML = b.textContent.replace(/\s*\d+$/, "") + (urgent || n ? ` <span class="cnt ${urgent && n ? "" : "zero"}">${n}</span>` : "");
       });
 
+      const q = $("search").value.trim().toLowerCase().replace(/^#/, "");
       let list = all.filter(TABS[tab]);
+      if (q) list = all.filter(r => r.id.toLowerCase().startsWith(q)
+        || (r.rewardName || "").toLowerCase().includes(q)
+        || ((members[r.uid] || {}).name || "").toLowerCase().includes(q));
       if (tab === "pending" || tab === "toShip") list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       else list.sort((a, b) => (toDate(b.completedAt) || toDate(b.shippedAt) || b.decidedAt || b.createdAt || 0)
                              - (toDate(a.completedAt) || toDate(a.shippedAt) || a.decidedAt || a.createdAt || 0));
@@ -360,24 +355,14 @@
         note: v("note").trim(),
       };
     }
-    function autoUrl(item) {
-      const s = readShip(item);
-      const tpl = s.carrier === "other" ? "" : (trackTpl[s.carrier] || "");
-      if (tpl && s.trackingNo) item.querySelector('[data-f="trackingUrl"]').value = tpl.replace("{no}", encodeURIComponent(s.trackingNo));
-    }
 
-    $("panel").addEventListener("input", e => {
-      const item = e.target.closest(".item");
-      if (item && (e.target.dataset.f === "trackingNo")) autoUrl(item);
-    });
+    $("search").addEventListener("input", () => render());
     $("panel").addEventListener("change", async e => {
       const item = e.target.closest(".item");
       if (!item) return;
       const f = e.target.dataset.f;
       if (f === "carrier") {
         item.querySelector(".other-name").classList.toggle("hidden", e.target.value !== "other");
-        if (e.target.value === "other") item.querySelector('[data-f="trackingUrl"]').value = "";
-        autoUrl(item);
       }
       if (f === "photos") {
         const id = item.dataset.id;
@@ -474,25 +459,10 @@
       }
     });
 
-    // ---------- 查询链接模板 ----------
-    $("tplSave").addEventListener("click", async () => {
-      trackTpl = { spx: $("tplSpx").value.trim(), jnt: $("tplJnt").value.trim() };
-      try {
-        await setDoc(doc(db, "settings", "shipping"), { trackTpl, updatedAt: serverTimestamp() }, { merge: true });
-        $("tplMsg").textContent = "已保存 ✅"; $("tplMsg").className = "msg ok";
-      } catch (err) { $("tplMsg").textContent = "保存失败：" + err.message; $("tplMsg").className = "msg err"; }
-    });
-
     $("reloadBtn").addEventListener("click", () => load());
 
     requireAdmin(async user => {
       adminEmail = user.email || "";
-      try {
-        const s = await getDoc(doc(db, "settings", "shipping"));
-        if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
-      } catch (e) {}
-      $("tplSpx").value = trackTpl.spx || "";
-      $("tplJnt").value = trackTpl.jnt || "";
       load().catch(e => { $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`; });
     });
   </script>
