@@ -29,7 +29,7 @@
       <div class="page-head">
         <div>
           <h2>❓ 商店帮助</h2>
-          <p class="muted">会员前台「我的 → 帮助中心 → 商店帮助」显示这里的问题（只有登入的会员看得到）。<br>
+          <p class="muted">会员前台「我的 → 帮助中心 → 商店帮助（英文 Shop Help）」显示这里的问题（只有登入的会员看得到）。<br>
             「俱乐部帮助」那一边（积分、等级、兑换、绑定）是系统自动写好的，不用在这里管。</p>
         </div>
       </div>
@@ -37,11 +37,29 @@
       <!-- 联系方式 -->
       <div class="panel">
         <h3>💬 联系我们按钮</h3>
-        <p class="muted" style="font-size:.82rem;margin:-6px 0 12px">显示在帮助中心最下面。留空的就不显示。</p>
-        <div class="grid2">
-          <label>WhatsApp 号码 <input id="cWa" inputmode="tel" placeholder="60123456789"></label>
-          <label>Shopee 店铺链接 <input id="cShopee" type="url" placeholder="https://shopee.com.my/…"></label>
-          <label>TikTok Shop 链接 <input id="cTiktok" type="url" placeholder="https://www.tiktok.com/@…"></label>
+        <p class="muted" style="font-size:.82rem;margin:-6px 0 12px">显示在帮助中心最下面。会员在「会员俱乐部」分页看到俱乐部的 WhatsApp，在「商店帮助」分页看到商店的 WhatsApp + Shopee + TikTok。留空的就不显示。<br>
+          按钮文字三语都可以改；没填的话自动用预设（俱乐部技术支援 / 联系客服）。</p>
+
+        <div class="lang-box" style="background:#fdf2f8;border-color:#fbcfe8">
+          <b style="font-size:.9rem">💎 俱乐部 WhatsApp</b>
+          <div class="grid2" style="margin-top:8px">
+            <label>号码 <input id="waClub" inputmode="tel" placeholder="60123456789"></label>
+            <label>按钮文字（中文）<input id="waClubZh" maxlength="30" placeholder="俱乐部技术支援"></label>
+            <label>English <input id="waClubEn" maxlength="40" placeholder="Club tech support"></label>
+            <label>Bahasa Melayu <input id="waClubMs" maxlength="40" placeholder="Sokongan teknikal kelab"></label>
+          </div>
+        </div>
+
+        <div class="lang-box">
+          <b style="font-size:.9rem">🛍️ 商店 WhatsApp</b>
+          <div class="grid2" style="margin-top:8px">
+            <label>号码 <input id="waStore" inputmode="tel" placeholder="60123456789"></label>
+            <label>按钮文字（中文）<input id="waStoreZh" maxlength="30" placeholder="联系客服"></label>
+            <label>English <input id="waStoreEn" maxlength="40" placeholder="Customer service"></label>
+            <label>Bahasa Melayu <input id="waStoreMs" maxlength="40" placeholder="Khidmat pelanggan"></label>
+            <label>Shopee 店铺链接 <input id="cShopee" type="url" placeholder="https://shopee.com.my/…"></label>
+            <label>TikTok Shop 链接 <input id="cTiktok" type="url" placeholder="https://www.tiktok.com/@…"></label>
+          </div>
         </div>
         <div class="actions">
           <button class="btn btn-primary" id="cSave">保存联系方式</button>
@@ -99,7 +117,7 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, serverTimestamp
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, serverTimestamp, deleteField
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
 
@@ -325,16 +343,39 @@
     });
 
     // ---------- 联系方式 ----------
+    const LBL = ["Zh", "En", "Ms"];
+    function readLabel(prefix) {
+      const o = {};
+      LBL.forEach(l => { const v = $(prefix + l).value.trim(); if (v) o[l.toLowerCase()] = v; });
+      return o;
+    }
+    function fillContacts(h) {
+      $("waClub").value = h.waClub || "";
+      $("waStore").value = h.waStore ?? h.whatsapp ?? "";   // 旧资料只有一个 whatsapp，当作商店的
+      LBL.forEach(l => {
+        $("waClub" + l).value = (h.waClubLabel || {})[l.toLowerCase()] || "";
+        $("waStore" + l).value = (h.waStoreLabel || {})[l.toLowerCase()] || "";
+      });
+      $("cShopee").value = h.shopee || "";
+      $("cTiktok").value = h.tiktok || "";
+    }
+
     $("cSave").addEventListener("click", async () => {
-      const wa = $("cWa").value.replace(/\D/g, "");
+      const digits = id => $(id).value.replace(/\D/g, "");
       const shopee = $("cShopee").value.trim(), tiktok = $("cTiktok").value.trim();
       const bad = [shopee, tiktok].find(u => u && !/^https:\/\//i.test(u));
       const msg = $("cMsg");
       if (bad) { msg.textContent = "链接要以 https:// 开头"; msg.className = "msg err"; return; }
+      const data = {
+        waClub: digits("waClub"), waClubLabel: readLabel("waClub"),
+        waStore: digits("waStore"), waStoreLabel: readLabel("waStore"),
+        whatsapp: deleteField(),
+        shopee, tiktok,
+      };
       $("cSave").disabled = true;
       try {
-        await setDoc(doc(db, "settings", "help"), { whatsapp: wa, shopee, tiktok }, { merge: true });
-        $("cWa").value = wa;
+        await setDoc(doc(db, "settings", "help"), data, { merge: true });
+        $("waClub").value = data.waClub; $("waStore").value = data.waStore;
         msg.textContent = "已保存 ✅"; msg.className = "msg ok";
       } catch (err) {
         msg.textContent = "保存失败：" + err.message; msg.className = "msg err";
@@ -346,9 +387,7 @@
     requireAdmin(async () => {
       try {
         const h = await seedIfNeeded();
-        $("cWa").value = h.whatsapp || "";
-        $("cShopee").value = h.shopee || "";
-        $("cTiktok").value = h.tiktok || "";
+        fillContacts(h);
         await load();
       } catch (e) {
         $("list").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`;
