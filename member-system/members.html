@@ -122,7 +122,6 @@
           spendable: bal.spendable,
           pending: bal.pending,
           internal: !!(m.internal && m.internal.on),
-          internalTest: !!(m.internal && m.internal.on && m.internal.test !== false),
         };
       });
 
@@ -157,7 +156,7 @@
       const list = filtered();
       $("rows").innerHTML = list.length ? list.map(r => `
         <tr data-uid="${esc(r.uid)}">
-          <td><b>${esc(r.name)}</b>${r.internal ? ` <span class="tag tag-pink" title="内部会员">🏷️${r.internalTest ? "🧪" : ""}</span>` : ""}</td>
+          <td><b>${esc(r.name)}</b>${r.internal ? ` <span class="tag tag-pink" title="内部会员">🏷️ 内部</span>` : ""}</td>
           <td>${tierHTML(r.tier)}</td>
           <td class="num">RM ${r.spend12m.toFixed(2)}</td>
           <td>${r.phone

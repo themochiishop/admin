@@ -86,13 +86,8 @@
           <!-- 🏷️ 内部会员（员工 / 测试用） -->
           <div class="panel" id="internalPanel">
             <h3>🏷️ 内部会员</h3>
-            <p class="meta" style="margin:-6px 0 10px">给员工或测试用的会员：不用绑定账号就能领额外福利、生日礼不需要订单。开通时送 <b id="internalPtsLbl"></b> 分（只送一次）。</p>
+            <p class="meta" style="margin:-6px 0 10px">给员工用的会员：不用绑定账号就能领额外福利、生日礼不需要订单，会员资料显示「内部会员」标签。开通时送 <b id="internalPtsLbl"></b> 分（只送一次）。兑换跟一般会员一样，你在「兑换管理」批准时再选这一笔是测试还是真实。</p>
             <label class="inline"><input type="checkbox" id="iOn"> 这是内部会员</label>
-            <div id="iModeBox" style="margin:8px 0 0 24px">
-              <div class="meta" style="margin-bottom:4px">兑换方式</div>
-              <label class="inline"><input type="radio" name="iMode" value="test" checked> 🧪 测试：照样走完流程，但不扣库存、不用掉券码库，也不算进数据</label>
-              <label class="inline"><input type="radio" name="iMode" value="real"> ✅ 真实：跟一般会员一样（会扣库存、会真的寄出）</label>
-            </div>
             <div class="actions"><button type="button" class="btn btn-primary" id="iSave">保存</button></div>
             <p id="iMsg" class="msg"></p>
           </div>
@@ -186,11 +181,9 @@
       currentMember = m;
       const iv = m.internal || {};
       $("iOn").checked = iv.on === true;
-      document.querySelector(`input[name="iMode"][value="${iv.test === false ? "real" : "test"}"]`).checked = true;
-      $("iModeBox").classList.toggle("hidden", !$("iOn").checked);
       $("internalPtsLbl").textContent = INTERNAL_BONUS;
       $("mName").textContent = m.name || "(未填称呼)";
-      $("mName").insertAdjacentHTML("beforeend", iv.on ? ` <span class="tag tag-pink">🏷️ 内部${iv.test === false ? "" : " · 🧪 测试"}</span>` : "");
+      $("mName").insertAdjacentHTML("beforeend", iv.on ? ` <span class="tag tag-pink">🏷️ 内部会员</span>` : "");
       $("mSub").textContent = `${TIER_LABELS[m.tier] || TIER_LABELS.mochii} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
       $("pName").value = m.name || "";
       $("pPhone").value = m.phone ? fmtPhone(m.phone) : "";
@@ -367,21 +360,19 @@
     // ---------- 🏷️ 内部会员 ----------
     const INTERNAL_BONUS = 888;   // 开通内部会员时送的积分（只送一次）
     let currentMember = null;
-    $("iOn").addEventListener("change", () => $("iModeBox").classList.toggle("hidden", !$("iOn").checked));
     $("iSave").addEventListener("click", async () => {
       const on = $("iOn").checked;
-      const test = document.querySelector('input[name="iMode"]:checked').value === "test";
       const before = (currentMember && currentMember.internal) || {};
       const giveBonus = on && !before.bonusGiven;
       const msg = on
-        ? `把「${currentMember.name || ""}」设为内部会员（${test ? "🧪 测试" : "✅ 真实"}兑换）？` + (giveBonus ? `\n会送 ${INTERNAL_BONUS} 分（只送一次）。` : "")
+        ? `把「${currentMember.name || ""}」设为内部会员？` + (giveBonus ? `\n会送 ${INTERNAL_BONUS} 分（只送一次）。` : "")
         : `取消「${currentMember.name || ""}」的内部会员？（已送的积分不会扣回）`;
       if (!confirm(msg)) return;
       $("iSave").disabled = true;
       try {
         const batch = writeBatch(db);
         batch.update(doc(db, "members", uid), {
-          internal: { ...before, on, test, by: adminEmail, at: serverTimestamp(), bonusGiven: before.bonusGiven || giveBonus }
+          internal: { on, by: adminEmail, since: before.since || serverTimestamp(), at: serverTimestamp(), bonusGiven: before.bonusGiven || giveBonus }
         });
         if (giveBonus) {
           batch.set(doc(collection(db, "pointsLedger")), {

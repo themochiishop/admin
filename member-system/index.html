@@ -23,6 +23,9 @@
     .tag-blue { background: #e0f2fe; color: #0369a1; }
     .problem { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
     .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; }
+    .mode-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: .86rem; }
+    .mode-row label { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
+    .mode-row input { width: auto; margin: 0; }
   </style>
 </head>
 <body>
@@ -88,9 +91,9 @@
     const shipPhotos = {};   // 兑换 ID → 待上传的包裹照片
 
     const isGift = r => r.kind === "gift";
-    // 🧪 测试兑换：已批准的看兑换本身的标记；审核中的看会员是不是「内部会员 · 测试」
-    const isTest = r => r.test === true || (r.status === "pending"
-      && !!(members[r.uid] && members[r.uid].internal && members[r.uid].internal.on && members[r.uid].internal.test !== false));
+    // 🧪 测试兑换：批准时选的；测试的不扣库存、不用掉券码库、不算进数据
+    const isTest = r => r.test === true;
+    const isInternal = uid => !!(members[uid] && members[uid].internal && members[uid].internal.on);
     const TABS = {
       pending: r => r.status === "pending",
       toShip:  r => isGift(r) && (r.status === "approved" || r.status === "problem"),
@@ -167,7 +170,7 @@
         <div class="item-head">
           <div style="min-width:0;flex:1">
             <div class="item-title">${kindTag(r)} ${isTest(r) ? '<span class="tag tag-warn">🧪 测试</span> ' : ""}${esc(r.rewardName)} · ${r.cost} 分 ${extra}</div>
-            <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a> · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
+            <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a>${isInternal(r.uid) ? ' <span class="tag tag-pink">🏷️ 内部会员</span>' : ""} · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
           </div>
           <code class="rno">${redeemCode(r.id)}</code>
         </div>`;
@@ -235,6 +238,11 @@
               ${bal.spendable >= r.cost ? '<span class="tag tag-ok">足够</span>' : '<span class="tag tag-bad">不足</span>'}
               ${bal.reserved ? ` · 其他审核中 ${bal.reserved} 分` : ""}${bal.pending ? ` · 待确认 ${bal.pending} 分` : ""}</div>
             ${addrBox(r)}
+            <div class="mode-row">
+              <span class="meta">这一笔是：</span>
+              <label><input type="radio" name="mode_${esc(r.id)}" value="real" checked> ✅ 真实兑换</label>
+              <label><input type="radio" name="mode_${esc(r.id)}" value="test"> 🧪 测试（不扣库存、不用券码库、不算进数据）</label>
+            </div>
             <div class="actions">
               <input class="note-input" placeholder="备注（选填，会员看得到）">
               <button class="btn btn-ok" data-act="approve">✔ 批准</button>
@@ -272,19 +280,20 @@
             ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}
             ${r.cancelNote ? `<div class="meta">取消原因：${esc(r.cancelNote)}</div>` : ""}`;
         }
-        return `<div class="item" data-id="${esc(r.id)}">${head(r)}${body}</div>`;
+        const testBtn = tab === "pending" || tab === "closed" ? ""
+          : `<div class="actions" style="margin-top:6px"><button class="btn btn-ghost" data-act="toggleTest">${isTest(r) ? "改为 ✅ 真实兑换" : "改为 🧪 测试"}</button></div>`;
+        return `<div class="item" data-id="${esc(r.id)}">${head(r)}${body}${testBtn}</div>`;
       }).join("") : `<p class="empty">${EMPTY[tab]}</p>`;
     }
 
     // ---------- 批准 / 拒绝 ----------
-    async function approve(r, note) {
+    async function approve(r, note, test) {
       const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
       const reward = rewardSnap.exists() ? rewardSnap.data() : null;
 
       const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
       if (bal.spendable < r.cost &&
           !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return false;
-      const test = isTest(r);
       if (!test && reward && typeof reward.stock === "number" && reward.stock <= 0 &&
           !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return false;
 
@@ -456,7 +465,24 @@
       buttons.forEach(b => b.disabled = true);
       try {
         let ok = true;
-        if (act === "approve") ok = await approve(r, item.querySelector(".note-input").value.trim());
+        if (act === "approve") {
+          const mode = item.querySelector(`input[name="mode_${CSS.escape(r.id)}"]:checked`);
+          ok = await approve(r, item.querySelector(".note-input").value.trim(), !!mode && mode.value === "test");
+        }
+        if (act === "toggleTest") {
+          // 批准后改为测试 / 真实：库存跟着调整
+          const toTest = !isTest(r);
+          if (!confirm(toTest ? "改为 🧪 测试？库存会加回 1，这笔不算进数据。" : "改为 ✅ 真实兑换？库存会扣 1。")) ok = false;
+          else {
+            const rs = await getDoc(doc(db, "rewards", r.rewardId));
+            const batch = writeBatch(db);
+            batch.update(doc(db, "redemptions", r.id), { test: toTest });
+            if (rs.exists() && typeof rs.data().stock === "number" && r.status !== "cancelled" && r.status !== "rejected") {
+              batch.update(doc(db, "rewards", r.rewardId), { stock: increment(toTest ? 1 : -1) });
+            }
+            await batch.commit();
+          }
+        }
         if (act === "reject") ok = await reject(r, item.querySelector(".note-input").value.trim());
         if (act === "cancel") ok = await cancelApproved(r);
         if (act === "ship") {
