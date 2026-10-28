@@ -84,8 +84,13 @@
         <!-- 右：绑定 -->
         <div>
           <div class="panel">
-            <h3>绑定账号</h3>
+            <h3>绑定账号 <span class="muted" id="bindCount" style="font-weight:400;font-size:.85rem"></span></h3>
+            <p class="meta" id="bindSummary" style="margin:-6px 0 8px"></p>
             <div id="bindList"></div>
+            <details id="logBox" class="hidden" style="margin-top:12px">
+              <summary style="cursor:pointer;font-size:.88rem;color:#475569;font-weight:600">📜 绑定历史 <span id="logCount"></span></summary>
+              <div id="logList" style="margin-top:8px"></div>
+            </details>
             <h3 style="margin-top:18px">代为绑定</h3>
             <p class="meta" style="margin-bottom:10px">会员改了用户名、或无法自行验证时使用。请先确认对方身份。</p>
             <form id="bindForm" class="inline-form">
@@ -122,7 +127,7 @@
     import { db } from "./js/firebase-config.js";
     import {
       collection, query, where, getDocs, getDoc, doc, addDoc, updateDoc, setDoc,
-      deleteDoc, serverTimestamp
+      deleteDoc, serverTimestamp, writeBatch
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance,
@@ -153,9 +158,10 @@
     async function load() {
       if (!uid) throw new Error("网址缺少 uid");
       const mine = c => getDocs(query(collection(db, c), where("uid", "==", uid)));
-      const [mSnap, bS, lS, oS, rS] = await Promise.all([
+      const [mSnap, bS, lS, oS, rS, logs] = await Promise.all([
         getDoc(doc(db, "members", uid)),
-        mine("bindings"), mine("pointsLedger"), mine("orders"), mine("redemptions")
+        mine("bindings"), mine("pointsLedger"), mine("orders"), mine("redemptions"),
+        mine("bindingLogs").then(s => s.docs.map(d => d.data())).catch(() => [])
       ]);
       if (!mSnap.exists()) throw new Error("找不到这位会员");
 
@@ -194,18 +200,10 @@
           <div class="${x.delta >= 0 ? "plus" : "minus"}">${x.delta >= 0 ? "+" : ""}${x.delta}</div>
         </div>`).join("") : `<p class="empty">没有积分记录</p>`;
 
-      // 订单
-      const orders = oS.docs.map(d => ({ id: d.id, ...d.data() }))
+      // 订单（可按绑定账号筛选）
+      allOrders = oS.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (toDate(b.orderTime) || 0) - (toDate(a.orderTime) || 0));
-      $("tab-orders").innerHTML = orders.length ? orders.map(o => `
-        <div class="list-row">
-          <div>
-            <div>${platformTag(o.platform)} <b>RM ${Number(o.amount || 0).toFixed(2)}</b>
-              ${o.status === "refunded" ? '<span class="tag tag-bad">已退货</span>' : ""}</div>
-            <div class="meta">${esc(o.id)} · ${esc(o.username)} · ${fmtDate(toDate(o.orderTime), true)}</div>
-          </div>
-          <div><b>${o.points || 0}</b> 分</div>
-        </div>`).join("") : `<p class="empty">没有订单</p>`;
+      renderOrders();
 
       // 兑换
       const ST = { pending: "tag-warn", approved: "tag-ok", rejected: "tag-bad", cancelled: "" };
@@ -219,16 +217,109 @@
           <div>${r.cost} 分</div>
         </div>`).join("") : `<p class="empty">没有兑换记录</p>`;
 
-      // 绑定
-      const bindings = bS.docs.map(d => ({ id: d.id, ...d.data() }));
-      $("bindList").innerHTML = bindings.length ? bindings.map(b => `
-        <div class="list-row">
+      // 绑定（每个账号的订单统计 + 绑定细节）
+      const stats = accountStats(allOrders);
+      const empty = { orders: 0, spend: 0, points: 0, refunded: 0, last: null, first: null };
+      const bindings = bS.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (toDate(a.createdAt) || 0) - (toDate(b.createdAt) || 0));
+      const tot = bindings.reduce((t, b) => {
+        const st = stats[b.id] || empty;
+        return { o: t.o + st.orders, s: t.s + st.spend, p: t.p + st.points };
+      }, { o: 0, s: 0, p: 0 });
+      $("bindCount").textContent = bindings.length ? `（${bindings.length} 个）` : "";
+      $("bindSummary").textContent = bindings.length
+        ? `合计 ${tot.o} 张有效订单 · RM ${tot.s.toFixed(2)} · ${tot.p.toLocaleString()} 分` : "";
+      $("bindList").innerHTML = bindings.length ? bindings.map(b => {
+        const st = stats[b.id] || empty;
+        const how = b.verifyOrder === "admin"
+          ? `🛠 管理员代绑${b.by ? "（" + esc(b.by) + "）" : ""}`
+          : `✅ 会员自己验证 · 单号 <code>${esc(b.verifyOrder)}</code>`;
+        return `
+        <div class="list-row acct-row">
           <div>
             <div>${platformTag(b.platform)} <b>${esc(b.username)}</b></div>
-            <div class="meta">绑定于 ${fmtDate(toDate(b.createdAt))} · ${b.verifyOrder === "admin" ? "管理员代绑" : "验证单号 " + esc(b.verifyOrder)}</div>
+            <div class="meta">绑定于 ${fmtDate(toDate(b.createdAt), true)} · ${how}</div>
+            <div class="meta">${st.orders || st.refunded
+              ? `📦 ${st.orders} 张有效订单 · RM ${st.spend.toFixed(2)} · ${st.points} 分${st.refunded ? ` · 退货 ${st.refunded} 张` : ""}`
+                + (st.first ? ` · 首单 ${fmtDate(st.first)} · 最近 ${fmtDate(st.last)}` : "")
+              : "📦 还没有订单记录"}</div>
           </div>
-          <button class="btn btn-bad" data-unbind="${esc(b.id)}">解除</button>
-        </div>`).join("") : `<p class="muted" style="font-size:.88rem">尚未绑定任何账号</p>`;
+          <div class="actions" style="margin:0;flex-direction:column;align-items:stretch">
+            <button class="btn btn-ghost" data-orders="${esc(b.id)}">看订单</button>
+            <button class="btn btn-bad" data-unbind="${esc(b.id)}">解除</button>
+          </div>
+        </div>`;
+      }).join("") : `<p class="muted" style="font-size:.88rem">尚未绑定任何账号</p>`;
+      currentBindings = bindings;
+
+      // 绑定历史（管理员代绑 / 解除的记录）
+      const hist = logs.sort((a, b) => (toDate(b.at) || 0) - (toDate(a.at) || 0));
+      $("logBox").classList.toggle("hidden", !hist.length);
+      $("logCount").textContent = hist.length ? `(${hist.length})` : "";
+      $("logList").innerHTML = hist.map(l => `
+        <div class="list-row">
+          <div>
+            <div>${l.action === "unbind" ? '<span class="tag tag-bad">解除</span>' : '<span class="tag tag-ok">代绑</span>'}
+              ${platformTag(l.platform)} <b>${esc(l.username)}</b></div>
+            <div class="meta">${fmtDate(toDate(l.at), true)} · 操作：${esc(l.by || "-")}
+              ${l.action === "unbind" ? ` · 原绑定于 ${fmtDate(toDate(l.boundAt))}（${l.verifyOrder === "admin" ? "管理员代绑" : "单号 " + esc(l.verifyOrder || "-")}）` : ""}
+              ${l.note ? " · 原因：" + esc(l.note) : ""}</div>
+          </div>
+        </div>`).join("");
+    }
+
+    // ---------- 订单列表 + 账号筛选 ----------
+    let allOrders = [], currentBindings = [], orderFilter = "";
+    function renderOrders() {
+      const keys = [...new Set(allOrders.map(o => o.platform + "_" + o.username))];
+      const list = orderFilter ? allOrders.filter(o => o.platform + "_" + o.username === orderFilter) : allOrders;
+      const chips = keys.length > 1 ? `
+        <div class="actions" style="margin:0 0 10px">
+          <button class="btn ${orderFilter ? "btn-ghost" : "btn-primary"}" data-filter="">全部 (${allOrders.length})</button>
+          ${keys.map(k => {
+            const [p, ...u] = k.split("_");
+            return `<button class="btn ${orderFilter === k ? "btn-primary" : "btn-ghost"}" data-filter="${esc(k)}">${esc(p === "shopee" ? "Shopee" : p === "tiktok" ? "TikTok" : p)} · ${esc(u.join("_"))} (${allOrders.filter(o => o.platform + "_" + o.username === k).length})</button>`;
+          }).join("")}
+        </div>` : "";
+      $("tab-orders").innerHTML = chips + (list.length ? list.map(o => `
+        <div class="list-row">
+          <div>
+            <div>${platformTag(o.platform)} <b>RM ${Number(o.amount || 0).toFixed(2)}</b>
+              ${o.status === "refunded" ? '<span class="tag tag-bad">已退货</span>' : ""}</div>
+            <div class="meta">${esc(o.id)} · ${esc(o.username)} · ${fmtDate(toDate(o.orderTime), true)}</div>
+          </div>
+          <div><b>${o.points || 0}</b> 分</div>
+        </div>`).join("") : `<p class="empty">没有订单</p>`);
+    }
+    $("tab-orders").addEventListener("click", e => {
+      const f = e.target.closest("[data-filter]");
+      if (!f) return;
+      orderFilter = f.dataset.filter;
+      renderOrders();
+    });
+    function showOrdersOf(key) {
+      orderFilter = key;
+      renderOrders();
+      document.querySelector('.tabs button[data-tab="orders"]').click();
+      document.querySelector(".tabs").scrollIntoView({ behavior: "smooth" });
+    }
+
+    // 每个账号的订单统计（退货另计）
+    function accountStats(orders) {
+      const out = {};
+      orders.forEach(o => {
+        if (!o.platform || !o.username) return;
+        const k = o.platform + "_" + o.username;
+        const a = out[k] = out[k] || { orders: 0, spend: 0, points: 0, refunded: 0, last: null, first: null };
+        if (o.status === "refunded") { a.refunded++; return; }
+        a.orders++;
+        a.spend += Number(o.amount || 0);
+        a.points += Number(o.points || 0);
+        const at = toDate(o.orderTime);
+        if (at && (!a.last || at > a.last)) a.last = at;
+        if (at && (!a.first || at < a.first)) a.first = at;
+      });
+      return out;
     }
 
     // ---------- 手动调整积分 ----------
@@ -299,9 +390,15 @@
             "这个账号已被其他会员绑定，请先到那位会员的页面解除（UID：" + owner + "）", "err");
           return;
         }
-        await setDoc(doc(db, "bindings", id), {
-          uid, platform, username, verifyOrder: "admin", createdAt: serverTimestamp()
+        const batch = writeBatch(db);
+        batch.set(doc(db, "bindings", id), {
+          uid, platform, username, verifyOrder: "admin", by: adminEmail, createdAt: serverTimestamp()
         });
+        batch.set(doc(collection(db, "bindingLogs")), {
+          uid, action: "bind", bindingId: id, platform, username,
+          verifyOrder: "admin", by: adminEmail, at: serverTimestamp()
+        });
+        await batch.commit();
         $("bindForm").reset();
         setMsg($("bindMsg"), "已绑定 ✅ 积分会在下次计算积分时入账（每小时自动，或在表格按同步）", "ok");
         await load();
@@ -314,12 +411,24 @@
 
     // ---------- 解除绑定 ----------
     $("bindList").addEventListener("click", async e => {
+      const ob = e.target.closest("[data-orders]");
+      if (ob) { showOrdersOf(ob.dataset.orders); return; }
       const id = e.target.dataset.unbind;
       if (!id) return;
-      if (!confirm(`解除绑定「${id}」？\n\n这个账号订单的积分会在下次计算积分时扣回（每小时自动，或在表格按同步）。`)) return;
+      const b = currentBindings.find(x => x.id === id);
+      if (!b) return;
+      const note = prompt(`解除绑定「${b.username}」？\n\n这个账号订单的积分会在下次计算积分时扣回（每小时自动，或在表格按同步）。\n会员的铃铛会收到通知。\n\n原因（选填，只有后台看得到）：`, "");
+      if (note === null) return;
       e.target.disabled = true;
       try {
-        await deleteDoc(doc(db, "bindings", id));
+        const batch = writeBatch(db);
+        batch.set(doc(collection(db, "bindingLogs")), {
+          uid, action: "unbind", bindingId: id, platform: b.platform, username: b.username,
+          verifyOrder: b.verifyOrder || "", boundAt: b.createdAt || null, boundBy: b.by || "",
+          by: adminEmail, note: note.trim(), at: serverTimestamp()
+        });
+        batch.delete(doc(db, "bindings", id));
+        await batch.commit();
         setMsg($("bindMsg"), "已解除绑定", "ok");
         await load();
       } catch (err) {

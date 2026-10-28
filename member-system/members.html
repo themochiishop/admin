@@ -159,7 +159,7 @@
             ? `<a href="${waLink(r.phone)}" target="_blank" class="wa-link" title="打开 WhatsApp">💬 ${esc(fmtPhone(r.phone))}</a>${r.waOptIn ? ' <span class="tag tag-ok" title="同意接收优惠通知">📣</span>' : ""}`
             : '<span class="muted">-</span>'}</td>
           <td>${esc(r.email)}</td>
-          <td>${r.bindings.map(b => `${platformTag(b.platform)} ${esc(b.username)}`).join("<br>") || '<span class="muted">未绑定</span>'}</td>
+          <td>${r.bindings.length > 1 ? `<span class="tag tag-pink">${r.bindings.length} 个</span><br>` : ""}${r.bindings.map(b => `${platformTag(b.platform)} ${esc(b.username)}${b.verifyOrder === "admin" ? ' <span class="muted" title="管理员代绑">🛠</span>' : ""}`).join("<br>") || '<span class="muted">未绑定</span>'}</td>
           <td class="num"><b>${r.spendable.toLocaleString()}</b></td>
           <td class="num">${r.pending.toLocaleString()}</td>
           <td>${esc(r.birthday) || '<span class="muted">-</span>'}</td>
