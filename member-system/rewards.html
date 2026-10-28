@@ -92,7 +92,7 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, getDocs, doc, addDoc, updateDoc, writeBatch, serverTimestamp
+      collection, getDocs, doc, addDoc, updateDoc, setDoc, writeBatch, serverTimestamp, deleteField
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { requireAdmin, renderAdminNav, esc, COUPON_FORMATS, SHOP_CATS, catOf } from "./js/admin-common.js";
     const $ = id => document.getElementById(id);
@@ -161,12 +161,32 @@ $("rimageRemove").addEventListener("click", () => {
   showPreview(null);
 });
 
+    // 🔒 共用优惠码存在 rewardSecrets（只有管理员能读），不放在会员读得到的奖品资料里
     async function load() {
-      const [rs, cs] = await Promise.all([
+      const [rs, cs, ss] = await Promise.all([
         getDocs(collection(db, "rewards")),
-        getDocs(collection(db, "coupons"))
+        getDocs(collection(db, "coupons")),
+        getDocs(collection(db, "rewardSecrets"))
       ]);
-      rewards = rs.docs.map(d => ({ id: d.id, ...d.data() }))
+      const secrets = {};
+      ss.docs.forEach(d => secrets[d.id] = d.data());
+
+      // 旧资料：优惠码还在奖品资料里的，自动搬过去
+      const legacy = rs.docs.filter(d => d.data().couponCode);
+      if (legacy.length) {
+        const batch = writeBatch(db);
+        legacy.forEach(d => {
+          if (!secrets[d.id] || !secrets[d.id].couponCode) {
+            secrets[d.id] = { couponCode: d.data().couponCode };
+            batch.set(doc(db, "rewardSecrets", d.id), { couponCode: d.data().couponCode, updatedAt: serverTimestamp() });
+          }
+          batch.update(doc(db, "rewards", d.id), { couponCode: deleteField() });
+        });
+        await batch.commit();
+        console.info("已把 " + legacy.length + " 个奖品的优惠码移到 rewardSecrets");
+      }
+
+      rewards = rs.docs.map(d => ({ id: d.id, ...d.data(), couponCode: (secrets[d.id] || {}).couponCode || null }))
         .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || a.cost - b.cost);
       coupons = {};
       cs.docs.forEach(d => coupons[d.id] = d.data());
@@ -276,13 +296,17 @@ showPreview(currentImage);
           return;
         }
         data.couponFormat = f.id;
-        data.couponCode = suffix ? f.prefix + suffix : null;
       }
+      // 优惠码另存（会员读不到）
+      const code = data.type === "coupon" && $("rcsuffix").value.trim()
+        ? fmtOf($("rcformat").value).prefix + $("rcsuffix").value.trim().toUpperCase() : null;
       $("saveBtn").disabled = true;
       try {
         const id = $("rid").value;
-        if (id) await updateDoc(doc(db, "rewards", id), data);
-        else await addDoc(collection(db, "rewards"), { ...data, createdAt: serverTimestamp() });
+        let rid = id;
+        if (id) await updateDoc(doc(db, "rewards", id), { ...data, couponCode: deleteField() });
+        else rid = (await addDoc(collection(db, "rewards"), { ...data, createdAt: serverTimestamp() })).id;
+        await setDoc(doc(db, "rewardSecrets", rid), { couponCode: code, updatedAt: serverTimestamp() });
         $("formPanel").classList.add("hidden");
         await load();
       } catch (err) {

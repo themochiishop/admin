@@ -45,6 +45,27 @@
       <div class="panel">
         <h3>① 区块顺序与开关</h3>
         <div id="secList"></div>
+
+        <h3 style="margin-top:18px">Feed 框（第一行右边，占 30%）</h3>
+        <p class="meta" style="margin:-6px 0 10px">显示在「你好」框右边：小标题、一句文字、下面一个箭头。箭头导向你设定的链接（还没有链接就先留空）。</p>
+        <label class="inline"><input type="checkbox" id="fOn" checked> 显示 Feed 框</label>
+        <div class="grid2">
+          <label>小标题（留空 = Mochii Feed） <input id="fTitle" maxlength="20" placeholder="Mochii Feed"></label>
+          <label>文字（留空 = 看看最新动态） <input id="fText" maxlength="40" placeholder="看看最新动态"></label>
+        </div>
+        <label>箭头导向
+          <select id="fLinkType" class="link-type"></select>
+        </label>
+        <label id="fLinkBox" class="hidden">网址 <input id="fLink" type="url" placeholder="https://…"></label>
+        <details class="lang-box">
+          <summary>🌐 英文 / 马来文版本（选填）</summary>
+          <div class="grid2">
+            <label>English 小标题 <input id="fEnTitle" maxlength="20"></label>
+            <label>Bahasa Melayu 小标题 <input id="fMsTitle" maxlength="20"></label>
+            <label>English 文字 <input id="fEnText" maxlength="40"></label>
+            <label>Bahasa Melayu 文字 <input id="fMsText" maxlength="40"></label>
+          </div>
+        </details>
         <div class="actions"><button class="btn btn-primary" id="saveSec">保存</button></div>
         <p id="secMsg" class="msg"></p>
       </div>
@@ -178,7 +199,7 @@
       const v = $(prefix + "LinkType").value;
       return v === "custom" ? $(prefix + "Link").value.trim() : v;
     }
-    ["bn", "n"].forEach(p => $(p + "LinkType").addEventListener("change", () =>
+    ["bn", "n", "f"].forEach(p => $(p + "LinkType").addEventListener("change", () =>
       $(p + "LinkBox").classList.toggle("hidden", $(p + "LinkType").value !== "custom")));
 
     let adminEmail = "";
@@ -213,8 +234,19 @@
     $("saveSec").addEventListener("click", async () => {
       $("saveSec").disabled = true;
       try {
+        const fLink = getLink("f");
+        if ($("fLinkType").value === "custom" && !/^https:\/\//i.test(fLink)) { setMsg($("secMsg"), "Feed 网址要以 https:// 开头", "err"); return; }
+        const fi18n = {};
+        [["en", "fEnTitle", "fEnText"], ["ms", "fMsTitle", "fMsText"]].forEach(([k, a, b]) => {
+          const tt = $(a).value.trim(), xx = $(b).value.trim();
+          if (tt || xx) fi18n[k] = { title: tt, text: xx };
+        });
         await setDoc(doc(db, "settings", "home"), {
           sections: sections.map(s => ({ key: s.key, on: s.on !== false, ...(s.count ? { count: s.count } : {}) })),
+          feed: {
+            on: $("fOn").checked, title: $("fTitle").value.trim(), text: $("fText").value.trim(),
+            link: fLink, i18n: fi18n
+          },
           updatedAt: serverTimestamp(), updatedBy: adminEmail
         }, { merge: true });
         setMsg($("secMsg"), "已保存 ✅", "ok");
@@ -432,6 +464,14 @@
           getDocs(collection(db, "rewards"))
         ]);
         const saved = (sSnap.exists() && sSnap.data().sections) || [];
+        const feed = (sSnap.exists() && sSnap.data().feed) || {};
+        $("fOn").checked = feed.on !== false;
+        $("fTitle").value = feed.title || "";
+        $("fText").value = feed.text || "";
+        setLink("f", feed.link || "");
+        const fi = feed.i18n || {};
+        $("fEnTitle").value = (fi.en || {}).title || ""; $("fEnText").value = (fi.en || {}).text || "";
+        $("fMsTitle").value = (fi.ms || {}).title || ""; $("fMsText").value = (fi.ms || {}).text || "";
         // 已存的顺序 + 之后新增的区块补在最后
         sections = [
           ...saved.filter(s => HOME_SECTIONS.some(d => d.key === s.key)),

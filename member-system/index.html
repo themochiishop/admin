@@ -143,11 +143,13 @@
       if (reward && typeof reward.stock === "number" && reward.stock <= 0 &&
           !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return;
 
-      // 优惠券：从券码库取一组未使用的
-           let couponCode = null, fromPool = false;
+      // 优惠券：共用优惠码（存在只有管理员能读的 rewardSecrets）；没有就从券码库取一组
+      let couponCode = null, fromPool = false;
       if (reward && reward.type === "coupon") {
-        if (reward.couponCode) {
-          couponCode = reward.couponCode;   // 共用优惠码，例如 THEMMSDIS
+        const secret = await getDoc(doc(db, "rewardSecrets", r.rewardId));
+        const shared = (secret.exists() && secret.data().couponCode) || reward.couponCode || null;
+        if (shared) {
+          couponCode = shared;   // 共用优惠码，例如 THEMMSDIS
         } else {
           const cs = await getDocs(query(collection(db, "coupons"),
             where("rewardId", "==", r.rewardId), where("used", "==", false), limit(1)));

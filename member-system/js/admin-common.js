@@ -49,7 +49,7 @@ export function catOf(r) {
 
 // 首页区块（会员前台 home.html 的 DEFAULT_SECTIONS 也要一致）
 export const HOME_SECTIONS = [
-  { key: "hero",    label: "👋 你好 + 积分 + 等级", on: true },
+  { key: "hero",    label: "👋 你好 + 积分 + 等级（含右边 Feed 框）", on: true },
   { key: "banners", label: "🖼️ 横幅",              on: true },
   { key: "order",   label: "🧾 最新一张订单",        on: true },
   { key: "news",    label: "📣 俱乐部消息",          on: true, count: 3 },
