@@ -34,6 +34,56 @@ export function tierHTML(tier) {
 }
 export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3 };
 
+// 商城分类（会员前台 common.js 的 SHOP_CATS 也要一致；名称三语在前台 i18n.js 的 shop.cat.*）
+export const SHOP_CATS = [
+  { id: "coupon",   label: "🎫 优惠券" },
+  { id: "bracelet", label: "📿 手链" },
+  { id: "blindbox", label: "🎁 盲盒" },
+  { id: "figure",   label: "🧸 公仔玩具" },
+  { id: "other",    label: "✨ 其他" },
+];
+export function catOf(r) {
+  if (r.category && SHOP_CATS.some(c => c.id === r.category)) return r.category;
+  return r.type === "coupon" ? "coupon" : "other";
+}
+
+// 首页区块（会员前台 home.html 的 DEFAULT_SECTIONS 也要一致）
+export const HOME_SECTIONS = [
+  { key: "hero",    label: "👋 你好 + 积分 + 等级", on: true },
+  { key: "banners", label: "🖼️ 横幅",              on: true },
+  { key: "order",   label: "🧾 最新一张订单",        on: true },
+  { key: "news",    label: "📣 俱乐部消息",          on: true, count: 3 },
+  { key: "rewards", label: "✨ 最新上架的兑换商品",   on: true, count: 4 },
+];
+
+// 把图片缩到最长边 max 像素，转成小档案（存进 Firestore 用）
+export function compressImage(file, max = 480) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      let url = c.toDataURL("image/webp", 0.8);
+      if (!url.startsWith("data:image/webp")) url = c.toDataURL("image/jpeg", 0.82);
+      URL.revokeObjectURL(img.src);
+      resolve(url);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// 额外福利：系统自动发放的四项（预设分数要和会员前台 common.js 的 BONUSES、Firestore 规则一致）
+export const PERK_DEFAULTS = [
+  { key: "welcome",   points: 50, label: "🎁 新会员欢迎礼",       cond: "绑定第一个购物账号" },
+  { key: "birthday",  points: 10, label: "📝 完善资料：生日",      cond: "填写生日" },
+  { key: "whatsapp",  points: 10, label: "📝 完善资料：WhatsApp 通知", cond: "填写手机号码并勾选接收 WhatsApp 通知" },
+  { key: "platform2", points: 20, label: "📝 完善资料：第二个平台", cond: "Shopee 和 TikTok 都绑定" },
+];
+
 export function platformTag(p) {
   return `<span class="tag tag-${p === "shopee" ? "warn" : "pink"}">${esc(PLATFORM_LABELS[p] || p)}</span>`;
 }
@@ -107,6 +157,8 @@ export function renderAdminNav(active) {
     ["redeem", "index.html", "兑换审核"],
     ["members", "members.html", "会员管理"],
     ["rewards", "rewards.html", "奖品管理"],
+    ["perks", "perks.html", "🎁 额外福利"],
+    ["home", "home.html", "🏠 首页设定"],
     ["announce", "announcements.html", "📢 会员公告"],
     ["back", "../", "← 返回控制台"],
   ];

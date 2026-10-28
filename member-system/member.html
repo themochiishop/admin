@@ -52,6 +52,9 @@
 
             <h3 style="margin-top:8px">手动调整积分</h3>
             <form id="adjustForm">
+              <label id="perkPickBox" class="hidden">快速选择自订福利（选填）
+                <select id="perkPick"><option value="">— 不选 —</option></select>
+              </label>
               <div class="inline-form">
                 <label>积分（扣分填负数）
                   <input type="number" id="adjDelta" required step="1" placeholder="例如 50 或 -20">
@@ -322,6 +325,24 @@
       return out;
     }
 
+    // ---------- 快速选择自订福利：带入分数和原因 ----------
+    let customPerks = [];
+    async function loadPerkPicker() {
+      try {
+        const s = await getDoc(doc(db, "settings", "perks"));
+        customPerks = ((s.exists() && s.data().custom) || []).filter(p => p.active !== false);
+      } catch (e) { customPerks = []; }
+      $("perkPickBox").classList.toggle("hidden", !customPerks.length);
+      $("perkPick").innerHTML = `<option value="">— 不选 —</option>` +
+        customPerks.map(p => `<option value="${esc(p.id)}">★ ${esc(p.title)}${p.points ? "（" + p.points + " 分）" : ""}</option>`).join("");
+    }
+    $("perkPick").addEventListener("change", () => {
+      const p = customPerks.find(x => x.id === $("perkPick").value);
+      if (!p) return;
+      if (p.points) $("adjDelta").value = p.points;
+      $("adjReason").value = p.title;
+    });
+
     // ---------- 手动调整积分 ----------
     $("adjustForm").addEventListener("submit", async e => {
       e.preventDefault();
@@ -438,6 +459,7 @@
     });
 
     requireAdmin(user => {
+      loadPerkPicker();
       adminEmail = user.email || "";
       load().catch(e => {
         $("pageError").textContent = "载入失败：" + e.message;

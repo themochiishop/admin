@@ -53,6 +53,9 @@
             <label>库存（留空 = 不限）
               <input type="number" id="rstock" min="0" step="1">
             </label>
+            <label>商城分类
+              <select id="rcat"></select>
+            </label>
             <label>排序（数字小的排前面）
               <input type="number" id="rsort" step="1" value="10">
             </label>
@@ -91,7 +94,7 @@
     import {
       collection, getDocs, doc, addDoc, updateDoc, writeBatch, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, COUPON_FORMATS } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, esc, COUPON_FORMATS, SHOP_CATS, catOf } from "./js/admin-common.js";
     const $ = id => document.getElementById(id);
     renderAdminNav("rewards");
 
@@ -194,7 +197,7 @@ $("rimageRemove").addEventListener("click", () => {
                 </div>
                 ${r.description ? `<div class="meta">${esc(r.description)}</div>` : ""}
                 <div class="meta">
-                  库存：${typeof r.stock === "number" ? r.stock : "不限"} · 排序 ${r.sortOrder ?? "-"}
+                  ${(SHOP_CATS.find(c => c.id === catOf(r)) || {}).label || ""} · 库存：${typeof r.stock === "number" ? r.stock : "不限"} · 排序 ${r.sortOrder ?? "-"}
                                    ${isCoupon && r.couponCode ? ` · 优惠码：<b>${esc(r.couponCode)}</b>（共用）` : ""}
                   ${isCoupon && !r.couponCode ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
                     ${cs.unused === 0 ? '<span class="tag tag-bad">需补充</span>' : cs.unused < 5 ? '<span class="tag tag-warn">快用完</span>' : ""}` : ""}
@@ -227,6 +230,8 @@ $("rimageRemove").addEventListener("click", () => {
       $("rtype").value = r ? r.type : "coupon";
       $("rstock").value = r && typeof r.stock === "number" ? r.stock : "";
       $("rsort").value = r ? (r.sortOrder ?? 10) : 10;
+      $("rcat").innerHTML = SHOP_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join("");
+      $("rcat").value = r ? catOf(r) : "coupon";
       $("ractive").checked = r ? !!r.active : true;
             const cf = fmtOf(r && r.couponFormat);
       $("rcformat").value = cf.id;
@@ -252,6 +257,7 @@ showPreview(currentImage);
         type: $("rtype").value,
         stock: stockText === "" ? null : parseInt(stockText, 10),
         sortOrder: parseInt($("rsort").value, 10) || 0,
+        category: $("rcat").value,
         active: $("ractive").checked,
         image: currentImage,
         updatedAt: serverTimestamp()

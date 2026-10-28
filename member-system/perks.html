@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>额外福利 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .perk-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .perk-table th, .perk-table td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+    .perk-table th { color: #64748b; font-weight: 600; font-size: .82rem; }
+    .perk-table input[type=number] { width: 90px; margin: 0; }
+    .perk-table .cond { color: #64748b; font-size: .8rem; }
+    .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .85rem; }
+    .switch input { width: auto; margin: 0; }
+    .lang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+    .lang-box summary { cursor: pointer; font-size: .88rem; color: #475569; font-weight: 600; }
+    .lang-box[open] summary { margin-bottom: 12px; }
+    @media (max-width: 640px) { .perk-table .cond { display: none; } }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>🎁 额外福利</h2>
+          <p class="muted">会员前台「会员等级 › 额外福利」显示的项目。改分数只影响之后领取的人，已领过的不会变。</p>
+        </div>
+      </div>
+
+      <!-- 系统福利：会员完成条件后自动领取 -->
+      <div class="panel">
+        <h3>自动发放的福利</h3>
+        <p class="meta" style="margin:-6px 0 10px">会员完成条件后系统马上发分，每人每项只发一次，都需要先绑定账号。</p>
+        <table class="perk-table">
+          <thead><tr><th>福利</th><th class="cond">领取条件</th><th>积分</th><th>开放</th></tr></thead>
+          <tbody id="sysRows"></tbody>
+        </table>
+        <div class="actions">
+          <button class="btn btn-primary" id="saveSys">保存</button>
+        </div>
+        <p id="sysMsg" class="msg"></p>
+      </div>
+
+      <!-- 自订福利：只显示说明，由你手动发放 -->
+      <div class="panel">
+        <div class="page-head" style="margin-bottom:6px">
+          <div>
+            <h3 style="margin:0">自订福利</h3>
+            <p class="meta">例如「直播互动送 30 分」「晒单送 20 分」。会员看得到说明；积分由你在会员详情页的「手动调整积分」选这项发放。</p>
+          </div>
+          <button class="btn btn-primary" id="newCustom">＋ 新增</button>
+        </div>
+
+        <form id="customForm" class="hidden" style="margin-top:12px">
+          <input type="hidden" id="cId">
+          <div class="grid2">
+            <label>名称 <input id="cTitle" required maxlength="40" placeholder="例如：直播互动奖励"></label>
+            <label>积分（显示用，选填） <input type="number" id="cPoints" min="0" step="1" placeholder="例如 30"></label>
+          </div>
+          <label>说明（会员看得到） <textarea id="cDesc" rows="2" maxlength="160" placeholder="例如：直播时留言参与互动游戏，每场最多一次，直播后统一发放"></textarea></label>
+          <label>按钮链接（选填）
+            <select id="cLinkType">
+              <option value="">不加链接</option>
+              <option value="shop.html">🛍️ 兑换商城</option>
+              <option value="profile.html">👤 个人资料</option>
+              <option value="bind.html">🔗 绑定账号</option>
+              <option value="custom">其他网址（https://…）</option>
+            </select>
+          </label>
+          <label id="cLinkBox" class="hidden">网址 <input id="cLink" type="url" placeholder="https://www.themochiishop.com/live-stream/"></label>
+          <details class="lang-box">
+            <summary>🌐 英文 / 马来文版本（选填）</summary>
+            <div class="grid2">
+              <label>English 名称 <input id="enTitle" maxlength="40"></label>
+              <label>Bahasa Melayu 名称 <input id="msTitle" maxlength="40"></label>
+              <label>English 说明 <textarea id="enDesc" rows="2" maxlength="160"></textarea></label>
+              <label>Bahasa Melayu 说明 <textarea id="msDesc" rows="2" maxlength="160"></textarea></label>
+            </div>
+          </details>
+          <label class="inline"><input type="checkbox" id="cActive" checked> 开放（会员看得到）</label>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="cSave">保存</button>
+            <button type="button" class="btn btn-ghost" id="cCancel">取消</button>
+          </div>
+          <p id="cMsg" class="msg"></p>
+        </form>
+
+        <div id="customList" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, esc, PERK_DEFAULTS } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("perks");
+
+    const ref = doc(db, "settings", "perks");
+    let cfg = {};
+    let adminEmail = "";
+
+    function setMsg(el, text, type) {
+      el.textContent = text;
+      el.className = "msg" + (type ? " " + type : "");
+    }
+
+    function renderSys() {
+      $("sysRows").innerHTML = PERK_DEFAULTS.map(p => {
+        const c = cfg[p.key] || {};
+        const pts = typeof c.points === "number" ? c.points : p.points;
+        return `
+          <tr>
+            <td><b>${esc(p.label)}</b></td>
+            <td class="cond">${esc(p.cond)}</td>
+            <td><input type="number" min="1" step="1" data-pts="${p.key}" value="${pts}"></td>
+            <td><label class="switch"><input type="checkbox" data-on="${p.key}" ${c.active === false ? "" : "checked"}> 开放</label></td>
+          </tr>`;
+      }).join("");
+    }
+
+    function linkLabel(l) {
+      const opt = [...$("cLinkType").options].find(o => o.value === l);
+      return opt ? opt.textContent : l;
+    }
+
+    function renderCustom() {
+      const list = cfg.custom || [];
+      $("customList").innerHTML = list.length ? list.map(p => `
+        <div class="item">
+          <div class="item-head">
+            <div>
+              <div class="item-title">★ ${esc(p.title)} ${p.points ? `<span class="tag tag-pink">+${p.points} 分</span>` : ""}</div>
+              ${p.desc ? `<div class="meta">${esc(p.desc)}</div>` : ""}
+              <div class="meta">${p.link ? "链接：" + esc(linkLabel(p.link)) + " · " : ""}${Object.keys(p.i18n || {}).length ? "有英文/马来文版 · " : ""}${p.active === false ? "已隐藏" : "开放中"}</div>
+            </div>
+            <div>${p.active === false ? '<span class="tag">隐藏</span>' : '<span class="tag tag-ok">开放</span>'}</div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost" data-edit="${esc(p.id)}">编辑</button>
+            <button class="btn btn-ghost" data-toggle="${esc(p.id)}">${p.active === false ? "开放" : "隐藏"}</button>
+            <button class="btn btn-bad" data-del="${esc(p.id)}">删除</button>
+          </div>
+        </div>`).join("") : `<p class="empty">还没有自订福利</p>`;
+    }
+
+    async function save(patch) {
+      cfg = { ...cfg, ...patch, updatedAt: serverTimestamp(), updatedBy: adminEmail };
+      await setDoc(ref, cfg);
+      const snap = await getDoc(ref);
+      cfg = snap.exists() ? snap.data() : {};
+    }
+
+    function openForm(p) {
+      $("customForm").classList.remove("hidden");
+      $("cId").value = p ? p.id : "";
+      $("cTitle").value = p ? p.title : "";
+      $("cPoints").value = p && p.points ? p.points : "";
+      $("cDesc").value = p ? p.desc || "" : "";
+      const link = p ? p.link || "" : "";
+      const preset = ["", "shop.html", "profile.html", "bind.html"].includes(link);
+      $("cLinkType").value = preset ? link : "custom";
+      $("cLink").value = preset ? "" : link;
+      $("cLinkBox").classList.toggle("hidden", preset);
+      const i = (p && p.i18n) || {};
+      $("enTitle").value = (i.en || {}).title || ""; $("enDesc").value = (i.en || {}).desc || "";
+      $("msTitle").value = (i.ms || {}).title || ""; $("msDesc").value = (i.ms || {}).desc || "";
+      $("cActive").checked = !p || p.active !== false;
+      setMsg($("cMsg"), "");
+      $("cTitle").focus();
+    }
+
+    $("cLinkType").addEventListener("change", () => {
+      $("cLinkBox").classList.toggle("hidden", $("cLinkType").value !== "custom");
+    });
+    $("newCustom").addEventListener("click", () => openForm(null));
+    $("cCancel").addEventListener("click", () => $("customForm").classList.add("hidden"));
+
+    requireAdmin(async user => {
+      adminEmail = user.email || "";
+      try {
+        const snap = await getDoc(ref);
+        cfg = snap.exists() ? snap.data() : {};
+      } catch (e) { setMsg($("sysMsg"), "载入失败：" + e.message, "err"); }
+      renderSys();
+      renderCustom();
+      if (!cfg.updatedAt) setMsg($("sysMsg"), "目前用的是预设分数。按一次「保存」就会存成你的设定。", "");
+
+      $("saveSys").addEventListener("click", async () => {
+        const patch = {};
+        for (const p of PERK_DEFAULTS) {
+          const pts = parseInt(document.querySelector(`[data-pts="${p.key}"]`).value, 10);
+          if (!(pts > 0)) { setMsg($("sysMsg"), `「${p.label}」的积分要大于 0`, "err"); return; }
+          patch[p.key] = { points: pts, active: document.querySelector(`[data-on="${p.key}"]`).checked };
+        }
+        $("saveSys").disabled = true;
+        try { await save(patch); setMsg($("sysMsg"), "已保存 ✅ 会员下次打开页面就会生效", "ok"); }
+        catch (err) { setMsg($("sysMsg"), "保存失败：" + err.message, "err"); }
+        finally { $("saveSys").disabled = false; }
+      });
+
+      $("customForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const title = $("cTitle").value.trim();
+        if (!title) return;
+        const linkType = $("cLinkType").value;
+        const link = linkType === "custom" ? $("cLink").value.trim() : linkType;
+        if (linkType === "custom" && !/^https:\/\//i.test(link)) { setMsg($("cMsg"), "网址要以 https:// 开头", "err"); return; }
+        const desc = $("cDesc").value.trim();
+        const i18n = {};
+        [["en", "enTitle", "enDesc"], ["ms", "msTitle", "msDesc"]].forEach(([k, a, b]) => {
+          const tt = $(a).value.trim(), dd = $(b).value.trim();
+          if (tt || dd) i18n[k] = { title: tt || title, desc: dd || desc };
+        });
+        const item = {
+          id: $("cId").value || "p" + Date.now().toString(36),
+          title, desc, link, i18n,
+          points: parseInt($("cPoints").value, 10) || 0,
+          active: $("cActive").checked,
+        };
+        const list = (cfg.custom || []).filter(x => x.id !== item.id);
+        const idx = (cfg.custom || []).findIndex(x => x.id === item.id);
+        if (idx >= 0) list.splice(idx, 0, item); else list.push(item);
+        $("cSave").disabled = true;
+        try {
+          await save({ custom: list });
+          $("customForm").classList.add("hidden");
+          renderCustom();
+        } catch (err) { setMsg($("cMsg"), "保存失败：" + err.message, "err"); }
+        finally { $("cSave").disabled = false; }
+      });
+
+      $("customList").addEventListener("click", async e => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        const list = cfg.custom || [];
+        if (b.dataset.edit) { openForm(list.find(x => x.id === b.dataset.edit)); return; }
+        let next = null;
+        if (b.dataset.toggle) next = list.map(x => x.id === b.dataset.toggle ? { ...x, active: x.active === false } : x);
+        if (b.dataset.del) {
+          if (!confirm("删除这个福利？（已发放的积分不受影响）")) return;
+          next = list.filter(x => x.id !== b.dataset.del);
+        }
+        if (!next) return;
+        b.disabled = true;
+        try { await save({ custom: next }); renderCustom(); }
+        catch (err) { alert("保存失败：" + err.message); b.disabled = false; }
+      });
+    });
+  </script>
+</body>
+</html>

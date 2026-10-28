@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>首页设定 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .sec-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+    .sec-row:last-child { border-bottom: none; }
+    .sec-row .name { flex: 1; min-width: 160px; font-weight: 600; }
+    .sec-row input[type=number] { width: 70px; margin: 0; }
+    .sec-row .btn { padding: 6px 10px; }
+    .sec-row.off .name { color: #94a3b8; text-decoration: line-through; }
+    .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .85rem; }
+    .switch input { width: auto; margin: 0; }
+    .thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
+    .thumb.wide { width: 140px; height: 60px; }
+    .lang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+    .lang-box summary { cursor: pointer; font-size: .88rem; color: #475569; font-weight: 600; }
+    .lang-box[open] summary { margin-bottom: 12px; }
+    .radio-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 12px; font-size: .88rem; }
+    .radio-row label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+    .radio-row input { width: auto; margin: 0; }
+    .item-head .thumb { margin-right: 4px; }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>🏠 首页设定</h2>
+          <p class="muted">会员登录后看到的第一页。可以开关区块、调整顺序，并管理横幅和首页消息。</p>
+        </div>
+        <a class="btn btn-ghost" href="https://www.themochiishop.com/memberclub/home.html" target="_blank">👁 看会员首页</a>
+      </div>
+
+      <!-- ① 区块 -->
+      <div class="panel">
+        <h3>① 区块顺序与开关</h3>
+        <div id="secList"></div>
+        <div class="actions"><button class="btn btn-primary" id="saveSec">保存</button></div>
+        <p id="secMsg" class="msg"></p>
+      </div>
+
+      <!-- ② 横幅 -->
+      <div class="panel">
+        <div class="page-head" style="margin-bottom:6px">
+          <div>
+            <h3 style="margin:0">② 横幅</h3>
+            <p class="meta">放在首页上方，可以左右滑动。建议用横向图片（例如 1200 × 500）。</p>
+          </div>
+          <button class="btn btn-primary" id="newBanner">＋ 新增横幅</button>
+        </div>
+        <form id="bannerForm" class="hidden" style="margin-top:12px">
+          <input type="hidden" id="bnId">
+          <label>图片 <input type="file" id="bnFile" accept="image/*"></label>
+          <div id="bnPrevBox" class="hidden" style="margin:-4px 0 12px"><img id="bnPrev" class="thumb wide"></div>
+          <div class="grid2">
+            <label>标题（选填，只在后台看到） <input id="bnTitle" maxlength="40"></label>
+            <label>排序（数字小的排前面） <input type="number" id="bnSort" value="10" step="1"></label>
+          </div>
+          <label>点了去哪里（选填）
+            <select id="bnLinkType" class="link-type"></select>
+          </label>
+          <label id="bnLinkBox" class="hidden">网址 <input id="bnLink" type="url" placeholder="https://…"></label>
+          <label class="inline"><input type="checkbox" id="bnActive" checked> 显示</label>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="bnSave">保存</button>
+            <button type="button" class="btn btn-ghost" id="bnCancel">取消</button>
+          </div>
+          <p id="bnMsg" class="msg"></p>
+        </form>
+        <div id="bannerList" style="margin-top:12px"></div>
+      </div>
+
+      <!-- ③ 首页消息 -->
+      <div class="panel">
+        <div class="page-head" style="margin-bottom:6px">
+          <div>
+            <h3 style="margin:0">③ 首页消息</h3>
+            <p class="meta">只显示在会员首页（和铃铛的「📢 会员公告」分开）。可以上传图片，或直接选一个兑换商品。</p>
+          </div>
+          <button class="btn btn-primary" id="newNews">＋ 新增消息</button>
+        </div>
+        <form id="newsForm" class="hidden" style="margin-top:12px">
+          <input type="hidden" id="nId">
+          <label>标题 <input id="nTitle" maxlength="60" placeholder="例如：新款手链上架！"></label>
+          <label>内容（选填） <textarea id="nBody" rows="3" maxlength="400"></textarea></label>
+
+          <div class="meta" style="margin-bottom:4px">图片</div>
+          <div class="radio-row">
+            <label><input type="radio" name="nImg" value="none" checked> 不放图片</label>
+            <label><input type="radio" name="nImg" value="upload"> 上传图片</label>
+            <label><input type="radio" name="nImg" value="reward"> 选择兑换商品</label>
+          </div>
+          <div id="nUploadBox" class="hidden">
+            <label>上传图片 <input type="file" id="nFile" accept="image/*"></label>
+            <div id="nPrevBox" class="hidden" style="margin:-4px 0 12px"><img id="nPrev" class="thumb"></div>
+          </div>
+          <div id="nRewardBox" class="hidden">
+            <label>兑换商品（会显示商品图片、名称、所需积分，点了去兑换商城）
+              <select id="nReward"></select>
+            </label>
+          </div>
+
+          <label>点了去哪里（选填）
+            <select id="nLinkType" class="link-type"></select>
+          </label>
+          <label id="nLinkBox" class="hidden">网址 <input id="nLink" type="url" placeholder="https://…"></label>
+
+          <details class="lang-box">
+            <summary>🌐 英文 / 马来文版本（选填）</summary>
+            <div class="grid2">
+              <label>English 标题 <input id="enTitle" maxlength="60"></label>
+              <label>Bahasa Melayu 标题 <input id="msTitle" maxlength="60"></label>
+              <label>English 内容 <textarea id="enBody" rows="3" maxlength="400"></textarea></label>
+              <label>Bahasa Melayu 内容 <textarea id="msBody" rows="3" maxlength="400"></textarea></label>
+            </div>
+          </details>
+          <label class="inline"><input type="checkbox" id="nActive" checked> 显示</label>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="nSave">保存</button>
+            <button type="button" class="btn btn-ghost" id="nCancel">取消</button>
+          </div>
+          <p id="nMsg" class="msg"></p>
+        </form>
+        <div id="newsList" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, setDoc,
+      query, orderBy, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import {
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, HOME_SECTIONS, compressImage
+    } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("home");
+
+    const LINKS = [
+      ["", "不加链接"],
+      ["shop.html", "🛍️ 兑换商城"],
+      ["rewards.html", "🧾 兑换记录"],
+      ["account.html", "💎 会员等级"],
+      ["points.html", "📊 积分明细"],
+      ["bind.html", "🔗 绑定账号"],
+      ["profile.html", "👤 个人资料"],
+      ["custom", "其他网址（https://…）"],
+    ];
+    document.querySelectorAll(".link-type").forEach(sel => {
+      sel.innerHTML = LINKS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+    });
+    const linkLabel = l => (LINKS.find(([v]) => v === l) || [l, l])[1];
+
+    function setMsg(el, text, type) {
+      el.textContent = text;
+      el.className = "msg" + (type ? " " + type : "");
+    }
+    function setLink(prefix, link) {
+      const preset = LINKS.some(([v]) => v === link && v !== "custom");
+      $(prefix + "LinkType").value = preset ? link : "custom";
+      $(prefix + "Link").value = preset ? "" : link;
+      $(prefix + "LinkBox").classList.toggle("hidden", preset);
+    }
+    function getLink(prefix) {
+      const v = $(prefix + "LinkType").value;
+      return v === "custom" ? $(prefix + "Link").value.trim() : v;
+    }
+    ["bn", "n"].forEach(p => $(p + "LinkType").addEventListener("change", () =>
+      $(p + "LinkBox").classList.toggle("hidden", $(p + "LinkType").value !== "custom")));
+
+    let adminEmail = "";
+    let sections = [];
+    let rewards = [];
+
+    // ================= ① 区块 =================
+    function renderSections() {
+      $("secList").innerHTML = sections.map((s, i) => {
+        const def = HOME_SECTIONS.find(x => x.key === s.key) || {};
+        return `
+          <div class="sec-row ${s.on === false ? "off" : ""}">
+            <span class="name">${i + 1}. ${def.label || s.key}</span>
+            ${"count" in def ? `<label class="switch">显示 <input type="number" min="1" max="12" data-count="${i}" value="${s.count || def.count}"> 个</label>` : ""}
+            <label class="switch"><input type="checkbox" data-on="${i}" ${s.on === false ? "" : "checked"}> 开</label>
+            <button class="btn btn-ghost" data-up="${i}" ${i === 0 ? "disabled" : ""}>↑</button>
+            <button class="btn btn-ghost" data-down="${i}" ${i === sections.length - 1 ? "disabled" : ""}>↓</button>
+          </div>`;
+      }).join("");
+    }
+    $("secList").addEventListener("change", e => {
+      const on = e.target.dataset.on, cnt = e.target.dataset.count;
+      if (on !== undefined) { sections[on].on = e.target.checked; renderSections(); }
+      if (cnt !== undefined) sections[cnt].count = Math.max(1, Math.min(12, parseInt(e.target.value, 10) || 1));
+    });
+    $("secList").addEventListener("click", e => {
+      const up = e.target.dataset.up, down = e.target.dataset.down;
+      const swap = (a, b) => { [sections[a], sections[b]] = [sections[b], sections[a]]; renderSections(); };
+      if (up !== undefined) swap(+up, +up - 1);
+      if (down !== undefined) swap(+down, +down + 1);
+    });
+    $("saveSec").addEventListener("click", async () => {
+      $("saveSec").disabled = true;
+      try {
+        await setDoc(doc(db, "settings", "home"), {
+          sections: sections.map(s => ({ key: s.key, on: s.on !== false, ...(s.count ? { count: s.count } : {}) })),
+          updatedAt: serverTimestamp(), updatedBy: adminEmail
+        }, { merge: true });
+        setMsg($("secMsg"), "已保存 ✅", "ok");
+      } catch (err) { setMsg($("secMsg"), "保存失败：" + err.message, "err"); }
+      finally { $("saveSec").disabled = false; }
+    });
+
+    // ================= ② 横幅 =================
+    let bnImage = null;
+    async function loadBanners() {
+      const snap = await getDocs(collection(db, "homeBanners"));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+      $("bannerList").innerHTML = list.length ? list.map(b => `
+        <div class="item">
+          <div class="item-head" style="justify-content:flex-start">
+            ${b.image ? `<img class="thumb wide" src="${esc(b.image)}">` : ""}
+            <div style="flex:1;min-width:0">
+              <div class="item-title">${esc(b.title || "（无标题）")} ${b.active === false ? '<span class="tag">隐藏</span>' : '<span class="tag tag-ok">显示中</span>'}</div>
+              <div class="meta">排序 ${b.sortOrder ?? "-"}${b.link ? " · 链接：" + esc(linkLabel(b.link)) : ""}</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost" data-bedit="${esc(b.id)}">编辑</button>
+            <button class="btn btn-ghost" data-btoggle="${esc(b.id)}" data-active="${b.active === false ? 0 : 1}">${b.active === false ? "显示" : "隐藏"}</button>
+            <button class="btn btn-bad" data-bdel="${esc(b.id)}">删除</button>
+          </div>
+        </div>`).join("") : `<p class="empty">还没有横幅</p>`;
+      $("bannerList")._list = list;
+    }
+    function openBanner(b) {
+      $("bannerForm").classList.remove("hidden");
+      $("bnId").value = b ? b.id : "";
+      $("bnTitle").value = b ? b.title || "" : "";
+      $("bnSort").value = b ? (b.sortOrder ?? 10) : 10;
+      $("bnActive").checked = !b || b.active !== false;
+      setLink("bn", b ? b.link || "" : "");
+      bnImage = b ? b.image || null : null;
+      $("bnFile").value = "";
+      $("bnPrevBox").classList.toggle("hidden", !bnImage);
+      if (bnImage) $("bnPrev").src = bnImage;
+      setMsg($("bnMsg"), "");
+    }
+    $("newBanner").addEventListener("click", () => openBanner(null));
+    $("bnCancel").addEventListener("click", () => $("bannerForm").classList.add("hidden"));
+    $("bnFile").addEventListener("change", async () => {
+      const f = $("bnFile").files[0];
+      if (!f) return;
+      let url = await compressImage(f, 1200);
+      if (url.length > 700000) url = await compressImage(f, 900);
+      bnImage = url;
+      $("bnPrev").src = url;
+      $("bnPrevBox").classList.remove("hidden");
+    });
+    $("bannerForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!bnImage) { setMsg($("bnMsg"), "请先选择图片", "err"); return; }
+      const link = getLink("bn");
+      if ($("bnLinkType").value === "custom" && !/^https:\/\//i.test(link)) { setMsg($("bnMsg"), "网址要以 https:// 开头", "err"); return; }
+      const data = {
+        image: bnImage, title: $("bnTitle").value.trim(), link,
+        sortOrder: parseInt($("bnSort").value, 10) || 0,
+        active: $("bnActive").checked, updatedAt: serverTimestamp()
+      };
+      $("bnSave").disabled = true;
+      try {
+        const id = $("bnId").value;
+        if (id) await updateDoc(doc(db, "homeBanners", id), data);
+        else await addDoc(collection(db, "homeBanners"), { ...data, createdAt: serverTimestamp() });
+        $("bannerForm").classList.add("hidden");
+        await loadBanners();
+      } catch (err) { setMsg($("bnMsg"), "保存失败：" + err.message, "err"); }
+      finally { $("bnSave").disabled = false; }
+    });
+    $("bannerList").addEventListener("click", async e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      const list = $("bannerList")._list || [];
+      if (b.dataset.bedit) { openBanner(list.find(x => x.id === b.dataset.bedit)); return; }
+      try {
+        if (b.dataset.btoggle) await updateDoc(doc(db, "homeBanners", b.dataset.btoggle), { active: b.dataset.active !== "1" });
+        if (b.dataset.bdel) {
+          if (!confirm("删除这个横幅？")) return;
+          await deleteDoc(doc(db, "homeBanners", b.dataset.bdel));
+        }
+        await loadBanners();
+      } catch (err) { alert("操作失败：" + err.message); }
+    });
+
+    // ================= ③ 首页消息 =================
+    let nImage = null;
+    const imgMode = () => document.querySelector('input[name="nImg"]:checked').value;
+    function showImgMode() {
+      $("nUploadBox").classList.toggle("hidden", imgMode() !== "upload");
+      $("nRewardBox").classList.toggle("hidden", imgMode() !== "reward");
+    }
+    document.querySelectorAll('input[name="nImg"]').forEach(r => r.addEventListener("change", showImgMode));
+
+    async function loadNews() {
+      const snap = await getDocs(query(collection(db, "homeNews"), orderBy("createdAt", "desc")));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const rw = Object.fromEntries(rewards.map(r => [r.id, r]));
+      $("newsList").innerHTML = list.length ? list.map(n => {
+        const r = n.rewardId ? rw[n.rewardId] : null;
+        const img = n.image || (r && r.image);
+        return `
+          <div class="item">
+            <div class="item-head" style="justify-content:flex-start">
+              ${img ? `<img class="thumb" src="${esc(img)}">` : ""}
+              <div style="flex:1;min-width:0">
+                <div class="item-title">${esc(n.title || (r ? r.name : "（无标题）"))}
+                  ${n.active === false ? '<span class="tag">隐藏</span>' : '<span class="tag tag-ok">显示中</span>'}</div>
+                ${n.body ? `<div class="meta" style="white-space:pre-line">${esc(n.body)}</div>` : ""}
+                <div class="meta">${fmtDate(toDate(n.createdAt), true)}
+                  ${n.rewardId ? " · 商品：" + esc(r ? r.name + "（" + r.cost + " 分）" : "（已删除）") : ""}
+                  ${n.link ? " · 链接：" + esc(linkLabel(n.link)) : ""}
+                  ${Object.keys(n.i18n || {}).length ? " · 有英文/马来文版" : ""}</div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost" data-nedit="${esc(n.id)}">编辑</button>
+              <button class="btn btn-ghost" data-ntoggle="${esc(n.id)}" data-active="${n.active === false ? 0 : 1}">${n.active === false ? "显示" : "隐藏"}</button>
+              <button class="btn btn-bad" data-ndel="${esc(n.id)}">删除</button>
+            </div>
+          </div>`;
+      }).join("") : `<p class="empty">还没有首页消息</p>`;
+      $("newsList")._list = list;
+    }
+    function openNews(n) {
+      $("newsForm").classList.remove("hidden");
+      $("nId").value = n ? n.id : "";
+      $("nTitle").value = n ? n.title || "" : "";
+      $("nBody").value = n ? n.body || "" : "";
+      const mode = n && n.rewardId ? "reward" : n && n.image ? "upload" : "none";
+      document.querySelector(`input[name="nImg"][value="${mode}"]`).checked = true;
+      showImgMode();
+      $("nReward").innerHTML = rewards.map(r =>
+        `<option value="${esc(r.id)}">${r.active ? "" : "（已下架）"}${esc(r.name)} · ${r.cost} 分</option>`).join("");
+      if (n && n.rewardId) $("nReward").value = n.rewardId;
+      nImage = n ? n.image || null : null;
+      $("nFile").value = "";
+      $("nPrevBox").classList.toggle("hidden", !nImage);
+      if (nImage) $("nPrev").src = nImage;
+      setLink("n", n ? n.link || "" : "");
+      const i = (n && n.i18n) || {};
+      $("enTitle").value = (i.en || {}).title || ""; $("enBody").value = (i.en || {}).body || "";
+      $("msTitle").value = (i.ms || {}).title || ""; $("msBody").value = (i.ms || {}).body || "";
+      $("nActive").checked = !n || n.active !== false;
+      setMsg($("nMsg"), "");
+    }
+    $("newNews").addEventListener("click", () => openNews(null));
+    $("nCancel").addEventListener("click", () => $("newsForm").classList.add("hidden"));
+    $("nFile").addEventListener("change", async () => {
+      const f = $("nFile").files[0];
+      if (!f) return;
+      let url = await compressImage(f, 720);
+      if (url.length > 500000) url = await compressImage(f, 480);
+      nImage = url;
+      $("nPrev").src = url;
+      $("nPrevBox").classList.remove("hidden");
+    });
+    $("newsForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const mode = imgMode();
+      const title = $("nTitle").value.trim();
+      if (!title && mode !== "reward") { setMsg($("nMsg"), "请填写标题", "err"); return; }
+      if (mode === "upload" && !nImage) { setMsg($("nMsg"), "请先选择图片", "err"); return; }
+      if (mode === "reward" && !$("nReward").value) { setMsg($("nMsg"), "请选择商品", "err"); return; }
+      const link = getLink("n");
+      if ($("nLinkType").value === "custom" && !/^https:\/\//i.test(link)) { setMsg($("nMsg"), "网址要以 https:// 开头", "err"); return; }
+      const body = $("nBody").value.trim();
+      const i18n = {};
+      [["en", "enTitle", "enBody"], ["ms", "msTitle", "msBody"]].forEach(([k, a, b]) => {
+        const tt = $(a).value.trim(), bb = $(b).value.trim();
+        if (tt || bb) i18n[k] = { title: tt || title, body: bb || body };
+      });
+      const data = {
+        title, body, link, i18n,
+        image: mode === "upload" ? nImage : null,
+        rewardId: mode === "reward" ? $("nReward").value : null,
+        active: $("nActive").checked,
+        by: adminEmail, updatedAt: serverTimestamp()
+      };
+      $("nSave").disabled = true;
+      try {
+        const id = $("nId").value;
+        if (id) await updateDoc(doc(db, "homeNews", id), data);
+        else await addDoc(collection(db, "homeNews"), { ...data, createdAt: serverTimestamp() });
+        $("newsForm").classList.add("hidden");
+        await loadNews();
+      } catch (err) { setMsg($("nMsg"), "保存失败：" + err.message, "err"); }
+      finally { $("nSave").disabled = false; }
+    });
+    $("newsList").addEventListener("click", async e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      const list = $("newsList")._list || [];
+      if (b.dataset.nedit) { openNews(list.find(x => x.id === b.dataset.nedit)); return; }
+      try {
+        if (b.dataset.ntoggle) await updateDoc(doc(db, "homeNews", b.dataset.ntoggle), { active: b.dataset.active !== "1" });
+        if (b.dataset.ndel) {
+          if (!confirm("删除这则首页消息？")) return;
+          await deleteDoc(doc(db, "homeNews", b.dataset.ndel));
+        }
+        await loadNews();
+      } catch (err) { alert("操作失败：" + err.message); }
+    });
+
+    // ================= 载入 =================
+    requireAdmin(async user => {
+      adminEmail = user.email || "";
+      try {
+        const [sSnap, rSnap] = await Promise.all([
+          getDoc(doc(db, "settings", "home")),
+          getDocs(collection(db, "rewards"))
+        ]);
+        const saved = (sSnap.exists() && sSnap.data().sections) || [];
+        // 已存的顺序 + 之后新增的区块补在最后
+        sections = [
+          ...saved.filter(s => HOME_SECTIONS.some(d => d.key === s.key)),
+          ...HOME_SECTIONS.filter(d => !saved.some(s => s.key === d.key)).map(d => ({ key: d.key, on: d.on, ...(d.count ? { count: d.count } : {}) })),
+        ];
+        rewards = rSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.active === true) - (a.active === true) || (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+        renderSections();
+        await Promise.all([loadBanners(), loadNews()]);
+      } catch (e) {
+        setMsg($("secMsg"), "载入失败：" + e.message, "err");
+      }
+    });
+  </script>
+</body>
+</html>
