@@ -197,6 +197,7 @@ export function renderAdminNav(active) {
     ["perks", "perks.html", "🎁 额外福利"],
     ["home", "home.html", "🏠 首页设定"],
     ["announce", "announcements.html", "📢 会员公告"],
+    ["storehelp", "storehelp.html", "❓ 商店帮助"],
     ["back", "../", "← 返回控制台"],
   ];
   document.getElementById("adminHeader").innerHTML = `

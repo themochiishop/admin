@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>商店帮助 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .lang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+    .lang-box summary { cursor: pointer; font-size: .88rem; color: #475569; font-weight: 600; }
+    .lang-box[open] summary { margin-bottom: 12px; }
+    .faq-a { white-space: pre-line; color: #334155; font-size: .88rem; margin-top: 6px; }
+    .item.off { opacity: .55; }
+    .item.draft { border-style: dashed; border-color: #f59e0b; background: #fffbeb; }
+    .ord { display: inline-flex; gap: 4px; }
+    .ord .btn { padding: 4px 10px; }
+    .cat-head { font-size: .82rem; font-weight: 800; color: #64748b; margin: 18px 0 8px; letter-spacing: .03em; }
+    .editing { outline: 2px solid #db2777; }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>❓ 商店帮助</h2>
+          <p class="muted">会员前台「我的 → 帮助中心 → 商店帮助」显示这里的问题（只有登入的会员看得到）。<br>
+            「俱乐部帮助」那一边（积分、等级、兑换、绑定）是系统自动写好的，不用在这里管。</p>
+        </div>
+      </div>
+
+      <!-- 联系方式 -->
+      <div class="panel">
+        <h3>💬 联系我们按钮</h3>
+        <p class="muted" style="font-size:.82rem;margin:-6px 0 12px">显示在帮助中心最下面。留空的就不显示。</p>
+        <div class="grid2">
+          <label>WhatsApp 号码 <input id="cWa" inputmode="tel" placeholder="60123456789"></label>
+          <label>Shopee 店铺链接 <input id="cShopee" type="url" placeholder="https://shopee.com.my/…"></label>
+          <label>TikTok Shop 链接 <input id="cTiktok" type="url" placeholder="https://www.tiktok.com/@…"></label>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="cSave">保存联系方式</button>
+          <span id="cMsg" class="msg"></span>
+        </div>
+      </div>
+
+      <!-- 新增 / 编辑 -->
+      <div class="panel" id="formPanel">
+        <h3 id="formTitle">➕ 新增问题</h3>
+        <form id="qForm">
+          <div class="grid2">
+            <label>分类
+              <select id="qCat"></select>
+            </label>
+            <label>状态
+              <select id="qActive">
+                <option value="1">显示给会员</option>
+                <option value="0">隐藏</option>
+              </select>
+            </label>
+          </div>
+          <label>问题（中文）<input id="qQ" required maxlength="120" placeholder="例如：下单后多久出货？"></label>
+          <label>回答（中文）<textarea id="qA" rows="4" maxlength="1500" placeholder="可以换行"></textarea></label>
+
+          <details class="lang-box" id="langBox">
+            <summary>🌐 英文 / 马来文版本（选填）</summary>
+            <p class="muted" style="font-size:.8rem;margin-bottom:10px">没填的话，所有会员都看中文版。</p>
+            <div class="grid2">
+              <label>English 问题 <input id="enQ" maxlength="160"></label>
+              <label>Bahasa Melayu 问题 <input id="msQ" maxlength="160"></label>
+              <label>English 回答 <textarea id="enA" rows="4" maxlength="2000"></textarea></label>
+              <label>Bahasa Melayu 回答 <textarea id="msA" rows="4" maxlength="2000"></textarea></label>
+            </div>
+          </details>
+
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
+            <button type="button" class="btn btn-ghost hidden" id="cancelBtn">取消编辑</button>
+          </div>
+          <p id="formMsg" class="msg"></p>
+        </form>
+      </div>
+
+      <div class="page-head" style="margin-top:8px">
+        <div>
+          <h2 style="font-size:1.1rem">所有问题</h2>
+          <p class="muted" style="font-size:.82rem">黄色虚线 = 草稿（会员看不到），请检查内容后按「发布」或编辑保存。↑↓ 调整同一分类里的顺序。</p>
+        </div>
+      </div>
+      <div id="list"><p class="empty">载入中…</p></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("storehelp");
+
+    // 和会员前台 help.html 的 STORE_CATS 一致（分类名称三语在前台 i18n.js：help.store.*）
+    const CATS = [
+      ["order", "🧾 订单"], ["shipping", "🚚 出货与物流"], ["payment", "💳 付款"],
+      ["return", "↩️ 退换货"], ["product", "💍 商品"], ["live", "🎥 直播"], ["contact", "💬 联系我们"],
+    ];
+    const catLabel = k => (CATS.find(c => c[0] === k) || [k, k])[1];
+    $("qCat").innerHTML = CATS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+
+    // ---------- 第一次打开时放进去的草稿（可以改、可以删） ----------
+    const SEED = [
+      { cat: "shipping", q: "下单后多久出货？",
+        a: "一般在付款后 1–3 个工作天内出货（周末和公共假期除外）。\n预购或特别款请以商品页的说明为准。",
+        en: ["How soon will my order be shipped?", "Orders are usually shipped within 1–3 working days after payment (excluding weekends and public holidays).\nFor pre-order or special items, please refer to the product page."],
+        ms: ["Berapa lama pesanan saya akan dihantar?", "Pesanan biasanya dihantar dalam 1–3 hari bekerja selepas pembayaran (tidak termasuk hujung minggu dan cuti umum).\nUntuk item pra-pesanan atau istimewa, sila rujuk halaman produk."] },
+      { cat: "shipping", q: "怎样查询物流？",
+        a: "出货后，在 Shopee 或 TikTok Shop 的订单页面点「查看物流」就能看到追踪号码和最新进度。\n如果超过 5 天都没有更新，请联系我们帮你查。",
+        en: ["How do I track my parcel?", "Once shipped, open the order in Shopee or TikTok Shop and tap “Track” to see the tracking number and latest status.\nIf there is no update for more than 5 days, please contact us."],
+        ms: ["Bagaimana untuk menjejak bungkusan saya?", "Selepas dihantar, buka pesanan di Shopee atau TikTok Shop dan tekan “Jejak” untuk melihat nombor penjejakan dan status terkini.\nJika tiada kemas kini lebih 5 hari, sila hubungi kami."] },
+      { cat: "payment", q: "可以货到付款（COD）吗？",
+        a: "可以。结帐时如果平台显示「货到付款 / COD」选项就能选择。\n部分地区或商品平台不提供 COD，以结帐页面为准。",
+        en: ["Can I pay with Cash on Delivery (COD)?", "Yes. If the platform shows a COD option at checkout, you can choose it.\nCOD may not be available for some areas or items — please check at checkout."],
+        ms: ["Boleh bayar secara Tunai Semasa Penghantaran (COD)?", "Boleh. Jika platform menunjukkan pilihan COD semasa pembayaran, anda boleh memilihnya.\nCOD mungkin tidak tersedia untuk sesetengah kawasan atau item — sila semak semasa pembayaran."] },
+      { cat: "return", q: "收到的商品有问题怎么办？",
+        a: "请在收货后 3 天内，拍下开箱视频或照片，然后：\n1. 在 Shopee / TikTok Shop 订单页申请「退货 / 退款」，或\n2. 直接联系我们，我们会尽快帮你处理。",
+        en: ["What if my item arrives damaged or wrong?", "Within 3 days of receiving it, take an unboxing video or photos, then:\n1. Request a return/refund on the Shopee / TikTok Shop order page, or\n2. Contact us directly and we'll help you as soon as possible."],
+        ms: ["Bagaimana jika item rosak atau salah?", "Dalam masa 3 hari selepas menerima, ambil video atau gambar semasa membuka bungkusan, kemudian:\n1. Mohon pemulangan/bayaran balik di halaman pesanan Shopee / TikTok Shop, atau\n2. Hubungi kami terus dan kami akan bantu secepat mungkin."] },
+      { cat: "product", q: "盲盒可以指定款式吗？",
+        a: "盲盒是随机出货，没办法指定或换款。\n拆开后因为款式不喜欢不能退换（商品有瑕疵除外）。",
+        en: ["Can I choose the design in a blind box?", "Blind boxes are packed randomly, so designs can't be chosen or exchanged.\nOpened boxes can't be returned because of the design (except for defects)."],
+        ms: ["Boleh pilih reka bentuk dalam kotak misteri?", "Kotak misteri dibungkus secara rawak, jadi reka bentuk tidak boleh dipilih atau ditukar.\nKotak yang telah dibuka tidak boleh dipulangkan kerana reka bentuk (kecuali jika rosak)."] },
+      { cat: "product", q: "手链尺寸怎么选？",
+        a: "用软尺量手腕最细的地方，再加 1–1.5 cm，就是适合的手链尺寸。\n不确定的话，可以把手腕尺寸发给我们，帮你推荐。",
+        en: ["How do I choose my bracelet size?", "Measure the narrowest part of your wrist with a soft tape and add 1–1.5 cm.\nNot sure? Send us your wrist size and we'll recommend one."],
+        ms: ["Bagaimana memilih saiz gelang?", "Ukur bahagian pergelangan tangan yang paling kecil dengan pita lembut dan tambah 1–1.5 cm.\nTidak pasti? Hantar saiz pergelangan anda kepada kami untuk cadangan."] },
+      { cat: "live", q: "什么时候有直播？",
+        a: "直播时间会提前在会员 🔔 公告和 TikTok 主页预告。\n直播间常有限定优惠和抽奖，记得关注我们！",
+        en: ["When do you go live?", "Live times are announced in the member 🔔 notifications and on our TikTok profile.\nLives often have exclusive deals and lucky draws — follow us so you don't miss out!"],
+        ms: ["Bila ada siaran langsung?", "Waktu siaran langsung akan diumumkan dalam notifikasi ahli 🔔 dan profil TikTok kami.\nSiaran langsung selalunya ada tawaran eksklusif dan cabutan bertuah — ikuti kami!"] },
+      { cat: "contact", q: "怎样联系客服？",
+        a: "可以在 Shopee / TikTok Shop 里直接聊天，或按下面的 WhatsApp 按钮。\n客服时间：星期一至五 10am – 6pm（请按实际时间修改）。",
+        en: ["How can I contact customer service?", "Chat with us in Shopee / TikTok Shop, or tap the WhatsApp button below.\nHours: Mon–Fri 10am – 6pm."],
+        ms: ["Bagaimana untuk menghubungi khidmat pelanggan?", "Sembang dengan kami di Shopee / TikTok Shop, atau tekan butang WhatsApp di bawah.\nWaktu: Isnin–Jumaat 10pg – 6ptg."] },
+    ];
+
+    let rows = [];
+    let editing = null;
+
+    async function seedIfNeeded() {
+      const hs = await getDoc(doc(db, "settings", "help"));
+      const h = hs.exists() ? hs.data() : {};
+      if (h.seeded) return h;
+      const batch = writeBatch(db);
+      SEED.forEach((x, i) => {
+        batch.set(doc(collection(db, "storeFaq")), {
+          cat: x.cat, q: x.q, a: x.a,
+          i18n: { en: { q: x.en[0], a: x.en[1] }, ms: { q: x.ms[0], a: x.ms[1] } },
+          sortOrder: i, active: true, draft: true, createdAt: serverTimestamp(),
+        });
+      });
+      batch.set(doc(db, "settings", "help"), { seeded: true }, { merge: true });   // 只放一次，删掉不会再出现
+      await batch.commit();
+      return { ...h, seeded: true };
+    }
+
+    async function load() {
+      const snap = await getDocs(collection(db, "storeFaq"));
+      rows = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+      render();
+    }
+
+    function render() {
+      if (!rows.length) { $("list").innerHTML = `<p class="empty">还没有问题，在上面新增第一题吧</p>`; return; }
+      const drafts = rows.filter(r => r.draft).length;
+      let html = drafts ? `<div class="actions" style="margin-bottom:8px"><span class="tag tag-warn">${drafts} 题草稿</span>
+        <button class="btn btn-ghost" id="pubAll">✅ 全部草稿发布</button></div>` : "";
+      CATS.forEach(([k]) => {
+        const list = rows.filter(r => (r.cat || "order") === k);
+        if (!list.length) return;
+        html += `<div class="cat-head">${catLabel(k)} · ${list.length}</div>`;
+        html += list.map((r, i) => {
+          const langs = Object.keys(r.i18n || {}).filter(l => r.i18n[l] && r.i18n[l].q).map(l => l === "en" ? "EN" : "BM");
+          return `
+          <div class="item${r.draft ? " draft" : ""}${r.active === false ? " off" : ""}${editing === r.id ? " editing" : ""}">
+            <div class="item-head">
+              <div style="flex:1;min-width:0">
+                <div class="item-title">${esc(r.q)}</div>
+                <div class="meta">${r.draft ? '<span class="tag tag-warn">草稿</span> ' : ""}${r.active === false ? '<span class="tag">隐藏</span> ' : r.draft ? "" : '<span class="tag tag-ok">显示中</span> '}${langs.length ? "另有 " + langs.join(" / ") + " 版" : "只有中文"}</div>
+              </div>
+              <div class="ord">
+                <button class="btn btn-ghost" data-up="${esc(r.id)}" ${i === 0 ? "disabled" : ""}>↑</button>
+                <button class="btn btn-ghost" data-down="${esc(r.id)}" ${i === list.length - 1 ? "disabled" : ""}>↓</button>
+              </div>
+            </div>
+            <div class="faq-a">${esc(r.a)}</div>
+            <div class="actions">
+              ${r.draft ? `<button class="btn btn-ok" data-pub="${esc(r.id)}">✅ 发布</button>` : ""}
+              <button class="btn btn-ghost" data-edit="${esc(r.id)}">✏️ 编辑</button>
+              <button class="btn btn-ghost" data-toggle="${esc(r.id)}">${r.active === false ? "👁 显示" : "🙈 隐藏"}</button>
+              <button class="btn btn-ghost" data-del="${esc(r.id)}">🗑 删除</button>
+            </div>
+          </div>`;
+        }).join("");
+      });
+      $("list").innerHTML = html;
+    }
+
+    // ---------- 列表按钮 ----------
+    $("list").addEventListener("click", async e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      const id = b.dataset.up || b.dataset.down || b.dataset.pub || b.dataset.edit || b.dataset.toggle || b.dataset.del;
+      const r = rows.find(x => x.id === id);
+      try {
+        if (b.id === "pubAll") {
+          if (!confirm("把所有草稿发布给会员看？建议先检查内容。")) return;
+          const batch = writeBatch(db);
+          rows.filter(x => x.draft).forEach(x => batch.update(doc(db, "storeFaq", x.id), { draft: false }));
+          await batch.commit();
+        } else if (!r) return;
+        else if (b.dataset.up || b.dataset.down) {
+          const list = rows.filter(x => (x.cat || "order") === (r.cat || "order"));
+          const i = list.indexOf(r), j = b.dataset.up ? i - 1 : i + 1;
+          if (j < 0 || j >= list.length) return;
+          [list[i], list[j]] = [list[j], list[i]];
+          // 整个分类重新编号，避免旧资料的顺序号重复
+          const others = rows.filter(x => (x.cat || "order") !== (r.cat || "order"));
+          const all = [...others, ...list].sort((a, b) => CATS.findIndex(c => c[0] === (a.cat || "order")) - CATS.findIndex(c => c[0] === (b.cat || "order")));
+          const batch = writeBatch(db);
+          let n = 0;
+          CATS.forEach(([k]) => all.filter(x => (x.cat || "order") === k).forEach(x => {
+            const so = n++;
+            if (x.sortOrder !== so) batch.update(doc(db, "storeFaq", x.id), { sortOrder: so });
+          }));
+          b.disabled = true;
+          await batch.commit();
+        } else if (b.dataset.pub) {
+          await updateDoc(doc(db, "storeFaq", id), { draft: false });
+        } else if (b.dataset.toggle) {
+          await updateDoc(doc(db, "storeFaq", id), { active: r.active === false });
+        } else if (b.dataset.del) {
+          if (!confirm(`删除这一题？\n\n${r.q}`)) return;
+          await deleteDoc(doc(db, "storeFaq", id));
+          if (editing === id) resetForm();
+        } else if (b.dataset.edit) {
+          startEdit(r);
+          return;
+        }
+        await load();
+      } catch (err) {
+        alert("操作失败：" + err.message);
+        b.disabled = false;
+      }
+    });
+
+    // ---------- 表单 ----------
+    function setMsg(text, type) {
+      $("formMsg").textContent = text;
+      $("formMsg").className = "msg" + (type ? " " + type : "");
+    }
+    function resetForm() {
+      editing = null;
+      $("qForm").reset();
+      $("formTitle").textContent = "➕ 新增问题";
+      $("saveBtn").textContent = "保存";
+      $("cancelBtn").classList.add("hidden");
+      $("langBox").open = false;
+      render();
+    }
+    function startEdit(r) {
+      editing = r.id;
+      const i = r.i18n || {};
+      $("qCat").value = r.cat || "order";
+      $("qActive").value = r.active === false ? "0" : "1";
+      $("qQ").value = r.q || "";
+      $("qA").value = r.a || "";
+      $("enQ").value = (i.en && i.en.q) || "";
+      $("enA").value = (i.en && i.en.a) || "";
+      $("msQ").value = (i.ms && i.ms.q) || "";
+      $("msA").value = (i.ms && i.ms.a) || "";
+      $("langBox").open = !!(i.en || i.ms);
+      $("formTitle").textContent = "✏️ 编辑问题";
+      $("saveBtn").textContent = r.draft ? "保存并发布" : "保存修改";
+      $("cancelBtn").classList.remove("hidden");
+      setMsg("");
+      render();
+      $("formPanel").scrollIntoView({ behavior: "smooth" });
+    }
+    $("cancelBtn").addEventListener("click", resetForm);
+
+    $("qForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const q = $("qQ").value.trim(), a = $("qA").value.trim();
+      if (!q || !a) { setMsg("问题和回答都要填", "err"); return; }
+      const i18n = {};
+      [["en", "enQ", "enA"], ["ms", "msQ", "msA"]].forEach(([k, qi, ai]) => {
+        const qq = $(qi).value.trim(), aa = $(ai).value.trim();
+        if (qq || aa) i18n[k] = { q: qq || q, a: aa || a };
+      });
+      const data = { cat: $("qCat").value, q, a, i18n, active: $("qActive").value === "1", draft: false, updatedAt: serverTimestamp() };
+      $("saveBtn").disabled = true;
+      try {
+        if (editing) {
+          await updateDoc(doc(db, "storeFaq", editing), data);
+        } else {
+          const max = rows.reduce((m, r) => Math.max(m, r.sortOrder ?? 0), -1);
+          await addDoc(collection(db, "storeFaq"), { ...data, sortOrder: max + 1, createdAt: serverTimestamp() });
+        }
+        resetForm();
+        setMsg("已保存 ✅", "ok");
+        await load();
+      } catch (err) {
+        setMsg("保存失败：" + err.message, "err");
+      } finally {
+        $("saveBtn").disabled = false;
+      }
+    });
+
+    // ---------- 联系方式 ----------
+    $("cSave").addEventListener("click", async () => {
+      const wa = $("cWa").value.replace(/\D/g, "");
+      const shopee = $("cShopee").value.trim(), tiktok = $("cTiktok").value.trim();
+      const bad = [shopee, tiktok].find(u => u && !/^https:\/\//i.test(u));
+      const msg = $("cMsg");
+      if (bad) { msg.textContent = "链接要以 https:// 开头"; msg.className = "msg err"; return; }
+      $("cSave").disabled = true;
+      try {
+        await setDoc(doc(db, "settings", "help"), { whatsapp: wa, shopee, tiktok }, { merge: true });
+        $("cWa").value = wa;
+        msg.textContent = "已保存 ✅"; msg.className = "msg ok";
+      } catch (err) {
+        msg.textContent = "保存失败：" + err.message; msg.className = "msg err";
+      } finally {
+        $("cSave").disabled = false;
+      }
+    });
+
+    requireAdmin(async () => {
+      try {
+        const h = await seedIfNeeded();
+        $("cWa").value = h.whatsapp || "";
+        $("cShopee").value = h.shopee || "";
+        $("cTiktok").value = h.tiktok || "";
+        await load();
+      } catch (e) {
+        $("list").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>
