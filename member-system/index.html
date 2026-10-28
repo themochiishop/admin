@@ -51,6 +51,17 @@
       <input id="search" placeholder="🔍 搜索兑换编号（例如 #A1B2C3）、会员名称或奖品" style="margin-bottom:12px">
       <div id="panel"><p class="empty">载入中…</p></div>
 
+      <details class="panel" style="margin-top:20px">
+        <summary style="cursor:pointer;font-weight:700">🔗 运输公司查询链接</summary>
+        <p class="meta" style="margin:10px 0">填物流资料时，输入单号就会自动生成查询链接，<code>{no}</code> 会换成追踪单号。第一次请用真实单号测试链接能不能打开，不对的话在这里改。</p>
+        <div class="grid2">
+          <label>SPX Express <input id="tplSpx"></label>
+          <label>J&amp;T Express <input id="tplJnt"></label>
+        </div>
+        <div class="actions"><button class="btn btn-primary" id="tplSave">保存</button></div>
+        <p id="tplMsg" class="msg"></p>
+      </details>
+
     </div>
   </div>
 
@@ -62,7 +73,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
-      fmtPhone, waLink, CARRIERS, refreshRedeemBadge, redeemCode
+      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -72,10 +83,14 @@
     const members = {};   // uid → 会员资料
     const ledgers = {};   // uid → 积分流水
     let tab = "pending";
+    let trackTpl = { ...DEFAULT_TRACK_TPL };
     let adminEmail = "";
     const shipPhotos = {};   // 兑换 ID → 待上传的包裹照片
 
     const isGift = r => r.kind === "gift";
+    // 🧪 测试兑换：已批准的看兑换本身的标记；审核中的看会员是不是「内部会员 · 测试」
+    const isTest = r => r.test === true || (r.status === "pending"
+      && !!(members[r.uid] && members[r.uid].internal && members[r.uid].internal.on && members[r.uid].internal.test !== false));
     const TABS = {
       pending: r => r.status === "pending",
       toShip:  r => isGift(r) && (r.status === "approved" || r.status === "problem"),
@@ -151,7 +166,7 @@
       return `
         <div class="item-head">
           <div style="min-width:0;flex:1">
-            <div class="item-title">${kindTag(r)} ${esc(r.rewardName)} · ${r.cost} 分 ${extra}</div>
+            <div class="item-title">${kindTag(r)} ${isTest(r) ? '<span class="tag tag-warn">🧪 测试</span> ' : ""}${esc(r.rewardName)} · ${r.cost} 分 ${extra}</div>
             <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a> · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
           </div>
           <code class="rno">${redeemCode(r.id)}</code>
@@ -176,7 +191,7 @@
             <label class="other-name ${carrier === "other" ? "" : "hidden"}">公司名称 <input data-f="carrierName" value="${esc(carrier === "other" ? s.carrierName || "" : "")}" placeholder="例如 Pos Laju"></label>
             <label>追踪单号 <input data-f="trackingNo" value="${esc(s.trackingNo || "")}" autocomplete="off"></label>
           </div>
-          <label>查询链接（贴上运输公司给这一单的链接，选填） <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
+          <label>查询链接（输入单号后自动生成，可以改） <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
           <div class="grid4">
             <label>重量 kg <input data-f="weightKg" type="number" step="0.01" min="0" value="${esc(s.weightKg || "")}"></label>
             <label>长 cm <input data-f="l" type="number" step="0.1" min="0" value="${esc((s.dims || {}).l || "")}"></label>
@@ -269,7 +284,8 @@
       const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
       if (bal.spendable < r.cost &&
           !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return false;
-      if (reward && typeof reward.stock === "number" && reward.stock <= 0 &&
+      const test = isTest(r);
+      if (!test && reward && typeof reward.stock === "number" && reward.stock <= 0 &&
           !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return false;
 
       // 优惠券：共用优惠码（存在只有管理员能读的 rewardSecrets）；没有就从券码库取一组
@@ -279,6 +295,8 @@
         const shared = (secret.exists() && secret.data().couponCode) || reward.couponCode || null;
         if (shared) {
           couponCode = shared;
+        } else if (test) {
+          couponCode = "TEST-" + r.id.slice(0, 6).toUpperCase();   // 测试：不用掉券码库
         } else {
           const cs = await getDocs(query(collection(db, "coupons"),
             where("rewardId", "==", r.rewardId), where("used", "==", false), limit(1)));
@@ -293,6 +311,7 @@
 
       const batch = writeBatch(db);
       const update = { status: "approved", decidedAt: serverTimestamp() };
+      if (test) update.test = true;
       if (note) update.note = note;
       if (couponCode) update.couponCode = couponCode;
       batch.update(doc(db, "redemptions", r.id), update);
@@ -305,7 +324,7 @@
           used: true, usedBy: r.uid, redemptionId: r.id, usedAt: serverTimestamp()
         });
       }
-      if (reward && typeof reward.stock === "number") {
+      if (!test && reward && typeof reward.stock === "number") {
         batch.update(doc(db, "rewards", r.rewardId), { stock: increment(-1) });
       }
       await batch.commit();
@@ -334,7 +353,7 @@
         uid: r.uid, delta: r.cost, reason: "兑换取消退回：" + r.rewardName, orderNo: null,
         redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
       });
-      if (reward && typeof reward.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
+      if (!r.test && reward && typeof reward.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
       await batch.commit();
       return true;
     }
@@ -357,12 +376,25 @@
     }
 
     $("search").addEventListener("input", () => render());
+
+    // 输入单号 / 换运输公司时，自动生成查询链接
+    function autoUrl(item) {
+      const s = readShip(item);
+      const tpl = s.carrier === "other" ? "" : (trackTpl[s.carrier] || "");
+      if (tpl && s.trackingNo) item.querySelector('[data-f="trackingUrl"]').value = tpl.replace("{no}", encodeURIComponent(s.trackingNo));
+    }
+    $("panel").addEventListener("input", e => {
+      const item = e.target.closest(".item");
+      if (item && e.target.dataset.f === "trackingNo") autoUrl(item);
+    });
     $("panel").addEventListener("change", async e => {
       const item = e.target.closest(".item");
       if (!item) return;
       const f = e.target.dataset.f;
       if (f === "carrier") {
         item.querySelector(".other-name").classList.toggle("hidden", e.target.value !== "other");
+        if (e.target.value === "other") item.querySelector('[data-f="trackingUrl"]').value = "";
+        autoUrl(item);
       }
       if (f === "photos") {
         const id = item.dataset.id;
@@ -459,10 +491,25 @@
       }
     });
 
+    // ---------- 查询链接模板 ----------
+    $("tplSave").addEventListener("click", async () => {
+      trackTpl = { spx: $("tplSpx").value.trim(), jnt: $("tplJnt").value.trim() };
+      try {
+        await setDoc(doc(db, "settings", "shipping"), { trackTpl, updatedAt: serverTimestamp() }, { merge: true });
+        $("tplMsg").textContent = "已保存 ✅"; $("tplMsg").className = "msg ok";
+      } catch (err) { $("tplMsg").textContent = "保存失败：" + err.message; $("tplMsg").className = "msg err"; }
+    });
+
     $("reloadBtn").addEventListener("click", () => load());
 
     requireAdmin(async user => {
       adminEmail = user.email || "";
+      try {
+        const s = await getDoc(doc(db, "settings", "shipping"));
+        if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
+      } catch (e) {}
+      $("tplSpx").value = trackTpl.spx || "";
+      $("tplJnt").value = trackTpl.jnt || "";
       load().catch(e => { $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`; });
     });
   </script>

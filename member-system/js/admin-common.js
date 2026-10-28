@@ -52,12 +52,18 @@ export function catOf(r, cats = DEFAULT_SHOP_CATS) {
   return cats[0] ? cats[0].id : "";
 }
 
-// 📦 实体奖品：运输公司（查询链接在每一笔发货时贴上）
+// 📦 实体奖品：运输公司
 export const CARRIERS = [
   { id: "spx",   name: "SPX Express", label: "SPX Express" },
   { id: "jnt",   name: "J&T Express", label: "J&T Express" },
   { id: "other", name: "",            label: "其他（自己填写）" },
 ];
+// 查询链接模板：输入单号后自动生成链接（{no} = 单号），可在「兑换管理」页面底部修改
+export const DEFAULT_TRACK_TPL = {
+  spx: "https://spx.com.my/track?{no}",
+  jnt: "https://www.jtexpress.my/tracking/{no}",
+};
+
 // 兑换编号：#加上兑换 ID 前 6 码（和会员前台一样）
 export function redeemCode(id) {
   return "#" + String(id || "").slice(0, 6).toUpperCase();
@@ -197,7 +203,7 @@ export function renderAdminNav(active) {
     <div class="brand">Mochiishop/admin · 会员系统</div>
     <nav>
       ${links.map(([k, href, t]) => `<a href="${href}" class="${k === active ? "active" : ""}">${t}</a>`).join("")}
-            <a href="#" id="clubSwitch" class="club-switch">俱乐部…</a>
+      <a href="#" id="clubSwitch" class="club-switch">俱乐部…</a>
       <a href="#" id="adminLogout">登出</a>
     </nav>`;
   document.getElementById("adminLogout").addEventListener("click", e => {

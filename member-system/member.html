@@ -50,7 +50,7 @@
               <div><div class="l">兑换审核中</div><div class="big" id="bReserved" style="color:#64748b">-</div></div>
             </div>
 
-            <h3 style="margin-top:8px">手动调整积分</h3>
+            <h3 style="margin-top:8px" id="adjustHead">手动调整积分</h3>
             <form id="adjustForm">
               <label id="perkPickBox" class="hidden">快速选择自订福利（选填）
                 <select id="perkPick"><option value="">— 不选 —</option></select>
@@ -82,6 +82,20 @@
               <p id="pMsg" class="msg"></p>
             </form>
           </div>
+
+          <!-- 🏷️ 内部会员（员工 / 测试用） -->
+          <div class="panel" id="internalPanel">
+            <h3>🏷️ 内部会员</h3>
+            <p class="meta" style="margin:-6px 0 10px">给员工或测试用的会员：不用绑定账号就能领额外福利、生日礼不需要订单。开通时送 <b id="internalPtsLbl"></b> 分（只送一次）。</p>
+            <label class="inline"><input type="checkbox" id="iOn"> 这是内部会员</label>
+            <div id="iModeBox" style="margin:8px 0 0 24px">
+              <div class="meta" style="margin-bottom:4px">兑换方式</div>
+              <label class="inline"><input type="radio" name="iMode" value="test" checked> 🧪 测试：照样走完流程，但不扣库存、不用掉券码库，也不算进数据</label>
+              <label class="inline"><input type="radio" name="iMode" value="real"> ✅ 真实：跟一般会员一样（会扣库存、会真的寄出）</label>
+            </div>
+            <div class="actions"><button type="button" class="btn btn-primary" id="iSave">保存</button></div>
+            <p id="iMsg" class="msg"></p>
+          </div>
         </div>
 
         <!-- 右：绑定 -->
@@ -94,7 +108,7 @@
               <summary style="cursor:pointer;font-size:.88rem;color:#475569;font-weight:600">📜 绑定历史 <span id="logCount"></span></summary>
               <div id="logList" style="margin-top:8px"></div>
             </details>
-            <h3 style="margin-top:18px">代为绑定</h3>
+            <h3 style="margin-top:18px" id="bindHead">代为绑定</h3>
             <p class="meta" style="margin-bottom:10px">会员改了用户名、或无法自行验证时使用。请先确认对方身份。</p>
             <form id="bindForm" class="inline-form">
               <label>平台
@@ -169,7 +183,14 @@
       if (!mSnap.exists()) throw new Error("找不到这位会员");
 
       const m = mSnap.data();
+      currentMember = m;
+      const iv = m.internal || {};
+      $("iOn").checked = iv.on === true;
+      document.querySelector(`input[name="iMode"][value="${iv.test === false ? "real" : "test"}"]`).checked = true;
+      $("iModeBox").classList.toggle("hidden", !$("iOn").checked);
+      $("internalPtsLbl").textContent = INTERNAL_BONUS;
       $("mName").textContent = m.name || "(未填称呼)";
+      $("mName").insertAdjacentHTML("beforeend", iv.on ? ` <span class="tag tag-pink">🏷️ 内部${iv.test === false ? "" : " · 🧪 测试"}</span>` : "");
       $("mSub").textContent = `${TIER_LABELS[m.tier] || TIER_LABELS.mochii} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
       $("pName").value = m.name || "";
       $("pPhone").value = m.phone ? fmtPhone(m.phone) : "";
@@ -341,6 +362,39 @@
       if (!p) return;
       if (p.points) $("adjDelta").value = p.points;
       $("adjReason").value = p.title;
+    });
+
+    // ---------- 🏷️ 内部会员 ----------
+    const INTERNAL_BONUS = 888;   // 开通内部会员时送的积分（只送一次）
+    let currentMember = null;
+    $("iOn").addEventListener("change", () => $("iModeBox").classList.toggle("hidden", !$("iOn").checked));
+    $("iSave").addEventListener("click", async () => {
+      const on = $("iOn").checked;
+      const test = document.querySelector('input[name="iMode"]:checked').value === "test";
+      const before = (currentMember && currentMember.internal) || {};
+      const giveBonus = on && !before.bonusGiven;
+      const msg = on
+        ? `把「${currentMember.name || ""}」设为内部会员（${test ? "🧪 测试" : "✅ 真实"}兑换）？` + (giveBonus ? `\n会送 ${INTERNAL_BONUS} 分（只送一次）。` : "")
+        : `取消「${currentMember.name || ""}」的内部会员？（已送的积分不会扣回）`;
+      if (!confirm(msg)) return;
+      $("iSave").disabled = true;
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(db, "members", uid), {
+          internal: { ...before, on, test, by: adminEmail, at: serverTimestamp(), bonusGiven: before.bonusGiven || giveBonus }
+        });
+        if (giveBonus) {
+          batch.set(doc(collection(db, "pointsLedger")), {
+            uid, delta: INTERNAL_BONUS, reason: "奖励：内部会员开通礼", orderNo: null,
+            by: adminEmail, availableAt: serverTimestamp(), createdAt: serverTimestamp()
+          });
+        }
+        await batch.commit();
+        setMsg($("iMsg"), "已保存 ✅", "ok");
+        await load();
+      } catch (err) {
+        setMsg($("iMsg"), "保存失败：" + err.message, "err");
+      } finally { $("iSave").disabled = false; }
     });
 
     // ---------- 手动调整积分 ----------

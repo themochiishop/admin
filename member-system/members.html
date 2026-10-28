@@ -121,13 +121,18 @@
           bindings: bindings[d.id] || [],
           spendable: bal.spendable,
           pending: bal.pending,
+          internal: !!(m.internal && m.internal.on),
+          internalTest: !!(m.internal && m.internal.on && m.internal.test !== false),
         };
       });
 
-      $("sMembers").textContent = rows.length.toLocaleString();
-      $("sBound").textContent = rows.filter(r => r.bindings.length).length.toLocaleString();
-      $("sAvail").textContent = rows.reduce((s, r) => s + r.spendable, 0).toLocaleString();
-      $("sPending").textContent = rows.reduce((s, r) => s + r.pending, 0).toLocaleString();
+      // 统计不算内部会员
+      const real = rows.filter(r => !r.internal);
+      const nInternal = rows.length - real.length;
+      $("sMembers").textContent = real.length.toLocaleString() + (nInternal ? `（另有内部 ${nInternal}）` : "");
+      $("sBound").textContent = real.filter(r => r.bindings.length).length.toLocaleString();
+      $("sAvail").textContent = real.reduce((s, r) => s + r.spendable, 0).toLocaleString();
+      $("sPending").textContent = real.reduce((s, r) => s + r.pending, 0).toLocaleString();
       render();
     }
 
@@ -152,7 +157,7 @@
       const list = filtered();
       $("rows").innerHTML = list.length ? list.map(r => `
         <tr data-uid="${esc(r.uid)}">
-          <td><b>${esc(r.name)}</b></td>
+          <td><b>${esc(r.name)}</b>${r.internal ? ` <span class="tag tag-pink" title="内部会员">🏷️${r.internalTest ? "🧪" : ""}</span>` : ""}</td>
           <td>${tierHTML(r.tier)}</td>
           <td class="num">RM ${r.spend12m.toFixed(2)}</td>
           <td>${r.phone
