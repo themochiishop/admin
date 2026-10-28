@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>兑换审核 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>兑换审核</h2>
+          <p class="muted">批准后才会扣除会员积分；优惠券会自动从券码库分配一组</p>
+        </div>
+        <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+      </div>
+
+      <div class="tabs">
+        <button data-tab="pending" class="active">待审核 <span id="pendingCount"></span></button>
+        <button data-tab="history">历史记录</button>
+      </div>
+
+      <div id="pendingPanel"><p class="empty">载入中…</p></div>
+      <div id="historyPanel" class="hidden"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, query, where, getDocs, getDoc, doc, limit,
+      writeBatch, serverTimestamp, increment
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import {
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance
+    } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("redeem");
+
+    const STATUS = {
+      approved: '<span class="tag tag-ok">已批准</span>',
+      rejected: '<span class="tag tag-bad">已拒绝</span>',
+      cancelled: '<span class="tag">会员取消</span>',
+    };
+
+    let all = [];
+    const members = {};   // uid → 会员资料
+    const ledgers = {};   // uid → 积分流水
+
+    document.querySelectorAll(".tabs button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
+        $("pendingPanel").classList.toggle("hidden", btn.dataset.tab !== "pending");
+        $("historyPanel").classList.toggle("hidden", btn.dataset.tab !== "history");
+      });
+    });
+
+    async function load() {
+      $("pendingPanel").innerHTML = `<p class="empty">载入中…</p>`;
+      const snap = await getDocs(collection(db, "redemptions"));
+      all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .map(r => ({ ...r, createdAt: toDate(r.createdAt), decidedAt: toDate(r.decidedAt) }));
+
+      const pending = all.filter(r => r.status === "pending");
+      const history = all.filter(r => r.status !== "pending")
+        .sort((a, b) => (b.decidedAt || b.createdAt || 0) - (a.decidedAt || a.createdAt || 0))
+        .slice(0, 100);
+
+      // 会员资料（待审核 + 最近历史）
+      const uids = [...new Set([...pending, ...history].map(r => r.uid))];
+      await Promise.all(uids.map(async uid => {
+        if (members[uid]) return;
+        const s = await getDoc(doc(db, "members", uid));
+        members[uid] = s.exists() ? s.data() : { name: "(资料不存在)" };
+      }));
+
+      // 待审核会员的积分流水（每次重新读，确保余额最新）
+      await Promise.all([...new Set(pending.map(r => r.uid))].map(async uid => {
+        const s = await getDocs(query(collection(db, "pointsLedger"), where("uid", "==", uid)));
+        ledgers[uid] = s.docs.map(d => d.data());
+      }));
+
+      renderPending(pending.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
+      renderHistory(history);
+    }
+
+    function renderPending(list) {
+      $("pendingCount").textContent = list.length ? `(${list.length})` : "";
+      $("pendingPanel").innerHTML = list.length ? list.map(r => {
+        const m = members[r.uid] || {};
+        const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
+        const enough = bal.spendable >= r.cost;
+        return `
+          <div class="item" data-id="${esc(r.id)}">
+            <div class="item-head">
+              <div>
+                <div class="item-title">${esc(r.rewardName)} · ${r.cost} 分</div>
+                <div class="meta">${esc(m.name)} · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}</div>
+                <div class="meta">会员可用积分：<b>${bal.spendable}</b>
+                  ${enough ? '<span class="tag tag-ok">足够</span>' : '<span class="tag tag-bad">不足</span>'}
+                  ${bal.reserved ? ` · 其他审核中 ${bal.reserved} 分` : ""}
+                  ${bal.pending ? ` · 待确认 ${bal.pending} 分` : ""}
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <input class="note-input" placeholder="备注（选填，会员看得到，例如：随下一单寄出）">
+              <button class="btn btn-ok" data-act="approve">✔ 批准</button>
+              <button class="btn btn-bad" data-act="reject">✕ 拒绝</button>
+            </div>
+          </div>`;
+      }).join("") : `<p class="empty">目前没有待审核的兑换 🎉</p>`;
+    }
+
+    function renderHistory(list) {
+      $("historyPanel").innerHTML = list.length ? list.map(r => {
+        const m = members[r.uid] || {};
+        return `
+          <div class="item">
+            <div class="item-title">${esc(r.rewardName)} · ${r.cost} 分 ${STATUS[r.status] || ""}</div>
+            <div class="meta">${esc(m.name)} · ${esc(m.email || "")} · 申请 ${fmtDate(r.createdAt)}${r.decidedAt ? " · 处理 " + fmtDate(r.decidedAt) : ""}</div>
+            ${r.couponCode ? `<div class="meta">券码：<code>${esc(r.couponCode)}</code></div>` : ""}
+            ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}
+          </div>`;
+      }).join("") : `<p class="empty">还没有记录</p>`;
+    }
+
+    async function approve(r, note, btn) {
+      const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
+      const reward = rewardSnap.exists() ? rewardSnap.data() : null;
+
+      const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
+      if (bal.spendable < r.cost &&
+          !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return;
+      if (reward && typeof reward.stock === "number" && reward.stock <= 0 &&
+          !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return;
+
+      // 优惠券：从券码库取一组未使用的
+           let couponCode = null, fromPool = false;
+      if (reward && reward.type === "coupon") {
+        if (reward.couponCode) {
+          couponCode = reward.couponCode;   // 共用优惠码，例如 THEMMSDIS
+        } else {
+          const cs = await getDocs(query(collection(db, "coupons"),
+            where("rewardId", "==", r.rewardId), where("used", "==", false), limit(1)));
+          if (cs.empty) {
+            alert("这个优惠券奖品还没设定优惠码，券码库也用完了。请先到「奖品管理」设定优惠码。");
+            return;
+          }
+          couponCode = cs.docs[0].id;
+          fromPool = true;
+        }
+      }
+
+      const batch = writeBatch(db);
+      const update = { status: "approved", decidedAt: serverTimestamp() };
+      if (note) update.note = note;
+      if (couponCode) update.couponCode = couponCode;
+      batch.update(doc(db, "redemptions", r.id), update);
+
+      batch.set(doc(collection(db, "pointsLedger")), {
+        uid: r.uid,
+        delta: -r.cost,
+        reason: "兑换：" + r.rewardName,
+        orderNo: null,
+        redemptionId: r.id,
+        availableAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      });
+
+      if (fromPool) {
+        batch.update(doc(db, "coupons", couponCode), {
+          used: true, usedBy: r.uid, redemptionId: r.id, usedAt: serverTimestamp()
+        });
+      }
+      if (reward && typeof reward.stock === "number") {
+        batch.update(doc(db, "rewards", r.rewardId), { stock: increment(-1) });
+      }
+
+      await batch.commit();
+    }
+
+    async function reject(r, note) {
+      if (!confirm(`拒绝「${r.rewardName}」的兑换申请？积分不会被扣除。`)) return false;
+      const batch = writeBatch(db);
+      const update = { status: "rejected", decidedAt: serverTimestamp() };
+      if (note) update.note = note;
+      batch.update(doc(db, "redemptions", r.id), update);
+      await batch.commit();
+      return true;
+    }
+
+    $("pendingPanel").addEventListener("click", async e => {
+      const act = e.target.dataset.act;
+      if (!act) return;
+      const item = e.target.closest(".item");
+      const r = all.find(x => x.id === item.dataset.id);
+      if (!r) return;
+      const note = item.querySelector(".note-input").value.trim();
+
+      item.querySelectorAll("button").forEach(b => b.disabled = true);
+      try {
+        if (act === "approve") await approve(r, note, e.target);
+        else await reject(r, note);
+        await load();
+      } catch (err) {
+        alert("操作失败：" + err.message);
+        item.querySelectorAll("button").forEach(b => b.disabled = false);
+      }
+    });
+
+    $("reloadBtn").addEventListener("click", load);
+
+    requireAdmin(() => load().catch(e => {
+      $("pendingPanel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`;
+    }));
+  </script>
+</body>
+</html>
