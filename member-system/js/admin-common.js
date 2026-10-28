@@ -34,17 +34,20 @@ export function tierHTML(tier) {
 }
 export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3 };
 
-// 商城分类（会员前台 common.js 的 SHOP_CATS 也要一致；名称三语在前台 i18n.js 的 shop.cat.*）
-export const SHOP_CATS = [
-  { id: "coupon",   label: "🎫 优惠券" },
-  { id: "bracelet", label: "📿 手链" },
-  { id: "blindbox", label: "🎁 盲盒" },
-  { id: "figure",   label: "🧸 公仔玩具" },
-  { id: "other",    label: "✨ 其他" },
+// 商城分类：可在「奖品管理 › 商城分类」自订（存在 settings/shop）；还没设定过就用这份预设
+export const DEFAULT_SHOP_CATS = [
+  { id: "coupon",   icon: "🎫", zh: "优惠券",   en: "Coupons",        ms: "Kupon" },
+  { id: "bracelet", icon: "📿", zh: "手链",     en: "Bracelets",      ms: "Gelang" },
+  { id: "blindbox", icon: "🎁", zh: "盲盒",     en: "Blind boxes",    ms: "Kotak misteri" },
+  { id: "figure",   icon: "🧸", zh: "公仔玩具", en: "Figures & toys", ms: "Figura & mainan" },
+  { id: "other",    icon: "✨", zh: "其他",     en: "Others",         ms: "Lain-lain" },
 ];
-export function catOf(r) {
-  if (r.category && SHOP_CATS.some(c => c.id === r.category)) return r.category;
-  return r.type === "coupon" ? "coupon" : "other";
+// 奖品属于哪个分类；分类被删掉或没设定时：优惠券 → coupon，其他 → other，再不然放第一个分类
+export function catOf(r, cats = DEFAULT_SHOP_CATS) {
+  if (r.category && cats.some(c => c.id === r.category)) return r.category;
+  if (r.type === "coupon" && cats.some(c => c.id === "coupon")) return "coupon";
+  if (cats.some(c => c.id === "other")) return "other";
+  return cats[0] ? cats[0].id : "";
 }
 
 // 首页区块（会员前台 home.html 的 DEFAULT_SECTIONS 也要一致）

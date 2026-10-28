@@ -6,6 +6,22 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>奖品管理 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .cat-row { display: grid; grid-template-columns: 54px 1fr 1fr 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
+    .cat-row input { margin: 0; }
+    .cat-row .btns { display: flex; gap: 4px; }
+    .cat-row .btn { padding: 6px 9px; }
+    .cat-head { font-size: .78rem; color: #64748b; font-weight: 600; border-bottom: none; padding-bottom: 0; }
+    .cat-count { font-size: .72rem; color: #94a3b8; }
+    @media (max-width: 640px) { .cat-row { grid-template-columns: 48px 1fr auto; } .cat-row .opt { display: none; } }
+    .order-btns { display: flex; flex-direction: column; gap: 4px; }
+    .order-btns .btn { padding: 4px 9px; line-height: 1; }
+    .sort-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+    .end-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .end-row input[type=datetime-local] { width: auto; margin: 0; }
+    .end-row label { margin: 0; }
+  </style>
 </head>
 <body>
   <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
@@ -56,9 +72,7 @@
             <label>商城分类
               <select id="rcat"></select>
             </label>
-            <label>排序（数字小的排前面）
-              <input type="number" id="rsort" step="1" value="10">
-            </label>
+            <input type="hidden" id="rsort" value="10">
           </div>
                     <div id="couponBox" class="panel" style="background:#f8fafc;padding:14px;margin-bottom:12px">
             <label>优惠码格式
@@ -74,6 +88,11 @@
             <p class="meta">完整优惠码：<b id="rcfull">-</b>（所有兑换者共用这个码）</p>
           </div>
           <label class="inline"><input type="checkbox" id="ractive" checked> 上架（会员看得到）</label>
+          <div class="end-row">
+            <label class="inline"><input type="checkbox" id="rendOn"> ⏰ 设定下架时间（即将下架）</label>
+            <input type="datetime-local" id="rend" class="hidden">
+          </div>
+          <p class="muted" style="font-size:.8rem;margin:-6px 0 10px">设定后，兑换商城会显示「即将下架」和剩余时间；时间一到，前台自动隐藏、不能再兑换，后台也会自动改成「已下架」。</p>
           <div class="actions">
             <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
             <button type="button" class="btn btn-ghost" id="cancelBtn">取消</button>
@@ -85,6 +104,27 @@
         </form>
       </div>
 
+      <!-- 🗂 商城分类（自订） -->
+      <details class="panel" id="catPanel">
+        <summary style="cursor:pointer;font-weight:700;color:#0f172a">🗂 商城分类 <span class="muted" style="font-weight:400;font-size:.85rem">（新增、改名、调整顺序）</span></summary>
+        <p class="meta" style="margin:10px 0">会员前台「兑换商城」上方的分类按钮，照这里的顺序显示，只显示有奖品的分类。删除分类后，原本那个分类的奖品会归到「其他」。</p>
+        <div class="cat-row cat-head"><span>图标</span><span>中文名称</span><span class="opt">English</span><span class="opt">Bahasa Melayu</span><span></span></div>
+        <div id="catList"></div>
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" id="catAdd">＋ 新增分类</button>
+          <button type="button" class="btn btn-primary" id="catSave">保存分类</button>
+        </div>
+        <p id="catMsg" class="msg"></p>
+      </details>
+
+      <div id="sortBar" class="sort-bar hidden">
+        <span>⚠️ 排列顺序已改变，记得保存（会员前台照这个顺序显示）</span>
+        <span class="actions" style="margin:0">
+          <button class="btn btn-ghost" id="sortCancel">还原</button>
+          <button class="btn btn-primary" id="sortSave">保存排序</button>
+        </span>
+      </div>
+
       <div id="list"><p class="empty">载入中…</p></div>
     </div>
   </div>
@@ -92,9 +132,9 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, getDocs, doc, addDoc, updateDoc, setDoc, writeBatch, serverTimestamp, deleteField
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, writeBatch, serverTimestamp, deleteField, Timestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, COUPON_FORMATS, SHOP_CATS, catOf } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, esc, COUPON_FORMATS, DEFAULT_SHOP_CATS, catOf, toDate, fmtDate } from "./js/admin-common.js";
     const $ = id => document.getElementById(id);
     renderAdminNav("rewards");
 
@@ -188,6 +228,23 @@ $("rimageRemove").addEventListener("click", () => {
 
       rewards = rs.docs.map(d => ({ id: d.id, ...d.data(), couponCode: (secrets[d.id] || {}).couponCode || null }))
         .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || a.cost - b.cost);
+
+      // 下架时间已过、还显示上架中的 → 自动改成已下架
+      const now = new Date();
+      const expired = rewards.filter(r => r.active && toDate(r.endAt) && toDate(r.endAt) <= now);
+      if (expired.length) {
+        const batch = writeBatch(db);
+        expired.forEach(r => { batch.update(doc(db, "rewards", r.id), { active: false, updatedAt: serverTimestamp() }); r.active = false; });
+        await batch.commit();
+      }
+
+      // 商城分类
+      const cs2 = await getDoc(doc(db, "settings", "shop"));
+      cats = (cs2.exists() && Array.isArray(cs2.data().categories) && cs2.data().categories.length)
+        ? cs2.data().categories : DEFAULT_SHOP_CATS.map(c => ({ ...c }));
+      renderCats();
+      sortDirty = false;
+      $("sortBar").classList.add("hidden");
       coupons = {};
       cs.docs.forEach(d => coupons[d.id] = d.data());
       render();
@@ -203,13 +260,108 @@ $("rimageRemove").addEventListener("click", () => {
       return { total, unused };
     }
 
+    // ---------- 🗂 商城分类 ----------
+    let cats = [];
+    const catLabel = id => { const c = cats.find(x => x.id === id); return c ? `${c.icon || ""} ${esc(c.zh)}` : "（未分类）"; };
+    function renderCats() {
+      const used = {};
+      rewards.forEach(r => { const k = catOf(r, cats); used[k] = (used[k] || 0) + 1; });
+      $("catList").innerHTML = cats.map((c, i) => `
+        <div class="cat-row" data-i="${i}">
+          <input data-f="icon" value="${esc(c.icon || "")}" maxlength="4" style="text-align:center">
+          <span><input data-f="zh" value="${esc(c.zh || "")}" maxlength="16" placeholder="中文名称"><span class="cat-count">${used[c.id] || 0} 个奖品</span></span>
+          <input class="opt" data-f="en" value="${esc(c.en || "")}" maxlength="24" placeholder="English">
+          <input class="opt" data-f="ms" value="${esc(c.ms || "")}" maxlength="24" placeholder="Bahasa Melayu">
+          <span class="btns">
+            <button type="button" class="btn btn-ghost" data-cup="${i}" ${i === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" class="btn btn-ghost" data-cdown="${i}" ${i === cats.length - 1 ? "disabled" : ""}>↓</button>
+            <button type="button" class="btn btn-bad" data-cdel="${i}">✕</button>
+          </span>
+        </div>`).join("");
+    }
+    $("catList").addEventListener("input", e => {
+      const row = e.target.closest(".cat-row"), f = e.target.dataset.f;
+      if (row && f) cats[+row.dataset.i][f] = e.target.value;
+    });
+    $("catList").addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      const swap = (a, c) => { [cats[a], cats[c]] = [cats[c], cats[a]]; renderCats(); };
+      if (b.dataset.cup) swap(+b.dataset.cup, +b.dataset.cup - 1);
+      if (b.dataset.cdown) swap(+b.dataset.cdown, +b.dataset.cdown + 1);
+      if (b.dataset.cdel) {
+        const c = cats[+b.dataset.cdel];
+        const n = rewards.filter(r => catOf(r, cats) === c.id).length;
+        if (!confirm(`删除分类「${c.zh}」？` + (n ? `\n这个分类有 ${n} 个奖品，删除后会归到「其他」（保存后生效）。` : ""))) return;
+        cats.splice(+b.dataset.cdel, 1);
+        renderCats();
+      }
+    });
+    $("catAdd").addEventListener("click", () => {
+      cats.push({ id: "c" + Date.now().toString(36), icon: "🏷️", zh: "", en: "", ms: "" });
+      renderCats();
+      $("catList").lastElementChild.querySelector('[data-f="zh"]').focus();
+    });
+    $("catSave").addEventListener("click", async () => {
+      const clean = cats.map(c => ({ id: c.id, icon: (c.icon || "").trim(), zh: (c.zh || "").trim(), en: (c.en || "").trim(), ms: (c.ms || "").trim() }));
+      if (clean.some(c => !c.zh)) { $("catMsg").textContent = "每个分类都要填中文名称"; $("catMsg").className = "msg err"; return; }
+      if (!clean.length) { $("catMsg").textContent = "至少要有一个分类"; $("catMsg").className = "msg err"; return; }
+      $("catSave").disabled = true;
+      try {
+        await setDoc(doc(db, "settings", "shop"), { categories: clean, updatedAt: serverTimestamp() }, { merge: true });
+        cats = clean;
+        renderCats(); render();
+        $("catMsg").textContent = "已保存 ✅"; $("catMsg").className = "msg ok";
+      } catch (err) { $("catMsg").textContent = "保存失败：" + err.message; $("catMsg").className = "msg err"; }
+      finally { $("catSave").disabled = false; }
+    });
+
+    // ---------- ⏰ 下架时间 ----------
+    function endInfo(r) {
+      const end = toDate(r.endAt);
+      if (!end) return "";
+      return end <= new Date()
+        ? ` · <span class="tag">已过下架时间 ${fmtDate(end, true)}</span>`
+        : ` · <span class="tag tag-warn">⏰ 即将下架 ${fmtDate(end, true)}</span>`;
+    }
+    const toLocalInput = d => {
+      const p = n => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+    $("rendOn").addEventListener("change", () => {
+      $("rend").classList.toggle("hidden", !$("rendOn").checked);
+      if ($("rendOn").checked && !$("rend").value) {
+        const d = new Date(Date.now() + 7 * 86400000); d.setHours(23, 59, 0, 0);
+        $("rend").value = toLocalInput(d);
+      }
+    });
+
+    // ---------- ↑↓ 排列顺序 ----------
+    let sortDirty = false;
+    function markSort() { sortDirty = true; $("sortBar").classList.remove("hidden"); render(); }
+    $("sortCancel").addEventListener("click", () => load());
+    $("sortSave").addEventListener("click", async () => {
+      $("sortSave").disabled = true;
+      try {
+        const batch = writeBatch(db);
+        rewards.forEach((r, i) => batch.update(doc(db, "rewards", r.id), { sortOrder: (i + 1) * 10 }));
+        await batch.commit();
+        await load();
+      } catch (err) { alert("保存排序失败：" + err.message); }
+      finally { $("sortSave").disabled = false; }
+    });
+
     function render() {
-      $("list").innerHTML = rewards.length ? rewards.map(r => {
+      $("list").innerHTML = rewards.length ? rewards.map((r, idx) => {
         const isCoupon = r.type === "coupon";
         const cs = isCoupon ? couponStats(r.id) : null;
         return `
           <div class="item" data-id="${esc(r.id)}">
-          <div class="item-head">
+          <div class="item-head" style="justify-content:flex-start;gap:12px">
+  <div class="order-btns">
+    <button class="btn btn-ghost" data-act="up" ${idx === 0 ? "disabled" : ""} title="往上">↑</button>
+    <button class="btn btn-ghost" data-act="down" ${idx === rewards.length - 1 ? "disabled" : ""} title="往下">↓</button>
+  </div>
   ${r.image ? `<img src="${esc(r.image)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px">` : ""}
   <div style="flex:1">
                 <div class="item-title">${isCoupon ? "🎫" : "🎁"} ${esc(r.name)} · ${r.cost} 分
@@ -217,7 +369,8 @@ $("rimageRemove").addEventListener("click", () => {
                 </div>
                 ${r.description ? `<div class="meta">${esc(r.description)}</div>` : ""}
                 <div class="meta">
-                  ${(SHOP_CATS.find(c => c.id === catOf(r)) || {}).label || ""} · 库存：${typeof r.stock === "number" ? r.stock : "不限"} · 排序 ${r.sortOrder ?? "-"}
+                  ${catLabel(catOf(r, cats))} · 库存：${typeof r.stock === "number" ? r.stock : "不限"}
+                  ${endInfo(r)}
                                    ${isCoupon && r.couponCode ? ` · 优惠码：<b>${esc(r.couponCode)}</b>（共用）` : ""}
                   ${isCoupon && !r.couponCode ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
                     ${cs.unused === 0 ? '<span class="tag tag-bad">需补充</span>' : cs.unused < 5 ? '<span class="tag tag-warn">快用完</span>' : ""}` : ""}
@@ -249,9 +402,13 @@ $("rimageRemove").addEventListener("click", () => {
       $("rcost").value = r ? r.cost : "";
       $("rtype").value = r ? r.type : "coupon";
       $("rstock").value = r && typeof r.stock === "number" ? r.stock : "";
-      $("rsort").value = r ? (r.sortOrder ?? 10) : 10;
-      $("rcat").innerHTML = SHOP_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join("");
-      $("rcat").value = r ? catOf(r) : "coupon";
+      $("rsort").value = r ? (r.sortOrder ?? 10) : ((rewards.length + 1) * 10);
+      $("rcat").innerHTML = cats.map(c => `<option value="${esc(c.id)}">${esc((c.icon || "") + " " + c.zh)}</option>`).join("");
+      $("rcat").value = r ? catOf(r, cats) : catOf({ type: "coupon" }, cats);
+      const end = r ? toDate(r.endAt) : null;
+      $("rendOn").checked = !!end;
+      $("rend").classList.toggle("hidden", !end);
+      $("rend").value = end ? toLocalInput(end) : "";
       $("ractive").checked = r ? !!r.active : true;
             const cf = fmtOf(r && r.couponFormat);
       $("rcformat").value = cf.id;
@@ -278,10 +435,16 @@ showPreview(currentImage);
         stock: stockText === "" ? null : parseInt(stockText, 10),
         sortOrder: parseInt($("rsort").value, 10) || 0,
         category: $("rcat").value,
+        endAt: $("rendOn").checked && $("rend").value ? Timestamp.fromDate(new Date($("rend").value)) : null,
         active: $("ractive").checked,
         image: currentImage,
         updatedAt: serverTimestamp()
       };
+      if (data.endAt && data.endAt.toDate() <= new Date()) {
+        $("formMsg").textContent = "下架时间要在现在之后";
+        $("formMsg").className = "msg err";
+        return;
+      }
       if (!data.name || !(data.cost > 0)) {
         $("formMsg").textContent = "请填写名称和正确的积分";
         $("formMsg").className = "msg err";
@@ -324,12 +487,22 @@ showPreview(currentImage);
       const r = rewards.find(x => x.id === item.dataset.id);
       if (!r) return;
 
+      if (act === "up" || act === "down") {
+        const i = rewards.indexOf(r), j = act === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= rewards.length) return;
+        [rewards[i], rewards[j]] = [rewards[j], rewards[i]];
+        markSort();
+        return;
+      }
       if (act === "edit") openForm(r);
 
       if (act === "toggle") {
         e.target.disabled = true;
         try {
-          await updateDoc(doc(db, "rewards", r.id), { active: !r.active, updatedAt: serverTimestamp() });
+          const patch = { active: !r.active, updatedAt: serverTimestamp() };
+          // 重新上架一个已过下架时间的奖品：清掉下架时间
+          if (!r.active && toDate(r.endAt) && toDate(r.endAt) <= new Date()) patch.endAt = null;
+          await updateDoc(doc(db, "rewards", r.id), patch);
           await load();
         } catch (err) { alert("失败：" + err.message); e.target.disabled = false; }
       }
