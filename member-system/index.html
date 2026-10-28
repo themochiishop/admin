@@ -4,8 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/jpeg" href="../logo.png">
-  <title>兑换审核 · 会员系统 Admin</title>
+  <title>兑换管理 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .tabs { flex-wrap: wrap; }
+    .tabs button .cnt { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; }
+    .tabs button .cnt.zero { background: #cbd5e1; }
+    .addr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
+    .ship-form { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 14px; margin-top: 10px; }
+    .ship-form .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
+    .ship-form .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 10px; }
+    @media (max-width: 640px) { .ship-form .grid3, .ship-form .grid4 { grid-template-columns: 1fr 1fr; } }
+    .photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .photos .ph-wrap { position: relative; }
+    .photos .ph-wrap button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #dc2626; color: #fff; font-size: .7rem; cursor: pointer; }
+    .kind { font-size: .7rem; }
+    .tag-blue { background: #e0f2fe; color: #0369a1; }
+    .problem { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
+    .track-cfg input { margin: 0; }
+  </style>
 </head>
 <body>
   <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
@@ -16,132 +34,248 @@
     <div class="container">
       <div class="page-head">
         <div>
-          <h2>兑换审核</h2>
-          <p class="muted">批准后才会扣除会员积分；优惠券会自动从券码库分配一组</p>
+          <h2>兑换管理</h2>
+          <p class="muted">批准后才扣积分。优惠券自动带入券码；实体奖品批准后到「待发货」填物流资料。</p>
         </div>
         <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
       </div>
 
-      <div class="tabs">
-        <button data-tab="pending" class="active">待审核 <span id="pendingCount"></span></button>
-        <button data-tab="history">历史记录</button>
+      <div class="tabs" id="tabs">
+        <button data-tab="pending" class="active">待审核</button>
+        <button data-tab="toShip">待发货</button>
+        <button data-tab="shipped">已发货</button>
+        <button data-tab="done">已完成</button>
+        <button data-tab="closed">已拒绝 / 取消</button>
       </div>
 
-      <div id="pendingPanel"><p class="empty">载入中…</p></div>
-      <div id="historyPanel" class="hidden"></div>
+      <div id="panel"><p class="empty">载入中…</p></div>
+
+      <details class="panel track-cfg" style="margin-top:20px">
+        <summary style="cursor:pointer;font-weight:700">🔗 运输公司查询链接</summary>
+        <p class="meta" style="margin:10px 0">填物流资料时会自动生成查询链接，<code>{no}</code> 会换成追踪单号。第一次请用真实单号测试一下链接能不能打开，不对的话在这里改。</p>
+        <div class="grid2">
+          <label>SPX Express <input id="tplSpx"></label>
+          <label>J&amp;T Express <input id="tplJnt"></label>
+        </div>
+        <div class="actions"><button class="btn btn-primary" id="tplSave">保存</button></div>
+        <p id="tplMsg" class="msg"></p>
+      </details>
     </div>
   </div>
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, query, where, getDocs, getDoc, doc, limit,
+      collection, query, where, getDocs, getDoc, doc, limit, setDoc, updateDoc,
       writeBatch, serverTimestamp, increment
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
+      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("redeem");
 
-    const STATUS = {
-      approved: '<span class="tag tag-ok">已批准</span>',
-      rejected: '<span class="tag tag-bad">已拒绝</span>',
-      cancelled: '<span class="tag">会员取消</span>',
-    };
-
     let all = [];
     const members = {};   // uid → 会员资料
     const ledgers = {};   // uid → 积分流水
+    let tab = "pending";
+    let trackTpl = { ...DEFAULT_TRACK_TPL };
+    let adminEmail = "";
+    const shipPhotos = {};   // 兑换 ID → 待上传的包裹照片
 
-    document.querySelectorAll(".tabs button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
-        $("pendingPanel").classList.toggle("hidden", btn.dataset.tab !== "pending");
-        $("historyPanel").classList.toggle("hidden", btn.dataset.tab !== "history");
-      });
+    const isGift = r => r.kind === "gift";
+    const TABS = {
+      pending: r => r.status === "pending",
+      toShip:  r => isGift(r) && (r.status === "approved" || r.status === "problem"),
+      shipped: r => isGift(r) && r.status === "shipped",
+      done:    r => r.status === "completed" || (!isGift(r) && r.status === "approved"),
+      closed:  r => r.status === "rejected" || r.status === "cancelled",
+    };
+    const EMPTY = {
+      pending: "目前没有待审核的兑换 🎉", toShip: "没有要发货的奖品 📦", shipped: "没有运送中的包裹",
+      done: "还没有完成的兑换", closed: "没有记录",
+    };
+
+    $("tabs").addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      tab = b.dataset.tab;
+      document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
+      render();
     });
 
     async function load() {
-      $("pendingPanel").innerHTML = `<p class="empty">载入中…</p>`;
+      $("panel").innerHTML = `<p class="empty">载入中…</p>`;
       const snap = await getDocs(collection(db, "redemptions"));
       all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .map(r => ({ ...r, createdAt: toDate(r.createdAt), decidedAt: toDate(r.decidedAt) }));
 
-      const pending = all.filter(r => r.status === "pending");
-      const history = all.filter(r => r.status !== "pending")
-        .sort((a, b) => (b.decidedAt || b.createdAt || 0) - (a.decidedAt || a.createdAt || 0))
-        .slice(0, 100);
-
-      // 会员资料（待审核 + 最近历史）
-      const uids = [...new Set([...pending, ...history].map(r => r.uid))];
-      await Promise.all(uids.map(async uid => {
+      const recent = all.filter(r => !TABS.closed(r) && !TABS.done(r))
+        .concat(all.filter(r => TABS.closed(r) || TABS.done(r))
+          .sort((a, b) => (b.decidedAt || b.createdAt || 0) - (a.decidedAt || a.createdAt || 0)).slice(0, 150));
+      await Promise.all([...new Set(recent.map(r => r.uid))].map(async uid => {
         if (members[uid]) return;
         const s = await getDoc(doc(db, "members", uid));
         members[uid] = s.exists() ? s.data() : { name: "(资料不存在)" };
       }));
-
-      // 待审核会员的积分流水（每次重新读，确保余额最新）
-      await Promise.all([...new Set(pending.map(r => r.uid))].map(async uid => {
+      await Promise.all([...new Set(all.filter(TABS.pending).map(r => r.uid))].map(async uid => {
         const s = await getDocs(query(collection(db, "pointsLedger"), where("uid", "==", uid)));
         ledgers[uid] = s.docs.map(d => d.data());
       }));
-
-      renderPending(pending.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
-      renderHistory(history);
+      render();
+      refreshRedeemBadge();
     }
 
-    function renderPending(list) {
-      $("pendingCount").textContent = list.length ? `(${list.length})` : "";
-      $("pendingPanel").innerHTML = list.length ? list.map(r => {
-        const m = members[r.uid] || {};
-        const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
-        const enough = bal.spendable >= r.cost;
-        return `
-          <div class="item" data-id="${esc(r.id)}">
-            <div class="item-head">
-              <div>
-                <div class="item-title">${esc(r.rewardName)} · ${r.cost} 分</div>
-                <div class="meta">${esc(m.name)} · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}</div>
-                <div class="meta">会员可用积分：<b>${bal.spendable}</b>
-                  ${enough ? '<span class="tag tag-ok">足够</span>' : '<span class="tag tag-bad">不足</span>'}
-                  ${bal.reserved ? ` · 其他审核中 ${bal.reserved} 分` : ""}
-                  ${bal.pending ? ` · 待确认 ${bal.pending} 分` : ""}
-                </div>
-              </div>
-            </div>
+    // ---------- 共用显示 ----------
+    const kindTag = r => isGift(r) ? '<span class="tag tag-blue kind">🎁 实体</span>' : '<span class="tag kind">🎫 优惠券</span>';
+    const addrText = a => a ? `${a.name}\n${a.phone}\n${a.line1}${a.line2 ? ", " + a.line2 : ""}\n${a.postcode} ${a.city}, ${a.state}\n${a.country || "Malaysia"}` : "";
+    function addrBox(r) {
+      const a = r.address;
+      if (!a) return "";
+      return `
+        <div class="addr-box">
+          📍 <b>${esc(a.name)}</b> · ${esc(fmtPhone(a.phone))}<br>
+          ${esc(a.line1)}${a.line2 ? ", " + esc(a.line2) : ""}<br>${esc(a.postcode)} ${esc(a.city)}, ${esc(a.state)}
+          ${r.addressUpdatedAt ? `<div class="meta">会员于 ${fmtDate(toDate(r.addressUpdatedAt), true)} 修改过地址</div>` : ""}
+          <div class="actions" style="margin-top:6px">
+            <button class="btn btn-ghost" data-act="copyAddr">📋 复制地址</button>
+            <a class="btn btn-ghost" href="${esc(waLink(a.phone, `Hi ${a.name}, ini The Mochii Shop 💕 berkenaan ganjaran ${r.rewardName}`))}" target="_blank">💬 WhatsApp</a>
+          </div>
+        </div>`;
+    }
+    function shipInfo(r) {
+      const s = r.shipping || {};
+      return `
+        <div class="addr-box">
+          🚚 <b>${esc(s.carrierName || "")}</b> · <code>${esc(s.trackingNo || "")}</code>
+          ${s.trackingUrl ? ` · <a href="${esc(s.trackingUrl)}" target="_blank">查询链接 ↗</a>` : ""}
+          <div class="meta">发货 ${fmtDate(toDate(r.shippedAt), true)}${s.weightKg ? ` · ${esc(s.weightKg)} kg` : ""}${s.dims && s.dims.l ? ` · ${esc(s.dims.l)}×${esc(s.dims.w)}×${esc(s.dims.h)} cm` : ""}${s.by ? " · " + esc(s.by) : ""}</div>
+          ${s.note ? `<div class="meta">留言：${esc(s.note)}</div>` : ""}
+          ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}">`).join("")}</div>` : ""}
+        </div>`;
+    }
+    function head(r, extra = "") {
+      const m = members[r.uid] || {};
+      return `
+        <div class="item-head">
+          <div style="min-width:0">
+            <div class="item-title">${kindTag(r)} ${esc(r.rewardName)} · ${r.cost} 分 ${extra}</div>
+            <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a> · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
+          </div>
+        </div>`;
+    }
+
+    // ---------- 发货表单 ----------
+    function shipForm(r) {
+      const s = r.shipping || {};
+      const carrier = s.carrier || "spx";
+      const photos = shipPhotos[r.id] || s.photos || [];
+      shipPhotos[r.id] = photos;
+      return `
+        <div class="ship-form">
+          <b>${r.status === "problem" ? "🔁 重新发货" : "🚚 填写物流资料"}</b>
+          <div class="grid3" style="margin-top:10px">
+            <label>运输公司
+              <select data-f="carrier">
+                ${CARRIERS.map(c => `<option value="${c.id}" ${c.id === carrier ? "selected" : ""}>${c.label}</option>`).join("")}
+              </select>
+            </label>
+            <label class="other-name ${carrier === "other" ? "" : "hidden"}">公司名称 <input data-f="carrierName" value="${esc(carrier === "other" ? s.carrierName || "" : "")}" placeholder="例如 Pos Laju"></label>
+            <label>追踪单号 <input data-f="trackingNo" value="${esc(s.trackingNo || "")}" autocomplete="off"></label>
+          </div>
+          <label>查询链接（自动生成，可以改） <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
+          <div class="grid4">
+            <label>重量 kg <input data-f="weightKg" type="number" step="0.01" min="0" value="${esc(s.weightKg || "")}"></label>
+            <label>长 cm <input data-f="l" type="number" step="0.1" min="0" value="${esc((s.dims || {}).l || "")}"></label>
+            <label>宽 cm <input data-f="w" type="number" step="0.1" min="0" value="${esc((s.dims || {}).w || "")}"></label>
+            <label>高 cm <input data-f="h" type="number" step="0.1" min="0" value="${esc((s.dims || {}).h || "")}"></label>
+          </div>
+          <label>包裹照片（最多 3 张，选填） <input type="file" accept="image/*" multiple data-f="photos"></label>
+          <div class="photos">${photos.map((p, i) => `<span class="ph-wrap"><img src="${esc(p)}"><button type="button" data-delphoto="${i}">✕</button></span>`).join("")}</div>
+          <label>给会员的留言（选填） <input data-f="note" maxlength="200" value="${esc(s.note || "")}" placeholder="例如：已加送一个小礼物 🎁"></label>
+          <div class="actions">
+            <button class="btn btn-ok" data-act="ship">📦 标记已发货</button>
+            <button class="btn btn-bad" data-act="cancel">取消并退回积分</button>
+          </div>
+        </div>`;
+    }
+
+    function render() {
+      // 分页数字
+      document.querySelectorAll("#tabs button").forEach(b => {
+        const n = all.filter(TABS[b.dataset.tab]).length;
+        const urgent = b.dataset.tab === "pending" || b.dataset.tab === "toShip";
+        b.innerHTML = b.textContent.replace(/\s*\d+$/, "") + (urgent || n ? ` <span class="cnt ${urgent && n ? "" : "zero"}">${n}</span>` : "");
+      });
+
+      let list = all.filter(TABS[tab]);
+      if (tab === "pending" || tab === "toShip") list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      else list.sort((a, b) => (toDate(b.completedAt) || toDate(b.shippedAt) || b.decidedAt || b.createdAt || 0)
+                             - (toDate(a.completedAt) || toDate(a.shippedAt) || a.decidedAt || a.createdAt || 0));
+      if (tab === "done" || tab === "closed") list = list.slice(0, 100);
+
+      $("panel").innerHTML = list.length ? list.map(r => {
+        let body = "";
+        if (tab === "pending") {
+          const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
+          body = `
+            <div class="meta">会员可用积分：<b>${bal.spendable}</b>
+              ${bal.spendable >= r.cost ? '<span class="tag tag-ok">足够</span>' : '<span class="tag tag-bad">不足</span>'}
+              ${bal.reserved ? ` · 其他审核中 ${bal.reserved} 分` : ""}${bal.pending ? ` · 待确认 ${bal.pending} 分` : ""}</div>
+            ${addrBox(r)}
             <div class="actions">
-              <input class="note-input" placeholder="备注（选填，会员看得到，例如：随下一单寄出）">
+              <input class="note-input" placeholder="备注（选填，会员看得到）">
               <button class="btn btn-ok" data-act="approve">✔ 批准</button>
               <button class="btn btn-bad" data-act="reject">✕ 拒绝</button>
-            </div>
-          </div>`;
-      }).join("") : `<p class="empty">目前没有待审核的兑换 🎉</p>`;
-    }
-
-    function renderHistory(list) {
-      $("historyPanel").innerHTML = list.length ? list.map(r => {
-        const m = members[r.uid] || {};
-        return `
-          <div class="item">
-            <div class="item-title">${esc(r.rewardName)} · ${r.cost} 分 ${STATUS[r.status] || ""}</div>
-            <div class="meta">${esc(m.name)} · ${esc(m.email || "")} · 申请 ${fmtDate(r.createdAt)}${r.decidedAt ? " · 处理 " + fmtDate(r.decidedAt) : ""}</div>
+            </div>`;
+        } else if (tab === "toShip") {
+          body = `
+            ${r.status === "problem" ? `<div class="problem">⚠️ 配送异常${r.problemNote ? "：" + esc(r.problemNote) : ""}（${fmtDate(toDate(r.problemAt), true)}）</div>` : ""}
+            ${r.note ? `<div class="meta">审核备注：${esc(r.note)}</div>` : ""}
+            ${addrBox(r)}
+            ${shipForm(r)}`;
+        } else if (tab === "shipped") {
+          const autoAt = toDate(r.shippedAt) ? new Date(toDate(r.shippedAt).getTime() + 14 * 86400000) : null;
+          body = `
+            ${shipInfo(r)}${addrBox(r)}
+            <div class="meta">会员还没确认收货${autoAt ? `，${fmtDate(autoAt)} 会自动完成` : ""}</div>
+            <div class="actions">
+              <button class="btn btn-ghost" data-act="problem">⚠️ 标记配送异常</button>
+              <button class="btn btn-ghost" data-act="reopen">✏️ 修改物流资料</button>
+              <button class="btn btn-ok" data-act="complete">✔ 手动标记完成</button>
+            </div>`;
+        } else if (tab === "done") {
+          const rc = r.receipt || {};
+          body = `
             ${r.couponCode ? `<div class="meta">券码：<code>${esc(r.couponCode)}</code></div>` : ""}
+            ${isGift(r) ? shipInfo(r) : ""}
+            ${isGift(r) ? `<div class="addr-box">✅ ${r.autoCompleted ? "自动完成" : r.adminCompleted ? "管理员标记完成" : "会员确认收货"} · ${fmtDate(toDate(r.completedAt), true)}
+              ${rc.comment ? `<div>「${esc(rc.comment)}」</div>` : ""}
+              ${rc.photo ? `<div class="photos"><img src="${esc(rc.photo)}" style="width:120px;height:120px"></div>` : ""}</div>` : ""}
+            ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}`;
+        } else {
+          body = `
+            <div class="meta">${r.status === "rejected" ? "已拒绝" : r.adminCancelled ? "管理员取消（积分已退回）" : "会员自己取消"}
+              ${r.cancelledAt ? " · " + fmtDate(toDate(r.cancelledAt), true) : ""}</div>
             ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}
-          </div>`;
-      }).join("") : `<p class="empty">还没有记录</p>`;
+            ${r.cancelNote ? `<div class="meta">取消原因：${esc(r.cancelNote)}</div>` : ""}`;
+        }
+        return `<div class="item" data-id="${esc(r.id)}">${head(r)}${body}</div>`;
+      }).join("") : `<p class="empty">${EMPTY[tab]}</p>`;
     }
 
-    async function approve(r, note, btn) {
+    // ---------- 批准 / 拒绝 ----------
+    async function approve(r, note) {
       const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
       const reward = rewardSnap.exists() ? rewardSnap.data() : null;
 
       const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
       if (bal.spendable < r.cost &&
-          !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return;
+          !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return false;
       if (reward && typeof reward.stock === "number" && reward.stock <= 0 &&
-          !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return;
+          !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return false;
 
       // 优惠券：共用优惠码（存在只有管理员能读的 rewardSecrets）；没有就从券码库取一组
       let couponCode = null, fromPool = false;
@@ -149,13 +283,13 @@
         const secret = await getDoc(doc(db, "rewardSecrets", r.rewardId));
         const shared = (secret.exists() && secret.data().couponCode) || reward.couponCode || null;
         if (shared) {
-          couponCode = shared;   // 共用优惠码，例如 THEMMSDIS
+          couponCode = shared;
         } else {
           const cs = await getDocs(query(collection(db, "coupons"),
             where("rewardId", "==", r.rewardId), where("used", "==", false), limit(1)));
           if (cs.empty) {
             alert("这个优惠券奖品还没设定优惠码，券码库也用完了。请先到「奖品管理」设定优惠码。");
-            return;
+            return false;
           }
           couponCode = cs.docs[0].id;
           fromPool = true;
@@ -167,17 +301,10 @@
       if (note) update.note = note;
       if (couponCode) update.couponCode = couponCode;
       batch.update(doc(db, "redemptions", r.id), update);
-
       batch.set(doc(collection(db, "pointsLedger")), {
-        uid: r.uid,
-        delta: -r.cost,
-        reason: "兑换：" + r.rewardName,
-        orderNo: null,
-        redemptionId: r.id,
-        availableAt: serverTimestamp(),
-        createdAt: serverTimestamp()
+        uid: r.uid, delta: -r.cost, reason: "兑换：" + r.rewardName, orderNo: null,
+        redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
       });
-
       if (fromPool) {
         batch.update(doc(db, "coupons", couponCode), {
           used: true, usedBy: r.uid, redemptionId: r.id, usedAt: serverTimestamp()
@@ -186,44 +313,188 @@
       if (reward && typeof reward.stock === "number") {
         batch.update(doc(db, "rewards", r.rewardId), { stock: increment(-1) });
       }
-
-      await batch.commit();
-    }
-
-    async function reject(r, note) {
-      if (!confirm(`拒绝「${r.rewardName}」的兑换申请？积分不会被扣除。`)) return false;
-      const batch = writeBatch(db);
-      const update = { status: "rejected", decidedAt: serverTimestamp() };
-      if (note) update.note = note;
-      batch.update(doc(db, "redemptions", r.id), update);
       await batch.commit();
       return true;
     }
 
-    $("pendingPanel").addEventListener("click", async e => {
-      const act = e.target.dataset.act;
-      if (!act) return;
+    async function reject(r, note) {
+      if (!confirm(`拒绝「${r.rewardName}」的兑换申请？积分不会被扣除。`)) return false;
+      const update = { status: "rejected", decidedAt: serverTimestamp() };
+      if (note) update.note = note;
+      await updateDoc(doc(db, "redemptions", r.id), update);
+      return true;
+    }
+
+    // ---------- 已批准后取消：退回积分、加回库存 ----------
+    async function cancelApproved(r) {
+      const why = prompt(`取消「${r.rewardName}」并退回 ${r.cost} 分给会员？\n\n原因（会员看得到，选填，例如：缺货）：`, "");
+      if (why === null) return false;
+      const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
+      const reward = rewardSnap.exists() ? rewardSnap.data() : null;
+      const batch = writeBatch(db);
+      batch.update(doc(db, "redemptions", r.id), {
+        status: "cancelled", adminCancelled: true, cancelledAt: serverTimestamp(), cancelNote: why.trim(), cancelledBy: adminEmail
+      });
+      batch.set(doc(collection(db, "pointsLedger")), {
+        uid: r.uid, delta: r.cost, reason: "兑换取消退回：" + r.rewardName, orderNo: null,
+        redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
+      });
+      if (reward && typeof reward.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
+      await batch.commit();
+      return true;
+    }
+
+    // ---------- 发货 ----------
+    function readShip(item) {
+      const v = f => (item.querySelector(`[data-f="${f}"]`) || {}).value || "";
+      const carrier = v("carrier");
+      const c = CARRIERS.find(x => x.id === carrier) || CARRIERS[0];
+      const num = x => x === "" ? null : Number(x);
+      return {
+        carrier,
+        carrierName: carrier === "other" ? v("carrierName").trim() : c.name,
+        trackingNo: v("trackingNo").trim(),
+        trackingUrl: v("trackingUrl").trim(),
+        weightKg: num(v("weightKg")),
+        dims: { l: num(v("l")), w: num(v("w")), h: num(v("h")) },
+        note: v("note").trim(),
+      };
+    }
+    function autoUrl(item) {
+      const s = readShip(item);
+      const tpl = s.carrier === "other" ? "" : (trackTpl[s.carrier] || "");
+      if (tpl && s.trackingNo) item.querySelector('[data-f="trackingUrl"]').value = tpl.replace("{no}", encodeURIComponent(s.trackingNo));
+    }
+
+    $("panel").addEventListener("input", e => {
       const item = e.target.closest(".item");
+      if (item && (e.target.dataset.f === "trackingNo")) autoUrl(item);
+    });
+    $("panel").addEventListener("change", async e => {
+      const item = e.target.closest(".item");
+      if (!item) return;
+      const f = e.target.dataset.f;
+      if (f === "carrier") {
+        item.querySelector(".other-name").classList.toggle("hidden", e.target.value !== "other");
+        if (e.target.value === "other") item.querySelector('[data-f="trackingUrl"]').value = "";
+        autoUrl(item);
+      }
+      if (f === "photos") {
+        const id = item.dataset.id;
+        const list = shipPhotos[id] || [];
+        for (const file of [...e.target.files].slice(0, 3 - list.length)) {
+          let url = await compressImage(file, 640);
+          if (url.length > 220000) url = await compressImage(file, 420);
+          list.push(url);
+        }
+        shipPhotos[id] = list;
+        const keep = readShip(item);
+        render();
+        restoreShip(id, keep);
+      }
+    });
+    // 重新画面后把正在填的资料放回去
+    function restoreShip(id, s) {
+      const item = document.querySelector(`.item[data-id="${CSS.escape(id)}"]`);
+      if (!item) return;
+      const set = (f, v) => { const el = item.querySelector(`[data-f="${f}"]`); if (el && v != null) el.value = v; };
+      set("carrier", s.carrier); set("carrierName", s.carrier === "other" ? s.carrierName : "");
+      set("trackingNo", s.trackingNo); set("trackingUrl", s.trackingUrl); set("weightKg", s.weightKg ?? "");
+      set("l", s.dims.l ?? ""); set("w", s.dims.w ?? ""); set("h", s.dims.h ?? ""); set("note", s.note);
+      item.querySelector(".other-name").classList.toggle("hidden", s.carrier !== "other");
+    }
+
+    $("panel").addEventListener("click", async e => {
+      const item = e.target.closest(".item");
+      if (!item) return;
       const r = all.find(x => x.id === item.dataset.id);
       if (!r) return;
-      const note = item.querySelector(".note-input").value.trim();
 
-      item.querySelectorAll("button").forEach(b => b.disabled = true);
+      const del = e.target.dataset.delphoto;
+      if (del !== undefined) {
+        const keep = readShip(item);
+        shipPhotos[r.id].splice(+del, 1);
+        render(); restoreShip(r.id, keep);
+        return;
+      }
+      const act = e.target.dataset.act;
+      if (!act) return;
+
+      if (act === "copyAddr") {
+        try { await navigator.clipboard.writeText(addrText(r.address)); e.target.textContent = "已复制 ✓"; }
+        catch { prompt("请手动复制：", addrText(r.address)); }
+        return;
+      }
+      if (act === "reopen") {
+        // 已发货 → 回到待发货修改（状态维持已发货，只是在这里重新填）
+        tab = "toShip";
+        r._reopen = true;
+        r.status = "approved";
+        document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === "toShip"));
+        render();
+        return;
+      }
+
+      const buttons = item.querySelectorAll("button");
+      buttons.forEach(b => b.disabled = true);
       try {
-        if (act === "approve") await approve(r, note, e.target);
-        else await reject(r, note);
-        await load();
+        let ok = true;
+        if (act === "approve") ok = await approve(r, item.querySelector(".note-input").value.trim());
+        if (act === "reject") ok = await reject(r, item.querySelector(".note-input").value.trim());
+        if (act === "cancel") ok = await cancelApproved(r);
+        if (act === "ship") {
+          const s = readShip(item);
+          if (!s.carrierName) { alert("请填写运输公司名称"); ok = false; }
+          else if (!s.trackingNo) { alert("请填写追踪单号"); ok = false; }
+          else if (s.trackingUrl && !/^https:\/\//i.test(s.trackingUrl)) { alert("查询链接要以 https:// 开头"); ok = false; }
+          else {
+            await updateDoc(doc(db, "redemptions", r.id), {
+              status: "shipped",
+              shippedAt: serverTimestamp(),
+              shipping: { ...s, photos: shipPhotos[r.id] || [], by: adminEmail },
+              problemNote: null,
+            });
+            delete shipPhotos[r.id];
+          }
+        }
+        if (act === "problem") {
+          const why = prompt("配送异常的原因（会员看得到，例如：地址不完整、包裹被退回）：", "");
+          if (why === null) ok = false;
+          else await updateDoc(doc(db, "redemptions", r.id), { status: "problem", problemAt: serverTimestamp(), problemNote: why.trim() });
+        }
+        if (act === "complete") {
+          if (!confirm("手动标记这笔兑换已完成？")) ok = false;
+          else await updateDoc(doc(db, "redemptions", r.id), { status: "completed", completedAt: serverTimestamp(), adminCompleted: true });
+        }
+        if (ok) await load();
+        else buttons.forEach(b => b.disabled = false);
       } catch (err) {
         alert("操作失败：" + err.message);
-        item.querySelectorAll("button").forEach(b => b.disabled = false);
+        buttons.forEach(b => b.disabled = false);
       }
     });
 
-    $("reloadBtn").addEventListener("click", load);
+    // ---------- 查询链接模板 ----------
+    $("tplSave").addEventListener("click", async () => {
+      trackTpl = { spx: $("tplSpx").value.trim(), jnt: $("tplJnt").value.trim() };
+      try {
+        await setDoc(doc(db, "settings", "shipping"), { trackTpl, updatedAt: serverTimestamp() }, { merge: true });
+        $("tplMsg").textContent = "已保存 ✅"; $("tplMsg").className = "msg ok";
+      } catch (err) { $("tplMsg").textContent = "保存失败：" + err.message; $("tplMsg").className = "msg err"; }
+    });
 
-    requireAdmin(() => load().catch(e => {
-      $("pendingPanel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`;
-    }));
+    $("reloadBtn").addEventListener("click", () => load());
+
+    requireAdmin(async user => {
+      adminEmail = user.email || "";
+      try {
+        const s = await getDoc(doc(db, "settings", "shipping"));
+        if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
+      } catch (e) {}
+      $("tplSpx").value = trackTpl.spx || "";
+      $("tplJnt").value = trackTpl.jnt || "";
+      load().catch(e => { $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`; });
+    });
   </script>
 </body>
 </html>

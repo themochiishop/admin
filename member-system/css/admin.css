@@ -94,3 +94,8 @@ code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; font-size: .85
 header nav a.club-switch { font-weight: 700; }
 header nav a.club-open { background: #16a34a; color: #fff; }
 header nav a.club-closed { background: #dc2626; color: #fff; }
+
+/* 导航上的红色数字 */
+.nav-badge { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; font-weight: 800; line-height: 18px; text-align: center; }
+.nav-badge[hidden] { display: none; }
+select { margin-top: 4px; }

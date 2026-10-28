@@ -3,7 +3,9 @@ import { auth, db } from "./firebase-config.js";
 import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import {
+  doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -48,6 +50,32 @@ export function catOf(r, cats = DEFAULT_SHOP_CATS) {
   if (r.type === "coupon" && cats.some(c => c.id === "coupon")) return "coupon";
   if (cats.some(c => c.id === "other")) return "other";
   return cats[0] ? cats[0].id : "";
+}
+
+// 📦 实体奖品：运输公司（查询链接模板可在「兑换管理」页面底部修改）
+export const CARRIERS = [
+  { id: "spx",   name: "SPX Express", label: "SPX Express" },
+  { id: "jnt",   name: "J&T Express", label: "J&T Express" },
+  { id: "other", name: "",            label: "其他（自己填写）" },
+];
+export const DEFAULT_TRACK_TPL = {
+  spx: "https://spx.com.my/track?{no}",
+  jnt: "https://www.jtexpress.my/tracking/{no}",
+};
+
+// 导航「兑换管理」旁边的红色数字：待审核 + 待发货（含配送异常）
+export async function refreshRedeemBadge() {
+  const el = document.getElementById("redeemBadge");
+  if (!el) return;
+  try {
+    const snap = await getDocs(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])));
+    const n = snap.docs.filter(d => {
+      const r = d.data();
+      return r.status === "pending" || (r.kind === "gift" && (r.status === "approved" || r.status === "problem"));
+    }).length;
+    el.textContent = n > 99 ? "99+" : n;
+    el.hidden = !n;
+  } catch (e) { console.warn("redeem badge", e); }
 }
 
 // 首页区块（会员前台 home.html 的 DEFAULT_SECTIONS 也要一致）
@@ -157,7 +185,7 @@ export function computeBalance(ledger, redemptions, excludeId) {
 // ---------- 顶部导航 ----------
 export function renderAdminNav(active) {
   const links = [
-    ["redeem", "index.html", "兑换审核"],
+    ["redeem", "index.html", '兑换管理 <span id="redeemBadge" class="nav-badge" hidden></span>'],
     ["members", "members.html", "会员管理"],
     ["rewards", "rewards.html", "奖品管理"],
     ["perks", "perks.html", "🎁 额外福利"],
@@ -233,7 +261,8 @@ export function requireAdmin(onReady) {
     gate.classList.add("hidden");
     app.classList.remove("hidden");
     onReady(user);
-        initClubSwitch(user);
+    initClubSwitch(user);
+    refreshRedeemBadge();
   });
 }
 

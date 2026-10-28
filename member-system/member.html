@@ -209,8 +209,8 @@
       renderOrders();
 
       // 兑换
-      const ST = { pending: "tag-warn", approved: "tag-ok", rejected: "tag-bad", cancelled: "" };
-      const STT = { pending: "审核中", approved: "已批准", rejected: "已拒绝", cancelled: "会员取消" };
+      const ST = { pending: "tag-warn", approved: "tag-ok", rejected: "tag-bad", cancelled: "", shipped: "tag-pink", problem: "tag-warn", completed: "tag-ok" };
+      const STT = { pending: "审核中", approved: "已批准", rejected: "已拒绝", cancelled: "已取消", shipped: "已发货", problem: "配送异常", completed: "已完成" };
       $("tab-redemptions").innerHTML = redemptions.length ? redemptions.map(r => `
         <div class="list-row">
           <div>
