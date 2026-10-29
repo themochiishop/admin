@@ -60,7 +60,9 @@
     
     /* 新增：图库卡片的图标颜色 */
     .card-gallery .card-icon { background: #e0f2fe; color: #0284c7; }
-
+    .card-entry .card-icon { background: #ecfeff; color: #0891b2; }
+    .btn-teal { background: #0891b2; }
+    .btn-teal:hover { background: #0e7490; }
     .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
     .card-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 18px; line-height: 1.5; }
     
@@ -221,7 +223,15 @@
         </div>
         <a href="my-admin-status/admin.html" class="card-btn btn-purple">状态动态管理 ⚙️</a>
       </div>
-
+  <!-- 新增：订单录入 Order Entry -->
+      <div class="card card-entry">
+        <div>
+          <div class="card-icon">📝</div>
+          <div class="card-title">订单录入 Order Entry</div>
+          <div class="card-desc">在网页直接录入订单，写进「第 1 张表单回复」并马上同步会员积分。</div>
+        </div>
+        <a href="order-entry/" class="card-btn btn-teal">录入订单 📝</a>
+      </div>
       <!-- 5. COD 面单打印系统 -->
       <div class="card card-cod">
         <div>
