@@ -35,7 +35,7 @@
     .resizer { display: none; }
     .card {
       background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-      padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 16px;margin-left: 70px
+      padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 16px;
     }
     h1 { font-size: 1.1rem; color: var(--ink); margin-bottom: 4px; }
     .sub { color: var(--muted); font-size: .68rem; margin-bottom: 16px; }
@@ -101,6 +101,7 @@
       .main { flex: 1; min-width: 0; overflow-y: auto; display: flex; }
       .wrap { margin: auto; width: 100%; padding: 20px 16px; }
       .wrap .card:last-child { margin-bottom: 0; }
+      .card { margin-left: 70px; }   /* 只在电脑上往右挪 70px */
       .side {
         flex: none; width: var(--side-w, 400px); max-width: none; margin: 0; border: 0;
         border-left: 1px solid var(--line); border-radius: 0; box-shadow: none;
