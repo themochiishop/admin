@@ -26,6 +26,13 @@
     .icon-btn { background: none; border: 0; color: #cbd5e1; font-size: 1.15rem; cursor: pointer; padding: 4px 6px; }
     .icon-btn:hover { color: #fff; }
     .wrap { max-width: 560px; margin: 24px auto; padding: 0 16px; }
+    /* 最近录入：手机上是表单下面的一张卡片 */
+    .side {
+      max-width: 528px; margin: 0 auto 24px; background: var(--card); border: 1px solid var(--line);
+      border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+    .side-inner { padding: 20px; }
+    .resizer { display: none; }
     .card {
       background: var(--card); border: 1px solid var(--line); border-radius: 12px;
       padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 16px;
@@ -77,7 +84,35 @@
     @keyframes flash { from { background: #ecfeff; } to { background: transparent; } }
     .empty { color: var(--muted); font-size: .88rem; padding: 8px 0; }
     .hidden { display: none !important; }
+    .side-hint { display: none; font-size: .75rem; color: var(--muted); margin: -4px 0 8px; }
     .setup p { font-size: .88rem; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+    /* 电脑：表单置中，最近录入固定在右边，可拖拉改宽度，整页不出现卷轴 */
+    @media (min-width: 900px) {
+      html, body { height: 100%; overflow: hidden; }
+      body { display: flex; flex-direction: column; }
+      .layout { flex: 1; display: flex; min-height: 0; }
+      .main { flex: 1; min-width: 0; overflow-y: auto; display: flex; }
+      .wrap { margin: auto; width: 100%; padding: 20px 16px; }
+      .wrap .card:last-child { margin-bottom: 0; }
+      .side {
+        flex: none; width: var(--side-w, 400px); max-width: none; margin: 0; border: 0;
+        border-left: 1px solid var(--line); border-radius: 0; box-shadow: none;
+        position: relative; display: flex; flex-direction: column; min-height: 0;
+      }
+      .side-inner { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+      .recent { flex: 1; overflow-y: auto; min-height: 0; margin-right: -8px; padding-right: 8px; }
+      .resizer {
+        display: block; position: absolute; left: -5px; top: 0; bottom: 0; width: 10px;
+        cursor: col-resize; z-index: 2; touch-action: none;
+      }
+      .resizer::after {
+        content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px;
+        background: transparent; transition: background .15s;
+      }
+      .resizer:hover::after, body.resizing .resizer::after { background: var(--teal); }
+      body.resizing { cursor: col-resize; user-select: none; }
+      .side-hint { display: block !important; }
+    }
     @media (max-width: 480px) {
       .wrap { margin: 16px auto; }
       .card { padding: 16px; }
@@ -91,6 +126,8 @@
     <button class="icon-btn" id="gear" title="设定网址和密钥" aria-label="设定">⚙️</button>
   </header>
 
+  <div class="layout">
+  <main class="main">
   <div class="wrap">
     <!-- 第一次使用：输入网址和密钥 -->
     <div class="card setup hidden" id="setup">
@@ -141,14 +178,21 @@
       </form>
     </div>
 
-    <!-- 最近录入 -->
-    <div class="card hidden" id="recentCard">
+  </div>
+  </main>
+
+  <!-- 最近录入（电脑：右边，可拖拉左边线改宽度） -->
+  <aside class="side hidden" id="recentCard">
+    <div class="resizer" id="resizer" title="拖拉改变宽度，双击还原"></div>
+    <div class="side-inner">
       <div class="recent-head">
         <h2>最近录入（订单表最上面几笔）</h2>
         <button class="btn btn-soft" id="refreshBtn" style="padding:6px 10px;font-size:.8rem">刷新</button>
       </div>
+      <div class="side-hint">拖拉左边的线可以改变宽度</div>
       <ul class="recent" id="recent"><li class="empty">载入中…</li></ul>
     </div>
+  </aside>
   </div>
 
   <script>
@@ -355,6 +399,39 @@
       } catch (e) { msg("formMsg", "❌ 刷新失败：" + e.message, "err"); }
       finally { $("refreshBtn").disabled = false; }
     };
+
+    // ---------- 右边栏宽度：拖拉改变，记在这台设备 ----------
+    const SIDE_KEY = "mochiiOrderEntrySideW";
+    const SIDE_MIN = 260, SIDE_DEFAULT = 400;
+    function sideMax() { return Math.max(SIDE_MIN, Math.min(900, window.innerWidth - 600)); }   // 左边至少留 600px 给表单
+    function setSideW(w, save) {
+      w = Math.round(Math.min(sideMax(), Math.max(SIDE_MIN, w)));
+      document.documentElement.style.setProperty("--side-w", w + "px");
+      if (save) { try { localStorage.setItem(SIDE_KEY, String(w)); } catch (e) {} }
+      return w;
+    }
+    let sideW = SIDE_DEFAULT;
+    try { sideW = Number(localStorage.getItem(SIDE_KEY)) || SIDE_DEFAULT; } catch (e) {}
+    setSideW(sideW);
+    window.addEventListener("resize", () => setSideW(sideW));
+
+    $("resizer").addEventListener("pointerdown", e => {
+      e.preventDefault();
+      $("resizer").setPointerCapture(e.pointerId);
+      document.body.classList.add("resizing");
+      const move = ev => { sideW = setSideW(window.innerWidth - ev.clientX); };
+      const up = () => {
+        document.body.classList.remove("resizing");
+        sideW = setSideW(sideW, true);
+        $("resizer").removeEventListener("pointermove", move);
+        $("resizer").removeEventListener("pointerup", up);
+        $("resizer").removeEventListener("pointercancel", up);
+      };
+      $("resizer").addEventListener("pointermove", move);
+      $("resizer").addEventListener("pointerup", up);
+      $("resizer").addEventListener("pointercancel", up);
+    });
+    $("resizer").addEventListener("dblclick", () => { sideW = setSideW(SIDE_DEFAULT, true); });
 
     // ---------- 开始 ----------
     checkTime();
