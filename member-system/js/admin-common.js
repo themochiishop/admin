@@ -121,6 +121,15 @@ export const PERK_DEFAULTS = [
   { key: "platform2", points: 20, label: "📝 完善资料：第二个平台", cond: "Shopee 和 TikTok 都绑定" },
 ];
 
+// 📣 关注我们（和会员前台 common.js 的 FOLLOWS 一致；Firestore 规则 followOk 也要一致）
+export const FOLLOW_DEFAULTS = [
+  { key: "follow_shopee",    points: 10, label: "🛍️ Shopee 店铺",     ph: "https://shopee.com.my/…" },
+  { key: "follow_tiktok",    points: 10, label: "🎵 TikTok",          ph: "https://www.tiktok.com/@…" },
+  { key: "follow_instagram", points: 10, label: "📸 Instagram",       ph: "https://www.instagram.com/…" },
+  { key: "follow_facebook",  points: 10, label: "👍 Facebook",        ph: "https://www.facebook.com/…" },
+  { key: "follow_whatsapp",  points: 10, label: "💬 WhatsApp 频道",   ph: "https://whatsapp.com/channel/…" },
+];
+
 export function platformTag(p) {
   return `<span class="tag tag-${p === "shopee" ? "warn" : "pink"}">${esc(PLATFORM_LABELS[p] || p)}</span>`;
 }

@@ -12,6 +12,7 @@
     .perk-table th { color: #64748b; font-weight: 600; font-size: .82rem; }
     .perk-table input[type=number] { width: 90px; margin: 0; }
     .perk-table .cond { color: #64748b; font-size: .8rem; }
+    .perk-table input[type=url] { margin: 0; min-width: 220px; }
     .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .85rem; }
     .switch input { width: auto; margin: 0; }
     .lang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
@@ -46,6 +47,21 @@
           <button class="btn btn-primary" id="saveSys">保存</button>
         </div>
         <p id="sysMsg" class="msg"></p>
+      </div>
+
+      <!-- 📣 关注我们：会员按「去关注」后自己领取 -->
+      <div class="panel">
+        <h3>📣 关注我们</h3>
+        <p class="meta" style="margin:-6px 0 10px">会员在「会员等级」页先按「去关注」打开你的主页，回来按「我已关注，领取」就马上得分。每个平台每人只能领一次，只有已绑定订单的会员（或内部会员）能领。<br>
+          系统没办法确认会员真的有关注，所以分数建议给少一点。<b>没填链接的平台不会显示。</b></p>
+        <table class="perk-table">
+          <thead><tr><th>平台</th><th>主页链接（https://…）</th><th>积分</th><th>开放</th></tr></thead>
+          <tbody id="followRows"></tbody>
+        </table>
+        <div class="actions">
+          <button class="btn btn-primary" id="saveFollow">保存</button>
+        </div>
+        <p id="followMsg" class="msg"></p>
       </div>
 
       <!-- 自订福利：只显示说明，由你手动发放 -->
@@ -100,7 +116,7 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, PERK_DEFAULTS } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, esc, PERK_DEFAULTS, FOLLOW_DEFAULTS } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("perks");
@@ -124,6 +140,20 @@
             <td class="cond">${esc(p.cond)}</td>
             <td><input type="number" min="1" step="1" data-pts="${p.key}" value="${pts}"></td>
             <td><label class="switch"><input type="checkbox" data-on="${p.key}" ${c.active === false ? "" : "checked"}> 开放</label></td>
+          </tr>`;
+      }).join("");
+    }
+
+    function renderFollow() {
+      $("followRows").innerHTML = FOLLOW_DEFAULTS.map(p => {
+        const c = cfg[p.key] || {};
+        const pts = typeof c.points === "number" ? c.points : p.points;
+        return `
+          <tr>
+            <td><b>${esc(p.label)}</b></td>
+            <td><input type="url" data-flink="${p.key}" value="${esc(c.link || "")}" placeholder="${esc(p.ph)}"></td>
+            <td><input type="number" min="1" step="1" data-fpts="${p.key}" value="${pts}"></td>
+            <td><label class="switch"><input type="checkbox" data-fon="${p.key}" ${c.active === false ? "" : "checked"}> 开放</label></td>
           </tr>`;
       }).join("");
     }
@@ -192,7 +222,23 @@
         cfg = snap.exists() ? snap.data() : {};
       } catch (e) { setMsg($("sysMsg"), "载入失败：" + e.message, "err"); }
       renderSys();
+      renderFollow();
       renderCustom();
+
+      $("saveFollow").addEventListener("click", async () => {
+        const patch = {};
+        for (const p of FOLLOW_DEFAULTS) {
+          const link = document.querySelector(`[data-flink="${p.key}"]`).value.trim();
+          const pts = parseInt(document.querySelector(`[data-fpts="${p.key}"]`).value, 10);
+          if (link && !/^https:\/\//i.test(link)) { setMsg($("followMsg"), `「${p.label}」的链接要以 https:// 开头`, "err"); return; }
+          if (!(pts > 0)) { setMsg($("followMsg"), `「${p.label}」的积分要大于 0`, "err"); return; }
+          patch[p.key] = { link, points: pts, active: document.querySelector(`[data-fon="${p.key}"]`).checked };
+        }
+        $("saveFollow").disabled = true;
+        try { await save(patch); setMsg($("followMsg"), "已保存 ✅ 有填链接、有开放的平台会显示给会员", "ok"); }
+        catch (err) { setMsg($("followMsg"), "保存失败：" + err.message, "err"); }
+        finally { $("saveFollow").disabled = false; }
+      });
       if (!cfg.updatedAt) setMsg($("sysMsg"), "目前用的是预设分数。按一次「保存」就会存成你的设定。", "");
 
       $("saveSys").addEventListener("click", async () => {
