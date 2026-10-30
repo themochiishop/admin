@@ -2,7 +2,7 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v8";
+  const STORE_KEY = "mochii_docs_v9";
 
   const fmt = n => {
     const num = Number(n) || 0;
@@ -146,12 +146,13 @@
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
+    // 设置标准的 A4 边缘留白，使元素铺满整个 A4 纸张
     const opt = {
-      margin:       [10, 10, 10, 10],
+      margin:       [5, 5, 5, 5],
       filename:     filename,
       image:        { type: 'jpeg', quality: 1.0 },
       html2canvas:  { 
-        scale: 3,           // 高超清渲染
+        scale: 2.5,         // 清晰高清
         useCORS: true, 
         scrollY: 0,
         scrollX: 0
