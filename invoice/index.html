@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh">
-<head> 
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MOCHII SHOP - Purchase Order / Invoice</title>
@@ -59,7 +59,7 @@
     </table>
 
     <!-- 客户信息 -->
-    <table class="info-table" style="margin-top: 12px;">
+    <table class="info-table">
       <tr>
         <td style="width: 58%; padding-right: 25px; vertical-align: top;">
           <div class="blue-bar">VENDOR</div>
@@ -83,7 +83,7 @@
     </table>
 
     <!-- 横排三栏 -->
-    <table class="middle-bar-table" style="margin-top: 12px;">
+    <table class="middle-bar-table">
       <tr>
         <td class="blue-bar-td" style="width: 33%;">REQUISITIONER</td>
         <td class="blue-bar-td" style="width: 34%;">PAYMENT TYPE</td>
@@ -97,7 +97,7 @@
     </table>
 
     <!-- 物品列表 -->
-    <table class="items-table" id="po-items" style="margin-top: 12px;">
+    <table class="items-table" id="po-items">
       <thead>
         <tr>
           <th class="blue-bar-td" style="width: 12%;">ITEM #</th>
@@ -114,7 +114,7 @@
     </table>
 
     <!-- 底部：备注 + 总计 -->
-    <table class="bottom-layout" style="margin-top: 12px;">
+    <table class="bottom-layout">
       <tr>
         <td style="width: 58%; vertical-align: top; padding-right: 25px;">
           <div class="blue-bar">Comments or Special Instructions</div>
@@ -125,34 +125,43 @@
         </td>
         <td style="width: 42%; vertical-align: top;">
           <table class="totals-table">
-            <tr><td class="right">SUBTOTAL</td><td class="gray-bg" data-sum="po-subtotal">1,376.00</td></tr>
+            <tr><td class="right">SUBTOTAL</td><td class="gray-bg" data-sum="po-subtotal">0.00</td></tr>
             <tr><td class="right">TAX</td><td><input type="number" id="po-tax" value=""></td></tr>
             <tr><td class="right">SHIPPING</td><td><input type="number" id="po-shipping" value=""></td></tr>
             <tr><td class="right">OTHER</td><td><input type="number" id="po-other" value=""></td></tr>
-            <tr><td class="right bold">TOTAL</td><td class="blue-bg bold" data-sum="po-total">RM 1,376.00</td></tr>
+            <tr><td class="right bold">TOTAL</td><td class="blue-bg bold" data-sum="po-total">0.00</td></tr>
           </table>
         </td>
       </tr>
     </table>
 
-    <!-- 签名与盖章落款区 -->
-    <table class="sign-layout" style="margin-top: 25px;">
-      <tr>
-        <td style="width: 58%; vertical-align: top;">
-          <div class="sign-title">Confirmed &amp; Accepted By:</div>
-          <div class="sign-line"></div>
-          <div class="sign-date">Date: <input type="text" id="po-sign-date" value="02/04/2026"></div>
-        </td>
-        <td style="width: 42%; vertical-align: top; padding-left: 20px;">
-          <div class="sign-title">Authorized Signature:</div>
-         <!-- 将原来的 stamp-box 替换为以下 img 标签 -->
-<div class="stamp-box">
-  <img src="signcop.png" alt="Stamp" class="stamp-img">
-</div>
-          <div class="sign-date" style="margin-top: 10px;">Date: <input type="text" id="po-auth-date" value="02/04/2026"></div>
-        </td>
-      </tr>
-    </table>
+    <!-- 完美签名区：替换旧的 sign-layout 表格 -->
+    <div class="sign-flex-container no-print-fix">
+      <div class="sign-section left-sign">
+        <div class="sign-title">Confirmed &amp; Accepted By:</div>
+        <div class="stamp-box left-empty-stamp">
+          <!-- 空白占位符 -->
+        </div>
+        <div class="sign-line-with-date">
+          <div class="sign-line-line"></div>
+          <div class="sign-line-date">
+            <span>Date:</span> <input type="text" id="po-sign-date" value="02/04/2026">
+          </div>
+        </div>
+      </div>
+      <div class="sign-section right-sign">
+        <div class="sign-title">Authorized Signature:</div>
+        <div class="stamp-box">
+          <img src="signcop.png" alt="Stamp" class="stamp-img">
+        </div>
+        <div class="sign-line-with-date">
+          <div class="sign-line-line"></div>
+          <div class="sign-line-date">
+            <span>Date:</span> <input type="text" id="po-auth-date" value="02/04/2026">
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 页脚 -->
     <div class="footer" style="margin-top: 25px;">
@@ -201,7 +210,7 @@
       </tr>
     </table>
 
-    <table class="info-table" style="margin-top: 12px;">
+    <table class="info-table">
       <tr>
         <td style="width: 58%; padding-right: 25px; vertical-align: top;">
           <div class="blue-bar">BILL TO</div>
@@ -225,7 +234,7 @@
       </tr>
     </table>
 
-    <table class="items-table" id="inv-items" style="margin-top: 12px;">
+    <table class="items-table" id="inv-items">
       <thead>
         <tr>
           <th class="blue-bar-td" style="width: 12%;">ITEM #</th>
@@ -239,7 +248,7 @@
       <tbody></tbody>
     </table>
 
-    <table class="bottom-layout" style="margin-top: 12px;">
+    <table class="bottom-layout">
       <tr>
         <td style="width: 58%; vertical-align: top; padding-right: 25px;">
           <div class="blue-bar">Comments or Special Instructions</div>
@@ -253,36 +262,43 @@
         </td>
         <td style="width: 42%; vertical-align: top;">
           <table class="totals-table">
-            <tr><td class="right">SUBTOTAL</td><td class="gray-bg" data-sum="inv-subtotal">1,376.00</td></tr>
+            <tr><td class="right">SUBTOTAL</td><td class="gray-bg" data-sum="inv-subtotal">0.00</td></tr>
             <tr><td class="right">TAX</td><td><input type="number" id="inv-tax" value=""></td></tr>
             <tr><td class="right">SHIPPING</td><td><input type="number" id="inv-shipping" value=""></td></tr>
             <tr><td class="right">OTHER</td><td><input type="number" id="inv-other" value=""></td></tr>
-            <tr><td class="right bold">TOTAL</td><td class="blue-bg bold" data-sum="inv-total">RM 1,376.00</td></tr>
+            <tr><td class="right bold">TOTAL</td><td class="blue-bg bold" data-sum="inv-total">0.00</td></tr>
           </table>
         </td>
       </tr>
     </table>
 
-    <table class="sign-layout" style="margin-top: 25px;">
-      <tr>
-        <td style="width: 58%; vertical-align: top;">
-          <div class="sign-title">Confirmed &amp; Accepted By:</div>
-          <div class="sign-line"></div>
-          <div class="sign-date">Date: <input type="text" id="inv-sign-date" value="02/04/2026"></div>
-        </td>
-        <td style="width: 42%; vertical-align: top; padding-left: 20px;">
-          <div class="sign-title">Authorized Signature:</div>
-          <div class="stamp-box">
-            <div>MOCHII SHOP</div>
-            <div>(202503305565)</div>
-            <div>36 JALAN SS 8/4, TAMAN SRI SAUJANA</div>
-            <div>81900 KOTA TINGGI, JOHOR</div>
-            <div>TEL/WS: 017-750 3767</div>
+    <!-- 完美签名区：在发票区域复制 PO 的结构，注意 ID 不同，且包含公章 -->
+    <div class="sign-flex-container no-print-fix">
+      <div class="sign-section left-sign">
+        <div class="sign-title">Confirmed &amp; Accepted By:</div>
+        <div class="stamp-box left-empty-stamp">
+          <!-- 空白占位符 -->
+        </div>
+        <div class="sign-line-with-date">
+          <div class="sign-line-line"></div>
+          <div class="sign-line-date">
+            <span>Date:</span> <input type="text" id="inv-sign-date" value="02/04/2026">
           </div>
-          <div class="sign-date" style="margin-top: 10px;">Date: <input type="text" id="inv-auth-date" value="02/04/2026"></div>
-        </td>
-      </tr>
-    </table>
+        </div>
+      </div>
+      <div class="sign-section right-sign">
+        <div class="sign-title">Authorized Signature:</div>
+        <div class="stamp-box">
+          <img src="signcop.png" alt="Stamp" class="stamp-img">
+        </div>
+        <div class="sign-line-with-date">
+          <div class="sign-line-line"></div>
+          <div class="sign-line-date">
+            <span>Date:</span> <input type="text" id="inv-auth-date" value="02/04/2026">
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="footer" style="margin-top: 25px;">
       <input type="text" id="inv-footnote1" value="*Goods sold are non-refundable/non-exchangeable.">
