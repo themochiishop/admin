@@ -2,11 +2,11 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v4";
+  const STORE_KEY = "mochii_docs_v5";
 
   const fmt = n => {
     const num = Number(n) || 0;
-    return num.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const state = {
@@ -89,6 +89,7 @@
       const qty = Number(tr.querySelector(".qty").value) || 0;
       const price = Number(tr.querySelector(".price").value) || 0;
       const line = qty * price;
+      tr.querySelector(".price").value = price ? fmt(price) : "";
       tr.querySelector(".total").textContent = fmt(line);
       subtotal += line;
     });
@@ -147,7 +148,7 @@
     const element = document.getElementById(targetId);
 
     const opt = {
-      margin:       [10, 10, 10, 10], // 上下左右 10mm 边距
+      margin:       [8, 8, 8, 8],
       filename:     filename,
       image:        { type: 'jpeg', quality: 1 },
       html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
