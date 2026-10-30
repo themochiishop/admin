@@ -1,11 +1,15 @@
 (() => {
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
- 
-  const STORE_KEY = "mochii_docs_v1";
-  const fmt = n => (Math.round((Number(n) + Number.EPSILON) * 100) / 100).toFixed(2);
 
-  /* ---------------- state ---------------- */
+  const STORE_KEY = "mochii_docs_v1";
+
+  // 加入千分位逗号的格式化函数
+  const fmt = n => {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const state = {
     po:  { rows: [{ desc: "PLUSH TOY SET", qty: 1, price: 1376 }] },
     inv: { rows: [{ desc: "PLUSH TOY SET", qty: 1, price: 1376 }] }
@@ -18,7 +22,6 @@
       const saved = JSON.parse(raw);
       if (saved.po?.rows?.length)  state.po.rows  = saved.po.rows;
       if (saved.inv?.rows?.length) state.inv.rows = saved.inv.rows;
-      // 还原所有 input 的值（按 id 存）
       if (saved.fields) {
         for (const [id, val] of Object.entries(saved.fields)) {
           const el = document.getElementById(id);
@@ -34,7 +37,6 @@
     localStorage.setItem(STORE_KEY, JSON.stringify({ ...state, fields }));
   }
 
-  /* ---------------- rows ---------------- */
   function buildRow(doc, data = { desc: "", qty: 1, price: 0 }) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -82,7 +84,6 @@
     tbody.innerHTML = "";
     rows.forEach(r => tbody.appendChild(buildRow(doc, r)));
 
-    // 编号 + 行金额
     let subtotal = 0;
     $$("tr", tbody).forEach((tr, i) => {
       tr.querySelector(".idx").textContent = i + 1;
@@ -99,10 +100,12 @@
     const total = subtotal + tax + ship + other;
 
     $(`[data-sum="${doc}-subtotal"]`).textContent = fmt(subtotal);
-    $(`[data-sum="${doc}-total"]`).textContent = fmt(total);
+    
+    // 总计行前加上 RM
+    const totalEl = $(`[data-sum="${doc}-total"]`);
+    totalEl.textContent = "RM " + fmt(total);
   }
 
-  /* ---------------- tabs ---------------- */
   const tabPO = $("#tab-po");
   const tabInv = $("#tab-inv");
   const pagePO = $("#page-po");
@@ -118,7 +121,6 @@
   tabPO.addEventListener("click", () => showTab("po"));
   tabInv.addEventListener("click", () => showTab("inv"));
 
-  /* ---------------- toolbar actions ---------------- */
   $("#btn-add").addEventListener("click", () => {
     const active = pagePO.classList.contains("hidden") ? "inv" : "po";
     state[active].rows.push({ desc: "", qty: 1, price: 0 });
@@ -136,7 +138,6 @@
     saveState();
   });
 
-  /* ---------------- bind totals inputs ---------------- */
   ["po", "inv"].forEach(doc => {
     ["tax", "shipping", "other"].forEach(field => {
       const el = $(`#${doc}-${field}`);
@@ -144,7 +145,6 @@
     });
   });
 
-  /* ---------------- init ---------------- */
   const today = new Date().toISOString().slice(0, 10);
   if (!$("#po-date").value) $("#po-date").value = today;
   if (!$("#inv-date").value) $("#inv-date").value = today;
