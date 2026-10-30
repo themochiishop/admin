@@ -145,7 +145,7 @@ body {
 .stamp-img { max-width: 140px; max-height: 60px; display: block; object-fit: contain; }
 
 /* 靠右对齐关键样式 */
-.right-align-td { text-align: right; }
+.right-align-td { text-align: center; }
 .right-align-td .stamp-space {
     margin-left: 75px;
     display: flex;
