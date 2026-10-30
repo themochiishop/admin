@@ -147,11 +147,16 @@
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
-    const opt = {
-      margin:       [8, 8, 8, 8],
+  const opt = {
+      margin:       [5, 5, 5, 5], // 适当缩小边距，防止内容溢出被裁剪
       filename:     filename,
-      image:        { type: 'jpeg', quality: 1 },
-      html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+        scale: 3,           // 提高分辨率（从2升至3，极大提升渲染清晰度）
+        useCORS: true, 
+        scrollY: 0,
+        windowWidth: 1200   // 锁定视口宽度，防止元素右移或变形
+      },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
