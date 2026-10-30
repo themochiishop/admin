@@ -146,9 +146,13 @@ body {
 
 /* 靠右对齐关键样式 */
 .right-align-td { text-align: right; }
-.right-align-td .stamp-space { display: flex; justify-content: flex-end; }
+.right-align-td .stamp-space {
+    margin-left: 75px;
+    display: flex;
+    justify-content: center;
+}
 .right-align-td .sign-line-cell { margin-left: auto; }
-.right-align-td .sign-date-row input { text-align: right; }
+.right-align-td .sign-date-row input { text-align: left; }
 
 /* 签名下划线，短横线长度 200px 紧贴文本长度 */
 .sign-line-cell {
