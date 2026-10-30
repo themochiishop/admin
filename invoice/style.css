@@ -39,7 +39,7 @@ body {
   justify-content: center;
 }
 
-/* 去除灰色外框 border 和 box-shadow，彻底解决导出灰边问题 */
+/* 彻底去除 border 与 box-shadow，解决导出时的灰色线条问题 */
 .sheet {
   width: 750px;
   background: #fff;
@@ -138,18 +138,19 @@ body {
 .totals-table .bold { font-weight: bold; }
 .totals-table input { text-align: right; font-weight: bold; }
 
-/* ---------- 签名区（左侧左对齐，右侧整体右对齐） ---------- */
+/* ---------- 签名与盖章区域 ---------- */
 .sign-layout-table { width: 100%; border-collapse: collapse; }
 .sign-title { font-size: 11.5px; font-weight: bold; color: #000; }
-.stamp-space { height: 55px; vertical-align: bottom; }
-.stamp-img { max-width: 140px; max-height: 55px; display: block; object-fit: contain; }
+.stamp-space { height: 60px; vertical-align: bottom; }
+.stamp-img { max-width: 140px; max-height: 60px; display: block; object-fit: contain; }
 
-/* 右侧靠右布局样式 */
+/* 靠右对齐关键样式 */
 .right-align-td { text-align: right; }
 .right-align-td .stamp-space { display: flex; justify-content: flex-end; }
 .right-align-td .sign-line-cell { margin-left: auto; }
 .right-align-td .sign-date-row input { text-align: right; }
 
+/* 签名下划线，短横线长度 200px 紧贴文本长度 */
 .sign-line-cell {
   border-bottom: 1.5px solid #000;
   width: 200px;
