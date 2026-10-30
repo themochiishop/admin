@@ -29,7 +29,7 @@ body {
 .toolbar button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; font-weight: bold; }
 .toolbar button.danger { color: #c00; border-color: #e2b9b9; }
 
-/* ---------- 纸张外观 (控制总高度，确保 1 页) ---------- */
+/* ---------- 纸张外观 ---------- */
 .page { 
   padding: 15px 0;
 }
@@ -39,12 +39,13 @@ body {
   justify-content: center;
 }
 
+/* 去除灰色外框 border 和 box-shadow，彻底解决导出灰边问题 */
 .sheet {
   width: 750px;
   background: #fff;
-  padding: 25px 35px 20px; /* 适当缩小底部 Padding 防止溢出第 2 页 */
-  border: 1px solid #ccc;
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  padding: 25px 35px 20px;
+  border: none !important;
+  box-shadow: none !important;
   box-sizing: border-box;
 }
 .hidden { display: none !important; }
@@ -137,13 +138,18 @@ body {
 .totals-table .bold { font-weight: bold; }
 .totals-table input { text-align: right; font-weight: bold; }
 
-/* ---------- 签名区（固定短横线，与上文对齐） ---------- */
+/* ---------- 签名区（左侧左对齐，右侧整体右对齐） ---------- */
 .sign-layout-table { width: 100%; border-collapse: collapse; }
 .sign-title { font-size: 11.5px; font-weight: bold; color: #000; }
-.stamp-space { height: 55px; text-align: left; vertical-align: bottom; }
+.stamp-space { height: 55px; vertical-align: bottom; }
 .stamp-img { max-width: 140px; max-height: 55px; display: block; object-fit: contain; }
 
-/* 关键改进：限定横线宽度为 200px，正好与文字对齐 */
+/* 右侧靠右布局样式 */
+.right-align-td { text-align: right; }
+.right-align-td .stamp-space { display: flex; justify-content: flex-end; }
+.right-align-td .sign-line-cell { margin-left: auto; }
+.right-align-td .sign-date-row input { text-align: right; }
+
 .sign-line-cell {
   border-bottom: 1.5px solid #000;
   width: 200px;
