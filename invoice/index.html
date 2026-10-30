@@ -135,36 +135,30 @@
       </tr>
     </table>
 
-    <!-- 完美签名区：替换旧的 sign-layout 表格 -->
-    <div class="sign-flex-container no-print-fix">
-      <div class="sign-section left-sign">
+    <!-- 签名区域 -->
+    <div class="sign-flex-container">
+      <div class="sign-section">
         <div class="sign-title">Confirmed &amp; Accepted By:</div>
-        <div class="stamp-box left-empty-stamp">
-          <!-- 空白占位符 -->
-        </div>
-        <div class="sign-line-with-date">
-          <div class="sign-line-line"></div>
-          <div class="sign-line-date">
-            <span>Date:</span> <input type="text" id="po-sign-date" value="02/04/2026">
-          </div>
+        <div class="stamp-box"></div>
+        <div class="sign-line-line"></div>
+        <div class="sign-date-under">
+          <span>Date:</span> <input type="text" id="po-sign-date" value="02/04/2026">
         </div>
       </div>
-      <div class="sign-section right-sign">
+      <div class="sign-section">
         <div class="sign-title">Authorized Signature:</div>
         <div class="stamp-box">
           <img src="signcop.png" alt="Stamp" class="stamp-img">
         </div>
-        <div class="sign-line-with-date">
-          <div class="sign-line-line"></div>
-          <div class="sign-line-date">
-            <span>Date:</span> <input type="text" id="po-auth-date" value="02/04/2026">
-          </div>
+        <div class="sign-line-line"></div>
+        <div class="sign-date-under">
+          <span>Date:</span> <input type="text" id="po-auth-date" value="02/04/2026">
         </div>
       </div>
     </div>
 
     <!-- 页脚 -->
-    <div class="footer" style="margin-top: 25px;">
+    <div class="footer" style="margin-top: 20px;">
       <input type="text" id="po-footnote" value="If you have any questions about this purchase order, please contact us on Whatapps 017-750 3767 THE MOCHII SHOP">
     </div>
 
@@ -272,35 +266,29 @@
       </tr>
     </table>
 
-    <!-- 完美签名区：在发票区域复制 PO 的结构，注意 ID 不同，且包含公章 -->
-    <div class="sign-flex-container no-print-fix">
-      <div class="sign-section left-sign">
+    <!-- 签名区域（Invoice中已添加印章） -->
+    <div class="sign-flex-container">
+      <div class="sign-section">
         <div class="sign-title">Confirmed &amp; Accepted By:</div>
-        <div class="stamp-box left-empty-stamp">
-          <!-- 空白占位符 -->
-        </div>
-        <div class="sign-line-with-date">
-          <div class="sign-line-line"></div>
-          <div class="sign-line-date">
-            <span>Date:</span> <input type="text" id="inv-sign-date" value="02/04/2026">
-          </div>
+        <div class="stamp-box"></div>
+        <div class="sign-line-line"></div>
+        <div class="sign-date-under">
+          <span>Date:</span> <input type="text" id="inv-sign-date" value="02/04/2026">
         </div>
       </div>
-      <div class="sign-section right-sign">
+      <div class="sign-section">
         <div class="sign-title">Authorized Signature:</div>
         <div class="stamp-box">
           <img src="signcop.png" alt="Stamp" class="stamp-img">
         </div>
-        <div class="sign-line-with-date">
-          <div class="sign-line-line"></div>
-          <div class="sign-line-date">
-            <span>Date:</span> <input type="text" id="inv-auth-date" value="02/04/2026">
-          </div>
+        <div class="sign-line-line"></div>
+        <div class="sign-date-under">
+          <span>Date:</span> <input type="text" id="inv-auth-date" value="02/04/2026">
         </div>
       </div>
     </div>
 
-    <div class="footer" style="margin-top: 25px;">
+    <div class="footer" style="margin-top: 20px;">
       <input type="text" id="inv-footnote1" value="*Goods sold are non-refundable/non-exchangeable.">
       <input type="text" id="inv-footnote2" value="If you have any questions about this invoice, Please contact us on Whatapps 017-750 3767 THE MOCHII SHOP.">
     </div>
