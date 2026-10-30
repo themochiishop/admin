@@ -60,9 +60,9 @@
       </table>
 
       <!-- 客户信息 -->
-      <table class="info-table" style="margin-top: 10px;">
+      <table class="info-table" style="margin-top: 12px;">
         <tr>
-          <td style="width: 58%; padding-right: 20px; vertical-align: top;">
+          <td style="width: 58%; padding-right: 25px; vertical-align: top;">
             <div class="blue-bar">VENDOR</div>
             <div class="info-content">
               <input type="text" id="po-vendor-name" value="TAN SIOW JIE">
@@ -70,7 +70,7 @@
               <input type="text" id="po-vendor-addr2" value="TAMAN ENSHAN JAYA">
               <div class="inline-row">
                 <span>Whatapp :&nbsp;</span>
-                <input type="text" id="po-vendor-tel" value="012-5598765" style="width: 130px;">
+                <input type="text" id="po-vendor-tel" value="012-5598765" style="width: 140px;">
               </div>
             </div>
           </td>
@@ -84,7 +84,7 @@
       </table>
 
       <!-- 横排三栏 -->
-      <table class="middle-bar-table" style="margin-top: 10px;">
+      <table class="middle-bar-table" style="margin-top: 12px;">
         <tr>
           <td class="blue-bar-td" style="width: 33%;">REQUISITIONER</td>
           <td class="blue-bar-td" style="width: 34%;">PAYMENT TYPE</td>
@@ -98,7 +98,7 @@
       </table>
 
       <!-- 物品列表 -->
-      <table class="items-table" id="po-items" style="margin-top: 10px;">
+      <table class="items-table" id="po-items" style="margin-top: 12px;">
         <thead>
           <tr>
             <th class="blue-bar-td" style="width: 12%;">ITEM #</th>
@@ -115,9 +115,9 @@
       </table>
 
       <!-- 底部：备注 + 总计 -->
-      <table class="bottom-layout" style="margin-top: 10px;">
+      <table class="bottom-layout" style="margin-top: 12px;">
         <tr>
-          <td style="width: 58%; vertical-align: top; padding-right: 20px;">
+          <td style="width: 58%; vertical-align: top; padding-right: 25px;">
             <div class="blue-bar">Comments or Special Instructions</div>
             <div class="notes-box">
               <input type="text" id="po-note1" value="Bank transfer from MOCHII SHOP (Maybank) 5013 3855 4207">
@@ -136,29 +136,29 @@
         </tr>
       </table>
 
-      <!-- 签名区重构（使用 Table 保证百分百平齐与无偏移） -->
-      <table class="sign-layout-table" style="margin-top: 15px;">
+      <!-- 完美复刻目标的签名区布局 -->
+      <table class="sign-layout-table" style="margin-top: 25px;">
         <tr>
-          <td style="width: 48%; vertical-align: top;">
+          <td style="width: 42%; vertical-align: top;">
             <div class="sign-title">Confirmed &amp; Accepted By:</div>
             <div class="stamp-space"></div>
-            <div class="sign-line"></div>
-            <div class="sign-date">Date: <input type="text" id="po-sign-date" value="02/04/2026"></div>
+            <div class="sign-line-cell"></div>
+            <div class="sign-date-row">Date: <input type="text" id="po-sign-date" value="02/04/2026"></div>
           </td>
-          <td style="width: 4%;"></td> <!-- 间距 -->
-          <td style="width: 48%; vertical-align: top;">
+          <td style="width: 16%;"></td> <!-- 距离间距 -->
+          <td style="width: 42%; vertical-align: top;">
             <div class="sign-title">Authorized Signature:</div>
             <div class="stamp-space">
               <img src="signcop.png" alt="Stamp" class="stamp-img">
             </div>
-            <div class="sign-line"></div>
-            <div class="sign-date">Date: <input type="text" id="po-auth-date" value="02/04/2026"></div>
+            <div class="sign-line-cell"></div>
+            <div class="sign-date-row">Date: <input type="text" id="po-auth-date" value="02/04/2026"></div>
           </td>
         </tr>
       </table>
 
       <!-- 页脚 -->
-      <div class="footer" style="margin-top: 15px;">
+      <div class="footer" style="margin-top: 35px;">
         <input type="text" id="po-footnote" value="If you have any questions about this purchase order, please contact us on Whatapps 017-750 3767 THE MOCHII SHOP">
       </div>
 
@@ -206,9 +206,9 @@
         </tr>
       </table>
 
-      <table class="info-table" style="margin-top: 10px;">
+      <table class="info-table" style="margin-top: 12px;">
         <tr>
-          <td style="width: 58%; padding-right: 20px; vertical-align: top;">
+          <td style="width: 58%; padding-right: 25px; vertical-align: top;">
             <div class="blue-bar">BILL TO</div>
             <div class="info-content">
               <input type="text" id="inv-bill-name" value="MAH KIEN LOONG">
@@ -217,7 +217,7 @@
               <input type="text" id="inv-bill-addr3" value="81100 JOHOR BAHRU, JOHOR">
               <div class="inline-row">
                 <span>Whatapp :&nbsp;</span>
-                <input type="text" id="inv-bill-tel" value="012-5598765" style="width: 130px;">
+                <input type="text" id="inv-bill-tel" value="012-5598765" style="width: 140px;">
               </div>
             </div>
           </td>
@@ -230,7 +230,7 @@
         </tr>
       </table>
 
-      <table class="items-table" id="inv-items" style="margin-top: 10px;">
+      <table class="items-table" id="inv-items" style="margin-top: 12px;">
         <thead>
           <tr>
             <th class="blue-bar-td" style="width: 12%;">ITEM #</th>
@@ -244,9 +244,9 @@
         <tbody></tbody>
       </table>
 
-      <table class="bottom-layout" style="margin-top: 10px;">
+      <table class="bottom-layout" style="margin-top: 12px;">
         <tr>
-          <td style="width: 58%; vertical-align: top; padding-right: 20px;">
+          <td style="width: 58%; vertical-align: top; padding-right: 25px;">
             <div class="blue-bar">Comments or Special Instructions</div>
             <div class="notes-box">
               <input type="text" id="inv-note1" value="Note: -">
@@ -268,27 +268,27 @@
         </tr>
       </table>
 
-      <table class="sign-layout-table" style="margin-top: 15px;">
+      <table class="sign-layout-table" style="margin-top: 25px;">
         <tr>
-          <td style="width: 48%; vertical-align: top;">
+          <td style="width: 42%; vertical-align: top;">
             <div class="sign-title">Confirmed &amp; Accepted By:</div>
             <div class="stamp-space"></div>
-            <div class="sign-line"></div>
-            <div class="sign-date">Date: <input type="text" id="inv-sign-date" value="02/04/2026"></div>
+            <div class="sign-line-cell"></div>
+            <div class="sign-date-row">Date: <input type="text" id="inv-sign-date" value="02/04/2026"></div>
           </td>
-          <td style="width: 4%;"></td>
-          <td style="width: 48%; vertical-align: top;">
+          <td style="width: 16%;"></td>
+          <td style="width: 42%; vertical-align: top;">
             <div class="sign-title">Authorized Signature:</div>
             <div class="stamp-space">
               <img src="signcop.png" alt="Stamp" class="stamp-img">
             </div>
-            <div class="sign-line"></div>
-            <div class="sign-date">Date: <input type="text" id="inv-auth-date" value="02/04/2026"></div>
+            <div class="sign-line-cell"></div>
+            <div class="sign-date-row">Date: <input type="text" id="inv-auth-date" value="02/04/2026"></div>
           </td>
         </tr>
       </table>
 
-      <div class="footer" style="margin-top: 15px;">
+      <div class="footer" style="margin-top: 35px;">
         <input type="text" id="inv-footnote1" value="*Goods sold are non-refundable/non-exchangeable.">
         <input type="text" id="inv-footnote2" value="If you have any questions about this invoice, Please contact us on Whatapps 017-750 3767 THE MOCHII SHOP.">
       </div>
