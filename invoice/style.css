@@ -1,22 +1,16 @@
 * { box-sizing: border-box; }
 
-:root {
-  --line: #000;
-  --muted: #333;
-  --blue: #3b5998; /* 截图里的深蓝色 */
-  --light-blue: #f0f4f9; /* 截图里高亮的浅蓝色 */
-  --bg-gray: #f9f9f9;
-}
-
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   background: #e8eaed;
   color: #000;
   font-size: 12px;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
-/* ---------- 工具栏 (不打印) ---------- */
+/* ---------- 工具栏 ---------- */
 .toolbar {
   position: sticky; top: 0; z-index: 10;
   display: flex; gap: 8px; align-items: center;
@@ -29,150 +23,120 @@ body {
 }
 .toolbar button:hover { background: #ececec; }
 .toolbar button.tab.active { background: #333; border-color: #333; color: #fff; }
+.toolbar button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; font-weight: bold; }
 .toolbar button.danger { color: #c00; border-color: #e2b9b9; }
 
-/* ---------- 纸张外观 ---------- */
+/* ---------- A4 纸张外观 ---------- */
 .page { padding: 24px 16px 60px; }
 .sheet {
-  max-width: 850px; margin: 0 auto; background: #fff;
-  padding: 35px 40px; border: 1px solid #ccc;
+  max-width: 850px; 
+  margin: 0 auto; 
+  background: #fff;
+  padding: 30px 40px; 
+  border: 1px solid #ccc;
   box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
 .hidden { display: none; }
 
-/* ---------- 头部与 Logo ---------- */
-.company-top { display: flex; align-items: center; gap: 15px; margin-bottom: 8px; }
-.logo { max-height: 50px; display: block; }
-.company-name h1 { font-size: 20px; margin: 0; font-weight: normal; font-family: "Times New Roman", Times, serif;}
-.company-name .reg-no { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
+/* 核心：用表格网格控制布局，防止变形 */
+.layout-table { width: 100%; border-collapse: collapse; }
+.layout-table td { vertical-align: top; padding: 0; }
 
-.company-address p { margin: 2px 0; line-height: 1.4; font-size: 11px; font-weight: bold; }
+/* ---------- 顶部信息 ---------- */
+.company-top { display: flex; align-items: center; gap: 12px; margin-bottom: 5px; }
+.logo { max-height: 45px; display: block; }
+.comp-name { font-family: "Times New Roman", serif; font-size: 18px !important; font-weight: bold; }
+.comp-reg { font-size: 11px; color: #444; }
+.addr-line { font-size: 11px; font-weight: bold; display: block; margin: 1px 0; }
 
-.doc-header {
-  display: flex; justify-content: space-between; gap: 20px;
-  margin-bottom: 25px;
-}
-.doc-title { text-align: right; min-width: 250px; }
-
-/* 顶部标题蓝框 */
-.title-box {
-  border: 1px solid var(--blue);
-  color: var(--blue);
-  font-size: 16px;
+.title-box { text-align: right; width: 250px; }
+.doc-title-text {
+  color: #3b5998;
+  font-size: 15px;
   font-weight: bold;
-  padding: 4px 20px;
-  display: inline-block;
-  margin-bottom: 10px;
-  letter-spacing: 1px;
+  border-top: 1px solid #3b5998;
+  border-bottom: 2px solid #3b5998;
+  padding: 4px 0;
+  margin-bottom: 8px;
 }
+.date-table { width: 100%; border-collapse: collapse; margin-left: auto; }
+.date-table td { padding: 3px 0; font-weight: bold; font-size: 11px; }
+.date-table td:first-child { text-align: right; padding-right: 10px; width: 60px;}
+.date-table .input-box { border: 1px solid #000; width: 110px; text-align: center; }
 
-/* 日期和编号对齐 */
-table.meta { margin-left: auto; border-collapse: collapse; width: 220px; }
-table.meta td { padding: 3px 0; font-weight: bold; font-size: 11px; }
-table.meta td:first-child { text-align: right; padding-right: 15px; color: var(--muted); }
-table.meta .meta-val { border: 1px solid var(--line); padding: 2px 5px; text-align: center; width: 100px; }
-
-/* 蓝色条横幅 */
+/* ---------- 蓝色横幅 ---------- */
 .blue-bar {
-  background-color: var(--blue);
+  background-color: #3b5998;
   color: #fff;
   font-weight: bold;
-  padding: 4px 8px;
+  padding: 3px 8px;
   font-size: 11px;
   text-align: left;
 }
-.blue-bar-td {
-  background-color: var(--blue) !important;
-  color: #fff !important;
-  font-weight: bold;
-}
+.blue-bar-td { background-color: #3b5998 !important; color: #fff !important; font-weight: bold; text-align: center; }
 
 /* ---------- 客户信息 ---------- */
-.party-row { display: flex; gap: 50px; margin-bottom: 15px; }
-.party { flex: 1; }
-.party-content { padding: 8px 4px; }
-.party-content p { margin: 3px 0; font-size: 11px; font-weight: bold; }
+.info-table { width: 100%; border-collapse: collapse; }
+.info-content { padding: 5px 0; }
+.info-content input { font-size: 11px; font-weight: bold; display: block; margin: 2px 0; }
 
-/* REQUISITIONER 上下两排 */
-table.meta-row-vertical {
-  width: 100%; border-collapse: collapse; margin-bottom: 15px;
-}
-table.meta-row-vertical td {
-  border: 1px solid var(--line);
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: bold;
-}
-table.meta-row-vertical tr:last-child td { background: var(--bg-gray); }
+/* ---------- 中间条 ---------- */
+.middle-bar-table { width: 100%; border-collapse: collapse; }
+.middle-bar-table td { border: 1px solid #000; padding: 4px 8px; font-size: 11px; font-weight: bold; }
+.middle-bar-table input { font-weight: bold; text-align: left; }
 
 /* ---------- 物品表格 ---------- */
-table.items { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-table.items th, table.items td { border: 1px solid var(--line); padding: 6px 8px; }
-table.items th { font-size: 11px; text-align: center; }
-table.items td { font-size: 11px; font-weight: bold; }
-table.items td.num, table.items td.total { text-align: right; }
-table.items input.desc { width: 100%; font-weight: bold; }
-table.items input.qty, table.items input.price { width: 100%; text-align: right; font-weight: bold; }
-table.items td.total { font-variant-numeric: tabular-nums; }
-table.items button.del { border: none; background: transparent; color: #c00; cursor: pointer; font-size: 16px; }
+.items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+.items-table th, .items-table td { border: 1px solid #000; padding: 6px 8px; font-size: 11px; font-weight: bold; }
+.items-table td { text-align: center; }
+.items-table td:nth-child(2) { text-align: left; }
+.items-table td.num, .items-table td.total { text-align: right; }
+.items-table input { font-weight: bold; }
+.items-table input.qty, .items-table input.price { text-align: right; }
+.items-table .del { color: #c00; background: none; border: none; cursor: pointer; }
 
-/* 表格最小高度，防止内容太少看起来干瘪 */
-table.items tbody { min-height: 150px; }
+/* 强制保持最小高度，好看些 */
+.items-table tbody tr { height: 25px; }
 
-/* ---------- 底部信息 ---------- */
-.bottom { display: flex; gap: 30px; align-items: stretch; }
-.notes { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--line); }
-.notes-content { padding: 10px; flex: 1; }
-.notes-content p { margin: 4px 0; font-size: 11px; font-weight: bold; }
+/* ---------- 底部 ---------- */
+.bottom-table { width: 100%; border-collapse: collapse; }
+.bottom-table > tbody > tr > td { vertical-align: top; }
 
-table.totals { width: 260px; border-collapse: collapse; }
-table.totals td { border: 1px solid var(--line); padding: 5px 10px; font-size: 11px; font-weight: bold;}
-table.totals td.tot-label { text-align: right; padding-right: 15px; border-top: none; border-left: none; }
-table.totals td:last-child { border-right: none; }
-table.totals tr:first-child td { border-top: none; }
+.notes-box { width: 60%; border: 1px solid #000; padding: 0; }
+.notes-content { padding: 8px; height: 110px; }
+.notes-content input { font-size: 11px; font-weight: bold; display: block; margin-bottom: 2px; }
 
-table.totals tr.grand td { border-bottom: none; }
-table.totals td.num { text-align: right; font-variant-numeric: tabular-nums; background: var(--bg-gray);}
-table.totals .light-bg { background: var(--bg-gray); }
-table.totals .blue-bg { background: var(--light-blue); color: var(--blue); font-size: 12px; }
-table.totals input { width: 100%; text-align: right; font-weight: bold; }
+.totals-box { width: 40%; padding-left: 20px; }
+.totals-table { width: 100%; border-collapse: collapse; }
+.totals-table td { padding: 6px 10px; border: 1px solid #000; font-size: 11px; font-weight: bold; }
+.totals-table .right { text-align: right; padding-right: 15px; }
+.totals-table .gray-bg { text-align: right; background-color: #f4f4f4; }
+.totals-table .blue-bg { text-align: right; background-color: #e5edf7; color: #3b5998; }
+.totals-table .bold { font-weight: 900; }
+.totals-table input { text-align: right; font-weight: bold; }
 
 /* ---------- 签名区 ---------- */
-.sign-row { display: flex; gap: 40px; margin-top: 30px; page-break-inside: avoid; }
-.sign-col { width: 250px; } /* 固定宽度，下划线就不会太长了 */
-.sign-box-wrap {
-  width: 180px; /* 下划线长度 */
-  margin-top: 25px;
-}
-.sign-box {
-  border-bottom: 1px solid var(--line);
-  height: 5px; /* 因为下面有 Date，所以这里只需要一点点高度即可 */
-}
-.sign-row p { margin: 2px 0; font-size: 11px; font-weight: bold;}
+.sign-table { width: 100%; margin-top: 35px; border-collapse: collapse; page-break-inside: avoid; }
+.sign-title { font-size: 11px; font-weight: bold; }
+.sign-line-box { width: 200px; margin-top: 35px; }
+.sign-line { border-bottom: 1px solid #000; height: 1px; }
+.sign-date { margin-top: 5px; font-size: 11px; font-weight: bold; }
+.sign-date input { width: 100px; font-weight: bold; }
 
 /* ---------- 页脚 ---------- */
-.foot { margin-top: 30px; font-size: 11px; font-weight: bold; }
-.foot p { margin: 2px 0; }
+.footer { margin-top: 40px; font-size: 11px; font-weight: bold; }
+.footer input { display: block; margin-bottom: 2px; }
 
-/* ---------- 输入框全局样式 ---------- */
+/* ---------- 输入框统一美化 ---------- */
 input {
   font: inherit; color: inherit; background: transparent; border: none;
   border-bottom: 1px dotted transparent; padding: 1px; width: 100%;
+  outline: none;
 }
-input:hover { border-bottom-color: #999; }
-input:focus { outline: none; border-bottom-color: #333; background: #f7f7f7; }
+input:hover { border-bottom-color: #ccc; }
+input:focus { border-bottom-color: #3b5998; background: #f7f7f7; }
 
-/* ---------- 核心：打印样式 ---------- */
+/* 网页端隐藏打印控制 */
 @media print {
-  @page { margin: 0; size: A4; }
-  body { background: #fff; margin: 0; padding: 0; }
   .no-print { display: none !important; }
-  .page { padding: 0; margin: 0; }
-  .sheet {
-    max-width: none; box-shadow: none; border: none;
-    padding: 15mm 15mm; 
-    margin: 0;
-  }
-  .hidden { display: none !important; }
-  input { border-bottom: none !important; background: transparent !important; }
 }
