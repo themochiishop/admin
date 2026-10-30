@@ -2,7 +2,7 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v2";
+  const STORE_KEY = "mochii_docs_v3";
 
   const fmt = n => {
     const num = Number(n) || 0;
@@ -39,7 +39,7 @@
   function buildRow(doc, data = { desc: "", qty: 1, price: 0 }) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="idx" style="text-align:center;"></td>
+      <td class="idx"></td>
       <td><input class="desc" type="text" value="${escapeAttr(data.desc)}"></td>
       <td><input class="qty" type="number" min="0" step="1" value="${data.qty}"></td>
       <td><input class="price" type="number" min="0" step="0.01" value="${data.price}"></td>
@@ -99,10 +99,7 @@
     const total = subtotal + tax + ship + other;
 
     $(`[data-sum="${doc}-subtotal"]`).textContent = fmt(subtotal);
-    
-    // 总金额加 RM 和千分位
-    const totalEl = $(`[data-sum="${doc}-total"]`);
-    totalEl.textContent = "RM " + fmt(total);
+    $(`[data-sum="${doc}-total"]`).textContent = "RM " + fmt(total);
   }
 
   const tabPO = $("#tab-po");
@@ -127,8 +124,6 @@
     saveState();
   });
 
-  $("#btn-print").addEventListener("click", () => window.print());
-
   $("#btn-clear").addEventListener("click", () => {
     if (!confirm("确定清空当前页面的数据？（仅本机）")) return;
     const active = pagePO.classList.contains("hidden") ? "inv" : "po";
@@ -141,6 +136,40 @@
     ["tax", "shipping", "other"].forEach(field => {
       const el = $(`#${doc}-${field}`);
       if (el) el.addEventListener("input", () => { render(doc); saveState(); });
+    });
+  });
+
+  // ---------------- 完美 PDF 下载 ----------------
+  $("#btn-download").addEventListener("click", () => {
+    const isPO = !pagePO.classList.contains("hidden");
+    const targetId = isPO ? "pdf-po-area" : "pdf-inv-area";
+    const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
+    const element = document.getElementById(targetId);
+
+    // 配置项：A4纸，高质量，允许背景颜色（蓝色的条幅能正常打印）
+    const opt = {
+      margin:       0,
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // 显示加载提示
+    const btn = $("#btn-download");
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "生成中...";
+    btn.disabled = true;
+
+    // 生成并下载
+    html2pdf().set(opt).from(element).save().then(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }).catch(err => {
+      console.error(err);
+      alert("生成失败，请重试！");
+      btn.innerHTML = originalText;
+      btn.disabled = false;
     });
   });
 
