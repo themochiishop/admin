@@ -2,11 +2,11 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v5";
+  const STORE_KEY = "mochii_docs_v6"; // 更新存储键
 
   const fmt = n => {
     const num = Number(n) || 0;
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const state = {
@@ -89,7 +89,6 @@
       const qty = Number(tr.querySelector(".qty").value) || 0;
       const price = Number(tr.querySelector(".price").value) || 0;
       const line = qty * price;
-      tr.querySelector(".price").value = price ? fmt(price) : "";
       tr.querySelector(".total").textContent = fmt(line);
       subtotal += line;
     });
@@ -147,15 +146,15 @@
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
-  const opt = {
-      margin:       [5, 5, 5, 5], // 适当缩小边距，防止内容溢出被裁剪
+    const opt = {
+      margin:       [10, 10, 10, 10], // 适当缩小边距，防止内容溢出被裁剪
       filename:     filename,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { 
         scale: 3,           // 提高分辨率（从2升至3，极大提升渲染清晰度）
         useCORS: true, 
         scrollY: 0,
-        windowWidth: 1200   // 锁定视口宽度，防止元素右移或变形
+        // windowWidth: 1200   // 移除锁定视口宽度，解决偏移
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
