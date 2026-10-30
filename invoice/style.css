@@ -8,7 +8,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   background: #e8eaed;
   color: #000;
-  font-size: 11px;
+  font-size: 11.5px;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
 }
@@ -29,19 +29,25 @@ body {
 .toolbar button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; font-weight: bold; }
 .toolbar button.danger { color: #c00; border-color: #e2b9b9; }
 
-/* ---------- 纸张外观 ---------- */
+/* ---------- A4 纸张页面尺寸 ---------- */
 .page { 
   padding: 20px 0;
+  display: flex;
+  justify-content: center;
 }
+
 .sheet-container {
   width: 100%;
   display: flex;
   justify-content: center;
 }
+
+/* 标准 A4 页面像素比例（794px 对应 210mm） */
 .sheet {
-  width: 700px; /* 完美契合 A4 居中尺寸，不产生滚动条 */
+  width: 794px;
+  min-height: 1123px;
   background: #fff;
-  padding: 25px 30px;
+  padding: 40px 45px;
   border: 1px solid #ccc;
   box-shadow: 0 4px 12px rgba(0,0,0,.08);
   box-sizing: border-box;
@@ -53,29 +59,29 @@ body {
 .main-layout td { padding: 0; }
 
 .company-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 4px; }
-.logo { max-height: 48px; display: block; object-fit: contain; }
+.logo { max-height: 52px; display: block; object-fit: contain; }
 .company-name { display: flex; flex-direction: column; }
-.comp-name { font-family: Arial, sans-serif; font-size: 16px !important; font-weight: bold; }
+.comp-name { font-family: Arial, sans-serif; font-size: 17px !important; font-weight: bold; }
 .comp-reg { font-size: 11px; color: #000; font-weight: bold; }
 .company-address { margin-top: 2px; }
-.addr-line { font-size: 10.5px; font-weight: bold; display: block; margin: 1px 0; color: #000; }
+.addr-line { font-size: 11px; font-weight: bold; display: block; margin: 1px 0; color: #000; }
 
 .doc-title-text {
   color: #1F4E79;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
-  border-top: 1.5px solid #1F4E79;
-  border-bottom: 2.5px solid #1F4E79;
-  padding: 3px 0;
-  margin-bottom: 12px;
+  border-top: 2px solid #1F4E79;
+  border-bottom: 3px solid #1F4E79;
+  padding: 4px 0;
+  margin-bottom: 14px;
   text-align: center;
   letter-spacing: 0.5px;
 }
 
 .date-table { width: 100%; border-collapse: collapse; margin-left: auto; }
 .date-table td { padding: 0; }
-.date-table .label-td { font-weight: bold; font-size: 11px; text-align: right; padding-right: 8px; width: 70px; }
-.date-table .input-td { border: 1px solid #000; width: 110px; text-align: center; padding: 2px 0; }
+.date-table .label-td { font-weight: bold; font-size: 11.5px; text-align: right; padding-right: 10px; width: 70px; }
+.date-table .input-td { border: 1px solid #000; width: 120px; text-align: center; padding: 3px 0; }
 .date-table .input-td input { text-align: center; font-weight: bold; }
 
 /* ---------- 蓝色横幅与内容块 ---------- */
@@ -83,8 +89,8 @@ body {
   background-color: #1F4E79;
   color: #fff;
   font-weight: bold;
-  padding: 4px 8px;
-  font-size: 11px;
+  padding: 5px 8px;
+  font-size: 11.5px;
   text-align: left;
   letter-spacing: 0.5px;
 }
@@ -93,60 +99,72 @@ body {
   color: #fff !important;
   font-weight: bold;
   text-align: center;
-  font-size: 11px;
-  padding: 4px 6px;
+  font-size: 11.5px;
+  padding: 5px 6px;
   border: 1px solid #000 !important;
 }
 
 /* ---------- 客户信息表格 ---------- */
 .info-table { width: 100%; border-collapse: collapse; }
-.info-content { padding: 5px 4px 2px 4px; }
-.info-content input { font-size: 11px; font-weight: bold; display: block; margin: 2px 0; color: #000; }
-.info-content .inline-row { display: flex; align-items: center; margin-top: 3px; font-weight: bold; }
+.info-content { padding: 6px 4px 2px 4px; }
+.info-content input { font-size: 11.5px; font-weight: bold; display: block; margin: 3px 0; color: #000; }
+.info-content .inline-row { display: flex; align-items: center; margin-top: 4px; font-weight: bold; }
 
 /* ---------- 横排中间条 ---------- */
 .middle-bar-table { width: 100%; border-collapse: collapse; }
-.middle-bar-table td { border: 1px solid #000; padding: 4px 6px; font-size: 11px; font-weight: bold; }
+.middle-bar-table td { border: 1px solid #000; padding: 5px 8px; font-size: 11.5px; font-weight: bold; }
 .middle-bar-table .content-td { text-align: center; }
 .middle-bar-table input { font-weight: bold; text-align: center; }
 
 /* ---------- 物品表格 ---------- */
 .items-table { width: 100%; border-collapse: collapse; }
-.items-table th, .items-table td { border: 1px solid #000; padding: 5px 8px; font-size: 11px; font-weight: bold; }
+.items-table th, .items-table td { border: 1px solid #000; padding: 6px 8px; font-size: 11.5px; font-weight: bold; }
 .items-table td { text-align: center; }
 .items-table td:nth-child(2) { text-align: left; }
 .items-table td.num, .items-table td.total { text-align: right; }
 .items-table input { font-weight: bold; }
 .items-table input.qty, .items-table input.price { text-align: right; }
 .items-table .del { color: #c00; background: none; border: none; cursor: pointer; font-size: 14px; }
-.items-table tbody tr { height: 26px; }
+.items-table tbody tr { height: 28px; }
 
 /* ---------- 底部：备注与合计 ---------- */
 .bottom-layout { width: 100%; border-collapse: collapse; }
 .bottom-layout td { vertical-align: top; padding: 0; }
 
-.notes-box { border: 1px solid #000; border-top: none; padding: 8px; min-height: 90px; }
-.notes-box input { font-size: 10.5px; font-weight: bold; display: block; margin-bottom: 3px; color: #000; }
+.notes-box { border: 1px solid #000; border-top: none; padding: 8px; min-height: 105px; }
+.notes-box input { font-size: 11px; font-weight: bold; display: block; margin-bottom: 4px; color: #000; }
 
 .totals-table { width: 100%; border-collapse: collapse; }
-.totals-table td { padding: 4px 8px; border: 1px solid #000; font-size: 11px; font-weight: bold; }
+.totals-table td { padding: 5px 10px; border: 1px solid #000; font-size: 11.5px; font-weight: bold; }
 .totals-table .right { text-align: right; padding-right: 12px; }
 .totals-table .gray-bg { text-align: right; background-color: #f2f2f2; }
 .totals-table .blue-bg { text-align: right; background-color: #dce6f1; color: #000; }
 .totals-table .bold { font-weight: bold; }
 .totals-table input { text-align: right; font-weight: bold; }
 
-/* ---------- 签名区 Table 结构 ---------- */
+/* ---------- 严格匹配图片排版的签名区 ---------- */
 .sign-layout-table { width: 100%; border-collapse: collapse; }
-.sign-title { font-size: 11px; font-weight: bold; color: #000; }
-.stamp-space { height: 65px; text-align: left; vertical-align: bottom; }
-.stamp-img { max-width: 140px; max-height: 65px; display: block; object-fit: contain; }
-.sign-line { border-bottom: 1px solid #000; width: 100%; height: 1px; margin-top: 2px; }
-.sign-date { margin-top: 4px; font-size: 11px; font-weight: bold; }
-.sign-date input { width: 110px; font-weight: bold; }
+.sign-title { font-size: 12px; font-weight: bold; color: #000; margin-bottom: 2px; }
+.stamp-space { height: 75px; text-align: left; vertical-align: bottom; }
+.stamp-img { max-width: 150px; max-height: 75px; display: block; object-fit: contain; }
+
+.sign-line-cell {
+  border-bottom: 1.5px solid #000;
+  height: 1px;
+}
+
+.sign-date-row {
+  font-size: 12px;
+  font-weight: bold;
+  padding-top: 4px;
+}
+.sign-date-row input {
+  width: 110px;
+  font-weight: bold;
+}
 
 /* ---------- 页脚 ---------- */
-.footer { font-size: 10.5px; font-weight: bold; color: #000; }
+.footer { font-size: 11px; font-weight: bold; color: #000; }
 .footer input { display: block; margin-bottom: 2px; font-weight: bold; color: #000; }
 
 /* ---------- 输入框统一样式 ---------- */
@@ -161,5 +179,6 @@ input:focus { border-bottom-color: #1F4E79; background: #f0f4f8; }
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; }
-  .sheet { border: none; box-shadow: none; padding: 0; width: 100%; }
+  .page { padding: 0; }
+  .sheet { border: none; box-shadow: none; padding: 0; width: 100%; min-height: auto; }
 }
