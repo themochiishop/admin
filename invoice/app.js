@@ -1,12 +1,12 @@
 (() => {
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
- 
-  const STORE_KEY = "mochii_docs_v6"; // 更新存储键
+
+  const STORE_KEY = "mochii_docs_v7";
 
   const fmt = n => {
     const num = Number(n) || 0;
-    return num.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const state = {
@@ -146,15 +146,19 @@
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
+    // 核心改进：解决 HTML 导出时的左侧截断与偏右偏移问题
     const opt = {
-      margin:       [10, 10, 10, 10], // 适当缩小边距，防止内容溢出被裁剪
+      margin:       [8, 8, 8, 8],
       filename:     filename,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { 
-        scale: 3,           // 提高分辨率（从2升至3，极大提升渲染清晰度）
+        scale: 3,           // 高清无模糊渲染
         useCORS: true, 
         scrollY: 0,
-        // windowWidth: 1200   // 移除锁定视口宽度，解决偏移
+        scrollX: 0,
+        x: 0,
+        y: 0,
+        width: 750         // 精准对齐 .sheet 宽度，禁止溢出和偏移
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
