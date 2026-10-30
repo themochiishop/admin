@@ -164,3 +164,26 @@ input:focus { border-bottom-color: #1F4E79; background: #f0f4f8; }
   body { background: #fff; }
   .sheet { border: none; box-shadow: none; padding: 0; width: 100%; }
 }
+/* 确保纸张容器完全适配 A4 居中导出 */
+.sheet {
+  width: 750px; /* 控制在标准 A4 宽度内 */
+  margin: 0 auto;
+  background: #fff;
+  padding: 30px 35px;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  box-sizing: border-box;
+}
+
+/* 印章图片样式 */
+.stamp-box {
+  margin-top: 5px;
+  min-height: 80px;
+}
+
+.stamp-img {
+  max-width: 200px;
+  max-height: 90px;
+  display: block;
+  object-fit: contain;
+}
