@@ -32,26 +32,28 @@ body {
 /* ---------- 纸张外观 ---------- */
 .page { 
   padding: 20px 0;
+}
+.sheet-container {
+  width: 100%;
   display: flex;
   justify-content: center;
 }
 .sheet {
-  width: 750px; /* 固定 A4 适合的像素宽度 */
+  width: 700px; /* 完美契合 A4 居中尺寸，不产生滚动条 */
   background: #fff;
-  padding: 30px 35px;
+  padding: 25px 30px;
   border: 1px solid #ccc;
   box-shadow: 0 4px 12px rgba(0,0,0,.08);
   box-sizing: border-box;
-  text-align: left;
 }
 .hidden { display: none !important; }
 
 /* ---------- 顶部公司信息与标题 ---------- */
-.main-layout { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-.main-layout td { padding: 0; vertical-align: top; }
+.main-layout { width: 100%; border-collapse: collapse; }
+.main-layout td { padding: 0; }
 
 .company-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 4px; }
-.logo { max-height: 50px; display: block; object-fit: contain; }
+.logo { max-height: 48px; display: block; object-fit: contain; }
 .company-name { display: flex; flex-direction: column; }
 .comp-name { font-family: Arial, sans-serif; font-size: 16px !important; font-weight: bold; }
 .comp-reg { font-size: 11px; color: #000; font-weight: bold; }
@@ -97,20 +99,20 @@ body {
 }
 
 /* ---------- 客户信息表格 ---------- */
-.info-table { margin: 12px 0 0 0; width: 100%; border-collapse: collapse; }
-.info-content { padding: 6px 4px 2px 4px; }
+.info-table { width: 100%; border-collapse: collapse; }
+.info-content { padding: 5px 4px 2px 4px; }
 .info-content input { font-size: 11px; font-weight: bold; display: block; margin: 2px 0; color: #000; }
-.info-content .inline-row { display: flex; align-items: center; margin-top: 4px; font-weight: bold; }
+.info-content .inline-row { display: flex; align-items: center; margin-top: 3px; font-weight: bold; }
 
 /* ---------- 横排中间条 ---------- */
-.middle-bar-table { margin: 12px 0 0 0; width: 100%; border-collapse: collapse; }
+.middle-bar-table { width: 100%; border-collapse: collapse; }
 .middle-bar-table td { border: 1px solid #000; padding: 4px 6px; font-size: 11px; font-weight: bold; }
 .middle-bar-table .content-td { text-align: center; }
 .middle-bar-table input { font-weight: bold; text-align: center; }
 
 /* ---------- 物品表格 ---------- */
-.items-table { margin: 12px 0 0 0; width: 100%; border-collapse: collapse; }
-.items-table th, .items-table td { border: 1px solid #000; padding: 6px 8px; font-size: 11px; font-weight: bold; }
+.items-table { width: 100%; border-collapse: collapse; }
+.items-table th, .items-table td { border: 1px solid #000; padding: 5px 8px; font-size: 11px; font-weight: bold; }
 .items-table td { text-align: center; }
 .items-table td:nth-child(2) { text-align: left; }
 .items-table td.num, .items-table td.total { text-align: right; }
@@ -120,10 +122,10 @@ body {
 .items-table tbody tr { height: 26px; }
 
 /* ---------- 底部：备注与合计 ---------- */
-.bottom-layout { margin: 12px 0 0 0; width: 100%; border-collapse: collapse; }
+.bottom-layout { width: 100%; border-collapse: collapse; }
 .bottom-layout td { vertical-align: top; padding: 0; }
 
-.notes-box { border: 1px solid #000; border-top: none; padding: 8px; min-height: 95px; }
+.notes-box { border: 1px solid #000; border-top: none; padding: 8px; min-height: 90px; }
 .notes-box input { font-size: 10.5px; font-weight: bold; display: block; margin-bottom: 3px; color: #000; }
 
 .totals-table { width: 100%; border-collapse: collapse; }
@@ -134,67 +136,14 @@ body {
 .totals-table .bold { font-weight: bold; }
 .totals-table input { text-align: right; font-weight: bold; }
 
-/* ---------- 重新设计的签名区域 ---------- */
-.sign-flex-container {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: 20px;
-}
-
-.sign-section {
-  width: 45%;
-  display: flex;
-  flex-direction: column;
-}
-
-.sign-title {
-  font-size: 11px;
-  font-weight: bold;
-  color: #000;
-  margin-bottom: 5px;
-}
-
-/* 印章框高度及放大20% */
-.stamp-box {
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.stamp-img {
-  max-width: 120px; /* 放大 20% (原 100px -> 120px) */
-  max-height: 80px;
-  display: block;
-  object-fit: contain;
-}
-
-/* 签名线 */
-.sign-line-line {
-  border-bottom: 1px solid #000;
-  width: 100%;
-  height: 1px;
-  margin-top: 5px;
-}
-
-/* 签名线下方的日期 */
-.sign-date-under {
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-}
-
-.sign-date-under span {
-  margin-right: 4px;
-}
-
-.sign-date-under input {
-  width: 110px;
-  font-weight: bold;
-}
+/* ---------- 签名区 Table 结构 ---------- */
+.sign-layout-table { width: 100%; border-collapse: collapse; }
+.sign-title { font-size: 11px; font-weight: bold; color: #000; }
+.stamp-space { height: 65px; text-align: left; vertical-align: bottom; }
+.stamp-img { max-width: 140px; max-height: 65px; display: block; object-fit: contain; }
+.sign-line { border-bottom: 1px solid #000; width: 100%; height: 1px; margin-top: 2px; }
+.sign-date { margin-top: 4px; font-size: 11px; font-weight: bold; }
+.sign-date input { width: 110px; font-weight: bold; }
 
 /* ---------- 页脚 ---------- */
 .footer { font-size: 10.5px; font-weight: bold; color: #000; }
