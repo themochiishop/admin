@@ -2,7 +2,7 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v7";
+  const STORE_KEY = "mochii_docs_v8";
 
   const fmt = n => {
     const num = Number(n) || 0;
@@ -146,19 +146,15 @@
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
-    // 核心改进：解决 HTML 导出时的左侧截断与偏右偏移问题
     const opt = {
-      margin:       [8, 8, 8, 8],
+      margin:       [10, 10, 10, 10],
       filename:     filename,
-      image:        { type: 'jpeg', quality: 0.98 },
+      image:        { type: 'jpeg', quality: 1.0 },
       html2canvas:  { 
-        scale: 3,           // 高清无模糊渲染
+        scale: 3,           // 高超清渲染
         useCORS: true, 
         scrollY: 0,
-        scrollX: 0,
-        x: 0,
-        y: 0,
-        width: 750         // 精准对齐 .sheet 宽度，禁止溢出和偏移
+        scrollX: 0
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
