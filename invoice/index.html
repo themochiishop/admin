@@ -1,302 +1,182 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOCHII SHOP - Purchase Order / Invoice</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-</head>
-<body>
+(() => {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-<div class="toolbar no-print">
-  <button id="tab-po" class="tab active">Purchase Order</button>
-  <button id="tab-inv" class="tab">Invoice</button>
-  <span class="spacer"></span>
-  <button id="btn-add">+ 添加行</button>
-  <button id="btn-download" class="primary">⬇️ 下载完美 PDF</button>
-  <button id="btn-clear" class="danger">清空数据</button>
-</div>
+  const STORE_KEY = "mochii_docs_v9";
 
-<!-- ================= Purchase Order ================= -->
-<section id="page-po" class="page">
-  <div class="sheet-container">
-    <div class="sheet" id="pdf-po-area">
-      
-      <!-- 顶部：公司信息 + 标题 -->
-      <table class="main-layout">
-        <tr>
-          <td style="width: 58%; vertical-align: top;">
-            <div class="company-top">
-              <img src="logo.png" alt="Logo" class="logo">
-              <div class="company-name">
-                <input type="text" id="po-comp-name" class="comp-name" value="MOCHII SHOP">
-                <input type="text" id="po-comp-reg" class="comp-reg" value="(202503305565)">
-              </div>
-            </div>
-            <div class="company-address">
-              <input type="text" id="po-comp-addr1" class="addr-line" value="36 JALAN SS 8/4,">
-              <input type="text" id="po-comp-addr2" class="addr-line" value="TAMAN SRI SAUJANA">
-              <input type="text" id="po-comp-addr3" class="addr-line" value="81900 KOTA TINGGI, JOHOR">
-              <input type="text" id="po-comp-tel" class="addr-line" value="TEL/WS: 017-750 3767">
-              <input type="text" id="po-comp-email" class="addr-line" value="Email: themochiishop@gmail.com">
-            </div>
-          </td>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="doc-title-text">PURCHASE ORDER</div>
-            <table class="date-table">
-              <tr>
-                <td class="label-td">DATE</td>
-                <td class="input-td"><input type="text" id="po-date" value="02/04/2026"></td>
-              </tr>
-              <tr style="height: 6px;"></tr>
-              <tr>
-                <td class="label-td">PO #</td>
-                <td class="input-td"><input type="text" id="po-no" value="204261842"></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+  const fmt = n => {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
-      <!-- 客户信息 -->
-      <table class="info-table" style="margin-top: 12px;">
-        <tr>
-          <td style="width: 58%; padding-right: 25px; vertical-align: top;">
-            <div class="blue-bar">VENDOR</div>
-            <div class="info-content">
-              <input type="text" id="po-vendor-name" value="TAN SIOW JIE">
-              <input type="text" id="po-vendor-addr1" value="16 JALAN EJ 3/8">
-              <input type="text" id="po-vendor-addr2" value="TAMAN ENSHAN JAYA">
-              <div class="inline-row">
-                <span>Whatapp :&nbsp;</span>
-                <input type="text" id="po-vendor-tel" value="012-5598765" style="width: 140px;">
-              </div>
-            </div>
-          </td>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="blue-bar">SEND TO</div>
-            <div class="info-content">
-              <input type="text" id="po-sendto" value="MOCHII SHOP">
-            </div>
-          </td>
-        </tr>
-      </table>
+  const state = {
+    po:  { rows: [{ desc: "PLUSH TOY SET", qty: 1, price: 1376 }] },
+    inv: { rows: [{ desc: "PLUSH TOY SET", qty: 1, price: 1376 }] }
+  };
 
-      <!-- 横排三栏 -->
-      <table class="middle-bar-table" style="margin-top: 12px;">
-        <tr>
-          <td class="blue-bar-td" style="width: 33%;">REQUISITIONER</td>
-          <td class="blue-bar-td" style="width: 34%;">PAYMENT TYPE</td>
-          <td class="blue-bar-td" style="width: 33%;">REFERENCE</td>
-        </tr>
-        <tr>
-          <td class="content-td"><input type="text" id="po-req" value="MAH KIEN LOONG"></td>
-          <td class="content-td"><input type="text" id="po-paytype" value="MAYBANK TRANSFER"></td>
-          <td class="content-td"><input type="text" id="po-ref" value="0204261842"></td>
-        </tr>
-      </table>
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.po?.rows?.length)  state.po.rows  = saved.po.rows;
+      if (saved.inv?.rows?.length) state.inv.rows = saved.inv.rows;
+      if (saved.fields) {
+        for (const [id, val] of Object.entries(saved.fields)) {
+          const el = document.getElementById(id);
+          if (el) el.value = val;
+        }
+      }
+    } catch (e) { console.warn("load failed", e); }
+  }
 
-      <!-- 物品列表 -->
-      <table class="items-table" id="po-items" style="margin-top: 12px;">
-        <thead>
-          <tr>
-            <th class="blue-bar-td" style="width: 12%;">ITEM #</th>
-            <th class="blue-bar-td" style="width: 48%;">DESCRIPTION</th>
-            <th class="blue-bar-td" style="width: 10%;">QTY</th>
-            <th class="blue-bar-td" style="width: 15%;">UNIT PRICE</th>
-            <th class="blue-bar-td" style="width: 15%;">TOTAL (RM)</th>
-            <th class="col-del no-print" style="width: 3%;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- JS 自动填充 -->
-        </tbody>
-      </table>
+  function saveState() {
+    const fields = {};
+    $$("input[id]").forEach(el => { fields[el.id] = el.value; });
+    localStorage.setItem(STORE_KEY, JSON.stringify({ ...state, fields }));
+  }
 
-      <!-- 底部：备注 + 总计 -->
-      <table class="bottom-layout" style="margin-top: 12px;">
-        <tr>
-          <td style="width: 58%; vertical-align: top; padding-right: 25px;">
-            <div class="blue-bar">Comments or Special Instructions</div>
-            <div class="notes-box">
-              <input type="text" id="po-note1" value="Bank transfer from MOCHII SHOP (Maybank) 5013 3855 4207">
-              <input type="text" id="po-note2" value="To: TAN SIOW JIE (RHB BANK) 10140000169977">
-            </div>
-          </td>
-          <td style="width: 42%; vertical-align: top;">
-            <table class="totals-table">
-              <tr><td class="right">SUBTOTAL</td><td class="gray-bg" data-sum="po-subtotal">1,376.00</td></tr>
-              <tr><td class="right">TAX</td><td><input type="number" id="po-tax" value=""></td></tr>
-              <tr><td class="right">SHIPPING</td><td><input type="number" id="po-shipping" value=""></td></tr>
-              <tr><td class="right">OTHER</td><td><input type="number" id="po-other" value=""></td></tr>
-              <tr><td class="right bold">TOTAL</td><td class="blue-bg bold" data-sum="po-total">RM 1,376.00</td></tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+  function buildRow(doc, data = { desc: "", qty: 1, price: 0 }) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="idx"></td>
+      <td><input class="desc" type="text" value="${escapeAttr(data.desc)}"></td>
+      <td><input class="qty" type="number" min="0" step="1" value="${data.qty}"></td>
+      <td><input class="price" type="number" min="0" step="0.01" value="${data.price}"></td>
+      <td class="total">0.00</td>
+      <td class="col-del no-print"><button class="del" title="删除">×</button></td>
+    `;
+    tr.querySelector(".qty").addEventListener("input", () => onRowChange(doc, tr));
+    tr.querySelector(".price").addEventListener("input", () => onRowChange(doc, tr));
+    tr.querySelector(".desc").addEventListener("input", () => onRowChange(doc, tr));
+    tr.querySelector(".del").addEventListener("click", () => {
+      tr.remove();
+      syncRowsFromDom(doc);
+      render(doc);
+      saveState();
+    });
+    return tr;
+  }
 
-      <!-- 完美复刻目标的签名区布局 -->
-      <table class="sign-layout-table" style="margin-top: 25px;">
-        <tr>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Confirmed &amp; Accepted By:</div>
-            <div class="stamp-space"></div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="po-sign-date" value="02/04/2026"></div>
-          </td>
-          <td style="width: 16%;"></td> <!-- 距离间距 -->
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Authorized Signature:</div>
-            <div class="stamp-space">
-              <img src="signcop.png" alt="Stamp" class="stamp-img">
-            </div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="po-auth-date" value="02/04/2026"></div>
-          </td>
-        </tr>
-      </table>
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
 
-      <!-- 页脚 -->
-      <div class="footer" style="margin-top: 35px;">
-        <input type="text" id="po-footnote" value="If you have any questions about this purchase order, please contact us on Whatapps 017-750 3767 THE MOCHII SHOP">
-      </div>
+  function onRowChange(doc, tr) {
+    syncRowsFromDom(doc);
+    render(doc);
+    saveState();
+  }
 
-    </div>
-  </div>
-</section>
+  function syncRowsFromDom(doc) {
+    const tbody = $(`#${doc}-items tbody`);
+    state[doc].rows = $$("tr", tbody).map(tr => ({
+      desc:  tr.querySelector(".desc").value,
+      qty:   Number(tr.querySelector(".qty").value)  || 0,
+      price: Number(tr.querySelector(".price").value) || 0
+    }));
+  }
 
-<!-- ================= Invoice ================= -->
-<section id="page-inv" class="page hidden">
-  <div class="sheet-container">
-    <div class="sheet" id="pdf-inv-area">
-      
-      <table class="main-layout">
-        <tr>
-          <td style="width: 58%; vertical-align: top;">
-            <div class="company-top">
-              <img src="logo.png" alt="Logo" class="logo">
-              <div class="company-name">
-                <input type="text" id="inv-comp-name" class="comp-name" value="MOCHII SHOP">
-                <input type="text" id="inv-comp-reg" class="comp-reg" value="(202503305565)">
-              </div>
-            </div>
-            <div class="company-address">
-              <input type="text" id="inv-comp-addr1" class="addr-line" value="36 JALAN SS 8/4,">
-              <input type="text" id="inv-comp-addr2" class="addr-line" value="TAMAN SRI SAUJANA">
-              <input type="text" id="inv-comp-addr3" class="addr-line" value="81900 KOTA TINGGI, JOHOR">
-              <input type="text" id="inv-comp-tel" class="addr-line" value="TEL/WS: 017-750 3767">
-              <input type="text" id="inv-comp-email" class="addr-line" value="Email: themochiishop@gmail.com">
-            </div>
-          </td>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="doc-title-text">BILLING INVOICE</div>
-            <table class="date-table">
-              <tr>
-                <td class="label-td">DATE</td>
-                <td class="input-td"><input type="text" id="inv-date" value="02/04/2026"></td>
-              </tr>
-              <tr style="height: 6px;"></tr>
-              <tr>
-                <td class="label-td">INV #</td>
-                <td class="input-td"><input type="text" id="inv-no" value="204261842"></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+  function render(doc) {
+    const tbody = $(`#${doc}-items tbody`);
+    const rows = state[doc].rows;
+    tbody.innerHTML = "";
+    rows.forEach(r => tbody.appendChild(buildRow(doc, r)));
 
-      <table class="info-table" style="margin-top: 12px;">
-        <tr>
-          <td style="width: 58%; padding-right: 25px; vertical-align: top;">
-            <div class="blue-bar">BILL TO</div>
-            <div class="info-content">
-              <input type="text" id="inv-bill-name" value="MAH KIEN LOONG">
-              <input type="text" id="inv-bill-addr1" value="16 JALAN EJ 3/8">
-              <input type="text" id="inv-bill-addr2" value="TAMAN ENSHAN JAYA">
-              <input type="text" id="inv-bill-addr3" value="81100 JOHOR BAHRU, JOHOR">
-              <div class="inline-row">
-                <span>Whatapp :&nbsp;</span>
-                <input type="text" id="inv-bill-tel" value="012-5598765" style="width: 140px;">
-              </div>
-            </div>
-          </td>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="blue-bar">SHIP TO</div>
-            <div class="info-content">
-              <div style="padding: 2px 0; font-weight: bold;">- SAME AS BILL TO -</div>
-            </div>
-          </td>
-        </tr>
-      </table>
+    let subtotal = 0;
+    $$("tr", tbody).forEach((tr, i) => {
+      tr.querySelector(".idx").textContent = i + 1;
+      const qty = Number(tr.querySelector(".qty").value) || 0;
+      const price = Number(tr.querySelector(".price").value) || 0;
+      const line = qty * price;
+      tr.querySelector(".total").textContent = fmt(line);
+      subtotal += line;
+    });
 
-      <table class="items-table" id="inv-items" style="margin-top: 12px;">
-        <thead>
-          <tr>
-            <th class="blue-bar-td" style="width: 12%;">ITEM #</th>
-            <th class="blue-bar-td" style="width: 48%;">DESCRIPTION</th>
-            <th class="blue-bar-td" style="width: 10%;">QTY</th>
-            <th class="blue-bar-td" style="width: 15%;">UNIT PRICE</th>
-            <th class="blue-bar-td" style="width: 15%;">TOTAL (RM)</th>
-            <th class="col-del no-print" style="width: 3%;"></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    const tax = Number($(`#${doc}-tax`)?.value) || 0;
+    const ship = Number($(`#${doc}-shipping`)?.value) || 0;
+    const other = Number($(`#${doc}-other`)?.value) || 0;
+    const total = subtotal + tax + ship + other;
 
-      <table class="bottom-layout" style="margin-top: 12px;">
-        <tr>
-          <td style="width: 58%; vertical-align: top; padding-right: 25px;">
-            <div class="blue-bar">Comments or Special Instructions</div>
-            <div class="notes-box">
-              <input type="text" id="inv-note1" value="Note: -">
-              <input type="text" id="inv-note2" value="Payment Details:">
-              <input type="text" id="inv-note3" value="Bank: Maybank | Account No: 5013 3855 4207 MOCHII SHOP">
-              <input type="text" id="inv-note4" value="Please send the payment receipt to our WhatsApp 017-7503767">
-              <input type="text" id="inv-note5" value="Thank you for supporting Mochii Shop!">
-            </div>
-          </td>
-          <td style="width: 42%; vertical-align: top;">
-            <table class="totals-table">
-              <tr><td class="right">SUBTOTAL</td><td class="gray-bg" data-sum="inv-subtotal">1,376.00</td></tr>
-              <tr><td class="right">TAX</td><td><input type="number" id="inv-tax" value=""></td></tr>
-              <tr><td class="right">SHIPPING</td><td><input type="number" id="inv-shipping" value=""></td></tr>
-              <tr><td class="right">OTHER</td><td><input type="number" id="inv-other" value=""></td></tr>
-              <tr><td class="right bold">TOTAL</td><td class="blue-bg bold" data-sum="inv-total">RM 1,376.00</td></tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+    $(`[data-sum="${doc}-subtotal"]`).textContent = fmt(subtotal);
+    $(`[data-sum="${doc}-total"]`).textContent = "RM " + fmt(total);
+  }
 
-      <table class="sign-layout-table" style="margin-top: 25px;">
-        <tr>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Confirmed &amp; Accepted By:</div>
-            <div class="stamp-space"></div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="inv-sign-date" value="02/04/2026"></div>
-          </td>
-          <td style="width: 16%;"></td>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Authorized Signature:</div>
-            <div class="stamp-space">
-              <img src="signcop.png" alt="Stamp" class="stamp-img">
-            </div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="inv-auth-date" value="02/04/2026"></div>
-          </td>
-        </tr>
-      </table>
+  const tabPO = $("#tab-po");
+  const tabInv = $("#tab-inv");
+  const pagePO = $("#page-po");
+  const pageInv = $("#page-inv");
 
-      <div class="footer" style="margin-top: 35px;">
-        <input type="text" id="inv-footnote1" value="*Goods sold are non-refundable/non-exchangeable.">
-        <input type="text" id="inv-footnote2" value="If you have any questions about this invoice, Please contact us on Whatapps 017-750 3767 THE MOCHII SHOP.">
-      </div>
+  function showTab(which) {
+    const isPO = which === "po";
+    tabPO.classList.toggle("active", isPO);
+    tabInv.classList.toggle("active", !isPO);
+    pagePO.classList.toggle("hidden", !isPO);
+    pageInv.classList.toggle("hidden", isPO);
+  }
+  tabPO.addEventListener("click", () => showTab("po"));
+  tabInv.addEventListener("click", () => showTab("inv"));
 
-    </div>
-  </div>
-</section>
+  $("#btn-add").addEventListener("click", () => {
+    const active = pagePO.classList.contains("hidden") ? "inv" : "po";
+    state[active].rows.push({ desc: "", qty: 1, price: 0 });
+    render(active);
+    saveState();
+  });
 
-<script src="app.js"></script>
-</body>
-</html>
+  $("#btn-clear").addEventListener("click", () => {
+    if (!confirm("确定清空当前页面的数据？（仅本机）")) return;
+    const active = pagePO.classList.contains("hidden") ? "inv" : "po";
+    state[active].rows = [{ desc: "", qty: 1, price: 0 }];
+    render(active);
+    saveState();
+  });
+
+  ["po", "inv"].forEach(doc => {
+    ["tax", "shipping", "other"].forEach(field => {
+      const el = $(`#${doc}-${field}`);
+      if (el) el.addEventListener("input", () => { render(doc); saveState(); });
+    });
+  });
+
+  // ---------------- 下载 PDF ----------------
+  $("#btn-download").addEventListener("click", () => {
+    const isPO = !pagePO.classList.contains("hidden");
+    const targetId = isPO ? "pdf-po-area" : "pdf-inv-area";
+    const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
+    const element = document.getElementById(targetId);
+
+    // 设置标准的 A4 边缘留白，使元素铺满整个 A4 纸张
+    const opt = {
+      margin:       [5, 5, 5, 5],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 1.0 },
+      html2canvas:  { 
+        scale: 2.5,         // 清晰高清
+        useCORS: true, 
+        scrollY: 0,
+        scrollX: 0
+      },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    const btn = $("#btn-download");
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "生成中...";
+    btn.disabled = true;
+
+    html2pdf().set(opt).from(element).save().then(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }).catch(err => {
+      console.error(err);
+      alert("生成失败，请重试！");
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    });
+  });
+
+  loadState();
+  render("po");
+  render("inv");
+})();
