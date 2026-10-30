@@ -139,26 +139,26 @@
     });
   });
 
-  // ---------------- 下载 PDF ----------------
+// ---------------- 下载 PDF ----------------
   $("#btn-download").addEventListener("click", () => {
     const isPO = !pagePO.classList.contains("hidden");
     const targetId = isPO ? "pdf-po-area" : "pdf-inv-area";
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
-    // 解决单页导出和截断的核心参数配置
     const opt = {
-      margin:       [6, 6, 6, 6],
+      margin:       [0, 0, 0, 0], // 设为 0 边距，由内部 padding 控制，消除灰边
       filename:     filename,
-      image:        { type: 'jpeg', quality: 0.98 },
+      image:        { type: 'jpeg', quality: 1.0 },
       html2canvas:  { 
         scale: 2.5,
         useCORS: true, 
         scrollY: 0,
-        scrollX: 0
+        scrollX: 0,
+        backgroundColor: '#ffffff' // 强制白色背景
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak:    { mode: 'avoid-all' } // 关键配置：强制禁止多页分割
+      pagebreak:    { mode: 'avoid-all' }
     };
 
     const btn = $("#btn-download");
@@ -176,8 +176,3 @@
       btn.disabled = false;
     });
   });
-
-  loadState();
-  render("po");
-  render("inv");
-})();
