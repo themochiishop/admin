@@ -2,7 +2,7 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v9"; 
+  const STORE_KEY = "mochii_docs_v10";
 
   const fmt = n => {
     const num = Number(n) || 0;
@@ -146,18 +146,19 @@
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
-    // 设置标准的 A4 边缘留白，使元素铺满整个 A4 纸张
+    // 解决单页导出和截断的核心参数配置
     const opt = {
-      margin:       [5, 5, 5, 5],
+      margin:       [6, 6, 6, 6],
       filename:     filename,
-      image:        { type: 'jpeg', quality: 1.0 },
+      image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { 
-        scale: 2.5,         // 清晰高清
+        scale: 2.5,
         useCORS: true, 
         scrollY: 0,
         scrollX: 0
       },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: 'avoid-all' } // 关键配置：强制禁止多页分割
     };
 
     const btn = $("#btn-download");
