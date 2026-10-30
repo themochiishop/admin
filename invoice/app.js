@@ -2,9 +2,8 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v1";
+  const STORE_KEY = "mochii_docs_v2";
 
-  // 加入千分位逗号的格式化函数
   const fmt = n => {
     const num = Number(n) || 0;
     return num.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -40,7 +39,7 @@
   function buildRow(doc, data = { desc: "", qty: 1, price: 0 }) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="idx"></td>
+      <td class="idx" style="text-align:center;"></td>
       <td><input class="desc" type="text" value="${escapeAttr(data.desc)}"></td>
       <td><input class="qty" type="number" min="0" step="1" value="${data.qty}"></td>
       <td><input class="price" type="number" min="0" step="0.01" value="${data.price}"></td>
@@ -101,7 +100,7 @@
 
     $(`[data-sum="${doc}-subtotal"]`).textContent = fmt(subtotal);
     
-    // 总计行前加上 RM
+    // 总金额加 RM 和千分位
     const totalEl = $(`[data-sum="${doc}-total"]`);
     totalEl.textContent = "RM " + fmt(total);
   }
@@ -144,10 +143,6 @@
       if (el) el.addEventListener("input", () => { render(doc); saveState(); });
     });
   });
-
-  const today = new Date().toISOString().slice(0, 10);
-  if (!$("#po-date").value) $("#po-date").value = today;
-  if (!$("#inv-date").value) $("#inv-date").value = today;
 
   loadState();
   render("po");
