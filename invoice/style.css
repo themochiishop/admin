@@ -1,8 +1,11 @@
 * { box-sizing: border-box; }
 
 :root {
-  --line: #222;
-  --muted: #555;
+  --line: #000;
+  --muted: #333;
+  --blue: #3b5998; /* 截图里的深蓝色 */
+  --light-blue: #f0f4f9; /* 截图里高亮的浅蓝色 */
+  --bg-gray: #f9f9f9;
 }
 
 body {
@@ -31,103 +34,145 @@ body {
 /* ---------- 纸张外观 ---------- */
 .page { padding: 24px 16px 60px; }
 .sheet {
-  max-width: 820px; margin: 0 auto; background: #fff;
-  padding: 30px 40px; border: 1px solid #ccc;
+  max-width: 850px; margin: 0 auto; background: #fff;
+  padding: 35px 40px; border: 1px solid #ccc;
   box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
 .hidden { display: none; }
 
 /* ---------- 头部与 Logo ---------- */
-h1 { font-size: 18px; margin: 0 0 2px; }
-h2 { font-size: 16px; margin: 0 0 10px; font-weight: bold; }
-h3 { font-size: 11px; margin: 0 0 5px; color: var(--muted); }
-h4 { font-size: 11px; margin: 0 0 5px; color: var(--muted); }
+.company-top { display: flex; align-items: center; gap: 15px; margin-bottom: 8px; }
+.logo { max-height: 50px; display: block; }
+.company-name h1 { font-size: 20px; margin: 0; font-weight: normal; font-family: "Times New Roman", Times, serif;}
+.company-name .reg-no { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
 
-.company p, .party p { margin: 2px 0; line-height: 1.4; font-size: 12px; }
-
-.logo { max-height: 45px; margin-bottom: 8px; display: block; }
+.company-address p { margin: 2px 0; line-height: 1.4; font-size: 11px; font-weight: bold; }
 
 .doc-header {
   display: flex; justify-content: space-between; gap: 20px;
-  border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 15px;
+  margin-bottom: 25px;
 }
-.doc-title { text-align: right; min-width: 200px; }
+.doc-title { text-align: right; min-width: 250px; }
 
-table.meta { margin-left: auto; border-collapse: collapse; }
-table.meta td { padding: 2px 0 2px 10px; font-weight: bold; }
-table.meta td:first-child { color: var(--muted); text-align: right; font-weight: normal; }
+/* 顶部标题蓝框 */
+.title-box {
+  border: 1px solid var(--blue);
+  color: var(--blue);
+  font-size: 16px;
+  font-weight: bold;
+  padding: 4px 20px;
+  display: inline-block;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+
+/* 日期和编号对齐 */
+table.meta { margin-left: auto; border-collapse: collapse; width: 220px; }
+table.meta td { padding: 3px 0; font-weight: bold; font-size: 11px; }
+table.meta td:first-child { text-align: right; padding-right: 15px; color: var(--muted); }
+table.meta .meta-val { border: 1px solid var(--line); padding: 2px 5px; text-align: center; width: 100px; }
+
+/* 蓝色条横幅 */
+.blue-bar {
+  background-color: var(--blue);
+  color: #fff;
+  font-weight: bold;
+  padding: 4px 8px;
+  font-size: 11px;
+  text-align: left;
+}
+.blue-bar-td {
+  background-color: var(--blue) !important;
+  color: #fff !important;
+  font-weight: bold;
+}
 
 /* ---------- 客户信息 ---------- */
-.party-row { display: flex; gap: 40px; margin-bottom: 15px; }
+.party-row { display: flex; gap: 50px; margin-bottom: 15px; }
 .party { flex: 1; }
+.party-content { padding: 8px 4px; }
+.party-content p { margin: 3px 0; font-size: 11px; font-weight: bold; }
 
-table.meta-row { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-table.meta-row td { border: 1px solid var(--line); padding: 6px 8px; }
-table.meta-row td:nth-child(odd) { color: var(--muted); background: #fafafa; width: 12%; }
+/* REQUISITIONER 上下两排 */
+table.meta-row-vertical {
+  width: 100%; border-collapse: collapse; margin-bottom: 15px;
+}
+table.meta-row-vertical td {
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: bold;
+}
+table.meta-row-vertical tr:last-child td { background: var(--bg-gray); }
 
 /* ---------- 物品表格 ---------- */
 table.items { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
 table.items th, table.items td { border: 1px solid var(--line); padding: 6px 8px; }
-table.items th { background: #f0f0f0; font-size: 11px; text-align: left; }
+table.items th { font-size: 11px; text-align: center; }
+table.items td { font-size: 11px; font-weight: bold; }
 table.items td.num, table.items td.total { text-align: right; }
-table.items input.desc { width: 100%; }
-table.items input.qty, table.items input.price { width: 100%; text-align: right; }
+table.items input.desc { width: 100%; font-weight: bold; }
+table.items input.qty, table.items input.price { width: 100%; text-align: right; font-weight: bold; }
 table.items td.total { font-variant-numeric: tabular-nums; }
 table.items button.del { border: none; background: transparent; color: #c00; cursor: pointer; font-size: 16px; }
 
+/* 表格最小高度，防止内容太少看起来干瘪 */
+table.items tbody { min-height: 150px; }
+
 /* ---------- 底部信息 ---------- */
-.bottom { display: flex; gap: 30px; align-items: flex-start; }
-.notes { flex: 1; }
-.notes p { margin: 3px 0; line-height: 1.4; font-size: 12px; }
+.bottom { display: flex; gap: 30px; align-items: stretch; }
+.notes { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--line); }
+.notes-content { padding: 10px; flex: 1; }
+.notes-content p { margin: 4px 0; font-size: 11px; font-weight: bold; }
 
 table.totals { width: 260px; border-collapse: collapse; }
-table.totals td { border: 1px solid var(--line); padding: 6px 10px; }
-table.totals td:first-child { color: var(--muted); background: #fafafa; width: 40%; }
-table.totals td.num { text-align: right; font-variant-numeric: tabular-nums; }
-table.totals tr.grand td { font-weight: bold; background: #f0f0f0; font-size: 13px; }
-table.totals input { width: 100%; text-align: right; }
+table.totals td { border: 1px solid var(--line); padding: 5px 10px; font-size: 11px; font-weight: bold;}
+table.totals td.tot-label { text-align: right; padding-right: 15px; border-top: none; border-left: none; }
+table.totals td:last-child { border-right: none; }
+table.totals tr:first-child td { border-top: none; }
+
+table.totals tr.grand td { border-bottom: none; }
+table.totals td.num { text-align: right; font-variant-numeric: tabular-nums; background: var(--bg-gray);}
+table.totals .light-bg { background: var(--bg-gray); }
+table.totals .blue-bg { background: var(--light-blue); color: var(--blue); font-size: 12px; }
+table.totals input { width: 100%; text-align: right; font-weight: bold; }
 
 /* ---------- 签名区 ---------- */
-.sign-row { display: flex; gap: 60px; margin-top: 40px; page-break-inside: avoid; }
-.sign-col { flex: 1; }
+.sign-row { display: flex; gap: 40px; margin-top: 30px; page-break-inside: avoid; }
+.sign-col { width: 250px; } /* 固定宽度，下划线就不会太长了 */
+.sign-box-wrap {
+  width: 180px; /* 下划线长度 */
+  margin-top: 25px;
+}
 .sign-box {
   border-bottom: 1px solid var(--line);
-  height: 50px;
-  margin-bottom: 8px;
+  height: 5px; /* 因为下面有 Date，所以这里只需要一点点高度即可 */
 }
-.sign-row p { margin: 2px 0; }
+.sign-row p { margin: 2px 0; font-size: 11px; font-weight: bold;}
 
 /* ---------- 页脚 ---------- */
-.foot { margin-top: 30px; border-top: 1px dashed #aaa; padding-top: 10px; color: var(--muted); font-size: 11px; }
+.foot { margin-top: 30px; font-size: 11px; font-weight: bold; }
 .foot p { margin: 2px 0; }
 
-/* ---------- 输入框优化 ---------- */
+/* ---------- 输入框全局样式 ---------- */
 input {
   font: inherit; color: inherit; background: transparent; border: none;
-  border-bottom: 1px dotted transparent; padding: 2px; width: 100%;
+  border-bottom: 1px dotted transparent; padding: 1px; width: 100%;
 }
 input:hover { border-bottom-color: #999; }
 input:focus { outline: none; border-bottom-color: #333; background: #f7f7f7; }
-input[type="date"] { width: auto; }
 
-/* ---------- 核心：打印样式修复 ---------- */
+/* ---------- 核心：打印样式 ---------- */
 @media print {
-  /* 告诉浏览器连边距都不要留，彻底消灭默认的页眉页脚（日期和网址） */
   @page { margin: 0; size: A4; }
-  
   body { background: #fff; margin: 0; padding: 0; }
   .no-print { display: none !important; }
-  
-  /* 给纸张加上安全的内边距，保证内容不贴边 */
   .page { padding: 0; margin: 0; }
   .sheet {
     max-width: none; box-shadow: none; border: none;
-    padding: 15mm 15mm; /* 调整这个数值可以改变打印出来的上下左右留白 */
+    padding: 15mm 15mm; 
     margin: 0;
   }
-  
   .hidden { display: none !important; }
-  
-  /* 打印时去掉输入框背景 */
   input { border-bottom: none !important; background: transparent !important; }
 }
