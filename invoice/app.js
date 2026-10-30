@@ -3,7 +3,7 @@
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const STORE_KEY = "mochii_docs_v9";
-
+ 
   const fmt = n => {
     const num = Number(n) || 0;
     return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
