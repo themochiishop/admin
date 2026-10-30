@@ -137,25 +137,29 @@
       </table>
 
       <!-- 完美复刻目标的签名区布局 -->
-      <table class="sign-layout-table" style="margin-top: 25px;">
-        <tr>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Confirmed &amp; Accepted By:</div>
-            <div class="stamp-space"></div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="po-sign-date" value="02/04/2026"></div>
-          </td>
-          <td style="width: 16%;"></td> <!-- 距离间距 -->
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Authorized Signature:</div>
-            <div class="stamp-space">
-              <img src="signcop.png" alt="Stamp" class="stamp-img">
-            </div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="po-auth-date" value="02/04/2026"></div>
-          </td>
-        </tr>
-      </table>
+     <!-- 签名区域（以 Purchase Order 为例，Invoice 同样替换此结构） -->
+<!-- 签名区域（以 Purchase Order 为例，Invoice 同样替换此结构） -->
+<table class="sign-layout-table" style="margin-top: 25px;">
+  <tr>
+    <!-- 左侧（Confirmed & Accepted By: 左对齐） -->
+    <td style="width: 48%; vertical-align: top;">
+      <div class="sign-title">Confirmed &amp; Accepted By:</div>
+      <div class="stamp-space"></div>
+      <div class="sign-line-cell"></div>
+      <div class="sign-date-row">Date: <input type="text" id="po-sign-date" value="02/04/2026"></div>
+    </td>
+    <td style="width: 4%;"></td>
+    <!-- 右侧（Authorized Signature: 靠右对齐，包含印章、横线、日期） -->
+    <td style="width: 48%; vertical-align: top;" class="right-align-td">
+      <div class="sign-title">Authorized Signature:</div>
+      <div class="stamp-space">
+        <img src="signcop.png" alt="Stamp" class="stamp-img">
+      </div>
+      <div class="sign-line-cell"></div>
+      <div class="sign-date-row">Date: <input type="text" id="po-auth-date" value="02/04/2026"></div>
+    </td>
+  </tr>
+</table>
 
       <!-- 页脚 -->
       <div class="footer" style="margin-top: 35px;">
@@ -268,26 +272,29 @@
         </tr>
       </table>
 
-      <table class="sign-layout-table" style="margin-top: 25px;">
-        <tr>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Confirmed &amp; Accepted By:</div>
-            <div class="stamp-space"></div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="inv-sign-date" value="02/04/2026"></div>
-          </td>
-          <td style="width: 16%;"></td>
-          <td style="width: 42%; vertical-align: top;">
-            <div class="sign-title">Authorized Signature:</div>
-            <div class="stamp-space">
-              <img src="signcop.png" alt="Stamp" class="stamp-img">
-            </div>
-            <div class="sign-line-cell"></div>
-            <div class="sign-date-row">Date: <input type="text" id="inv-auth-date" value="02/04/2026"></div>
-          </td>
-        </tr>
-      </table>
-
+  <!-- 签名区域（以 Purchase Order 为例，Invoice 同样替换此结构） -->
+<!-- 签名区域（以 Purchase Order 为例，Invoice 同样替换此结构） -->
+<table class="sign-layout-table" style="margin-top: 25px;">
+  <tr>
+    <!-- 左侧（Confirmed & Accepted By: 左对齐） -->
+    <td style="width: 48%; vertical-align: top;">
+      <div class="sign-title">Confirmed &amp; Accepted By:</div>
+      <div class="stamp-space"></div>
+      <div class="sign-line-cell"></div>
+      <div class="sign-date-row">Date: <input type="text" id="po-sign-date" value="02/04/2026"></div>
+    </td>
+    <td style="width: 4%;"></td>
+    <!-- 右侧（Authorized Signature: 靠右对齐，包含印章、横线、日期） -->
+    <td style="width: 48%; vertical-align: top;" class="right-align-td">
+      <div class="sign-title">Authorized Signature:</div>
+      <div class="stamp-space">
+        <img src="signcop.png" alt="Stamp" class="stamp-img">
+      </div>
+      <div class="sign-line-cell"></div>
+      <div class="sign-date-row">Date: <input type="text" id="po-auth-date" value="02/04/2026"></div>
+    </td>
+  </tr>
+</table>
       <div class="footer" style="margin-top: 35px;">
         <input type="text" id="inv-footnote1" value="*Goods sold are non-refundable/non-exchangeable.">
         <input type="text" id="inv-footnote2" value="If you have any questions about this invoice, Please contact us on Whatapps 017-750 3767 THE MOCHII SHOP.">
