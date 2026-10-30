@@ -2,7 +2,7 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v3";
+  const STORE_KEY = "mochii_docs_v4";
 
   const fmt = n => {
     const num = Number(n) || 0;
@@ -139,29 +139,26 @@
     });
   });
 
-  // ---------------- 完美 PDF 下载 ----------------
+  // ---------------- 下载 PDF ----------------
   $("#btn-download").addEventListener("click", () => {
     const isPO = !pagePO.classList.contains("hidden");
     const targetId = isPO ? "pdf-po-area" : "pdf-inv-area";
     const filename = isPO ? "Purchase-Order.pdf" : "Invoice.pdf";
     const element = document.getElementById(targetId);
 
-    // 配置项：A4纸，高质量，允许背景颜色（蓝色的条幅能正常打印）
     const opt = {
-      margin:       0,
+      margin:       [10, 10, 10, 10], // 上下左右 10mm 边距
       filename:     filename,
-      image:        { type: 'jpeg', quality: 0.98 },
+      image:        { type: 'jpeg', quality: 1 },
       html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // 显示加载提示
     const btn = $("#btn-download");
     const originalText = btn.innerHTML;
     btn.innerHTML = "生成中...";
     btn.disabled = true;
 
-    // 生成并下载
     html2pdf().set(opt).from(element).save().then(() => {
       btn.innerHTML = originalText;
       btn.disabled = false;
