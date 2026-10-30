@@ -1,7 +1,7 @@
 (() => {
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
+ 
   const STORE_KEY = "mochii_docs_v1";
   const fmt = n => (Math.round((Number(n) + Number.EPSILON) * 100) / 100).toFixed(2);
 
