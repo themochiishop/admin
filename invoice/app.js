@@ -1,7 +1,7 @@
 (() => {
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
+ 
   const STORE_KEY = "mochii_docs_v6"; // 更新存储键
 
   const fmt = n => {
