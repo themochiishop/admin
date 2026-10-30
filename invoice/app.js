@@ -2,7 +2,7 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v9";
+  const STORE_KEY = "mochii_docs_v9"; 
 
   const fmt = n => {
     const num = Number(n) || 0;
