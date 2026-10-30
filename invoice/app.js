@@ -2,7 +2,7 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const STORE_KEY = "mochii_docs_v10";
+  const STORE_KEY = "mochii_docs_v11";
 
   const fmt = n => {
     const num = Number(n) || 0;
@@ -139,7 +139,7 @@
     });
   });
 
-// ---------------- 下载 PDF ----------------
+  // ---------------- 下载 PDF ----------------
   $("#btn-download").addEventListener("click", () => {
     const isPO = !pagePO.classList.contains("hidden");
     const targetId = isPO ? "pdf-po-area" : "pdf-inv-area";
@@ -147,7 +147,7 @@
     const element = document.getElementById(targetId);
 
     const opt = {
-      margin:       [0, 0, 0, 0], // 设为 0 边距，由内部 padding 控制，消除灰边
+      margin:       [0, 0, 0, 0], // 0 外边距完全无灰边
       filename:     filename,
       image:        { type: 'jpeg', quality: 1.0 },
       html2canvas:  { 
@@ -155,10 +155,10 @@
         useCORS: true, 
         scrollY: 0,
         scrollX: 0,
-        backgroundColor: '#ffffff' // 强制白色背景
+        backgroundColor: '#ffffff'
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak:    { mode: 'avoid-all' }
+      pagebreak:    { mode: 'avoid-all' } // 严格阻止分成 2 页
     };
 
     const btn = $("#btn-download");
@@ -176,3 +176,8 @@
       btn.disabled = false;
     });
   });
+
+  loadState();
+  render("po");
+  render("inv");
+})();
