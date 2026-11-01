@@ -328,7 +328,7 @@
           messagingSenderId: "803720903757",
           appId: "1:803720903757:web:8b561daabc0d69af9e7004"
         });
-        const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
+        const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com', 'ivychongsingyee@gmail.com'];
         let started = false;
         firebase.auth().onAuthStateChanged(u => {
           const ok = u && !u.isAnonymous && ALLOWED.includes(String(u.email || '').toLowerCase());
