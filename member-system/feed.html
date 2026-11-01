@@ -43,6 +43,9 @@
       .title-row { grid-template-columns: 1fr 1fr; }
       .title-head { display: none; }
     }
+    /* 从总览点进来的帖子 / 回复 */
+    .item.focus { border-color: #db2777; box-shadow: 0 0 0 3px rgba(219,39,119,.18); }
+    .cmt.focus { background: var(--pink-bg); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
   </style>
 </head>
 <body>
@@ -241,11 +244,50 @@
       if (b.dataset.tab === "titles") { renderTitleRows(); loadAssigned(); }
     });
 
-    // 侧边栏「Feed 审核」：网址带 #pending 就打开待审核分页
-    function openFromHash() {
-      if (location.hash !== "#pending") return;
-      document.querySelector('#tabs button[data-tab="pending"]').click();
-      document.querySelectorAll(".side-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "feed.html#pending"));
+    // 网址带分页或帖子：
+    //   #pending                 → 打开待审核（侧边栏「Feed 审核」）
+    //   #post=帖子ID             → 打开那篇帖子（总览「最近动态」点进来）
+    //   #post=帖子ID&c=回复ID     → 打开那篇帖子，并展开回复、标出那一条
+    function showTab(k) {
+      document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === k));
+      ["post", "pending", "all", "perm", "titles"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== k));
+    }
+    async function openFromHash() {
+      if (location.hash === "#pending") {
+        document.querySelector('#tabs button[data-tab="pending"]').click();
+        document.querySelectorAll(".side-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "feed.html#pending"));
+        return;
+      }
+      const h = new URLSearchParams(location.hash.slice(1));
+      const pid = h.get("post"), cid = h.get("c");
+      if (!pid) return;
+      try {
+        const snap = await getDoc(doc(db, "feedPosts", pid));
+        if (!snap.exists()) { alert("这篇帖子已经被删除了"); return; }
+        const pending = snap.data().status === "pending";
+        const box = pending ? $("pendingList") : $("allList");
+        showTab(pending ? "pending" : "all");
+        if (pending) await loadPending(); else { $("fStatus").value = ""; await loadAll(); }
+        let card = box.querySelector(`.item[data-id="${CSS.escape(pid)}"]`);
+        if (!card) {
+          // 比较旧、不在列表里的帖子：单独放在最上面
+          const [p] = await withContent([{ id: pid, ...snap.data() }]);
+          box.insertAdjacentHTML("afterbegin", postCard(p, pending ? "pending" : "all"));
+          bindCards(box, pending ? loadPending : loadAll);
+          card = box.querySelector(`.item[data-id="${CSS.escape(pid)}"]`);
+        }
+        card.classList.add("focus");
+        card.scrollIntoView({ behavior: "smooth", block: "start" });
+        const btn = card.querySelector('[data-act="cmts"]');
+        if (cid && btn) {
+          btn.click();
+          const cbox = card.querySelector(".cmts");
+          for (let i = 0; i < 40 && !cbox.querySelector(".cmt, .muted:not(:empty)"); i++) await new Promise(r => setTimeout(r, 100));
+          for (let i = 0; i < 40 && cbox.textContent.includes("载入中"); i++) await new Promise(r => setTimeout(r, 100));
+          const row = cbox.querySelector(`.cmt[data-cid="${CSS.escape(cid)}"]`);
+          if (row) { row.classList.add("focus"); row.scrollIntoView({ behavior: "smooth", block: "center" }); }
+        }
+      } catch (err) { console.warn("open post", err); }
     }
     window.addEventListener("hashchange", openFromHash);
 
@@ -391,7 +433,7 @@
       const snap = await getDocs(query(collection(db, "feedPosts", id, "comments"), orderBy("createdAt", "asc")));
       box.innerHTML = snap.empty ? `<p class="muted" style="font-size:.85rem">还没有回复</p>` : snap.docs.map(d => {
         const c = d.data();
-        return `<div class="cmt"><div><span class="who">${authorLine(c)}</span>
+        return `<div class="cmt" data-cid="${esc(d.id)}"><div><span class="who">${authorLine(c)}</span>
           ${c.replyTo ? `<span class="muted">回复 @${esc(c.replyTo.name || "")}</span>` : ""}：${esc(c.text)}
           <div class="meta">${fmtDate(toDate(c.createdAt), true)}</div></div>
           <button class="x" data-cdel="${esc(d.id)}">删除</button></div>`;
@@ -415,7 +457,7 @@
             el.disabled = true;
             try {
               await fn();
-              if (LOG[act]) logAdmin("feed", `${LOG[act]}：${who} 的 Feed 帖子`, act === "del" ? "feed.html#all" : "feed.html#all");
+              if (LOG[act]) logAdmin("feed", `${LOG[act]}：${who} 的 Feed 帖子`, act === "del" ? "feed.html" : `feed.html#post=${id}`);
               await reload();
             } catch (err) { alert("失败：" + err.message); el.disabled = false; }
           };

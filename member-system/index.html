@@ -490,14 +490,14 @@
           const who = esc(p.authorName || nameOf(p.authorUid));
           const st = p.status === "pending" ? "，等你审核" : p.status === "rejected" ? "（已退回）" : "";
           out.push({ cat: "feed", d: toDate(p.createdAt), ic: "📰",
-            html: `<a href="feed.html${p.status === "pending" ? "#pending" : ""}"><b>${who}</b> 发了帖子${st}</a>` });
+            html: `<a href="feed.html#post=${encodeURIComponent(p.id)}"><b>${who}</b> 发了帖子${st}</a>` });
         });
         const cs = await Promise.all(posts.map(p =>
           getDocs(query(collection(db, "feedPosts", p.id, "comments"), orderBy("createdAt", "desc"), limit(5))).catch(() => null)));
         cs.forEach((snap, i) => snap && snap.docs.forEach(d => {
           const c = d.data(), p = posts[i];
           out.push({ cat: "feed", d: toDate(c.createdAt), ic: "💬",
-            html: `<a href="feed.html"><b>${esc(c.authorName || nameOf(c.authorUid))}</b> 回复了 ${esc(p.authorName || "")} 的帖子 <span class="q">「${esc(short(c.text))}」</span></a>` });
+            html: `<a href="feed.html#post=${encodeURIComponent(p.id)}&c=${encodeURIComponent(d.id)}"><b>${esc(c.authorName || nameOf(c.authorUid))}</b> 回复了 ${esc(p.authorName || "")} 的帖子 <span class="q">「${esc(short(c.text))}」</span></a>` });
         }));
       } catch (e) { console.warn("recent feed", e); }
       logNote = "";
