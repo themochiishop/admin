@@ -258,6 +258,7 @@ export function renderAdminNav(active) {
     ["rewards", "rewards.html", "奖品管理"],
     ["perks", "perks.html", "🎁 额外福利"],
     ["home", "home.html", "🏠 首页设定"],
+        ["feed", "feed.html", "📰 Feed"],
     ["announce", "announcements.html", "📢 会员公告"],
     ["storehelp", "storehelp.html", "❓ 商店帮助"],
     ["back", "../", "← 返回控制台"],
