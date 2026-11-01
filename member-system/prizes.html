@@ -56,6 +56,14 @@
     .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
     .photos .ph-wrap { position: relative; }
     .photos .ph-wrap button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #dc2626; color: #fff; font-size: .7rem; cursor: pointer; }
+    .note-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+    .note-row select { flex: 1 1 220px; margin: 0; }
+    .note-row .btn { flex-shrink: 0; }
+    .note-mgr { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin: 8px 0 12px; }
+    .note-mgr h4 { font-size: .9rem; color: #0f172a; margin: 0 0 8px; }
+    .note-mgr .nrow { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .note-mgr .nrow input { margin: 0; }
+    .note-mgr .nrow .btn { padding: 6px 10px; flex-shrink: 0; }
     .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; align-self: flex-start; }
     .tag-blue { background: #e0f2fe; color: #0369a1; }
     .item-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -133,7 +141,25 @@
             <div class="photos"></div>
           </div>
 
-          <label style="margin-top:12px">给会员的留言（选填） <input id="fNote" maxlength="200" placeholder="例如：恭喜！奖品会和你的下一张订单一起寄出 🎁"></label>
+          <label style="margin-top:12px;margin-bottom:4px">给会员的留言（选填，选好配送方式会自动带入默认留言）</label>
+          <div class="note-row">
+            <select id="noteSel"><option value="">— 从留言菜单选择 —</option></select>
+            <button type="button" class="btn btn-ghost" id="noteMgrBtn">⚙️ 管理留言菜单</button>
+          </div>
+          <div class="note-mgr hidden" id="noteMgr">
+            <h4>默认留言（选配送方式时自动带入）</h4>
+            <label>📦 随单发送 <input id="nmWith" maxlength="200"></label>
+            <label>🚚 单独包裹寄出 <input id="nmSep" maxlength="200"></label>
+            <h4 style="margin-top:6px">其他留言</h4>
+            <div id="nmList"></div>
+            <div class="actions" style="margin-top:4px">
+              <button type="button" class="btn btn-ghost" id="nmAdd">➕ 添加一条</button>
+              <button type="button" class="btn btn-primary" id="nmSave">💾 保存留言菜单</button>
+              <button type="button" class="btn btn-ghost" id="nmClose">关闭</button>
+            </div>
+            <p class="msg" id="nmMsg"></p>
+          </div>
+          <label style="margin-top:8px"><input id="fNote" maxlength="200" placeholder="留言内容（会员看得到，可以直接修改）"></label>
           <div class="actions">
             <button type="submit" class="btn btn-primary" id="addBtn">💾 保存并通知会员</button>
             <button type="button" class="btn btn-ghost" id="resetBtn">清空</button>
@@ -159,7 +185,7 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, getDocs, getDoc, doc, addDoc, updateDoc, serverTimestamp
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
@@ -443,7 +469,82 @@
     // ---------- 保存 ----------
     $("addShip").querySelector('[data-f="carrier"]').innerHTML = carrierOpts("spx");
     bindShipEvents($("addShip"));
-    $("dlv").addEventListener("change", () => $("dlv").classList.remove("bad"));
+    // ---------- 💬 留言菜单（存在 settings/prizeNotes） ----------
+    const DEFAULT_NOTES = {
+      withOrder: "恭喜！奖品会和你的下一张订单一起寄出",
+      separate: "恭喜！奖品将会单独寄出",
+      list: [],
+    };
+    let notes = { ...DEFAULT_NOTES };
+    function fillNoteSel() {
+      const opts = [
+        ["📦 随单发送默认", notes.withOrder], ["🚚 单独包裹默认", notes.separate],
+        ...notes.list.map(x => ["", x]),
+      ].filter(([, v]) => v);
+      $("noteSel").innerHTML = `<option value="">— 从留言菜单选择 —</option>` +
+        opts.map(([tag, v]) => `<option value="${esc(v)}">${tag ? tag + "：" : ""}${esc(v)}</option>`).join("");
+    }
+    async function loadNotes() {
+      try {
+        const s = await getDoc(doc(db, "settings", "prizeNotes"));
+        if (s.exists()) {
+          const d = s.data();
+          notes = {
+            withOrder: typeof d.withOrder === "string" ? d.withOrder : DEFAULT_NOTES.withOrder,
+            separate: typeof d.separate === "string" ? d.separate : DEFAULT_NOTES.separate,
+            list: Array.isArray(d.list) ? d.list.filter(x => typeof x === "string" && x.trim()) : [],
+          };
+        }
+      } catch (e) { console.warn("prizeNotes", e); }
+      fillNoteSel();
+    }
+    $("noteSel").addEventListener("change", () => {
+      if ($("noteSel").value) $("fNote").value = $("noteSel").value;
+      $("noteSel").value = "";
+      $("fNote").focus();
+    });
+    // 选配送方式：留言是空的、或还是另一种的默认留言 → 换成这一种的默认留言
+    $("dlv").addEventListener("change", () => {
+      $("dlv").classList.remove("bad");
+      const dlv = (document.querySelector('input[name="dlv"]:checked') || {}).value;
+      const cur = $("fNote").value.trim();
+      if (dlv && (!cur || cur === notes.withOrder || cur === notes.separate)) $("fNote").value = notes[dlv] || "";
+    });
+
+    // 管理留言菜单
+    const nmRow = v => `<div class="nrow"><input maxlength="200" value="${esc(v)}" placeholder="留言内容">
+      <button type="button" class="btn btn-ghost" data-nm="up" title="上移">↑</button>
+      <button type="button" class="btn btn-ghost" data-nm="del" title="删除">✕</button></div>`;
+    const nmMsg = (t, ty) => { $("nmMsg").textContent = t; $("nmMsg").className = "msg" + (ty ? " " + ty : ""); };
+    $("noteMgrBtn").addEventListener("click", () => {
+      $("nmWith").value = notes.withOrder; $("nmSep").value = notes.separate;
+      $("nmList").innerHTML = notes.list.map(nmRow).join("");
+      nmMsg(""); $("noteMgr").classList.toggle("hidden");
+    });
+    $("nmClose").addEventListener("click", () => $("noteMgr").classList.add("hidden"));
+    $("nmAdd").addEventListener("click", () => {
+      $("nmList").insertAdjacentHTML("beforeend", nmRow(""));
+      $("nmList").lastElementChild.querySelector("input").focus();
+    });
+    $("nmList").addEventListener("click", e => {
+      const b = e.target.closest("[data-nm]");
+      if (!b) return;
+      const row = b.closest(".nrow");
+      if (b.dataset.nm === "del") row.remove();
+      if (b.dataset.nm === "up" && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+    });
+    $("nmSave").addEventListener("click", async () => {
+      const list = [...$("nmList").querySelectorAll("input")].map(i => i.value.trim().slice(0, 200)).filter(Boolean);
+      const next = { withOrder: $("nmWith").value.trim().slice(0, 200), separate: $("nmSep").value.trim().slice(0, 200), list: [...new Set(list)] };
+      $("nmSave").disabled = true;
+      try {
+        await setDoc(doc(db, "settings", "prizeNotes"), { ...next, updatedAt: serverTimestamp(), updatedBy: adminEmail });
+        notes = next; fillNoteSel();
+        $("nmList").innerHTML = notes.list.map(nmRow).join("");
+        nmMsg("已保存 ✅", "ok");
+      } catch (err) { nmMsg("保存失败：" + err.message, "err"); }
+      finally { $("nmSave").disabled = false; }
+    });
     const addMsg = (t, ty) => { $("addMsg").textContent = t; $("addMsg").className = "msg" + (ty ? " " + ty : ""); };
 
     function resetForm() {
@@ -688,7 +789,7 @@
         if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
       } catch (e) {}
       try {
-        await Promise.all([loadMembers(), loadPeriods()]);
+        await Promise.all([loadMembers(), loadPeriods(), loadNotes()]);
         await loadWins();
         const uid = new URLSearchParams(location.search).get("uid");   // 从会员详情页过来
         if (uid && members[uid]) chooseMember(uid);
