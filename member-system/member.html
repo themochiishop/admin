@@ -92,6 +92,27 @@
             <div class="actions"><button type="button" class="btn btn-primary" id="iSave">保存</button></div>
             <p id="iMsg" class="msg"></p>
           </div>
+
+          <!-- 📰 会员的 Feed -->
+          <div class="panel" id="feedPanel">
+            <h3 id="fpHead">📰 会员的 Feed</h3>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+              <span id="fpAvatar"></span>
+              <div style="min-width:0">
+                <div id="fpBio" style="font-size:.9rem;color:#334155;white-space:pre-wrap"></div>
+                <div class="meta" id="fpStat"></div>
+              </div>
+            </div>
+            <label>头衔
+              <select id="fpTitle"></select>
+            </label>
+            <div class="actions">
+              <button type="button" class="btn btn-ghost" id="fpResetAv">重设头像</button>
+              <button type="button" class="btn btn-ghost" id="fpClearBio">清除简介</button>
+              <a class="btn btn-ghost" id="fpOpen" target="_blank">看会员的 Feed 主页 ↗</a>
+            </div>
+            <p id="fpMsg" class="msg"></p>
+          </div>
         </div>
 
         <!-- 右：绑定 -->
@@ -140,7 +161,7 @@
     import { db } from "./js/firebase-config.js";
     import {
       collection, query, where, getDocs, getDoc, doc, addDoc, updateDoc, setDoc,
-      deleteDoc, serverTimestamp, writeBatch
+      deleteDoc, serverTimestamp, writeBatch, getCountFromServer
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance,
@@ -505,8 +526,69 @@
       }
     });
 
+    // ---------- 📰 会员的 Feed：头像、简介、头衔、帖子数 ----------
+    const FEED_PRESETS = [
+      ["🐰", "#ffd1e8", "#ff8fc1"], ["🐱", "#ffe7c2", "#ffb36b"], ["🐻", "#f3d9c4", "#c08457"], ["🐼", "#e5e7eb", "#94a3b8"],
+      ["🦊", "#ffd8b8", "#ff8a4c"], ["🐥", "#fff3b0", "#ffcf3f"], ["🌸", "#ffe0ef", "#f472b6"], ["⭐", "#e0e7ff", "#818cf8"],
+      ["🍡", "#fde2f3", "#c084fc"], ["🧸", "#fde6cf", "#e2a46b"], ["🎀", "#ffd6e0", "#fb7185"], ["☁️", "#dbeafe", "#60a5fa"],
+    ]; // 和会员前台 feed.html 的 PRESETS 一致
+    function feedAvatar(f, name) {
+      const box = "width:56px;height:56px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;";
+      const a = (f && f.avatar) || "";
+      const m = a.match(/^p:(\d{1,2})$/);
+      if (m && FEED_PRESETS[+m[1]]) {
+        const [e, c1, c2] = FEED_PRESETS[+m[1]];
+        return `<span style="${box}font-size:1.8rem;background:linear-gradient(135deg,${c1},${c2})">${e}</span>`;
+      }
+      if (/^data:image\//.test(a)) return `<img src="${esc(a)}" alt="" style="${box}object-fit:cover">`;
+      const ch = Array.from(String(name || "?").trim())[0] || "?";
+      return `<span style="${box}font-weight:800;color:#fff;font-size:1.3rem;background:linear-gradient(135deg,#ff6fae,#7c5cff)">${esc(ch.toUpperCase())}</span>`;
+    }
+    async function loadFeedPanel() {
+      const [mS, fS, tS, cS, nPub, nPend] = await Promise.all([
+        getDoc(doc(db, "members", uid)),
+        getDoc(doc(db, "memberFeed", uid)),
+        getDoc(doc(db, "feedTitles", uid)),
+        getDoc(doc(db, "feedConfig", "main")),
+        getCountFromServer(query(collection(db, "feedPosts"), where("authorUid", "==", uid), where("status", "==", "published"))),
+        getCountFromServer(query(collection(db, "feedPosts"), where("authorUid", "==", uid), where("status", "==", "pending"))),
+      ]);
+      const name = (mS.exists() && mS.data().name) || "会员";
+      const f = fS.exists() ? fS.data() : null;
+      const titles = (cS.exists() && cS.data().titles) || {};
+      const cur = tS.exists() ? (tS.data().title || "") : "";
+      $("fpHead").textContent = `📰 ${name} 的 Feed`;
+      $("fpAvatar").innerHTML = feedAvatar(f, name);
+      $("fpBio").textContent = f && f.bio ? f.bio : "（没有简介）";
+      $("fpStat").textContent = `已发布 ${nPub.data().count} 篇` + (nPend.data().count ? ` · 审核中 ${nPend.data().count} 篇` : "")
+        + (f ? "" : " · 还没打开过 Feed");
+      $("fpTitle").innerHTML = `<option value="">（没有头衔）</option>` +
+        Object.entries(titles).map(([k, t]) => `<option value="${esc(k)}" ${k === cur ? "selected" : ""}>${esc(t.zh || k)}</option>`).join("");
+      $("fpOpen").href = "https://www.themochiishop.com/memberclub/feed.html#u-" + encodeURIComponent(uid);
+      $("fpResetAv").disabled = !(f && f.avatar);
+      $("fpClearBio").disabled = !(f && f.bio);
+      $("fpTitle").onchange = async () => {
+        try {
+          if ($("fpTitle").value) await setDoc(doc(db, "feedTitles", uid), { title: $("fpTitle").value, name, at: serverTimestamp() });
+          else await deleteDoc(doc(db, "feedTitles", uid));
+          setMsg($("fpMsg"), "头衔已更新 ✅（会员下次打开 Feed 时生效）", "ok");
+        } catch (e) { setMsg($("fpMsg"), "失败：" + e.message, "err"); }
+      };
+      $("fpResetAv").onclick = async () => {
+        if (!confirm(`把 ${name} 的头像重设为预设（名字第一个字）？`)) return;
+        try { await updateDoc(doc(db, "memberFeed", uid), { avatar: "", updatedAt: serverTimestamp() }); await loadFeedPanel(); setMsg($("fpMsg"), "头像已重设 ✅", "ok"); }
+        catch (e) { setMsg($("fpMsg"), "失败：" + e.message, "err"); }
+      };
+      $("fpClearBio").onclick = async () => {
+        if (!confirm(`清除 ${name} 的简介？`)) return;
+        try { await updateDoc(doc(db, "memberFeed", uid), { bio: "", updatedAt: serverTimestamp() }); await loadFeedPanel(); setMsg($("fpMsg"), "简介已清除 ✅", "ok"); }
+        catch (e) { setMsg($("fpMsg"), "失败：" + e.message, "err"); }
+      };
+    }
+
     requireAdmin(user => {
       loadPerkPicker();
+      if (uid) loadFeedPanel().catch(e => setMsg($("fpMsg"), "Feed 资料载入失败：" + e.message, "err"));
       adminEmail = user.email || "";
       load().catch(e => {
         $("pageError").textContent = "载入失败：" + e.message;

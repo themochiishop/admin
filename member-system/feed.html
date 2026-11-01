@@ -221,7 +221,11 @@
     }
     function authorLine(p) {
       const tier = p.authorTier ? (TIER_LABELS[p.authorTier] || "") : "";
-      return `${esc(p.authorName || "")} ${tier ? `<span class="muted">${tier}</span>` : ""} ${titleTag(p.authorTitle)}`;
+      // 会员的帖子、回复：名字连到「会员详情」
+      const name = p.authorTier && p.authorUid
+        ? `<a href="member.html?uid=${encodeURIComponent(p.authorUid)}" target="_blank" title="打开会员详情">${esc(p.authorName || "会员")}</a>`
+        : esc(p.authorName || "");
+      return `${name} ${tier ? `<span class="muted">${tier}</span>` : ""} ${titleTag(p.authorTitle)}`;
     }
     function setMsg(id, text, type) { $(id).textContent = text; $(id).className = "msg" + (type ? " " + type : ""); }
 
