@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>邮件提醒 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .ev { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid #f1f5f9; }
+    .ev:first-child { border-top: 0; }
+    .ev input { width: auto; margin: 3px 0 0; transform: scale(1.2); }
+    .ev .t { font-weight: 700; color: #0f172a; }
+    .ev .d { font-size: .82rem; color: #64748b; margin-top: 2px; }
+    .ev .rec { font-size: .7rem; font-weight: 700; color: #be185d; background: #fce7f3; border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
+    .mode { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mode label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; cursor: pointer; margin: 0; }
+    .mode label:has(input:checked) { border-color: #db2777; background: #fdf2f8; }
+    .mode input { width: auto; margin: 3px 0 0; }
+    .mode b { color: #0f172a; display: block; }
+    .mode span { font-size: .8rem; color: #64748b; }
+    .mails { display: grid; gap: 8px; }
+    .mails input { margin: 0; }
+    .note { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: .84rem; color: #475569; line-height: 1.6; }
+    @media (max-width: 600px) { .mode { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>📧 邮件提醒</h2>
+          <p class="muted">会员俱乐部有事情要你处理时，寄邮件通知你。由 Google 表格的 Apps Script 每 10 分钟检查一次。</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>收件人</h3>
+        <p class="muted" style="font-size:.82rem;margin:-6px 0 10px">最多 3 个。全部留空时，寄到 Apps Script 原本设定的邮箱。</p>
+        <div class="mails">
+          <input type="email" id="m0" placeholder="mail@themochiishop.com">
+          <input type="email" id="m1" placeholder="（选填）">
+          <input type="email" id="m2" placeholder="（选填）">
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>寄送方式</h3>
+        <div class="mode">
+          <label><input type="radio" name="mode" value="instant" checked><div><b>⚡ 有事就寄</b><span>每 10 分钟检查一次，有新事情就寄一封</span></div></label>
+          <label><input type="radio" name="mode" value="daily"><div><b>📬 每天一封汇总</b><span>每天早上 9 点，把前一天的事情整理成一封</span></div></label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>要提醒哪些事</h3>
+        <div id="events"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="saveBtn">💾 保存设定</button>
+        <button class="btn btn-ghost" id="testBtn">✉️ 寄一封测试邮件</button>
+      </div>
+      <p id="msg" class="msg"></p>
+      <p class="meta" id="testInfo"></p>
+
+      <div class="note" style="margin-top:18px">
+        💡 <b>小提醒</b><br>
+        • 测试邮件和所有提醒都由 Apps Script 寄出，按下后 <b>10 分钟内</b>会收到。<br>
+        • 关掉某一项之后，那类事情<b>不会再寄</b>；之后重新打开，也不会把关闭期间的旧事情一次补寄。<br>
+        • 后台的红点提醒（兑换审核、中奖奖品、Feed 待审核）照常显示，和邮件无关。
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, esc, toDate, fmtDate } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("notify");
+
+    // 和 Apps Script notify-watch.gs 的 MS_NOTIFY_DEFAULT_EVENTS 一致
+    const EVENTS = [
+      { key: "newMember",    on: true,  rec: true, t: "🆕 新会员注册",            d: "有人注册成为会员（附上会员详情链接）" },
+      { key: "redemption",   on: true,  rec: true, t: "🎁 新的兑换申请",          d: "会员用积分兑换奖品，等你审核（附收货地址）" },
+      { key: "prize",        on: true,  rec: true, t: "🏆 会员领取中奖奖品",       d: "每月抽奖的得奖会员按了领取，等你审核" },
+      { key: "feedPending",  on: true,  rec: true, t: "📰 Feed 投稿待审核",       d: "会员发的帖子需要你批准才会公开" },
+      { key: "address",      on: false, t: "📦 会员修改了收货地址",                d: "还没发货的兑换／奖品，会员改了地址" },
+      { key: "problemStale", on: false, t: "⚠️ 配送异常超过 3 天没处理",           d: "标记为「配送异常」的兑换放太久了" },
+      { key: "newBinding",   on: false, t: "🔗 会员绑定了新的平台账号",            d: "会员自己用单号绑定（客服代绑的不算）" },
+    ];
+    const ref = doc(db, "adminSettings", "notify");
+    let me = null;
+
+    function setMsg(text, type) { $("msg").textContent = text; $("msg").className = "msg" + (type ? " " + type : ""); }
+
+    function render(cfg) {
+      const ev = cfg.events || {};
+      $("events").innerHTML = EVENTS.map(e => `
+        <label class="ev">
+          <input type="checkbox" data-ev="${e.key}" ${(ev[e.key] ?? e.on) ? "checked" : ""}>
+          <div><div class="t">${e.t}${e.rec ? '<span class="rec">推荐</span>' : ""}</div><div class="d">${e.d}</div></div>
+        </label>`).join("");
+      (cfg.emails || []).slice(0, 3).forEach((m, i) => { $("m" + i).value = m; });
+      const mode = cfg.mode === "daily" ? "daily" : "instant";
+      document.querySelector(`input[name=mode][value=${mode}]`).checked = true;
+      const req = toDate(cfg.testRequestedAt), sent = toDate(cfg.testSentAt);
+      $("testInfo").textContent = req
+        ? (sent && sent >= req ? `✅ 测试邮件已在 ${fmtDate(sent, true)} 寄出` : `⏳ ${fmtDate(req, true)} 要求了测试邮件，10 分钟内会寄出`)
+        : "";
+    }
+
+    function collect() {
+      const emails = [0, 1, 2].map(i => $("m" + i).value.trim()).filter(Boolean);
+      const bad = emails.find(m => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m));
+      if (bad) throw new Error("邮箱格式不对：" + bad);
+      const events = {};
+      document.querySelectorAll("[data-ev]").forEach(el => { events[el.dataset.ev] = el.checked; });
+      return { emails, mode: document.querySelector("input[name=mode]:checked").value, events };
+    }
+
+    async function save(extra = {}) {
+      const data = { ...collect(), ...extra, updatedAt: serverTimestamp(), updatedBy: me.email || "" };
+      await setDoc(ref, data, { merge: true });
+      render({ ...(await getDoc(ref)).data() });
+    }
+
+    $("saveBtn").onclick = async () => {
+      $("saveBtn").disabled = true;
+      try { await save(); setMsg("已保存 ✅ 下一次检查（10 分钟内）开始照新设定寄送", "ok"); }
+      catch (e) { setMsg("保存失败：" + e.message, "err"); }
+      finally { $("saveBtn").disabled = false; }
+    };
+    $("testBtn").onclick = async () => {
+      $("testBtn").disabled = true;
+      try { await save({ testRequestedAt: serverTimestamp() }); setMsg("已要求测试邮件 ✉️ 10 分钟内会寄到收件人（设定也一起保存了）", "ok"); }
+      catch (e) { setMsg("失败：" + e.message, "err"); }
+      finally { $("testBtn").disabled = false; }
+    };
+
+    requireAdmin(async user => {
+      me = user;
+      try {
+        const s = await getDoc(ref);
+        render(s.exists() ? s.data() : {});
+      } catch (e) {
+        render({});
+        setMsg("读取设定失败：" + e.message + "（请确认 Firestore 规则已加上 adminSettings）", "err");
+      }
+    });
+  </script>
+</body>
+</html>
