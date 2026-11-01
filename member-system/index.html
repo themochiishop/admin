@@ -26,6 +26,11 @@
     .mode-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: .86rem; }
     .mode-row label { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
     .mode-row input { width: auto; margin: 0; }
+    .prize-alert { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #fff1f2; border: 1px solid #fda4af; color: #9f1239;
+      border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; text-decoration: none; font-size: .9rem; }
+    .prize-alert:hover { background: #ffe4e6; }
+    .prize-alert b { font-size: .95rem; }
+    .prize-alert .go { margin-left: auto; font-weight: 700; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -38,10 +43,13 @@
       <div class="page-head">
         <div>
           <h2>兑换管理</h2>
-          <p class="muted">批准后才扣积分。优惠券自动带入券码；实体奖品批准后到「待发货」填物流资料。</p>
+          <p class="muted">批准后才扣积分。优惠券自动带入券码；实体奖品批准后到「待发货」填物流资料。每月抽奖的中奖奖品在「🏆 中奖奖品」处理。</p>
         </div>
         <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
       </div>
+
+      <!-- 🏆 中奖奖品有要处理的才显示 -->
+      <a id="prizeAlert" class="prize-alert hidden" href="prizes.html"></a>
 
       <div class="tabs" id="tabs">
         <button data-tab="pending" class="active">待审核</button>
@@ -114,7 +122,21 @@
       render();
     });
 
+    // 🏆 中奖奖品：会员已领取（待审核）+ 待发货
+    async function loadPrizeAlert() {
+      try {
+        const s = await getDocs(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])));
+        const list = s.docs.map(d => d.data());
+        const a = list.filter(p => p.status === "claimed").length, b = list.length - a;
+        $("prizeAlert").innerHTML = `<b>🏆 中奖奖品</b>
+          ${a ? `<span>${a} 笔会员已领取，待审核</span>` : ""}${a && b ? "<span>·</span>" : ""}${b ? `<span>${b} 笔待发货</span>` : ""}
+          <span class="go">去处理 ➔</span>`;
+        $("prizeAlert").classList.toggle("hidden", !list.length);
+      } catch (e) { console.warn("prize alert", e); }
+    }
+
     async function load() {
+      loadPrizeAlert();
       $("panel").innerHTML = `<p class="empty">载入中…</p>`;
       const snap = await getDocs(collection(db, "redemptions"));
       all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
