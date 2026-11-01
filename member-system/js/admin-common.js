@@ -24,7 +24,7 @@ export const COUPON_FORMATS = [
 
 // 会员等级（显示用；规则以 Google 表格同步脚本的 MS_TIERS 为准）
 export const TIER_LABELS = {
-   mochii: "Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石"
+   mochii: "Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石", black: "🖤 Black Elite"
 };
 
 // 列表用：Mochii 会员显示会员俱乐部 logo
@@ -34,7 +34,7 @@ export function tierHTML(tier) {
     ? `<img src="https://www.themochiishop.com/memberclub/img/member.jpg" alt="" style="width:18px;height:18px;border-radius:4px;vertical-align:-4px"> ${label}`
     : label;
 }
-export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3 };
+export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3, black: 4 };
 
 // 商城分类：可在「奖品管理 › 商城分类」自订（存在 settings/shop）；还没设定过就用这份预设
 export const DEFAULT_SHOP_CATS = [

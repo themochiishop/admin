@@ -93,6 +93,15 @@
             <p id="iMsg" class="msg"></p>
           </div>
 
+          <!-- 🖤 Black Elite（邀请制） -->
+          <div class="panel" id="blackPanel">
+            <h3>🖤 Black Elite</h3>
+            <p class="meta" style="margin:-6px 0 10px">最高等级，只能由你邀请开通，不看消费金额。积分 ×2、生日礼 888 分。打开后会员在<b>下一次同步（每小时）</b>升级并收到铃铛通知；关掉后按消费回到对应等级（最多降一级，同样在下一次同步生效）。</p>
+            <label class="inline"><input type="checkbox" id="bOn"> 邀请成为 Black Elite</label>
+            <div class="actions"><button type="button" class="btn btn-primary" id="bSave">保存</button></div>
+            <p id="bMsg" class="msg"></p>
+          </div>
+
           <!-- 📰 会员的 Feed -->
           <div class="panel" id="feedPanel">
             <h3 id="fpHead">📰 会员的 Feed</h3>
@@ -165,7 +174,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance,
-      platformTag, normalizeUsername, TIER_LABELS,
+      platformTag, normalizeUsername, TIER_LABELS, TIER_ORDER,
       normalizePhone, isValidPhone, fmtPhone, waLink
     } from "./js/admin-common.js";
 
@@ -204,10 +213,16 @@
       currentMember = m;
       const iv = m.internal || {};
       $("iOn").checked = iv.on === true;
+      const be = m.blackElite || {};
+      $("bOn").checked = be.on === true;
+      $("bMsg").textContent = be.at ? `上次修改：${fmtDate(toDate(be.at), true)}${be.by ? " · " + be.by : ""}` : "";
+      $("bMsg").className = "msg";
       $("internalPtsLbl").textContent = INTERNAL_BONUS;
       $("mName").textContent = m.name || "(未填称呼)";
       $("mName").insertAdjacentHTML("beforeend", iv.on ? ` <span class="tag tag-pink">🏷️ 内部会员</span>` : "");
-      $("mSub").textContent = `${TIER_LABELS[m.tier] || TIER_LABELS.mochii} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
+      const tExp = toDate(m.tierExpires);
+      const bestTxt = m.bestTier && (TIER_ORDER[m.bestTier] ?? 0) > (TIER_ORDER[m.tier] ?? 0) ? ` · 🏅 曾达 ${TIER_LABELS[m.bestTier] || m.bestTier}` : "";
+      $("mSub").textContent = `${TIER_LABELS[m.tier] || TIER_LABELS.mochii}${tExp && (m.tier || "mochii") !== "mochii" ? `（有效至 ${fmtDate(tExp)}）` : ""}${bestTxt} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
       $("pName").value = m.name || "";
       $("pPhone").value = m.phone ? fmtPhone(m.phone) : "";
       $("pWa").checked = !!m.waOptIn;
@@ -409,6 +424,22 @@
       } catch (err) {
         setMsg($("iMsg"), "保存失败：" + err.message, "err");
       } finally { $("iSave").disabled = false; }
+    });
+
+    // ---------- 🖤 Black Elite ----------
+    $("bSave").addEventListener("click", async () => {
+      const on = $("bOn").checked;
+      const name = (currentMember && currentMember.name) || "";
+      if (!confirm(on ? `邀请「${name}」成为 🖤 Black Elite？\n下一次同步（1 小时内）生效，会员会收到铃铛通知。`
+                      : `取消「${name}」的 Black Elite？\n下一次同步时按消费回到对应等级（最多降一级）。`)) return;
+      $("bSave").disabled = true;
+      try {
+        await updateDoc(doc(db, "members", uid), { blackElite: { on, by: adminEmail, at: serverTimestamp() } });
+        setMsg($("bMsg"), "已保存 ✅ 下一次同步（1 小时内）生效", "ok");
+        currentMember.blackElite = { on };
+      } catch (err) {
+        setMsg($("bMsg"), "保存失败：" + err.message + "（请确认 Firestore 规则已加上 blackElite）", "err");
+      } finally { $("bSave").disabled = false; }
     });
 
     // ---------- 手动调整积分 ----------
