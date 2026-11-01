@@ -6,21 +6,22 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>会员管理 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
     .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .stat-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
-    .stat-box .n { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
-    .stat-box .l { font-size: .8rem; color: #64748b; }
-    .table-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow-x: auto; }
+    .stat-box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .stat-box .n { font-size: 1.6rem; font-weight: 800; color: var(--ink); }
+    .stat-box .l { font-size: .8rem; color: var(--muted); }
+    .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
-    th { background: #f8fafc; color: #475569; font-weight: 600; cursor: pointer; user-select: none; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--soft); white-space: nowrap; }
+    th { background: var(--soft2); color: var(--text2); font-weight: 600; cursor: pointer; user-select: none; }
     tbody tr { cursor: pointer; }
-    tbody tr:hover { background: #fdf2f8; }
+    tbody tr:hover { background: var(--pink-bg); }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
     .toolbar input { flex: 1; min-width: 220px; margin: 0; }
-    .wa-link { color: #15803d; font-weight: 600; }
+    .wa-link { color: var(--green-tx); font-weight: 600; }
     .wa-link:hover { text-decoration: underline; }
   </style>
 </head>

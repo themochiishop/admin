@@ -6,22 +6,23 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>邮件提醒 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
-    .ev { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid #f1f5f9; }
+    .ev { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--soft); }
     .ev:first-child { border-top: 0; }
     .ev input { width: auto; margin: 3px 0 0; transform: scale(1.2); }
-    .ev .t { font-weight: 700; color: #0f172a; }
-    .ev .d { font-size: .82rem; color: #64748b; margin-top: 2px; }
-    .ev .rec { font-size: .7rem; font-weight: 700; color: #be185d; background: #fce7f3; border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
+    .ev .t { font-weight: 700; color: var(--ink); }
+    .ev .d { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+    .ev .rec { font-size: .7rem; font-weight: 700; color: var(--pink-tx); background: var(--pink-bg2); border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
     .mode { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .mode label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; cursor: pointer; margin: 0; }
-    .mode label:has(input:checked) { border-color: #db2777; background: #fdf2f8; }
+    .mode label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; margin: 0; }
+    .mode label:has(input:checked) { border-color: #db2777; background: var(--pink-bg); }
     .mode input { width: auto; margin: 3px 0 0; }
-    .mode b { color: #0f172a; display: block; }
-    .mode span { font-size: .8rem; color: #64748b; }
+    .mode b { color: var(--ink); display: block; }
+    .mode span { font-size: .8rem; color: var(--muted); }
     .mails { display: grid; gap: 8px; }
     .mails input { margin: 0; }
-    .note { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: .84rem; color: #475569; line-height: 1.6; }
+    .note { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: .84rem; color: var(--text2); line-height: 1.6; }
     @media (max-width: 600px) { .mode { grid-template-columns: 1fr; } }
   </style>
 </head>

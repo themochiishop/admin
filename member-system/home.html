@@ -6,19 +6,20 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>首页设定 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
-    .sec-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+    .sec-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
     .sec-row:last-child { border-bottom: none; }
     .sec-row .name { flex: 1; min-width: 160px; font-weight: 600; }
     .sec-row input[type=number] { width: 70px; margin: 0; }
     .sec-row .btn { padding: 6px 10px; }
-    .sec-row.off .name { color: #94a3b8; text-decoration: line-through; }
+    .sec-row.off .name { color: var(--faint); text-decoration: line-through; }
     .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .85rem; }
     .switch input { width: auto; margin: 0; }
-    .thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
+    .thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--soft2); flex-shrink: 0; }
     .thumb.wide { width: 140px; height: 60px; }
-    .lang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
-    .lang-box summary { cursor: pointer; font-size: .88rem; color: #475569; font-weight: 600; }
+    .lang-box { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+    .lang-box summary { cursor: pointer; font-size: .88rem; color: var(--text2); font-weight: 600; }
     .lang-box[open] summary { margin-bottom: 12px; }
     .radio-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 12px; font-size: .88rem; }
     .radio-row label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }

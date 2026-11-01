@@ -3,473 +3,465 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/jpeg" href="../logo.png">
-  <title>总览 · 会员系统 Admin</title>
-  <link rel="stylesheet" href="css/admin.css">
-  <script src="js/theme.js"></script>
+  <link rel="icon" type="image/jpeg" href="logo.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <title>The Mochii Shop - Admin 管理控制台</title>
   <style>
-    .container { max-width: 1240px; margin-top: 18px; margin-bottom: 18px; }
-    .ov-head { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 12px; }
-    .ov-head h2 { font-size: 1.2rem; color: var(--ink); }
-    .ov-head p { color: var(--muted); font-size: .8rem; margin-top: 1px; }
-    .ov-head .right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .78rem; color: var(--faint); }
-    .qbtn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 8px; font-size: .8rem; font-weight: 600;
-      background: var(--card); border: 1px solid var(--line); color: var(--ink); }
-    .qbtn:hover { border-color: #db2777; color: #db2777; }
-    #reloadBtn { padding: 6px 10px; font-size: .8rem; }
-    #updated { margin-right: 4px; }
-
-    /* ===== 便当盒 ===== */
-    .bento {
-      display: grid; gap: 12px;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-template-areas:
-        "todo  todo  mem    pts"
-        "todo  todo  tier   tier"
-        "month stock recent recent"
-        "bday  sys   recent recent";
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f4f6f9;
+      color: #333;
+      line-height: 1.4;
     }
-    .t-todo { grid-area: todo; } .t-mem { grid-area: mem; } .t-pts { grid-area: pts; }
-    .t-tier { grid-area: tier; } .t-month { grid-area: month; } .t-stock { grid-area: stock; }
-    .t-recent { grid-area: recent; } .t-bday { grid-area: bday; } .t-sys { grid-area: sys; }
-
-    /* 电脑：整页刚好一个画面，不用上下滑；格子里的清单太长才在格子里滚动 */
-    @media (min-width: 1180px) and (min-height: 600px) {
-      body.has-side #app { height: 100vh; }
-      .container { height: 100vh; margin: 0 auto; padding-top: 16px; padding-bottom: 16px; display: flex; flex-direction: column; }
-      .bento { flex: 1; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); }
-      .tile { overflow: hidden; }
-      .scroll { overflow-y: auto; min-height: 0; flex: 1; margin-right: -8px; padding-right: 8px; }
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    @media (max-width: 1179px) {
-      .bento {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-areas: "todo todo" "mem pts" "tier tier" "month stock" "recent recent" "bday sys";
-      }
+    .brand { font-size: 1.00rem; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+    .nav-links a { color: #cbd5e1; text-decoration: none; font-size: 0.88rem; }
+    .nav-links a:hover { color: #fff; }
+    .admin-container { max-width: 1050px; margin: 30px auto; padding: 0 15px; }
+    .dashboard-header {
+      background: #ffffff;
+      padding: 15px 30px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 15px;
     }
-    @media (max-width: 559px) {
-      .bento { grid-template-columns: minmax(0, 1fr); gap: 10px;
-        grid-template-areas: "todo" "mem" "pts" "tier" "month" "stock" "recent" "bday" "sys"; }
-      .ov-head .right { width: 100%; }
+    .dashboard-header h3 { font-size: 1.35rem; color: #0f172a; margin-bottom: 2px; }
+    .dashboard-header p { color: #64748b; font-size: 0.85rem; }
+    
+    .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
+    
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s ease;
     }
-
-    .tile {
-      background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
-      display: flex; flex-direction: column; min-width: 0; min-height: 0; color: inherit;
-      transition: border-color .15s, box-shadow .15s;
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+    .card-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 14px; }
+    .card-draw .card-icon { background: #fef3c7; color: #d97706; }
+    .card-cod .card-icon { background: #fff3ed; color: #ff5722; }
+    .card-wheel .card-icon { background: #eff6ff; color: #2563eb; }
+    .card-search .card-icon { background: #f0fdf4; color: #16a34a; }
+    .card-status .card-icon { background: #faf5ff; color: #9333ea; }
+    
+    /* 新增：图库卡片的图标颜色 */
+    .card-gallery .card-icon { background: #e0f2fe; color: #0284c7; }
+    .card-entry .card-icon { background: #ecfeff; color: #0891b2; }
+    .btn-teal { background: #0891b2; }
+    .btn-teal:hover { background: #0e7490; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+    .card-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 18px; line-height: 1.5; }
+    
+    .card-btn {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s;
+      text-decoration: none;
+      color: #fff;
+      border: none;
+      cursor: pointer;
     }
-    a.tile:hover { border-color: var(--line2); box-shadow: 0 6px 16px var(--shadow); }
-    .tile-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .76rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; flex-shrink: 0; }
-    .tile-h .go { font-weight: 600; color: var(--faint); font-size: .74rem; white-space: nowrap; }
-    a.tile:hover .tile-h .go { color: #db2777; }
-    .big { font-size: 1.65rem; font-weight: 800; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-    .big small { font-size: .78rem; font-weight: 600; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
-    .sub { font-size: .78rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-    .sub b { color: var(--ink); font-variant-numeric: tabular-nums; }
-    .up { color: #16a34a; font-weight: 700; }
-    .down { color: #dc2626; font-weight: 700; }
-    .loading { color: var(--faint); }
-    .row-big { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+    
+    .btn-amber { background: #d97706; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-orange, .btn-cod { background: #ff5722; }
+    .btn-orange:hover, .btn-cod:hover { background: #f4511e; }
+    .btn-blue { background: #2563eb; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-green { background: #16a34a; }
+    .btn-green:hover { background: #15803d; }
+    .btn-purple { background: #9333ea; }
+    .btn-purple:hover { background: #7e22ce; }
+    
+    /* 新增：图库按钮颜色 */
+    .btn-gallery { background: #0284c7; }
+    .btn-gallery:hover { background: #0369a1; }
 
-    /* 待处理 */
-    .t-todo { padding: 14px 16px; }
-    .t-todo.busy { background: linear-gradient(160deg, var(--pink-bg2) 0%, var(--card) 60%); border-color: #f9a8d4; }
-    .t-todo.clear { background: linear-gradient(160deg, var(--green-bg2) 0%, var(--card) 60%); border-color: #86efac; }
-    :root[data-theme="dark"] .t-todo.busy { border-color: rgba(244,114,182,.5); }
-    :root[data-theme="dark"] .t-todo.clear { border-color: rgba(74,222,128,.4); }
-    .todo-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }
-    .todo-top .big { font-size: 2.2rem; }
-    .t-todo.busy .todo-top .big { color: #db2777; }
-    .t-todo.clear .todo-top .big { color: #16a34a; }
-    .todo-top .lbl { font-size: .86rem; color: var(--text2); font-weight: 600; }
-    .todo-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
-    @media (max-width: 559px) { .todo-list { grid-template-columns: 1fr; } }
-    .todo-row {
-      display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 10px;
-      background: var(--card); border: 1px solid var(--line); color: var(--ink); font-size: .84rem;
+    /* 新增：会员系统卡片与按钮颜色 */
+    .card-member .card-icon { background: #fdf2f8; color: #db2777; }
+    .btn-member { background: #db2777; }
+    .btn-member:hover { background: #be185d; }
+
+    /* 弹窗 Modal 样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
     }
-    .todo-row:hover { border-color: #db2777; }
-    .todo-row .ic { font-size: 1rem; width: 20px; text-align: center; }
-    .todo-row .tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .todo-row .n { font-weight: 800; font-size: .95rem; min-width: 28px; text-align: center; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--faint); font-variant-numeric: tabular-nums; }
-    .todo-row.has .n { background: #e11d48; color: #fff; }
-    .todo-row:not(.has) { color: var(--faint); }
-    .todo-done { font-size: .82rem; color: var(--green-tx); font-weight: 600; grid-column: 1 / -1; margin-top: 2px; }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 420px;
+      padding: 28px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      position: relative;
+      text-align: center;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none; border: none;
+      font-size: 1.2rem; cursor: pointer; color: #94a3b8;
+    }
+    .modal-close:hover { color: #0f172a; }
+    .modal-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .modal-desc { font-size: 0.88rem; color: #64748b; margin-bottom: 20px; }
+    .modal-links { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    .modal-link-btn {
+      padding: 12px 16px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      border-radius: 10px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-admin-portal { background: #0f172a; color: #fbbf24; }
+    .btn-admin-portal:hover { background: #1e293b; }
+    .btn-public-portal { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
+    .btn-public-portal:hover { background: #e2e8f0; }
+    .btn-test-portal { background: #fdf4ff; color: #a21caf; border: 1px dashed #e879f9; }
+    .btn-test-portal:hover { background: #fae8ff; }
+    /* 卡片图标右边的提醒按钮：每月抽奖【领奖追踪】、会员系统【兑换审核】共用 */
+    .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .claim-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: #e0f2fe; border: 1px solid #7dd3fc;
+      color: #0369a1; font-size: 0.8rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all .2s; }
+    .claim-link:hover { background: #bae6fd; }
+    .claim-link.has-todo { background: #fff1f2; border-color: #fda4af; color: #be123c; animation: claimBlink 1.2s ease-in-out infinite; }
+    .claim-link.has-todo .claim-count { animation: claimDot 1.2s ease-in-out infinite; }
+    @keyframes claimBlink { 0%, 100% { box-shadow: 0 0 0 0 rgba(225,29,72,.5); } 50% { box-shadow: 0 0 0 7px rgba(225,29,72,0); background: #ffe4e6; } }
+    @keyframes claimDot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+    @media (prefers-reduced-motion: reduce) { .claim-link.has-todo, .claim-link.has-todo .claim-count { animation: none; } }
+    .claim-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #e11d48; color: #fff; font-size: 0.72rem; display: inline-flex; align-items: center; justify-content: center; }
+    .claim-count[hidden] { display: none; }
 
-    /* 等级分布 */
-    .tier-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--soft); gap: 2px; flex-shrink: 0; margin-top: 4px; }
-    .tier-bar span { display: block; height: 100%; min-width: 3px; }
-    .tier-legend { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
-    @media (max-width: 559px) { .tier-legend { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    .tier-legend div { font-size: .72rem; color: var(--muted); min-width: 0; }
-    .tier-legend b { display: block; font-size: 1.05rem; color: var(--ink); font-variant-numeric: tabular-nums; }
-    .tier-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
-
-    /* 清单 */
-    .list { list-style: none; display: flex; flex-direction: column; }
-    .list li { display: flex; align-items: center; gap: 8px; font-size: .8rem; padding: 5px 0; border-top: 1px solid var(--soft); min-width: 0; }
-    .list li:first-child { border-top: 0; }
-    .list .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
-    .list .rt { color: var(--faint); font-size: .72rem; white-space: nowrap; }
-    .list a { color: var(--ink); }
-    .list a:hover { color: #db2777; }
-    .t-recent .list li { padding: 7px 0; }
-    .t-recent .ic { width: 20px; text-align: center; flex-shrink: 0; }
-    .none { color: var(--faint); font-size: .8rem; padding: 4px 0; }
-
-    /* 系统：俱乐部 + 邮件提醒 */
-    .sys-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
-    .sys-row + .sys-row { border-top: 1px solid var(--soft); }
-    .club-state { display: flex; align-items: center; gap: 8px; font-size: .92rem; font-weight: 800; color: var(--ink); }
-    .club-state .lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--line2); box-shadow: 0 0 0 3px var(--soft); }
-    .club-state.on .lamp { background: #16a34a; box-shadow: 0 0 0 3px var(--green-bg2); }
-    .club-state.off .lamp { background: #dc2626; box-shadow: 0 0 0 3px var(--red-bg2); }
-    .sys-row .btn { padding: 5px 10px; font-size: .76rem; }
-    .sys-k { font-size: .74rem; color: var(--muted); }
-    .sys-v { font-size: .86rem; font-weight: 700; color: var(--ink); }
-    .sys-row a.go2 { font-size: .76rem; font-weight: 600; }
-
-    .err-box { background: var(--red-bg); border: 1px solid #fecaca; color: var(--red-tx); border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; font-size: .85rem; flex-shrink: 0; }
+    footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 0.85rem; }
   </style>
 </head>
 <body>
-  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+  <header>
+    <div class="brand">Mochiishop/admin</div>
+    <div class="nav-links">
+      <a href="https://www.themochiishop.com" target="_blank">返回主页 ➔</a>
+    </div>
+  </header>
 
-  <div id="app" class="hidden">
-    <header id="adminHeader"></header>
+  <div class="admin-container">
+    <div class="dashboard-header">
+      <h3>工具与控制台 Dashboard</h3>
+      <p>欢迎回来！处理 COD 手动 AWB 打印、直播大转盘、每月抽奖晋级控盘、买家订单查询与动态更新。</p>
+    </div>
 
-    <div class="container">
-      <div class="ov-head">
+    <div class="action-grid">
+      <!-- 1. 幸运大转盘 Wheel -->
+      <div class="card card-wheel">
         <div>
-          <h2 id="hello">📊 总览</h2>
-          <p>先看「待处理」，再看会员和积分的变化。点任何一格都会跳到对应的页面。</p>
+          <div class="card-icon">🎡</div>
+          <div class="card-title">幸运大转盘 wheel</div>
+          <div class="card-desc">直播抽奖大转盘，支持现场同步名单与多时间段快照记忆。</div>
         </div>
-        <div class="right">
-          <a class="qbtn" href="announcements.html">📢 发公告</a>
-          <a class="qbtn" href="rewards.html">🛍️ 新增奖品</a>
-          <a class="qbtn" href="feed.html">✨ 发 Feed</a>
-          <a class="qbtn" href="home.html">🏠 首页设定</a>
-          <span id="updated"></span>
-          <button id="reloadBtn" class="btn btn-ghost" title="重新整理">🔄</button>
-        </div>
+        <a href="wheel/" class="card-btn btn-blue">打开大转盘 🎡</a>
       </div>
 
-      <div id="errBox" class="err-box hidden"></div>
+      <!-- 2. 买家订单查询 buyer-order-search -->
+      <div class="card card-search">
+        <div>
+          <div class="card-icon">🔍</div>
+          <div class="card-title">订单查询 Order Search</div>
+          <div class="card-desc">快速检索全渠道买家订单详细信息、物流状态与记录。</div>
+        </div>
+        <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
+      </div>
 
-      <div class="bento">
-        <!-- 🔔 待处理 -->
-        <section class="tile t-todo" id="tTodo">
-          <div class="tile-h"><span>🔔 待处理</span></div>
-          <div class="todo-top"><span class="big" id="todoTotal">–</span><span class="lbl" id="todoLbl">件事要处理</span></div>
-          <div class="todo-list scroll" id="todoList"></div>
-        </section>
+      <!-- 3. 新增：图库管理 Gallery (插在订单查询之后) -->
+      <div class="card card-gallery">
+        <div>
+          <div class="card-icon">🖼️</div>
+          <div class="card-title">图库管理 Gallery</div>
+          <div class="card-desc">管理并在前台展示高清图库，支持分类浏览、全屏查看与后台一键上传。</div>
+        </div>
+        <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
+      </div>
 
-        <!-- 👥 会员 -->
-        <a class="tile t-mem" href="members.html">
-          <div class="tile-h"><span>👥 会员</span><span class="go">会员列表 →</span></div>
-          <div class="big" id="memTotal">–</div>
-          <div class="sub" id="memSub"><span class="loading">载入中…</span></div>
-        </a>
-
-        <!-- 💰 积分 -->
-        <a class="tile t-pts" href="members.html">
-          <div class="tile-h"><span>💰 流通中的可用积分</span></div>
-          <div class="big" id="ptsTotal">–</div>
-          <div class="sub" id="ptsSub"><span class="loading">载入中…</span></div>
-        </a>
-
-        <!-- 🏅 等级分布 -->
-        <a class="tile t-tier" href="members.html">
-          <div class="tile-h"><span>🏅 等级分布</span><span class="go" id="tierNote"></span></div>
-          <div class="tier-bar" id="tierBar"></div>
-          <div class="tier-legend" id="tierLegend"></div>
-        </a>
-
-        <!-- 🛍️ 本月兑换 -->
-        <a class="tile t-month" href="redeem.html#done">
-          <div class="tile-h"><span>🛍️ 本月兑换</span><span class="go">→</span></div>
-          <div class="big" id="monthCount">–</div>
-          <div class="sub" id="monthSub"><span class="loading">载入中…</span></div>
-        </a>
-
-        <!-- 🎫 券码与库存 -->
-        <a class="tile t-stock" href="rewards.html">
-          <div class="tile-h"><span>🎫 券码与库存</span><span class="go">商城奖品 →</span></div>
-          <div id="stockBig" class="row-big"></div>
-          <ul class="list scroll" id="stockList"><li class="none">载入中…</li></ul>
-        </a>
-
-        <!-- 🕒 最近动态 -->
-        <section class="tile t-recent">
-          <div class="tile-h"><span>🕒 最近动态</span></div>
-          <ul class="list scroll" id="recentList"><li class="none">载入中…</li></ul>
-        </section>
-
-        <!-- 🎂 本月寿星 -->
-        <a class="tile t-bday" href="members.html">
-          <div class="tile-h"><span id="bdayTitle">🎂 本月寿星</span></div>
-          <div class="big" id="bdayCount">–</div>
-          <ul class="list scroll" id="bdayList"></ul>
-        </a>
-
-        <!-- ⚙️ 系统：俱乐部 + 邮件提醒 -->
-        <section class="tile t-sys">
-          <div class="tile-h"><span>⚙️ 系统</span></div>
-          <div class="scroll">
-          <div class="sys-row">
-            <div><div class="sys-k">会员俱乐部</div><div class="club-state" id="clubState"><span class="lamp"></span><span id="clubText">读取中…</span></div></div>
-            <button class="btn btn-ghost" id="clubBtn" type="button">切换</button>
+      <!-- 4. Mochii Feed（会员系统） -->
+      <div class="card card-status">
+        <div>
+          <div class="card-head">
+            <div class="card-icon">📰</div>
+            <a id="feedAlertLink" class="claim-link" href="member-system/feed.html" title="会员投稿待审核">⏳ 待审核<span id="feedAlertCount" class="claim-count" hidden></span></a>
           </div>
-          <div class="sys-row">
-            <div><div class="sys-k">📧 邮件提醒</div><div class="sys-v" id="notifyCount">–</div><div class="sys-k" id="notifySub"></div></div>
-            <a class="go2" href="notify.html">设定 →</a>
+          <div class="card-title">Mochii Feed</div>
+          <div class="card-desc">发布店铺动态（公开帖会显示在网站首页）、审核会员投稿、管理头衔与权限。</div>
+        </div>
+        <a href="member-system/feed.html" class="card-btn btn-purple">Feed 管理 📰</a>
+      </div>
+  <!-- 新增：订单录入 Order Entry -->
+      <div class="card card-entry">
+        <div>
+          <div class="card-icon">📝</div>
+          <div class="card-title">订单录入 Order Entry</div>
+          <div class="card-desc">在网页直接录入订单，写进「第 1 张表单回复」并马上同步会员积分。</div>
+        </div>
+        <a href="order-entry/" class="card-btn btn-teal" target="_blank" >录入订单 📝</a>
+      </div>
+      <!-- 5. COD 面单打印系统 -->
+      <div class="card card-cod">
+        <div>
+          <div class="card-icon">📦</div>
+          <div class="card-title">COD 手动 AWB 打印</div>
+          <div class="card-desc">规避 Shopee COD 2小时延迟，手动即时生成/打印 AWB 面单。</div>
+        </div>
+        <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
+      </div>
+     
+      <!-- 6. 每月抽奖 Monthly Draw -->
+      <div class="card card-draw">
+        <div>
+          <div class="card-head">
+            <div class="card-icon">🎁</div>
+            <a id="drawClaimLink" class="claim-link" href="./draw_tournament/claims.html" target="_blank" title="得奖者联系与寄送进度">🎁 领奖追踪<span id="drawClaimCount" class="claim-count" hidden></span></a>
           </div>
+          <div class="card-title">每月抽奖 Monthly Draw</div>
+          <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
+        </div>
+        <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
+      </div>
+
+      <!-- 7. 会员系统 member-system -->
+      <div class="card card-member">
+        <div>
+          <div class="card-head">
+            <div class="card-icon">🎫</div>
+            <a id="memberAlertLink" class="claim-link" href="member-system/redeem.html" title="积分兑换 + 中奖奖品的审核与发货">🔔 兑换审核<span id="memberAlertCount" class="claim-count" hidden></span></a>
           </div>
-        </section>
+          <div class="card-title">Member Club</div>
+          <div class="card-desc">审核会员积分兑换与中奖奖品领取，管理会员、奖品与优惠券码库。</div>
+        </div>
+        <a href="member-system/" class="card-btn btn-member">进入会员系统 🎫</a>
+      </div>
+    </div>
+
+    <footer>© 2026 themochiishop. All rights reserved.</footer>
+  </div>
+
+  <!-- 🎁 每月抽奖 - 系统入口弹窗 -->
+  <div id="drawModalOverlay" class="modal-overlay">
+    <div class="modal-card">
+      <button onclick="closeDrawModal()" class="modal-close">✕</button>
+      <div style="font-size: 2.5rem; margin-bottom: 10px;">🏆</div>
+      <div class="modal-title">每月抽奖活动入口</div>
+      <div class="modal-desc">密码验证通过！请选择您要前往的系统页面：</div>
+      <div class="modal-links">
+        <a href="./draw_tournament/admin.html" class="modal-link-btn btn-admin-portal" target="_blank">
+          🎬 进入抽奖控制台 (Admin)
+        </a>
+        <a href="https://www.themochiishop.com/live-draw/" class="modal-link-btn btn-public-portal" target="_blank">
+          🏆 打开买家公开普及大屏 (Public)
+        </a>
+        <a href="https://www.themochiishop.com/live-draw/?test=1" class="modal-link-btn btn-test-portal" target="_blank">
+          🧪 测试大屏 (Test)
+        </a>
       </div>
     </div>
   </div>
 
+  <!-- 🖼️ 图库管理 - 系统入口弹窗 -->
+  <div id="galleryModalOverlay" class="modal-overlay">
+    <div class="modal-card">
+      <button onclick="closeGalleryModal()" class="modal-close">✕</button>
+      <div style="font-size: 2.5rem; margin-bottom: 10px;">🖼️</div>
+      <div class="modal-title">图库系统入口</div>
+      <div class="modal-desc">请选择您要前往的图库页面：</div>
+      <div class="modal-links">
+        <!-- 注意这里加了 target="_blank" 方便新标签页打开，不需要可以删掉 -->
+        <a href="./gallery/viewer.html" class="modal-link-btn btn-admin-portal" target="_blank">
+          👁️ 查看前台展示页 (Viewer)
+        </a>
+        <a href="./gallery/upload.html" class="modal-link-btn btn-public-portal" target="_blank">
+          📤 进入后台上传页 (Upload)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 领奖提醒：读取抽奖系统的领奖清单（在本机登录过抽奖后台就会显示） -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script>
+    (function () {
+      try {
+        firebase.initializeApp({
+          apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
+          authDomain: "draw-tournament.firebaseapp.com",
+          databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "draw-tournament",
+          storageBucket: "draw-tournament.firebasestorage.app",
+          messagingSenderId: "803720903757",
+          appId: "1:803720903757:web:8b561daabc0d69af9e7004"
+        });
+        const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com', 'ivychongsingyee@gmail.com'];
+        let started = false;
+        firebase.auth().onAuthStateChanged(u => {
+          const ok = u && !u.isAnonymous && ALLOWED.includes(String(u.email || '').toLowerCase());
+          const link = document.getElementById('drawClaimLink'), count = document.getElementById('drawClaimCount');
+          if (!ok) { count.hidden = true; link.classList.remove('has-todo'); return; }
+          if (started) return;
+          started = true;
+          // 会员俱乐部「🏆 中奖奖品」已发货的订单号（下面的会员系统脚本放进 window.clubShippedOrders），也算已寄出
+          let last = {};
+          const norm = o => String(o || '').replace(/\s/g, '').toUpperCase();
+          const recount = () => {
+            const club = window.clubShippedOrders || new Set();
+            let left = 0, months = 0;
+            Object.values(last).forEach(b => {
+              const n = Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.shipped && !club.has(norm(x.orderNo))).length;
+              if (n) { left += n; months++; }
+            });
+            count.hidden = !left;
+            count.textContent = left;
+            link.classList.toggle('has-todo', !!left);
+            link.title = left ? `${left} 位得主未寄出${months > 1 ? `（${months} 场）` : ''}` : '得奖者联系与寄送进度（全部已寄出）';
+          };
+          window.addEventListener('club-prizes', recount);
+          firebase.database().ref('draw_private/claimBatches').on('value', snap => { last = snap.val() || {}; recount(); }, () => { count.hidden = true; });
+        });
+      } catch (e) { console.warn('领奖提醒载入失败', e); }
+    })();
+  </script>
+
+  <!-- 兑换审核提醒：积分兑换 + 中奖奖品的待审核、待发货（在本机登录过会员系统后台就会显示） -->
   <script type="module">
-    import { db } from "./js/firebase-config.js";
+    import { auth, db } from "./member-system/js/firebase-config.js";
+    import { readyWinners } from "./member-system/js/admin-common.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners
-    } from "./js/admin-common.js";
-    import {
-      collection, getDocs, getDoc, doc, query, where, onSnapshot
+      doc, getDoc, collection, query, where, onSnapshot
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-    const $ = id => document.getElementById(id);
-    renderAdminNav("overview");
+    const link = document.getElementById("memberAlertLink");
+    const count = document.getElementById("memberAlertCount");
+    let started = false;
 
-    const TIERS = [
-      { key: "mochii",  color: "#f9a8d4" },
-      { key: "silver",  color: "#94a3b8" },
-      { key: "gold",    color: "#f59e0b" },
-      { key: "diamond", color: "#38bdf8" },
-      { key: "black",   color: "#1e293b" },
-    ];
-    // 和 notify.html 的 EVENTS 一致（预设开或关）
-    const NOTIFY_DEFAULTS = { newMember: true, redemption: true, prize: true, feedPending: true, address: false, problemStale: false, newBinding: false };
+    onAuthStateChanged(auth, async user => {
+      if (!user) { count.hidden = true; link.classList.remove("has-todo"); return; }
+      if (started) return;
+      try {
+        if (!(await getDoc(doc(db, "admins", user.uid))).exists()) return;
+      } catch (e) { return; }
+      started = true;
 
-    const num = n => Number(n || 0).toLocaleString("en-US");
-    const DONE_STATUSES = ["approved", "shipped", "completed", "problem"];
-
-    function ago(d) {
-      if (!d) return "";
-      const s = (Date.now() - d.getTime()) / 1000;
-      if (s < 60) return "刚刚";
-      if (s < 3600) return Math.floor(s / 60) + " 分钟前";
-      if (s < 86400) return Math.floor(s / 3600) + " 小时前";
-      if (s < 172800) return "昨天";
-      if (s < 7 * 86400) return Math.floor(s / 86400) + " 天前";
-      return fmtDate(d);
-    }
-    const monthStart = (offset = 0) => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth() + offset, 1); };
-
-    // ---------- 🔔 待处理 ----------
-    const todo = {
-      rPending: { ic: "🎁", t: "兑换待审核", href: "redeem.html#pending", n: null },
-      rShip:    { ic: "📦", t: "兑换待发货", href: "redeem.html#toShip", n: null },
-      pClaimed: { ic: "🏆", t: "中奖待审核", href: "prizes.html#claimed", n: null },
-      pShip:    { ic: "🚚", t: "中奖待发货", href: "prizes.html#approved", n: null },
-      feed:     { ic: "⏳", t: "Feed 投稿待审核", href: "feed.html#pending", n: null },
-      ready:    { ic: "🔗", t: "得奖者已绑定，待发奖", href: "prizes.html", n: null },
-    };
-    function renderTodo() {
-      const rows = Object.values(todo);
-      const total = rows.reduce((s, r) => s + (r.n || 0), 0);
-      const loaded = rows.filter(r => r.n !== null).length;
-      $("todoTotal").textContent = loaded ? total : "–";
-      $("todoLbl").textContent = total ? "件事要处理" : (loaded === rows.length ? "全部处理完了" : "件事要处理");
-      $("tTodo").classList.toggle("busy", total > 0);
-      $("tTodo").classList.toggle("clear", loaded === rows.length && total === 0);
-      $("todoList").innerHTML = rows.map(r => `
-        <a class="todo-row ${r.n ? "has" : ""}" href="${r.href}">
-          <span class="ic">${r.ic}</span>
-          <span class="tx">${r.t}</span>
-          <span class="n">${r.n === null ? "…" : r.n}</span>
-        </a>`).join("") +
-        (loaded === rows.length && !total ? `<div class="todo-done" style="grid-column:1/-1">✓ 目前没有要处理的事，休息一下 ☕</div>` : "");
-    }
-
-    // ---------- 主要资料 ----------
-    async function load() {
-      $("errBox").classList.add("hidden");
-      const [mS, bS, lS, rS, wS, fS, rwS, cS, sS, nS] = await Promise.all([
-        getDocs(collection(db, "members")),
-        getDocs(collection(db, "bindings")),
-        getDocs(collection(db, "pointsLedger")),
-        getDocs(collection(db, "redemptions")),
-        getDocs(collection(db, "prizeWins")),
-        getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending"))),
-        getDocs(collection(db, "rewards")),
-        getDocs(collection(db, "coupons")),
-        getDocs(collection(db, "rewardSecrets")),
-        getDoc(doc(db, "adminSettings", "notify")).catch(() => null),
-      ]);
-
-      const members = {};
-      mS.docs.forEach(d => members[d.id] = { uid: d.id, ...d.data() });
-      const nameOf = uid => (members[uid] || {}).name || "会员";
-      const isInternal = uid => !!(members[uid] && members[uid].internal && members[uid].internal.on);
-      const redemptions = rS.docs.map(d => ({ id: d.id, ...d.data() }));
-      const wins = wS.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      // 待处理
-      todo.rPending.n = redemptions.filter(r => r.status === "pending").length;
-      todo.rShip.n = redemptions.filter(r => r.kind === "gift" && (r.status === "approved" || r.status === "problem")).length;
-      todo.pClaimed.n = wins.filter(w => w.status === "claimed").length;
-      todo.pShip.n = wins.filter(w => w.status === "approved").length;
-      todo.feed.n = fS.size;
-      renderTodo();
-
-      // 会员（统计不算内部会员）
-      const real = Object.values(members).filter(m => !isInternal(m.uid));
-      const boundUids = new Set(bS.docs.map(d => d.data().uid));
-      const bound = real.filter(m => boundUids.has(m.uid)).length;
-      const thisMonth = monthStart(0), lastMonth = monthStart(-1);
-      const newThis = real.filter(m => (toDate(m.createdAt) || 0) >= thisMonth).length;
-      const newLast = real.filter(m => { const d = toDate(m.createdAt); return d && d >= lastMonth && d < thisMonth; }).length;
-      const nInternal = Object.keys(members).length - real.length;
-      $("memTotal").innerHTML = `${num(real.length)}<small>人</small>`;
-      $("memSub").innerHTML = `本月新增 <b>+${newThis}</b>${newLast ? `（上月 ${newLast}）` : ""}<br>
-        已绑定 <b>${real.length ? Math.round(bound / real.length * 100) : 0}%</b>（${bound} 人）${nInternal ? ` · 内部 ${nInternal}` : ""}`;
-
-      // 积分
-      const ledgers = {}, redByUid = {};
-      lS.docs.forEach(d => { const x = d.data(); (ledgers[x.uid] = ledgers[x.uid] || []).push(x); });
-      redemptions.forEach(r => (redByUid[r.uid] = redByUid[r.uid] || []).push(r));
-      let spendable = 0, pending = 0, negative = 0;
-      real.forEach(m => {
-        const b = computeBalance(ledgers[m.uid] || [], redByUid[m.uid] || []);
-        spendable += b.spendable; pending += b.pending;
-        if (b.spendable < 0) negative++;
-      });
-      $("ptsTotal").innerHTML = `${num(spendable)}<small>分</small>`;
-      $("ptsSub").innerHTML = `待确认 <b>${num(pending)}</b> 分（14 天后入账）${negative ? `<br><span class="down">${negative} 位会员积分是负数</span>` : ""}`;
-
-      // 等级分布
-      const tierCount = {};
-      real.forEach(m => { const t = TIERS.some(x => x.key === m.tier) ? m.tier : "mochii"; tierCount[t] = (tierCount[t] || 0) + 1; });
-      const tTotal = real.length || 1;
-      $("tierBar").innerHTML = TIERS.filter(t => tierCount[t.key])
-        .map(t => `<span style="flex:${tierCount[t.key]};background:${t.color}" title="${esc(TIER_LABELS[t.key])}：${tierCount[t.key]}"></span>`).join("");
-      $("tierLegend").innerHTML = TIERS.map(t => `
-        <div><b>${tierCount[t.key] || 0}</b><i style="background:${t.color}"></i>${esc(TIER_LABELS[t.key])}
-          <span class="muted">${Math.round((tierCount[t.key] || 0) / tTotal * 100)}%</span></div>`).join("");
-      $("tierNote").textContent = "不含内部会员";
-
-      // 本月兑换（不算测试兑换）
-      const decided = redemptions.filter(r => !r.test && DONE_STATUSES.includes(r.status));
-      const inRange = (r, a, b) => { const d = toDate(r.decidedAt) || toDate(r.createdAt); return d && d >= a && (!b || d < b); };
-      const mThis = decided.filter(r => inRange(r, thisMonth));
-      const mLast = decided.filter(r => inRange(r, lastMonth, thisMonth));
-      const ptsThis = mThis.reduce((s, r) => s + (r.cost || 0), 0);
-      const top = {};
-      mThis.forEach(r => top[r.rewardName || "?"] = (top[r.rewardName || "?"] || 0) + 1);
-      const topName = Object.entries(top).sort((a, b) => b[1] - a[1])[0];
-      const diff = mThis.length - mLast.length;
-      $("monthCount").innerHTML = `${mThis.length}<small>笔</small>`;
-      $("monthSub").innerHTML = `用掉 <b>${num(ptsThis)}</b> 分 · 上月 ${mLast.length} 笔
-        ${mLast.length || mThis.length ? `<span class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "↑" : "↓"}${Math.abs(diff)}</span>` : ""}
-        ${topName ? `<br>最热门：<b>${esc(topName[0])}</b>` : ""}`;
-
-      // 券码与库存：上架中的奖品
-      const secrets = {};
-      sS.docs.forEach(d => secrets[d.id] = d.data());
-      const pool = {};
-      cS.docs.forEach(d => { const c = d.data(); if (!c.used) pool[c.rewardId] = (pool[c.rewardId] || 0) + 1; });
-      const warn = [];
-      rwS.docs.forEach(d => {
-        const r = { id: d.id, ...d.data() };
-        if (!r.active) return;
-        if (r.type === "coupon" && !(secrets[r.id] || {}).couponCode) {
-          const left = pool[r.id] || 0;
-          if (left < 5) warn.push({ name: r.name, left, unit: "组券码", bad: left === 0 });
-        } else if (typeof r.stock === "number" && r.stock <= 3) {
-          warn.push({ name: r.name, left: r.stock, unit: "件库存", bad: r.stock <= 0 });
-        }
-      });
-      warn.sort((a, b) => a.left - b.left);
-      const activeN = rwS.docs.filter(d => d.data().active).length;
-      $("stockBig").innerHTML = warn.length
-        ? `<span class="big" style="color:#dc2626">${warn.length}</span><span class="sub">个快用完</span>`
-        : `<span class="big" style="color:#16a34a">✓</span><span class="sub">${activeN} 个上架奖品，都够用</span>`;
-      $("stockList").innerHTML = warn.map(w => `
-          <li><span class="nm">${esc(w.name)}</span><span class="tag ${w.bad ? "tag-bad" : "tag-warn"}">剩 ${w.left} ${w.unit}</span></li>`).join("");
-
-      // 最近动态
-      const ev = [];
-      Object.values(members).forEach(m => { const d = toDate(m.createdAt); if (d) ev.push({ d, ic: "🆕", html: `<a href="member.html?uid=${encodeURIComponent(m.uid)}"><b>${esc(m.name || "新会员")}</b> 注册成为会员</a>` }); });
-      redemptions.forEach(r => { const d = toDate(r.createdAt); if (d && !r.test) ev.push({ d, ic: "🎁", html: `<a href="redeem.html${r.status === "pending" ? "#pending" : ""}"><b>${esc(nameOf(r.uid))}</b> 兑换 ${esc(r.rewardName || "")}（${r.cost || 0} 分）</a>` }); });
-      wins.forEach(w => { const d = toDate(w.claimedAt); if (d) ev.push({ d, ic: "🏆", html: `<a href="prizes.html${w.status === "claimed" ? "#claimed" : ""}"><b>${esc(nameOf(w.uid))}</b> 领取了 ${esc(w.prizeName || "中奖奖品")}</a>` }); });
-      fS.docs.forEach(d => { const p = d.data(), at = toDate(p.createdAt); if (at) ev.push({ d: at, ic: "📰", html: `<a href="feed.html#pending"><b>${esc(p.authorName || nameOf(p.authorUid))}</b> 发了帖子，等你审核</a>` }); });
-      ev.sort((a, b) => b.d - a.d);
-      $("recentList").innerHTML = ev.length
-        ? ev.slice(0, 20).map(e => `<li><span class="ic">${e.ic}</span><span class="nm">${e.html}</span><span class="rt">${ago(e.d)}</span></li>`).join("")
-        : `<li class="none">还没有动态</li>`;
-
-      // 本月寿星（生日格式 YYYY-MM-DD）
-      const now = new Date(), mm = now.getMonth() + 1, dd = now.getDate();
-      const bdays = Object.values(members).map(m => {
-        const x = String(m.birthday || "").match(/^\d{4}-(\d{2})-(\d{2})/);
-        return x && +x[1] === mm ? { m, day: +x[2] } : null;
-      }).filter(Boolean).sort((a, b) => a.day - b.day);
-      $("bdayTitle").textContent = `🎂 ${mm} 月寿星`;
-      $("bdayCount").innerHTML = `${bdays.length}<small>人</small>`;
-      $("bdayList").innerHTML = bdays.length
-        ? bdays.map(b => `<li><span class="nm">${b.day === dd ? "🎉 " : ""}${esc(b.m.name || "会员")}</span><span class="rt">${b.day === dd ? "今天" : `${mm}/${b.day}`}</span></li>`).join("")
-        : `<li class="none">这个月没有寿星</li>`;
-
-      // 邮件提醒
-      const cfg = nS && nS.exists() ? nS.data() : {};
-      const evs = cfg.events || {};
-      const onN = Object.keys(NOTIFY_DEFAULTS).filter(k => evs[k] ?? NOTIFY_DEFAULTS[k]).length;
-      const emails = (cfg.emails || []).length;
-      $("notifyCount").textContent = `${onN} / ${Object.keys(NOTIFY_DEFAULTS).length} 项开启`;
-      $("notifySub").innerHTML = emails
-        ? `寄到 <b>${emails}</b> 个邮箱 · ${cfg.mode === "daily" ? "每天汇总一次" : "马上寄出"}`
-        : `<span class="down">还没设定收件邮箱</span>`;
-
-      const t = new Date();
-      $("updated").textContent = `更新 ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
-
-      // 得奖者已绑定、还没发奖（要读抽奖网站，比较慢，放最后）
-      todo.ready.n = null; renderTodo();
-      readyWinners().then(list => { todo.ready.n = list.length; renderTodo(); })
-        .catch(e => { console.warn("readyWinners", e); todo.ready.n = 0; renderTodo(); });
-    }
-
-    // ---------- 俱乐部开关（和侧边栏同一个开关） ----------
-    function watchClub() {
-      onSnapshot(doc(db, "settings", "club"), s => {
-        const open = s.exists() && s.data().open === true;
-        $("clubState").className = "club-state " + (open ? "on" : "off");
-        $("clubText").textContent = open ? "开放中" : "维修中";
-        $("clubState").title = open ? "会员可以注册、登录和兑换" : "会员看到「正在装修俱乐部」，无法登录";
-        $("clubBtn").textContent = open ? "关闭" : "开放";
-      });
-      $("clubBtn").addEventListener("click", () => $("clubSwitch").click());
-    }
-
-    function run() {
-      $("reloadBtn").disabled = true;
-      load().catch(e => {
-        $("errBox").textContent = "载入失败：" + e.message;
-        $("errBox").classList.remove("hidden");
-      }).finally(() => { $("reloadBtn").disabled = false; });
-    }
-    $("reloadBtn").addEventListener("click", run);
-
-    renderTodo();
-    requireAdmin(user => {
-      const h = new Date().getHours();
-      const hi = h < 5 ? "夜深了" : h < 12 ? "早安" : h < 18 ? "午安" : "晚上好";
-      $("hello").textContent = `📊 总览 · ${hi}${user.displayName ? "，" + user.displayName : ""}`;
-      watchClub();
-      run();
+      // 积分兑换：待审核 + 实体奖品待发货（含配送异常）；中奖奖品：会员已领取（待审核）+ 待发货
+      const c = { rPending: 0, rShip: 0, pClaimed: 0, pShip: 0, pReady: 0 };
+      function show() {
+        const n = c.rPending + c.rShip + c.pClaimed + c.pShip + c.pReady;
+        count.hidden = !n;
+        count.textContent = n > 99 ? "99+" : n;
+        link.classList.toggle("has-todo", !!n);
+        const parts = [];
+        if (c.rPending) parts.push(`积分兑换待审核 ${c.rPending}`);
+        if (c.rShip) parts.push(`兑换奖品待发货 ${c.rShip}`);
+        if (c.pReady) parts.push(`得奖者已绑定待发奖 ${c.pReady}`);
+        if (c.pClaimed) parts.push(`中奖奖品待审核 ${c.pClaimed}`);
+        if (c.pShip) parts.push(`中奖奖品待发货 ${c.pShip}`);
+        link.title = n ? parts.join(" · ") : "兑换审核（目前没有待处理的要求）";
+      }
+      onSnapshot(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])), snap => {
+        const list = snap.docs.map(d => d.data());
+        c.rPending = list.filter(r => r.status === "pending").length;
+        c.rShip = list.filter(r => r.kind === "gift" && r.status !== "pending").length;
+        show();
+      }, e => console.warn("redemptions alert", e));
+      // 已发货 / 已完成的中奖奖品 → 告诉「🎁 领奖追踪」提醒这些得主已寄出
+      onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["shipped", "completed"])), snap => {
+        window.clubShippedOrders = new Set(snap.docs.map(d => String(d.data().orderNo || "").replace(/\s/g, "").toUpperCase()).filter(Boolean));
+        window.dispatchEvent(new Event("club-prizes"));
+      }, e => console.warn("prizeWins shipped", e));
+      // 📰 Feed：会员投稿待审核
+      onSnapshot(query(collection(db, "feedPosts"), where("status", "==", "pending")), snap => {
+        const n = snap.size, fl = document.getElementById("feedAlertLink"), fc = document.getElementById("feedAlertCount");
+        fc.hidden = !n; fc.textContent = n > 99 ? "99+" : n;
+        fl.classList.toggle("has-todo", !!n);
+        fl.title = n ? `${n} 篇会员投稿待审核` : "会员投稿待审核（目前没有）";
+      }, e => console.warn("feed alert", e));
+      onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])), snap => {
+        const list = snap.docs.map(d => d.data());
+        c.pClaimed = list.filter(p => p.status === "claimed").length;
+        c.pShip = list.filter(p => p.status === "approved").length;
+        show();
+      }, e => console.warn("prizeWins alert", e));
+      // 得奖者已注册并绑定中奖订单、还没发奖（每 10 分钟重新检查一次）
+      const checkReady = () => readyWinners().then(r => { c.pReady = r.length; show(); }).catch(e => console.warn("ready winners", e));
+      checkReady();
+      setInterval(checkReady, 600000);
     });
+  </script>
+  <script>
+    // 每月抽奖弹窗逻辑
+    function openDrawModal() {
+      const pwd = prompt("请输入6位数密码");
+      if (pwd === null) return;
+      if (pwd === "023457") {
+        document.getElementById('drawModalOverlay').classList.add('active');
+      } else {
+        alert("🔒 密码错误，请重新输入！");
+      }
+    }
+    function closeDrawModal() {
+      document.getElementById('drawModalOverlay').classList.remove('active');
+    }
+
+    // 图库弹窗逻辑
+    function openGalleryModal() {
+      // 如果图库也需要密码，可以在这里加，不需要的话就直接显示
+      document.getElementById('galleryModalOverlay').classList.add('active');
+    }
+    function closeGalleryModal() {
+      document.getElementById('galleryModalOverlay').classList.remove('active');
+    }
+
+    // 点击弹窗外部关闭弹窗
+    window.onclick = function(event) {
+      const drawOverlay = document.getElementById('drawModalOverlay');
+      const galleryOverlay = document.getElementById('galleryModalOverlay');
+      if (event.target === drawOverlay) {
+        closeDrawModal();
+      }
+      if (event.target === galleryOverlay) {
+        closeGalleryModal();
+      }
+    }
   </script>
 </body>
 </html>

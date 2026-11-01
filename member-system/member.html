@@ -6,12 +6,13 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>会员详情 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
     .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .big { font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
+    .big { font-size: 2rem; font-weight: 800; color: var(--ink); line-height: 1.1; }
     .bal-row { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 16px; }
-    .bal-row .l { font-size: .8rem; color: #64748b; }
-    .list-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .bal-row .l { font-size: .8rem; color: var(--muted); }
+    .list-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--soft); }
     .list-row:last-child { border-bottom: none; }
     .plus { color: #16a34a; font-weight: 800; }
     .minus { color: #dc2626; font-weight: 800; }
@@ -47,8 +48,8 @@
             <h3>积分</h3>
             <div class="bal-row">
               <div><div class="l">可用积分</div><div class="big" id="bSpend">-</div></div>
-              <div><div class="l">待确认</div><div class="big" id="bPending" style="color:#b45309">-</div></div>
-              <div><div class="l">兑换审核中</div><div class="big" id="bReserved" style="color:#64748b">-</div></div>
+              <div><div class="l">待确认</div><div class="big" id="bPending" style="color:var(--amber-tx)">-</div></div>
+              <div><div class="l">兑换审核中</div><div class="big" id="bReserved" style="color:var(--muted)">-</div></div>
             </div>
 
             <h3 style="margin-top:8px" id="adjustHead">手动调整积分</h3>
@@ -131,7 +132,7 @@
             <p class="meta" id="bindSummary" style="margin:-6px 0 8px"></p>
             <div id="bindList"></div>
             <details id="logBox" class="hidden" style="margin-top:12px">
-              <summary style="cursor:pointer;font-size:.88rem;color:#475569;font-weight:600">📜 绑定历史 <span id="logCount"></span></summary>
+              <summary style="cursor:pointer;font-size:.88rem;color:var(--text2);font-weight:600">📜 绑定历史 <span id="logCount"></span></summary>
               <div id="logList" style="margin-top:8px"></div>
             </details>
             <h3 style="margin-top:18px" id="bindHead">代为绑定</h3>

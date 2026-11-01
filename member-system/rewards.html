@@ -6,18 +6,19 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>商城奖品 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
-    .cat-row { display: grid; grid-template-columns: 54px 1fr 1fr 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
+    .cat-row { display: grid; grid-template-columns: 54px 1fr 1fr 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
     .cat-row input { margin: 0; }
     .cat-row .btns { display: flex; gap: 4px; }
     .cat-row .btn { padding: 6px 9px; }
-    .cat-head { font-size: .78rem; color: #64748b; font-weight: 600; border-bottom: none; padding-bottom: 0; }
-    .cat-count { font-size: .72rem; color: #94a3b8; }
+    .cat-head { font-size: .78rem; color: var(--muted); font-weight: 600; border-bottom: none; padding-bottom: 0; }
+    .cat-count { font-size: .72rem; color: var(--faint); }
     @media (max-width: 640px) { .cat-row { grid-template-columns: 48px 1fr auto; } .cat-row .opt { display: none; } }
     .order-btns { display: flex; flex-direction: column; gap: 4px; }
     .order-btns .btn { padding: 4px 9px; line-height: 1; }
     .sort-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+      background: var(--orange-bg); border: 1px solid #fdba74; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
     .end-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .end-row input[type=datetime-local] { width: auto; margin: 0; }
     .end-row label { margin: 0; }
@@ -53,7 +54,7 @@
   <input type="file" id="rimage" accept="image/*">
 </label>
 <div id="rimageBox" class="hidden actions" style="margin:-4px 0 12px">
-  <img id="rpreview" style="width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0">
+  <img id="rpreview" style="width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">
   <button type="button" class="btn btn-ghost" id="rimageRemove">移除图片</button>
 </div>
           <div class="grid2">
@@ -74,13 +75,13 @@
             </label>
             <input type="hidden" id="rsort" value="10">
           </div>
-                    <div id="couponBox" class="panel" style="background:#f8fafc;padding:14px;margin-bottom:12px">
+                    <div id="couponBox" class="panel" style="background:var(--soft2);padding:14px;margin-bottom:12px">
             <label>优惠码格式
               <select id="rcformat"></select>
             </label>
             <label>优惠码
               <div style="display:flex;align-items:center;margin-top:4px">
-                <span id="rcprefix" style="padding:9px 11px;background:#e2e8f0;border:1px solid #cbd5e1;border-right:none;border-radius:8px 0 0 8px;color:#64748b;font-weight:700"></span>
+                <span id="rcprefix" style="padding:9px 11px;background:var(--line);border:1px solid var(--line2);border-right:none;border-radius:8px 0 0 8px;color:var(--muted);font-weight:700"></span>
                 <input id="rcsuffix" style="margin:0;text-transform:uppercase" autocomplete="off">
               </div>
               <small class="muted" id="rchint"></small>
@@ -106,7 +107,7 @@
 
       <!-- 🗂 商城分类（自订） -->
       <details class="panel" id="catPanel">
-        <summary style="cursor:pointer;font-weight:700;color:#0f172a">🗂 商城分类 <span class="muted" style="font-weight:400;font-size:.85rem">（新增、改名、调整顺序）</span></summary>
+        <summary style="cursor:pointer;font-weight:700;color:var(--ink)">🗂 商城分类 <span class="muted" style="font-weight:400;font-size:.85rem">（新增、改名、调整顺序）</span></summary>
         <p class="meta" style="margin:10px 0">会员前台「兑换商城」上方的分类按钮，照这里的顺序显示，只显示有奖品的分类。删除分类后，原本那个分类的奖品会归到「其他」。</p>
         <div class="cat-row cat-head"><span>图标</span><span>中文名称</span><span class="opt">English</span><span class="opt">Bahasa Melayu</span><span></span></div>
         <div id="catList"></div>

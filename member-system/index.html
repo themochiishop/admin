@@ -6,122 +6,130 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>总览 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
-    .container { max-width: 1120px; }
-    .ov-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-    .ov-head h2 { font-size: 1.4rem; color: #0f172a; }
-    .ov-head p { color: #64748b; font-size: .85rem; margin-top: 2px; }
-    .ov-head .right { display: flex; align-items: center; gap: 10px; font-size: .8rem; color: #94a3b8; }
+    .container { max-width: 1240px; margin-top: 18px; margin-bottom: 18px; }
+    .ov-head { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 12px; }
+    .ov-head h2 { font-size: 1.2rem; color: var(--ink); }
+    .ov-head p { color: var(--muted); font-size: .8rem; margin-top: 1px; }
+    .ov-head .right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .78rem; color: var(--faint); }
+    .qbtn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 8px; font-size: .8rem; font-weight: 600;
+      background: var(--card); border: 1px solid var(--line); color: var(--ink); }
+    .qbtn:hover { border-color: #db2777; color: #db2777; }
+    #reloadBtn { padding: 6px 10px; font-size: .8rem; }
+    #updated { margin-right: 4px; }
 
     /* ===== 便当盒 ===== */
     .bento {
-      display: grid; gap: 14px;
+      display: grid; gap: 12px;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-areas:
         "todo  todo  mem    pts"
         "todo  todo  tier   tier"
         "month stock recent recent"
-        "bday  club  recent recent"
-        "quick quick quick  notify";
+        "bday  sys   recent recent";
     }
     .t-todo { grid-area: todo; } .t-mem { grid-area: mem; } .t-pts { grid-area: pts; }
     .t-tier { grid-area: tier; } .t-month { grid-area: month; } .t-stock { grid-area: stock; }
-    .t-recent { grid-area: recent; } .t-bday { grid-area: bday; } .t-club { grid-area: club; }
-    .t-quick { grid-area: quick; } .t-notify { grid-area: notify; }
+    .t-recent { grid-area: recent; } .t-bday { grid-area: bday; } .t-sys { grid-area: sys; }
+
+    /* 电脑：整页刚好一个画面，不用上下滑；格子里的清单太长才在格子里滚动 */
+    @media (min-width: 1180px) and (min-height: 600px) {
+      body.has-side #app { height: 100vh; }
+      .container { height: 100vh; margin: 0 auto; padding-top: 16px; padding-bottom: 16px; display: flex; flex-direction: column; }
+      .bento { flex: 1; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); }
+      .tile { overflow: hidden; }
+      .scroll { overflow-y: auto; min-height: 0; flex: 1; margin-right: -8px; padding-right: 8px; }
+    }
     @media (max-width: 1179px) {
       .bento {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-areas:
-          "todo  todo" "mem pts" "tier tier" "month stock" "recent recent" "bday club" "notify quick";
+        grid-template-areas: "todo todo" "mem pts" "tier tier" "month stock" "recent recent" "bday sys";
       }
     }
     @media (max-width: 559px) {
-      .bento { grid-template-columns: minmax(0, 1fr); gap: 12px;
-        grid-template-areas: "todo" "mem" "pts" "tier" "month" "stock" "recent" "bday" "club" "notify" "quick"; }
+      .bento { grid-template-columns: minmax(0, 1fr); gap: 10px;
+        grid-template-areas: "todo" "mem" "pts" "tier" "month" "stock" "recent" "bday" "sys"; }
+      .ov-head .right { width: 100%; }
     }
 
     .tile {
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 18px;
-      display: flex; flex-direction: column; min-width: 0; color: inherit;
-      transition: border-color .15s, box-shadow .15s, transform .15s;
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+      display: flex; flex-direction: column; min-width: 0; min-height: 0; color: inherit;
+      transition: border-color .15s, box-shadow .15s;
     }
-    a.tile:hover { border-color: #cbd5e1; box-shadow: 0 8px 18px rgba(15,23,42,.06); transform: translateY(-2px); }
-    .tile-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .8rem; font-weight: 700; color: #64748b; margin-bottom: 10px; }
-    .tile-h .go { font-weight: 600; color: #94a3b8; font-size: .78rem; white-space: nowrap; }
+    a.tile:hover { border-color: var(--line2); box-shadow: 0 6px 16px var(--shadow); }
+    .tile-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .76rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; flex-shrink: 0; }
+    .tile-h .go { font-weight: 600; color: var(--faint); font-size: .74rem; white-space: nowrap; }
     a.tile:hover .tile-h .go { color: #db2777; }
-    .big { font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-    .big small { font-size: .85rem; font-weight: 600; color: #64748b; margin-left: 4px; letter-spacing: 0; }
-    .sub { font-size: .82rem; color: #64748b; margin-top: 6px; line-height: 1.55; }
-    .sub b { color: #0f172a; font-variant-numeric: tabular-nums; }
+    .big { font-size: 1.65rem; font-weight: 800; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+    .big small { font-size: .78rem; font-weight: 600; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+    .sub { font-size: .78rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+    .sub b { color: var(--ink); font-variant-numeric: tabular-nums; }
     .up { color: #16a34a; font-weight: 700; }
     .down { color: #dc2626; font-weight: 700; }
-    .loading { color: #cbd5e1; }
+    .loading { color: var(--faint); }
+    .row-big { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
 
     /* 待处理 */
-    .t-todo { padding: 18px 20px; }
-    .t-todo.busy { background: linear-gradient(160deg, #fdf2f8 0%, #fff 55%); border-color: #f9a8d4; }
-    .t-todo.clear { background: linear-gradient(160deg, #f0fdf4 0%, #fff 55%); border-color: #bbf7d0; }
-    .todo-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-    .todo-top .big { font-size: 2.6rem; }
+    .t-todo { padding: 14px 16px; }
+    .t-todo.busy { background: linear-gradient(160deg, var(--pink-bg2) 0%, var(--card) 60%); border-color: #f9a8d4; }
+    .t-todo.clear { background: linear-gradient(160deg, var(--green-bg2) 0%, var(--card) 60%); border-color: #86efac; }
+    :root[data-theme="dark"] .t-todo.busy { border-color: rgba(244,114,182,.5); }
+    :root[data-theme="dark"] .t-todo.clear { border-color: rgba(74,222,128,.4); }
+    .todo-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }
+    .todo-top .big { font-size: 2.2rem; }
     .t-todo.busy .todo-top .big { color: #db2777; }
     .t-todo.clear .todo-top .big { color: #16a34a; }
-    .todo-top .lbl { font-size: .9rem; color: #475569; font-weight: 600; }
-    .todo-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .todo-top .lbl { font-size: .86rem; color: var(--text2); font-weight: 600; }
+    .todo-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
     @media (max-width: 559px) { .todo-list { grid-template-columns: 1fr; } }
     .todo-row {
-      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
-      background: #fff; border: 1px solid #e2e8f0; color: #0f172a; font-size: .86rem;
+      display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 10px;
+      background: var(--card); border: 1px solid var(--line); color: var(--ink); font-size: .84rem;
     }
     .todo-row:hover { border-color: #db2777; }
-    .todo-row .ic { font-size: 1.05rem; width: 22px; text-align: center; }
-    .todo-row .tx { flex: 1; min-width: 0; }
-    .todo-row .tx small { display: block; color: #94a3b8; font-size: .72rem; }
-    .todo-row .n { font-weight: 800; font-size: 1.05rem; min-width: 30px; text-align: center; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #94a3b8; font-variant-numeric: tabular-nums; }
+    .todo-row .ic { font-size: 1rem; width: 20px; text-align: center; }
+    .todo-row .tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .todo-row .n { font-weight: 800; font-size: .95rem; min-width: 28px; text-align: center; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--faint); font-variant-numeric: tabular-nums; }
     .todo-row.has .n { background: #e11d48; color: #fff; }
-    .todo-row:not(.has) { color: #94a3b8; }
-    .todo-done { margin-top: 12px; font-size: .85rem; color: #15803d; font-weight: 600; }
+    .todo-row:not(.has) { color: var(--faint); }
+    .todo-done { font-size: .82rem; color: var(--green-tx); font-weight: 600; grid-column: 1 / -1; margin-top: 2px; }
 
     /* 等级分布 */
-    .tier-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #f1f5f9; gap: 2px; }
+    .tier-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--soft); gap: 2px; flex-shrink: 0; margin-top: 4px; }
     .tier-bar span { display: block; height: 100%; min-width: 3px; }
-    .tier-legend { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+    .tier-legend { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
     @media (max-width: 559px) { .tier-legend { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    .tier-legend div { font-size: .74rem; color: #64748b; min-width: 0; }
-    .tier-legend b { display: block; font-size: 1.1rem; color: #0f172a; font-variant-numeric: tabular-nums; }
-    .tier-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+    .tier-legend div { font-size: .72rem; color: var(--muted); min-width: 0; }
+    .tier-legend b { display: block; font-size: 1.05rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .tier-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 
     /* 清单 */
-    .list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
-    .list li { display: flex; align-items: center; gap: 8px; font-size: .84rem; padding: 6px 0; border-top: 1px solid #f1f5f9; min-width: 0; }
+    .list { list-style: none; display: flex; flex-direction: column; }
+    .list li { display: flex; align-items: center; gap: 8px; font-size: .8rem; padding: 5px 0; border-top: 1px solid var(--soft); min-width: 0; }
     .list li:first-child { border-top: 0; }
-    .list .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #0f172a; }
-    .list .rt { color: #94a3b8; font-size: .76rem; white-space: nowrap; }
-    .list a { color: #0f172a; }
+    .list .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+    .list .rt { color: var(--faint); font-size: .72rem; white-space: nowrap; }
+    .list a { color: var(--ink); }
     .list a:hover { color: #db2777; }
-    .t-recent .list li { padding: 8px 0; }
-    .t-recent .ic { width: 22px; text-align: center; flex-shrink: 0; }
-    .none { color: #94a3b8; font-size: .84rem; padding: 6px 0; }
+    .t-recent .list li { padding: 7px 0; }
+    .t-recent .ic { width: 20px; text-align: center; flex-shrink: 0; }
+    .none { color: var(--faint); font-size: .8rem; padding: 4px 0; }
 
-    /* 俱乐部 */
-    .club-state { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 800; color: #0f172a; }
-    .club-state .lamp { width: 12px; height: 12px; border-radius: 50%; background: #cbd5e1; box-shadow: 0 0 0 4px #f1f5f9; }
-    .club-state.on .lamp { background: #16a34a; box-shadow: 0 0 0 4px #dcfce7; }
-    .club-state.off .lamp { background: #dc2626; box-shadow: 0 0 0 4px #fee2e2; }
-    .tile .btn { align-self: flex-start; margin-top: auto; }
-    .t-club .btn { margin-top: 12px; }
+    /* 系统：俱乐部 + 邮件提醒 */
+    .sys-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
+    .sys-row + .sys-row { border-top: 1px solid var(--soft); }
+    .club-state { display: flex; align-items: center; gap: 8px; font-size: .92rem; font-weight: 800; color: var(--ink); }
+    .club-state .lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--line2); box-shadow: 0 0 0 3px var(--soft); }
+    .club-state.on .lamp { background: #16a34a; box-shadow: 0 0 0 3px var(--green-bg2); }
+    .club-state.off .lamp { background: #dc2626; box-shadow: 0 0 0 3px var(--red-bg2); }
+    .sys-row .btn { padding: 5px 10px; font-size: .76rem; }
+    .sys-k { font-size: .74rem; color: var(--muted); }
+    .sys-v { font-size: .86rem; font-weight: 700; color: var(--ink); }
+    .sys-row a.go2 { font-size: .76rem; font-weight: 600; }
 
-    /* 快捷 */
-    .quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    @media (max-width: 1179px) { .quick { grid-template-columns: 1fr 1fr; } }
-    .quick a {
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-      padding: 12px 6px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0;
-      color: #0f172a; font-size: .82rem; font-weight: 600; text-align: center;
-    }
-    .quick a span { font-size: 1.25rem; }
-    .quick a:hover { border-color: #db2777; background: #fdf2f8; }
-
-    .err-box { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: .88rem; }
+    .err-box { background: var(--red-bg); border: 1px solid #fecaca; color: var(--red-tx); border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; font-size: .85rem; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -137,8 +145,12 @@
           <p>先看「待处理」，再看会员和积分的变化。点任何一格都会跳到对应的页面。</p>
         </div>
         <div class="right">
+          <a class="qbtn" href="announcements.html">📢 发公告</a>
+          <a class="qbtn" href="rewards.html">🛍️ 新增奖品</a>
+          <a class="qbtn" href="feed.html">✨ 发 Feed</a>
+          <a class="qbtn" href="home.html">🏠 首页设定</a>
           <span id="updated"></span>
-          <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+          <button id="reloadBtn" class="btn btn-ghost" title="重新整理">🔄</button>
         </div>
       </div>
 
@@ -149,7 +161,7 @@
         <section class="tile t-todo" id="tTodo">
           <div class="tile-h"><span>🔔 待处理</span></div>
           <div class="todo-top"><span class="big" id="todoTotal">–</span><span class="lbl" id="todoLbl">件事要处理</span></div>
-          <div class="todo-list" id="todoList"></div>
+          <div class="todo-list scroll" id="todoList"></div>
         </section>
 
         <!-- 👥 会员 -->
@@ -180,50 +192,40 @@
           <div class="sub" id="monthSub"><span class="loading">载入中…</span></div>
         </a>
 
-        <!-- 🎫 库存提醒 -->
+        <!-- 🎫 券码与库存 -->
         <a class="tile t-stock" href="rewards.html">
           <div class="tile-h"><span>🎫 券码与库存</span><span class="go">商城奖品 →</span></div>
-          <div id="stockBody"><span class="none">载入中…</span></div>
+          <div id="stockBig" class="row-big"></div>
+          <ul class="list scroll" id="stockList"><li class="none">载入中…</li></ul>
         </a>
 
         <!-- 🕒 最近动态 -->
         <section class="tile t-recent">
           <div class="tile-h"><span>🕒 最近动态</span></div>
-          <ul class="list" id="recentList"><li class="none">载入中…</li></ul>
+          <ul class="list scroll" id="recentList"><li class="none">载入中…</li></ul>
         </section>
 
         <!-- 🎂 本月寿星 -->
         <a class="tile t-bday" href="members.html">
           <div class="tile-h"><span id="bdayTitle">🎂 本月寿星</span></div>
           <div class="big" id="bdayCount">–</div>
-          <ul class="list" id="bdayList"></ul>
+          <ul class="list scroll" id="bdayList"></ul>
         </a>
 
-        <!-- 🟢 俱乐部 -->
-        <section class="tile t-club">
-          <div class="tile-h"><span>🏠 会员俱乐部</span></div>
-          <div class="club-state" id="clubState"><span class="lamp"></span><span id="clubText">读取中…</span></div>
-          <div class="sub" id="clubSub"></div>
-          <button class="btn btn-ghost" id="clubBtn" type="button">切换</button>
-        </section>
-
-        <!-- ⚡ 快捷 -->
-        <section class="tile t-quick">
-          <div class="tile-h"><span>⚡ 快捷操作</span></div>
-          <div class="quick">
-            <a href="announcements.html"><span>📢</span>发公告</a>
-            <a href="rewards.html"><span>🛍️</span>新增奖品</a>
-            <a href="feed.html"><span>✨</span>发 Feed</a>
-            <a href="home.html"><span>🏠</span>首页设定</a>
+        <!-- ⚙️ 系统：俱乐部 + 邮件提醒 -->
+        <section class="tile t-sys">
+          <div class="tile-h"><span>⚙️ 系统</span></div>
+          <div class="scroll">
+          <div class="sys-row">
+            <div><div class="sys-k">会员俱乐部</div><div class="club-state" id="clubState"><span class="lamp"></span><span id="clubText">读取中…</span></div></div>
+            <button class="btn btn-ghost" id="clubBtn" type="button">切换</button>
+          </div>
+          <div class="sys-row">
+            <div><div class="sys-k">📧 邮件提醒</div><div class="sys-v" id="notifyCount">–</div><div class="sys-k" id="notifySub"></div></div>
+            <a class="go2" href="notify.html">设定 →</a>
+          </div>
           </div>
         </section>
-
-        <!-- 📧 邮件提醒 -->
-        <a class="tile t-notify" href="notify.html">
-          <div class="tile-h"><span>📧 邮件提醒</span><span class="go">设定 →</span></div>
-          <div class="big" id="notifyCount">–</div>
-          <div class="sub" id="notifySub"></div>
-        </a>
       </div>
     </div>
   </div>
@@ -245,7 +247,7 @@
       { key: "silver",  color: "#94a3b8" },
       { key: "gold",    color: "#f59e0b" },
       { key: "diamond", color: "#38bdf8" },
-      { key: "black",   color: "#0f172a" },
+      { key: "black",   color: "#1e293b" },
     ];
     // 和 notify.html 的 EVENTS 一致（预设开或关）
     const NOTIFY_DEFAULTS = { newMember: true, redemption: true, prize: true, feedPending: true, address: false, problemStale: false, newBinding: false };
@@ -391,11 +393,11 @@
       });
       warn.sort((a, b) => a.left - b.left);
       const activeN = rwS.docs.filter(d => d.data().active).length;
-      $("stockBody").innerHTML = warn.length ? `
-        <div class="big" style="color:#dc2626">${warn.length}<small>个快用完</small></div>
-        <ul class="list" style="margin-top:8px">${warn.slice(0, 4).map(w => `
-          <li><span class="nm">${esc(w.name)}</span><span class="tag ${w.bad ? "tag-bad" : "tag-warn"}">剩 ${w.left} ${w.unit}</span></li>`).join("")}</ul>`
-        : `<div class="big" style="color:#16a34a">✓</div><div class="sub">${activeN} 个上架奖品，券码和库存都够用</div>`;
+      $("stockBig").innerHTML = warn.length
+        ? `<span class="big" style="color:#dc2626">${warn.length}</span><span class="sub">个快用完</span>`
+        : `<span class="big" style="color:#16a34a">✓</span><span class="sub">${activeN} 个上架奖品，都够用</span>`;
+      $("stockList").innerHTML = warn.map(w => `
+          <li><span class="nm">${esc(w.name)}</span><span class="tag ${w.bad ? "tag-bad" : "tag-warn"}">剩 ${w.left} ${w.unit}</span></li>`).join("");
 
       // 最近动态
       const ev = [];
@@ -405,7 +407,7 @@
       fS.docs.forEach(d => { const p = d.data(), at = toDate(p.createdAt); if (at) ev.push({ d: at, ic: "📰", html: `<a href="feed.html#pending"><b>${esc(p.authorName || nameOf(p.authorUid))}</b> 发了帖子，等你审核</a>` }); });
       ev.sort((a, b) => b.d - a.d);
       $("recentList").innerHTML = ev.length
-        ? ev.slice(0, 8).map(e => `<li><span class="ic">${e.ic}</span><span class="nm">${e.html}</span><span class="rt">${ago(e.d)}</span></li>`).join("")
+        ? ev.slice(0, 20).map(e => `<li><span class="ic">${e.ic}</span><span class="nm">${e.html}</span><span class="rt">${ago(e.d)}</span></li>`).join("")
         : `<li class="none">还没有动态</li>`;
 
       // 本月寿星（生日格式 YYYY-MM-DD）
@@ -417,8 +419,7 @@
       $("bdayTitle").textContent = `🎂 ${mm} 月寿星`;
       $("bdayCount").innerHTML = `${bdays.length}<small>人</small>`;
       $("bdayList").innerHTML = bdays.length
-        ? bdays.slice(0, 4).map(b => `<li><span class="nm">${b.day === dd ? "🎉 " : ""}${esc(b.m.name || "会员")}</span><span class="rt">${b.day === dd ? "今天" : `${mm}/${b.day}`}</span></li>`).join("")
-          + (bdays.length > 4 ? `<li class="none">还有 ${bdays.length - 4} 位…</li>` : "")
+        ? bdays.map(b => `<li><span class="nm">${b.day === dd ? "🎉 " : ""}${esc(b.m.name || "会员")}</span><span class="rt">${b.day === dd ? "今天" : `${mm}/${b.day}`}</span></li>`).join("")
         : `<li class="none">这个月没有寿星</li>`;
 
       // 邮件提醒
@@ -426,13 +427,13 @@
       const evs = cfg.events || {};
       const onN = Object.keys(NOTIFY_DEFAULTS).filter(k => evs[k] ?? NOTIFY_DEFAULTS[k]).length;
       const emails = (cfg.emails || []).length;
-      $("notifyCount").innerHTML = `${onN}<small>/ ${Object.keys(NOTIFY_DEFAULTS).length} 项开启</small>`;
+      $("notifyCount").textContent = `${onN} / ${Object.keys(NOTIFY_DEFAULTS).length} 项开启`;
       $("notifySub").innerHTML = emails
         ? `寄到 <b>${emails}</b> 个邮箱 · ${cfg.mode === "daily" ? "每天汇总一次" : "马上寄出"}`
         : `<span class="down">还没设定收件邮箱</span>`;
 
       const t = new Date();
-      $("updated").textContent = `更新于 ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+      $("updated").textContent = `更新 ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
 
       // 得奖者已绑定、还没发奖（要读抽奖网站，比较慢，放最后）
       todo.ready.n = null; renderTodo();
@@ -446,8 +447,8 @@
         const open = s.exists() && s.data().open === true;
         $("clubState").className = "club-state " + (open ? "on" : "off");
         $("clubText").textContent = open ? "开放中" : "维修中";
-        $("clubSub").textContent = open ? "会员可以注册、登录和兑换。" : "会员看到「正在装修俱乐部」，无法登录。";
-        $("clubBtn").textContent = open ? "关闭俱乐部" : "开放俱乐部";
+        $("clubState").title = open ? "会员可以注册、登录和兑换" : "会员看到「正在装修俱乐部」，无法登录";
+        $("clubBtn").textContent = open ? "关闭" : "开放";
       });
       $("clubBtn").addEventListener("click", () => $("clubSwitch").click());
     }
@@ -465,7 +466,7 @@
     requireAdmin(user => {
       const h = new Date().getHours();
       const hi = h < 5 ? "夜深了" : h < 12 ? "早安" : h < 18 ? "午安" : "晚上好";
-      $("hello").textContent = `📊 总览 · ${hi}${user.displayName ? "，" + user.displayName.split(" ")[0] : ""}`;
+      $("hello").textContent = `📊 总览 · ${hi}${user.displayName ? "，" + user.displayName : ""}`;
       watchClub();
       run();
     });

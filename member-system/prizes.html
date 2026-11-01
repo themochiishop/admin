@@ -6,75 +6,76 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>中奖奖品 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
     .tabs { flex-wrap: wrap; }
     .tabs button .cnt { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; }
-    .tabs button .cnt.zero { background: #cbd5e1; }
-    .step-h { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0f172a; margin: 18px 0 10px; }
+    .tabs button .cnt.zero { background: var(--line2); }
+    .step-h { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); margin: 18px 0 10px; }
     .step-h:first-child { margin-top: 0; }
     .step-h .n { width: 22px; height: 22px; border-radius: 50%; background: #db2777; color: #fff; font-size: .75rem; display: inline-flex; align-items: center; justify-content: center; }
     .periods { display: flex; gap: 6px; flex-wrap: wrap; }
-    .periods button { padding: 6px 12px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font-weight: 600; color: #475569; font-size: .85rem; }
-    .periods button.on { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .periods button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line2); background: var(--card); cursor: pointer; font-weight: 600; color: var(--text2); font-size: .85rem; }
+    .periods button.on { background: var(--navy); color: #fff; border-color: #0f172a; }
     .prize-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .prize-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; font-size: .85rem; color: #0f172a; text-align: left; }
+    .prize-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); cursor: pointer; font-size: .85rem; color: var(--ink); text-align: left; }
     .prize-chip:hover { border-color: #db2777; }
-    .prize-chip.on { border-color: #db2777; background: #fdf2f8; box-shadow: 0 0 0 2px rgba(219,39,119,.15); }
-    .pthumb { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: #f1f5f9; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.1rem; }
+    .prize-chip.on { border-color: #db2777; background: var(--pink-bg); box-shadow: 0 0 0 2px rgba(219,39,119,.15); }
+    .pthumb { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: var(--soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.1rem; }
     .wtable { width: 100%; border-collapse: collapse; font-size: .85rem; }
-    .wtable th, .wtable td { text-align: left; padding: 8px 6px; border-top: 1px solid #f1f5f9; vertical-align: middle; }
-    .wtable th { color: #64748b; font-weight: 600; font-size: .78rem; border-top: none; }
+    .wtable th, .wtable td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--soft); vertical-align: middle; }
+    .wtable th { color: var(--muted); font-weight: 600; font-size: .78rem; border-top: none; }
     .wtable td.act { text-align: right; white-space: nowrap; }
     .wtable .btn { padding: 5px 10px; font-size: .8rem; }
     @media (max-width: 640px) {
       .wtable thead { display: none; }
-      .wtable tr { display: block; border-top: 1px solid #e2e8f0; padding: 8px 0; }
+      .wtable tr { display: block; border-top: 1px solid var(--line); padding: 8px 0; }
       .wtable td { display: block; border: none; padding: 2px 0; }
       .wtable td.act { text-align: left; padding-top: 6px; }
     }
     .mpick { position: relative; }
-    .mres { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 2px; max-height: 260px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.08); }
-    .mres button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: .86rem; color: #0f172a; border-top: 1px solid #f1f5f9; }
+    .mres { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; margin-top: 2px; max-height: 260px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+    .mres button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: .86rem; color: var(--ink); border-top: 1px solid var(--soft); }
     .mres button:first-child { border-top: none; }
-    .mres button:hover { background: #fdf2f8; }
-    .chosen { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; margin-top: 4px; font-size: .88rem; }
+    .mres button:hover { background: var(--pink-bg); }
+    .chosen { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #bbf7d0; background: var(--green-bg); border-radius: 10px; margin-top: 4px; font-size: .88rem; }
     .chosen .x { margin-left: auto; }
     .dlv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
     @media (max-width: 600px) { .dlv { grid-template-columns: 1fr; } }
-    .dlv label { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; margin: 0; background: #fff; color: #0f172a; }
-    .dlv label:has(input:checked) { border-color: #db2777; background: #fdf2f8; }
+    .dlv label { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; margin: 0; background: var(--card); color: var(--ink); }
+    .dlv label:has(input:checked) { border-color: #db2777; background: var(--pink-bg); }
     .dlv input { width: auto; margin: 3px 0 0; }
     .dlv b { display: block; font-size: .92rem; }
-    .dlv span { font-size: .8rem; color: #64748b; }
+    .dlv span { font-size: .8rem; color: var(--muted); }
     .dlv.bad label { border-color: #fca5a5; }
     .req { color: #dc2626; }
-    .ship-form { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 14px; margin-top: 10px; }
+    .ship-form { background: var(--blue-bg); border: 1px solid #bae6fd; border-radius: 12px; padding: 14px; margin-top: 10px; }
     .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
     @media (max-width: 640px) { .grid3 { grid-template-columns: 1fr 1fr; } }
-    .addr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
+    .addr-box { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
     .photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
     .photos .ph-wrap { position: relative; }
     .photos .ph-wrap button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #dc2626; color: #fff; font-size: .7rem; cursor: pointer; }
     .note-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
     .note-row select { flex: 1 1 220px; margin: 0; }
     .note-row .btn { flex-shrink: 0; }
-    .note-mgr { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin: 8px 0 12px; }
-    .note-mgr h4 { font-size: .9rem; color: #0f172a; margin: 0 0 8px; }
+    .note-mgr { background: var(--soft2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin: 8px 0 12px; }
+    .note-mgr h4 { font-size: .9rem; color: var(--ink); margin: 0 0 8px; }
     .note-mgr .nrow { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
     .note-mgr .nrow input { margin: 0; }
     .note-mgr .nrow .btn { padding: 6px 10px; flex-shrink: 0; }
-    .addr-edit { background: #fff; border: 1px solid #fbcfe8; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .addr-edit { background: var(--card); border: 1px solid #fbcfe8; border-radius: 10px; padding: 12px; margin-top: 8px; }
     .addr-edit .grid3 { margin-top: 0; }
     .deadline.soon { color: #dc2626; font-weight: 700; }
-    .ready-box { background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; }
-    .ready-box b.h { color: #9a3412; }
+    .ready-box { background: var(--orange-bg); border: 1px solid #fdba74; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; }
+    .ready-box b.h { color: var(--orange-tx); }
     .ready-box ul { list-style: none; margin-top: 8px; }
     .ready-box li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid #fed7aa; font-size: .88rem; }
     .ready-box li:first-child { border-top: none; }
     .ready-box li .btn { margin-left: auto; padding: 5px 12px; font-size: .8rem; }
-    .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; align-self: flex-start; }
-    .tag-blue { background: #e0f2fe; color: #0369a1; }
+    .rno { font-size: .72rem; color: var(--muted); flex-shrink: 0; align-self: flex-start; }
+    .tag-blue { background: var(--blue-bg2); color: var(--blue-tx); }
     .item-row { display: flex; gap: 12px; align-items: flex-start; }
     .item-row .pthumb { width: 52px; height: 52px; }
   </style>
@@ -133,7 +134,7 @@
           </label>
 
           <div style="margin-bottom:12px">
-            <div style="font-size:.85rem;color:#475569">配送方式 <span class="req">*</span></div>
+            <div style="font-size:.85rem;color:var(--text2)">配送方式 <span class="req">*</span></div>
             <div class="dlv" id="dlv">
               <label><input type="radio" name="dlv" value="withOrder">
                 <div><b>📦 奖品随单发送（一般选这个）</b><span>跟会员下一张订单同包寄出，顺便鼓励再下单</span></div></label>
@@ -717,7 +718,7 @@
     function addrBox(w) {
       const a = w.address;
       const canEdit = w.delivery === "separate" && ["claimed", "approved", "shipped"].includes(w.status);
-      if (!a) return canEdit ? `<div class="addr-box" style="border-color:#fdba74;background:#fff7ed">⚠️ 单独包裹还没有收货地址
+      if (!a) return canEdit ? `<div class="addr-box" style="border-color:#fdba74;background:var(--orange-bg)">⚠️ 单独包裹还没有收货地址
           <div class="actions" style="margin-top:6px"><button class="btn btn-primary" data-act="editAddr">➕ 填写地址</button></div></div>` : "";
       const txt = `${a.name}\n${a.phone}\n${a.line1}${a.line2 ? ", " + a.line2 : ""}\n${a.postcode} ${a.city}, ${a.state}\n${a.country || "Malaysia"}`;
       return `

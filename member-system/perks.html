@@ -6,17 +6,18 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>额外福利 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
     .perk-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    .perk-table th, .perk-table td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
-    .perk-table th { color: #64748b; font-weight: 600; font-size: .82rem; }
+    .perk-table th, .perk-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    .perk-table th { color: var(--muted); font-weight: 600; font-size: .82rem; }
     .perk-table input[type=number] { width: 90px; margin: 0; }
-    .perk-table .cond { color: #64748b; font-size: .8rem; }
+    .perk-table .cond { color: var(--muted); font-size: .8rem; }
     .perk-table input[type=url] { margin: 0; min-width: 220px; }
     .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .85rem; }
     .switch input { width: auto; margin: 0; }
-    .lang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
-    .lang-box summary { cursor: pointer; font-size: .88rem; color: #475569; font-weight: 600; }
+    .lang-box { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+    .lang-box summary { cursor: pointer; font-size: .88rem; color: var(--text2); font-weight: 600; }
     .lang-box[open] summary { margin-bottom: 12px; }
     @media (max-width: 640px) { .perk-table .cond { display: none; } }
   </style>

@@ -6,18 +6,19 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>商店帮助 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
-    .lang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
-    .lang-box summary { cursor: pointer; font-size: .88rem; color: #475569; font-weight: 600; }
+    .lang-box { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+    .lang-box summary { cursor: pointer; font-size: .88rem; color: var(--text2); font-weight: 600; }
     .lang-box[open] summary { margin-bottom: 12px; }
     .faq-a { white-space: pre-line; color: #334155; font-size: .88rem; margin-top: 6px; }
     .item.off { opacity: .55; }
-    .item.draft { border-style: dashed; border-color: #f59e0b; background: #fffbeb; }
+    .item.draft { border-style: dashed; border-color: #f59e0b; background: var(--amber-bg); }
     .ord { display: inline-flex; gap: 4px; }
     .ord .btn { padding: 4px 10px; }
-    .cat-head { font-size: .82rem; font-weight: 800; color: #64748b; margin: 18px 0 8px; letter-spacing: .03em; }
+    .cat-head { font-size: .82rem; font-weight: 800; color: var(--muted); margin: 18px 0 8px; letter-spacing: .03em; }
     .editing { outline: 2px solid #db2777; }
-      .note-h { font-size: .8rem; color: #475569; font-weight: 600; margin: 4px 0 6px; }
+      .note-h { font-size: .8rem; color: var(--text2); font-weight: 600; margin: 4px 0 6px; }
     .grid3n { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
     @media (max-width: 640px) { .grid3n { grid-template-columns: 1fr; } }
 </style>
@@ -43,7 +44,7 @@
         <p class="muted" style="font-size:.82rem;margin:-6px 0 12px">显示在帮助中心最下面。会员在「会员俱乐部」分页看到俱乐部的 WhatsApp，在「商店帮助」分页看到商店的 WhatsApp + Shopee + TikTok。留空的就不显示。<br>
           按钮文字三语都可以改；没填的话自动用预设（俱乐部技术支援 / 联系客服）。</p>
 
-        <div class="lang-box" style="background:#fdf2f8;border-color:#fbcfe8">
+        <div class="lang-box" style="background:var(--pink-bg);border-color:#fbcfe8">
           <b style="font-size:.9rem">💎 俱乐部 WhatsApp</b>
           <div class="grid2" style="margin-top:8px">
             <label>号码 <input id="waClub" inputmode="tel" placeholder="60123456789"></label>

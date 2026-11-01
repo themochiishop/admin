@@ -303,6 +303,7 @@ export function renderAdminNav(active) {
     </nav>
     <div class="side-foot">
       <a href="#" id="clubSwitch" class="club-switch">俱乐部…</a>
+      <a href="#" id="themeBtn" class="side-link theme-btn"></a>
       <a href="../" class="side-link"><span class="ic">←</span><span class="tx">返回控制台</span></a>
       <a href="#" id="adminLogout" class="side-link"><span class="ic">⎋</span><span class="tx">登出</span></a>
     </div>
@@ -310,6 +311,20 @@ export function renderAdminNav(active) {
   document.getElementById("adminLogout").addEventListener("click", e => {
     e.preventDefault();
     signOut(auth);
+  });
+  // 白色 / 暗黑模式切换（记在这台设备）
+  const themeBtn = document.getElementById("themeBtn");
+  const paintTheme = () => {
+    const dark = document.documentElement.getAttribute("data-theme") === "dark";
+    themeBtn.innerHTML = dark ? '<span class="ic">☀️</span><span class="tx">白色模式</span>' : '<span class="ic">🌙</span><span class="tx">暗黑模式</span>';
+  };
+  paintTheme();
+  themeBtn.addEventListener("click", e => {
+    e.preventDefault();
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("msAdminTheme", next); } catch (err) {}
+    paintTheme();
   });
   const toggle = on => document.body.classList.toggle("side-open", on);
   document.getElementById("sideBurger").addEventListener("click", () => toggle(!document.body.classList.contains("side-open")));

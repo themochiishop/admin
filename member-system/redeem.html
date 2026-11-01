@@ -6,29 +6,30 @@
   <link rel="icon" type="image/jpeg" href="../logo.png">
   <title>兑换审核 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
   <style>
     .tabs { flex-wrap: wrap; }
     .tabs button .cnt { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; }
-    .tabs button .cnt.zero { background: #cbd5e1; }
-    .addr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
-    .ship-form { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 14px; margin-top: 10px; }
+    .tabs button .cnt.zero { background: var(--line2); }
+    .addr-box { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
+    .ship-form { background: var(--blue-bg); border: 1px solid #bae6fd; border-radius: 12px; padding: 14px; margin-top: 10px; }
     .ship-form .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
     .ship-form .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 10px; }
     @media (max-width: 640px) { .ship-form .grid3, .ship-form .grid4 { grid-template-columns: 1fr 1fr; } }
     .photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
     .photos .ph-wrap { position: relative; }
     .photos .ph-wrap button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #dc2626; color: #fff; font-size: .7rem; cursor: pointer; }
     .kind { font-size: .7rem; }
-    .tag-blue { background: #e0f2fe; color: #0369a1; }
-    .problem { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
-    .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; }
+    .tag-blue { background: var(--blue-bg2); color: var(--blue-tx); }
+    .problem { background: var(--orange-bg); border: 1px solid #fdba74; color: var(--orange-tx); border-radius: 10px; padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
+    .rno { font-size: .72rem; color: var(--muted); flex-shrink: 0; }
     .mode-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: .86rem; }
     .mode-row label { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
     .mode-row input { width: auto; margin: 0; }
-    .prize-alert { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #fff1f2; border: 1px solid #fda4af; color: #9f1239;
+    .prize-alert { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--rose-bg); border: 1px solid #fda4af; color: var(--rose-tx);
       border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; text-decoration: none; font-size: .9rem; }
-    .prize-alert:hover { background: #ffe4e6; }
+    .prize-alert:hover { background: var(--rose-bg2); }
     .prize-alert b { font-size: .95rem; }
     .prize-alert .go { margin-left: auto; font-weight: 700; white-space: nowrap; }
   </style>
