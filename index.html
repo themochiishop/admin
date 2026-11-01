@@ -214,14 +214,17 @@
         <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
       </div>
 
-      <!-- 4. 社交圈动态 my-admin-status -->
+      <!-- 4. Mochii Feed（会员系统） -->
       <div class="card card-status">
         <div>
-          <div class="card-icon">⚙️</div>
-          <div class="card-title">Admin Status Update</div>
-          <div class="card-desc">管理并发布店铺动态圈通知、更新个人 Profile 与系统状态。</div>
+          <div class="card-head">
+            <div class="card-icon">📰</div>
+            <a id="feedAlertLink" class="claim-link" href="member-system/feed.html" title="会员投稿待审核">⏳ 待审核<span id="feedAlertCount" class="claim-count" hidden></span></a>
+          </div>
+          <div class="card-title">Mochii Feed</div>
+          <div class="card-desc">发布店铺动态（公开帖会显示在网站首页）、审核会员投稿、管理头衔与权限。</div>
         </div>
-        <a href="my-admin-status/admin.html" class="card-btn btn-purple">状态动态管理 ⚙️</a>
+        <a href="member-system/feed.html" class="card-btn btn-purple">Feed 管理 📰</a>
       </div>
   <!-- 新增：订单录入 Order Entry -->
       <div class="card card-entry">
@@ -405,6 +408,13 @@
         window.clubShippedOrders = new Set(snap.docs.map(d => String(d.data().orderNo || "").replace(/\s/g, "").toUpperCase()).filter(Boolean));
         window.dispatchEvent(new Event("club-prizes"));
       }, e => console.warn("prizeWins shipped", e));
+      // 📰 Feed：会员投稿待审核
+      onSnapshot(query(collection(db, "feedPosts"), where("status", "==", "pending")), snap => {
+        const n = snap.size, fl = document.getElementById("feedAlertLink"), fc = document.getElementById("feedAlertCount");
+        fc.hidden = !n; fc.textContent = n > 99 ? "99+" : n;
+        fl.classList.toggle("has-todo", !!n);
+        fl.title = n ? `${n} 篇会员投稿待审核` : "会员投稿待审核（目前没有）";
+      }, e => console.warn("feed alert", e));
       onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])), snap => {
         const list = snap.docs.map(d => d.data());
         c.pClaimed = list.filter(p => p.status === "claimed").length;
