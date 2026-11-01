@@ -52,6 +52,10 @@
     .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
     @media (max-width: 640px) { .grid3 { grid-template-columns: 1fr 1fr; } }
     .addr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
+    .photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .photos .ph-wrap { position: relative; }
+    .photos .ph-wrap button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #dc2626; color: #fff; font-size: .7rem; cursor: pointer; }
     .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; align-self: flex-start; }
     .tag-blue { background: #e0f2fe; color: #0369a1; }
     .item-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -115,7 +119,7 @@
             </div>
           </div>
 
-          <div class="ship-form" id="addShip">
+          <div class="ship-form" id="addShip" data-key="__add">
             <b>🚚 运单号（选填，之后也可以补）</b>
             <div class="grid3" style="margin-top:10px">
               <label>运输公司
@@ -125,6 +129,8 @@
               <label>运单号 <input data-f="trackingNo"></label>
             </div>
             <label>查询链接（输入运单号后自动生成，可以改） <input data-f="trackingUrl" placeholder="https://…"></label>
+            <label style="margin-bottom:0">发货图片（最多 3 张，选填） <input type="file" accept="image/*" multiple data-f="photos"></label>
+            <div class="photos"></div>
           </div>
 
           <label style="margin-top:12px">给会员的留言（选填） <input id="fNote" maxlength="200" placeholder="例如：恭喜！奖品会和你的下一张订单一起寄出 🎁"></label>
@@ -159,7 +165,7 @@
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag,
-      normalizeUsername, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge
+      normalizeUsername, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, compressImage
     } from "./js/admin-common.js";
 
     // 每月抽奖的资料库（和 www.themochiishop.com/monthly-draw/ 同一个，只读）
@@ -221,8 +227,39 @@
       if (s.trackingUrl && !/^https:\/\//i.test(s.trackingUrl)) return "查询链接要以 https:// 开头";
       return "";
     }
+    // 📷 发货图片：表单 key（中奖 ID，新增表单用 __add）→ 还没保存的图片
+    const shipPhotos = {};
+    const MAX_PHOTOS = 3;
+    function photosHTML(key) {
+      return (shipPhotos[key] || []).map((p, i) =>
+        `<span class="ph-wrap"><img src="${esc(p)}" alt=""><button type="button" data-delphoto="${i}" title="删除">✕</button></span>`).join("");
+    }
+    function drawPhotos(box) { box.querySelector(".photos").innerHTML = photosHTML(box.dataset.key); }
+
     // 运单表单的互动（新增表单和列表共用）
     function bindShipEvents(root) {
+      root.addEventListener("click", e => {
+        const del = e.target.closest("[data-delphoto]");
+        if (!del) return;
+        const box = del.closest(".ship-form");
+        (shipPhotos[box.dataset.key] || []).splice(+del.dataset.delphoto, 1);
+        drawPhotos(box);
+      });
+      root.addEventListener("change", async e => {
+        const box = e.target.closest(".ship-form");
+        if (!box || e.target.dataset.f !== "photos") return;
+        const key = box.dataset.key;
+        const list = shipPhotos[key] = shipPhotos[key] || [];
+        const files = [...e.target.files];
+        if (files.length > MAX_PHOTOS - list.length) alert(`发货图片最多 ${MAX_PHOTOS} 张`);
+        for (const file of files.slice(0, MAX_PHOTOS - list.length)) {
+          let url = await compressImage(file, 640);
+          if (url.length > 220000) url = await compressImage(file, 420);
+          list.push(url);
+        }
+        e.target.value = "";
+        drawPhotos(box);
+      });
       root.addEventListener("input", e => {
         const box = e.target.closest(".ship-form");
         if (box && e.target.dataset.f === "trackingNo") autoUrl(box);
@@ -418,6 +455,8 @@
       box.querySelector('[data-f="carrier"]').value = "spx";
       box.querySelector(".other-name").classList.add("hidden");
       ["carrierName", "trackingNo", "trackingUrl"].forEach(f => box.querySelector(`[data-f="${f}"]`).value = "");
+      shipPhotos.__add = [];
+      drawPhotos(box);
       pick = { uid: "", image: "", winnerName: "", orderNo: "" };
       chooseMember("");
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
@@ -452,7 +491,8 @@
         createdAt: serverTimestamp(),
         createdBy: adminEmail,
       };
-      if (ship.trackingNo) data.shipping = { ...ship, by: adminEmail };
+      const addPhotos = shipPhotos.__add || [];
+      if (ship.trackingNo || addPhotos.length) data.shipping = { ...ship, photos: addPhotos, by: adminEmail };
       $("addBtn").disabled = true;
       try {
         const r = await addDoc(collection(db, "prizeWins"), data);
@@ -489,16 +529,18 @@
     }
     function shipInfo(w) {
       const s = w.shipping || {};
-      if (!s.trackingNo) return "";
-      return `<div class="addr-box">🚚 <b>${esc(s.carrierName || "")}</b> · <code>${esc(s.trackingNo)}</code>
+      if (!s.trackingNo && !(s.photos || []).length) return "";
+      return `<div class="addr-box">${s.trackingNo ? `🚚 <b>${esc(s.carrierName || "")}</b> · <code>${esc(s.trackingNo)}</code>` : "📷 发货图片"}
+        ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}" alt="">`).join("")}</div>` : ""}
         ${s.trackingUrl ? `<div class="meta"><a href="${esc(s.trackingUrl)}" target="_blank">🔗 ${esc(s.trackingUrl)}</a></div>` : ""}
         ${w.shippedAt ? `<div class="meta">发货 ${fmtDate(toDate(w.shippedAt), true)}</div>` : ""}</div>`;
     }
     function shipForm(w, buttons) {
       const s = w.shipping || {};
       const carrier = s.carrier || "spx";
+      if (!shipPhotos[w.id]) shipPhotos[w.id] = (s.photos || []).slice();
       return `
-        <div class="ship-form">
+        <div class="ship-form" data-key="${esc(w.id)}">
           <b>🚚 运单号</b>
           <div class="grid3" style="margin-top:10px">
             <label>运输公司 <select data-f="carrier">${carrierOpts(carrier)}</select></label>
@@ -506,6 +548,8 @@
             <label>运单号 <input data-f="trackingNo" value="${esc(s.trackingNo || "")}"></label>
           </div>
           <label>查询链接 <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
+          <label style="margin-bottom:0">发货图片（最多 ${MAX_PHOTOS} 张，选填） <input type="file" accept="image/*" multiple data-f="photos"></label>
+          <div class="photos">${photosHTML(w.id)}</div>
           <div class="actions">${buttons}</div>
         </div>`;
     }
@@ -584,6 +628,7 @@
       const w = wins.find(x => x.id === item.dataset.id);
       if (!w) return;
       if (act === "editShip") {   // 已发货 → 显示表单修改（状态不变）
+        shipPhotos[w.id] = ((w.shipping || {}).photos || []).slice();
         e.target.closest(".actions").outerHTML = shipForm(w, `<button class="btn btn-ghost" data-act="saveShip">💾 保存运单号</button>`);
         return;
       }
@@ -593,7 +638,8 @@
       if (act === "saveShip") {
         const err = shipError(ship, false);
         if (err) { alert(err); return; }
-        upd = { shipping: ship.trackingNo ? { ...ship, by: adminEmail } : null };
+        const photos = shipPhotos[w.id] || [];
+        upd = { shipping: ship.trackingNo || photos.length ? { ...ship, photos, by: adminEmail } : null };
       }
       if (act === "switchDlv") {
         const to = w.delivery === "separate" ? "withOrder" : "separate";
@@ -604,7 +650,7 @@
       if (act === "ship") {
         const err = shipError(ship, true);
         if (err) { alert(err); return; }
-        upd = { status: "shipped", shippedAt: serverTimestamp(), shipping: { ...ship, by: adminEmail } };
+        upd = { status: "shipped", shippedAt: serverTimestamp(), shipping: { ...ship, photos: shipPhotos[w.id] || [], by: adminEmail } };
         if (w.status === "claimed") upd.approvedAt = serverTimestamp();
       }
       if (act === "complete") {
@@ -620,6 +666,7 @@
       item.querySelectorAll("button").forEach(b => b.disabled = true);
       try {
         await updateDoc(doc(db, "prizeWins", w.id), upd);
+        delete shipPhotos[w.id];
         await loadWins();
       } catch (err) {
         alert("操作失败：" + err.message);
