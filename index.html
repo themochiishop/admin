@@ -260,10 +260,10 @@
         <div>
           <div class="card-head">
             <div class="card-icon">🎫</div>
-            <a id="memberAlertLink" class="claim-link" href="member-system/" title="会员兑换审核">🔔 兑换审核<span id="memberAlertCount" class="claim-count" hidden></span></a>
+            <a id="memberAlertLink" class="claim-link" href="member-system/" title="积分兑换 + 中奖奖品的审核与发货">🔔 兑换审核<span id="memberAlertCount" class="claim-count" hidden></span></a>
           </div>
           <div class="card-title">Member Club</div>
-          <div class="card-desc">审核会员积分兑换，管理会员、奖品与优惠券码库。</div>
+          <div class="card-desc">审核会员积分兑换与中奖奖品领取，管理会员、奖品与优惠券码库。</div>
         </div>
         <a href="member-system/members.html" class="card-btn btn-member">进入会员系统 🎫</a>
       </div>
@@ -352,7 +352,7 @@
     })();
   </script>
 
-  <!-- 兑换审核提醒：读取会员系统的待审核兑换（在本机登录过会员系统后台就会显示） -->
+  <!-- 兑换审核提醒：积分兑换 + 中奖奖品的待审核、待发货（在本机登录过会员系统后台就会显示） -->
   <script type="module">
     import { auth, db } from "./member-system/js/firebase-config.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -372,13 +372,32 @@
       } catch (e) { return; }
       started = true;
 
-      onSnapshot(query(collection(db, "redemptions"), where("status", "==", "pending")), snap => {
-        const n = snap.size;
+      // 积分兑换：待审核 + 实体奖品待发货（含配送异常）；中奖奖品：会员已领取（待审核）+ 待发货
+      const c = { rPending: 0, rShip: 0, pClaimed: 0, pShip: 0 };
+      function show() {
+        const n = c.rPending + c.rShip + c.pClaimed + c.pShip;
         count.hidden = !n;
-        count.textContent = n;
+        count.textContent = n > 99 ? "99+" : n;
         link.classList.toggle("has-todo", !!n);
-        link.title = n ? `${n} 个兑换申请待审核` : "会员兑换审核（目前没有待审核）";
-      }, () => { count.hidden = true; });
+        const parts = [];
+        if (c.rPending) parts.push(`积分兑换待审核 ${c.rPending}`);
+        if (c.rShip) parts.push(`兑换奖品待发货 ${c.rShip}`);
+        if (c.pClaimed) parts.push(`中奖奖品待审核 ${c.pClaimed}`);
+        if (c.pShip) parts.push(`中奖奖品待发货 ${c.pShip}`);
+        link.title = n ? parts.join(" · ") : "兑换审核（目前没有待处理的要求）";
+      }
+      onSnapshot(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])), snap => {
+        const list = snap.docs.map(d => d.data());
+        c.rPending = list.filter(r => r.status === "pending").length;
+        c.rShip = list.filter(r => r.kind === "gift" && r.status !== "pending").length;
+        show();
+      }, e => console.warn("redemptions alert", e));
+      onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])), snap => {
+        const list = snap.docs.map(d => d.data());
+        c.pClaimed = list.filter(p => p.status === "claimed").length;
+        c.pShip = list.filter(p => p.status === "approved").length;
+        show();
+      }, e => console.warn("prizeWins alert", e));
     });
   </script>
   <script>
