@@ -633,6 +633,7 @@
       { k: "pClaimed", ic: "🏆", t: "中奖待审核",     href: "/member-system/prizes.html#claimed", src: "ms" },
       { k: "pShip",    ic: "🚚", t: "中奖待发货",     href: "/member-system/prizes.html#approved", src: "ms" },
       { k: "feed",     ic: "⏳", t: "Feed 投稿待审核", href: "/member-system/feed.html#pending",   src: "ms" },
+      { k: "reports",  ic: "🚩", t: "Feed 检举待处理", href: "/member-system/feed.html#reports",   src: "ms" },
       { k: "claims",   ic: "🎀", t: "领奖追踪未寄出", href: "/draw_tournament/claims.html",       src: "draw" },
     ];
     const n = {};             // 数字；null = 读取中
@@ -692,6 +693,9 @@
           onSnapshot(query(collection(db, "feedPosts"), where("status", "==", "pending")), snap => {
             n.feed = snap.size; render();
           }, () => { n.feed = 0; render(); });
+          onSnapshot(query(collection(db, "feedReports"), where("status", "==", "open")), snap => {
+            n.reports = new Set(snap.docs.map(d => d.data().targetKey)).size; render();
+          }, () => { n.reports = 0; render(); });
         });
       } catch (e) { console.warn("会员系统提醒载入失败", e); login.ms = false; render(); }
     })();
