@@ -522,7 +522,7 @@
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyTestModeUI); else applyTestModeUI();
     // ===== 🔐 登录：只有这两个 Google 账号能写入（与 Firebase 规则一致）=====
-    const ALLOWED_ADMIN_EMAILS = ['xiaomah09@gmail.com', 'mail@themochiishop.com'];
+    const ALLOWED_ADMIN_EMAILS = ['xiaomah09@gmail.com', 'mail@themochiishop.com', 'ivychongsingyee@gmail.com'];
     let __adminListenersStarted = false;
 
     function isAllowedAdmin(user) {
