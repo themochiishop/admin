@@ -53,7 +53,7 @@
           <label>小标题（留空 = Mochii Feed） <input id="fTitle" maxlength="20" placeholder="Mochii Feed"></label>
           <label>文字（留空 = 看看最新动态） <input id="fText" maxlength="40" placeholder="看看最新动态"></label>
         </div>
-        <label>箭头导向
+        <label>箭头导向（预设 = ✨ Mochii Feed）
           <select id="fLinkType" class="link-type"></select>
         </label>
         <label id="fLinkBox" class="hidden">网址 <input id="fLink" type="url" placeholder="https://…"></label>
@@ -172,11 +172,12 @@
 
     const LINKS = [
       ["", "不加链接"],
+      ["feed.html", "✨ Mochii Feed"],
       ["shop.html", "🛍️ 兑换商城"],
       ["rewards.html", "🧾 兑换记录"],
       ["account.html", "💎 会员等级"],
       ["points.html", "📊 积分明细"],
-      ["bind.html", "🔗 绑定账号"],
+      ["profile.html#bind", "🔗 关联平台"],
       ["profile.html", "👤 个人资料"],
       ["custom", "其他网址（https://…）"],
     ];
@@ -468,7 +469,7 @@
         $("fOn").checked = feed.on !== false;
         $("fTitle").value = feed.title || "";
         $("fText").value = feed.text || "";
-        setLink("f", feed.link || "");
+        setLink("f", feed.link === undefined ? "feed.html" : feed.link);   // 没设定过：预设导向 Mochii Feed
         const fi = feed.i18n || {};
         $("fEnTitle").value = (fi.en || {}).title || ""; $("fEnText").value = (fi.en || {}).text || "";
         $("fMsTitle").value = (fi.ms || {}).title || ""; $("fMsText").value = (fi.ms || {}).text || "";
