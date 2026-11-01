@@ -174,7 +174,7 @@
       deleteDoc, serverTimestamp, writeBatch, getCountFromServer
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance,
+      requireAdmin, renderAdminNav, logAdmin, esc, toDate, fmtDate, computeBalance,
       platformTag, normalizeUsername, TIER_LABELS, TIER_ORDER,
       normalizePhone, isValidPhone, fmtPhone, waLink
     } from "./js/admin-common.js";
@@ -397,6 +397,7 @@
     });
 
     // ---------- 🏷️ 内部会员 ----------
+    const mName = () => (currentMember && currentMember.name) || "会员";
     const INTERNAL_BONUS = 888;   // 开通内部会员时送的积分（只送一次）
     let currentMember = null;
     $("iSave").addEventListener("click", async () => {
@@ -420,6 +421,7 @@
           });
         }
         await batch.commit();
+        logAdmin("member", on ? `把「${mName()}」设为内部会员${giveBonus ? `（送 ${INTERNAL_BONUS} 分）` : ""}` : `取消「${mName()}」的内部会员`, `member.html?uid=${encodeURIComponent(uid)}`);
         setMsg($("iMsg"), "已保存 ✅", "ok");
         await load();
       } catch (err) {
@@ -437,6 +439,7 @@
       try {
         await updateDoc(doc(db, "members", uid), { blackElite: { on, by: adminEmail, at: serverTimestamp() } });
         setMsg($("bMsg"), "已保存 ✅ 下一次同步（1 小时内）生效", "ok");
+        logAdmin("member", on ? `邀请「${name}」成为 Black Elite` : `取消「${name}」的 Black Elite`, `member.html?uid=${encodeURIComponent(uid)}`);
         currentMember.blackElite = { on };
       } catch (err) {
         setMsg($("bMsg"), "保存失败：" + err.message + "（请确认 Firestore 规则已加上 blackElite）", "err");
@@ -462,6 +465,7 @@
           createdAt: serverTimestamp()
         });
         $("adjustForm").reset();
+        logAdmin("points", `给「${mName()}」${delta > 0 ? "加" : "扣"} ${Math.abs(delta)} 分：${reason}`, `member.html?uid=${encodeURIComponent(uid)}`);
         setMsg($("adjMsg"), "已调整 ✅", "ok");
         await load();
       } catch (err) {
@@ -486,6 +490,7 @@
       $("pBtn").disabled = true;
       try {
         await updateDoc(doc(db, "members", uid), data);
+        logAdmin("member", `更正了「${mName()}」的会员资料`, `member.html?uid=${encodeURIComponent(uid)}`);
         setMsg($("pMsg"), "已保存 ✅", "ok");
         await load();
       } catch (err) {
@@ -521,6 +526,7 @@
         });
         await batch.commit();
         $("bindForm").reset();
+        logAdmin("member", `帮「${mName()}」绑定 ${platform === "shopee" ? "Shopee" : "TikTok"} 账号 ${username}`, `member.html?uid=${encodeURIComponent(uid)}`);
         setMsg($("bindMsg"), "已绑定 ✅ 积分会在下次计算积分时入账（每小时自动，或在表格按同步）", "ok");
         await load();
       } catch (err) {
@@ -551,6 +557,7 @@
         batch.delete(doc(db, "bindings", id));
         await batch.commit();
         setMsg($("bindMsg"), "已解除绑定", "ok");
+        logAdmin("member", `解除「${mName()}」的 ${b.platform === "shopee" ? "Shopee" : "TikTok"} 账号 ${b.username}${note.trim() ? "（" + note.trim() + "）" : ""}`, `member.html?uid=${encodeURIComponent(uid)}`);
         await load();
       } catch (err) {
         alert("解除失败：" + err.message);
@@ -604,16 +611,17 @@
           if ($("fpTitle").value) await setDoc(doc(db, "feedTitles", uid), { title: $("fpTitle").value, name, at: serverTimestamp() });
           else await deleteDoc(doc(db, "feedTitles", uid));
           setMsg($("fpMsg"), "头衔已更新 ✅（会员下次打开 Feed 时生效）", "ok");
+          logAdmin("feed", `更改「${name}」的 Feed 头衔`, `member.html?uid=${encodeURIComponent(uid)}`);
         } catch (e) { setMsg($("fpMsg"), "失败：" + e.message, "err"); }
       };
       $("fpResetAv").onclick = async () => {
         if (!confirm(`把 ${name} 的头像重设为预设（名字第一个字）？`)) return;
-        try { await updateDoc(doc(db, "memberFeed", uid), { avatar: "", updatedAt: serverTimestamp() }); await loadFeedPanel(); setMsg($("fpMsg"), "头像已重设 ✅", "ok"); }
+        try { await updateDoc(doc(db, "memberFeed", uid), { avatar: "", updatedAt: serverTimestamp() }); await loadFeedPanel(); setMsg($("fpMsg"), "头像已重设 ✅", "ok"); logAdmin("feed", `重设「${name}」的 Feed 头像`, `member.html?uid=${encodeURIComponent(uid)}`); }
         catch (e) { setMsg($("fpMsg"), "失败：" + e.message, "err"); }
       };
       $("fpClearBio").onclick = async () => {
         if (!confirm(`清除 ${name} 的简介？`)) return;
-        try { await updateDoc(doc(db, "memberFeed", uid), { bio: "", updatedAt: serverTimestamp() }); await loadFeedPanel(); setMsg($("fpMsg"), "简介已清除 ✅", "ok"); }
+        try { await updateDoc(doc(db, "memberFeed", uid), { bio: "", updatedAt: serverTimestamp() }); await loadFeedPanel(); setMsg($("fpMsg"), "简介已清除 ✅", "ok"); logAdmin("feed", `清除「${name}」的 Feed 简介`, `member.html?uid=${encodeURIComponent(uid)}`); }
         catch (e) { setMsg($("fpMsg"), "失败：" + e.message, "err"); }
       };
     }

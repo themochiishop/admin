@@ -117,7 +117,7 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, PERK_DEFAULTS, FOLLOW_DEFAULTS } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, logAdmin, esc, PERK_DEFAULTS, FOLLOW_DEFAULTS } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("perks");
@@ -187,6 +187,7 @@
     async function save(patch) {
       cfg = { ...cfg, ...patch, updatedAt: serverTimestamp(), updatedBy: adminEmail };
       await setDoc(ref, cfg);
+      logAdmin("settings", "修改了额外福利设定", "perks.html");
       const snap = await getDoc(ref);
       cfg = snap.exists() ? snap.data() : {};
     }

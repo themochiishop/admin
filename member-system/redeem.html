@@ -85,7 +85,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
-      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode, readyWinners
+      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode, logAdmin, readyWinners
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -540,6 +540,9 @@
           if (!confirm("手动标记这笔兑换已完成？")) ok = false;
           else await updateDoc(doc(db, "redemptions", r.id), { status: "completed", completedAt: serverTimestamp(), adminCompleted: true });
         }
+        const LOG = { approve: "批准兑换", reject: "拒绝兑换", cancel: "取消兑换并退回积分", ship: "兑换已发货",
+          problem: "标记配送异常", complete: "标记兑换完成", toggleTest: isTest(r) ? "改为真实兑换" : "改为测试兑换" };
+        if (ok && LOG[act]) logAdmin("redeem", `${LOG[act]}：${(members[r.uid] || {}).name || "会员"} 的「${r.rewardName}」${redeemCode(r.id)}`, "redeem.html");
         if (ok) await load();
         else buttons.forEach(b => b.disabled = false);
       } catch (err) {
@@ -553,6 +556,7 @@
       trackTpl = { spx: $("tplSpx").value.trim(), jnt: $("tplJnt").value.trim() };
       try {
         await setDoc(doc(db, "settings", "shipping"), { trackTpl, updatedAt: serverTimestamp() }, { merge: true });
+        logAdmin("settings", "修改了运输公司查询链接", "redeem.html");
         $("tplMsg").textContent = "已保存 ✅"; $("tplMsg").className = "msg ok";
       } catch (err) { $("tplMsg").textContent = "保存失败：" + err.message; $("tplMsg").className = "msg err"; }
     });

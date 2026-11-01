@@ -181,7 +181,7 @@
       collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit,
       serverTimestamp, writeBatch, getCountFromServer
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, refreshFeedBadge, esc, toDate, fmtDate, compressImage, TIER_LABELS } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, refreshFeedBadge, logAdmin, esc, toDate, fmtDate, compressImage, TIER_LABELS } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("feed");
@@ -285,6 +285,7 @@
         }, { merge: true });
         await loadCfg();
         setMsg("permMsg", "已保存 ✅", "ok");
+        logAdmin("settings", "修改了 Feed 权限设定", "feed.html");
       } catch (err) { setMsg("permMsg", "保存失败：" + err.message, "err"); }
     };
 
@@ -327,6 +328,7 @@
         await batch.commit();
         $("postForm").reset(); pics = []; renderPics(); $("pRank").innerHTML = opt(RANKS, -1);
         setMsg("pMsg", "已发布 ✅", "ok");
+        logAdmin("feed", `发布了店铺帖子：${(text || "（图片）").slice(0, 40)}`, "feed.html#all");
       } catch (err) {
         setMsg("pMsg", "发布失败：" + err.message + (/size|exceed/i.test(err.message) ? "（图片太大，少放一张试试）" : ""), "err");
       } finally { $("pSend").disabled = false; }
@@ -356,7 +358,7 @@
           <button class="btn btn-ghost" data-act="cmts">💬 回复（${p.nCmt}）</button>
           <button class="btn btn-ghost" data-act="del">🗑 删除</button>`;
       return `
-        <div class="item" data-id="${esc(p.id)}">
+        <div class="item" data-id="${esc(p.id)}" data-author="${esc(p.authorName || "")}">
           <div class="post-row">
             ${img ? `<img class="thumb" src="${img}" alt="">` : ""}
             <div class="body">
@@ -396,7 +398,7 @@
       }).join("");
       box.querySelectorAll("[data-cdel]").forEach(b => b.onclick = async () => {
         if (!confirm("删除这条回复？")) return;
-        try { await deleteDoc(doc(db, "feedPosts", id, "comments", b.dataset.cdel)); await loadComments(box, id); }
+        try { await deleteDoc(doc(db, "feedPosts", id, "comments", b.dataset.cdel)); logAdmin("feed", "删除了一条 Feed 回复", "feed.html#all"); await loadComments(box, id); }
         catch (err) { alert("删除失败：" + err.message); }
       });
     }
@@ -405,9 +407,18 @@
       container.querySelectorAll(".item[data-id]").forEach(card => {
         const id = card.dataset.id;
         const post = doc(db, "feedPosts", id);
+        const who = card.dataset.author || "会员";
+        const LOG = { rank: "更改了谁能看", pin: "置顶 / 取消置顶", approve: "批准公开", reject: "退回", del: "删除", edit: "修改了文字" };
         card.querySelectorAll("[data-act]").forEach(el => {
           const act = el.dataset.act;
-          const run = async fn => { el.disabled = true; try { await fn(); await reload(); } catch (err) { alert("失败：" + err.message); el.disabled = false; } };
+          const run = async fn => {
+            el.disabled = true;
+            try {
+              await fn();
+              if (LOG[act]) logAdmin("feed", `${LOG[act]}：${who} 的 Feed 帖子`, act === "del" ? "feed.html#all" : "feed.html#all");
+              await reload();
+            } catch (err) { alert("失败：" + err.message); el.disabled = false; }
+          };
           if (act === "rank") el.onchange = () => run(() => updateDoc(post, { minRank: +el.value }));
           if (act === "pin") el.onclick = () => run(() => updateDoc(post, { pinned: el.textContent.includes("置顶") && !el.textContent.includes("取消") }));
           if (act === "approve") el.onclick = () => run(() => updateDoc(post, { status: "published", reviewedAt: serverTimestamp() }));
@@ -500,6 +511,7 @@
         await setDoc(doc(db, "feedConfig", "main"), { titles: out, updatedAt: serverTimestamp() }, { merge: true });
         cfg.titles = out; await loadCfg(); renderTitleRows(); loadAssigned();
         setMsg("titleMsg", "已保存 ✅", "ok");
+        logAdmin("settings", "修改了 Feed 头衔清单", "feed.html");
       } catch (err) { setMsg("titleMsg", "保存失败：" + err.message, "err"); }
     };
 
@@ -511,6 +523,7 @@
     async function setTitle(uid, name, title) {
       if (title) await setDoc(doc(db, "feedTitles", uid), { title, name: name || "", at: serverTimestamp() });
       else await deleteDoc(doc(db, "feedTitles", uid));
+      logAdmin("feed", title ? `指定「${name || "会员"}」的 Feed 头衔` : `移除「${name || "会员"}」的 Feed 头衔`, "feed.html");
       await loadAssigned();
     }
 

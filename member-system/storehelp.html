@@ -135,7 +135,7 @@
     import {
       collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, setDoc, writeBatch, serverTimestamp, deleteField
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, logAdmin, esc } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("storehelp");
@@ -283,6 +283,7 @@
         } else if (b.dataset.del) {
           if (!confirm(`删除这一题？\n\n${r.q}`)) return;
           await deleteDoc(doc(db, "storeFaq", id));
+          logAdmin("content", `删除商店帮助问题：${(r.q || "").slice(0, 40)}`, "storehelp.html");
           if (editing === id) resetForm();
         } else if (b.dataset.edit) {
           startEdit(r);
@@ -348,6 +349,7 @@
           const max = rows.reduce((m, r) => Math.max(m, r.sortOrder ?? 0), -1);
           await addDoc(collection(db, "storeFaq"), { ...data, sortOrder: max + 1, createdAt: serverTimestamp() });
         }
+        logAdmin("content", `${editing ? "修改" : "新增"}商店帮助问题：${q.slice(0, 40)}`, "storehelp.html");
         resetForm();
         setMsg("已保存 ✅", "ok");
         await load();
@@ -394,6 +396,7 @@
       $("cSave").disabled = true;
       try {
         await setDoc(doc(db, "settings", "help"), data, { merge: true });
+        logAdmin("settings", "修改了商店帮助的联络资料", "storehelp.html");
         $("waClub").value = data.waClub; $("waStore").value = data.waStore;
         msg.textContent = "已保存 ✅"; msg.className = "msg ok";
       } catch (err) {

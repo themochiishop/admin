@@ -207,7 +207,7 @@
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag, normalizePhone, isValidPhone,
-      normalizeUsername, readyWinners, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, compressImage
+      normalizeUsername, readyWinners, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, logAdmin, compressImage
     } from "./js/admin-common.js";
 
     // 每月抽奖的资料库（和 www.themochiishop.com/monthly-draw/ 同一个，只读）
@@ -598,6 +598,7 @@
       $("nmSave").disabled = true;
       try {
         await setDoc(doc(db, "settings", "prizeNotes"), { ...next, updatedAt: serverTimestamp(), updatedBy: adminEmail });
+        logAdmin("settings", "修改了中奖奖品说明", "prizes.html");
         notes = next; fillNoteSel();
         $("nmList").innerHTML = notes.list.map(nmRow).join("");
         nmMsg("已保存 ✅", "ok");
@@ -662,6 +663,7 @@
       try {
         const r = await addDoc(collection(db, "prizeWins"), data);
         addMsg(`✅ 已添加 ${redeemCode(r.id)}：${prizeName} → ${(members[pick.uid] || {}).name || ""}`, "ok");
+        logAdmin("prize", `添加中奖奖品：${(members[pick.uid] || {}).name || "会员"} 的「${prizeName}」${redeemCode(r.id)}`, "prizes.html#unclaimed");
         resetForm();
         tab = "unclaimed";
         document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
@@ -897,6 +899,9 @@
       item.querySelectorAll("button").forEach(b => b.disabled = true);
       try {
         await updateDoc(doc(db, "prizeWins", w.id), upd);
+        const LOG = { saveAddr: "修改中奖奖品收货地址", extend: "延长领取期限", reopen: "恢复为待领取", saveShip: "更新运单号",
+          switchDlv: "更改配送方式", approve: "批准中奖奖品", ship: "中奖奖品已发货", complete: "标记中奖奖品完成", cancel: "取消中奖奖品" };
+        if (LOG[act]) logAdmin("prize", `${LOG[act]}：${(members[w.uid] || {}).name || "会员"} 的「${w.prizeName}」${redeemCode(w.id)}`, "prizes.html");
         delete shipPhotos[w.id];
         await loadWins();
       } catch (err) {

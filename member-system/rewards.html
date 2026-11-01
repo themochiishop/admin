@@ -135,7 +135,7 @@
     import {
       collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, writeBatch, serverTimestamp, deleteField, Timestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, COUPON_FORMATS, DEFAULT_SHOP_CATS, catOf, toDate, fmtDate } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, logAdmin, esc, COUPON_FORMATS, DEFAULT_SHOP_CATS, catOf, toDate, fmtDate } from "./js/admin-common.js";
     const $ = id => document.getElementById(id);
     renderAdminNav("rewards");
 
@@ -310,6 +310,7 @@ $("rimageRemove").addEventListener("click", () => {
       $("catSave").disabled = true;
       try {
         await setDoc(doc(db, "settings", "shop"), { categories: clean, updatedAt: serverTimestamp() }, { merge: true });
+        logAdmin("settings", "修改了商城分类", "rewards.html");
         cats = clean;
         renderCats(); render();
         $("catMsg").textContent = "已保存 ✅"; $("catMsg").className = "msg ok";
@@ -347,6 +348,7 @@ $("rimageRemove").addEventListener("click", () => {
         const batch = writeBatch(db);
         rewards.forEach((r, i) => batch.update(doc(db, "rewards", r.id), { sortOrder: (i + 1) * 10 }));
         await batch.commit();
+        logAdmin("content", "调整了商城奖品排序", "rewards.html");
         await load();
       } catch (err) { alert("保存排序失败：" + err.message); }
       finally { $("sortSave").disabled = false; }
@@ -472,6 +474,7 @@ showPreview(currentImage);
         else rid = (await addDoc(collection(db, "rewards"), { ...data, createdAt: serverTimestamp() })).id;
         await setDoc(doc(db, "rewardSecrets", rid), { couponCode: code, updatedAt: serverTimestamp() });
         $("formPanel").classList.add("hidden");
+        logAdmin("content", `${id ? "修改" : "新增"}商城奖品「${data.name}」`, "rewards.html");
         await load();
       } catch (err) {
         $("formMsg").textContent = "保存失败：" + err.message;
@@ -504,6 +507,7 @@ showPreview(currentImage);
           // 重新上架一个已过下架时间的奖品：清掉下架时间
           if (!r.active && toDate(r.endAt) && toDate(r.endAt) <= new Date()) patch.endAt = null;
           await updateDoc(doc(db, "rewards", r.id), patch);
+          logAdmin("content", `${r.active ? "下架" : "上架"}商城奖品「${r.name}」`, "rewards.html");
           await load();
         } catch (err) { alert("失败：" + err.message); e.target.disabled = false; }
       }
@@ -532,6 +536,7 @@ showPreview(currentImage);
             }));
             await batch.commit();
           }
+          logAdmin("content", `给「${r.name}」补充 ${fresh.length} 组券码`, "rewards.html");
           await load();
           alert(`已加入 ${fresh.length} 组券码` + (skipped.length ? `，跳过 ${skipped.length} 组（已存在或含有 /）` : ""));
         } catch (err) {

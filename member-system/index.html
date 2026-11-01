@@ -116,6 +116,11 @@
     .t-recent .list li { padding: 7px 0; }
     .t-recent .ic { width: 20px; text-align: center; flex-shrink: 0; }
     .none { color: var(--faint); font-size: .8rem; padding: 4px 0; }
+    .chips { display: inline-flex; gap: 4px; }
+    .chips button { font: inherit; font-size: .72rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--muted); cursor: pointer; }
+    .chips button.on { background: #db2777; border-color: #db2777; color: #fff; }
+    .list .q { color: var(--muted); }
+    .list .by { color: var(--faint); font-size: .72rem; }
 
     /* 系统：俱乐部 + 邮件提醒 */
     .sys-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
@@ -201,7 +206,10 @@
 
         <!-- 🕒 最近动态 -->
         <section class="tile t-recent">
-          <div class="tile-h"><span>🕒 最近动态</span></div>
+          <div class="tile-h"><span>🕒 最近动态</span>
+            <span class="chips" id="recentChips">
+              <button data-f="all" class="on">全部</button><button data-f="member">会员</button><button data-f="feed">Feed</button><button data-f="admin">管理员</button>
+            </span></div>
           <ul class="list scroll" id="recentList"><li class="none">载入中…</li></ul>
         </section>
 
@@ -236,7 +244,7 @@
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners
     } from "./js/admin-common.js";
     import {
-      collection, getDocs, getDoc, doc, query, where, onSnapshot
+      collection, getDocs, getDoc, doc, query, where, onSnapshot, orderBy, limit
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const $ = id => document.getElementById(id);
@@ -399,16 +407,29 @@
       $("stockList").innerHTML = warn.map(w => `
           <li><span class="nm">${esc(w.name)}</span><span class="tag ${w.bad ? "tag-bad" : "tag-warn"}">剩 ${w.left} ${w.unit}</span></li>`).join("");
 
-      // 最近动态
+      // 最近动态：会员、Feed、管理员三类（Feed 和管理员记录另外读取，慢一点出现）
       const ev = [];
-      Object.values(members).forEach(m => { const d = toDate(m.createdAt); if (d) ev.push({ d, ic: "🆕", html: `<a href="member.html?uid=${encodeURIComponent(m.uid)}"><b>${esc(m.name || "新会员")}</b> 注册成为会员</a>` }); });
-      redemptions.forEach(r => { const d = toDate(r.createdAt); if (d && !r.test) ev.push({ d, ic: "🎁", html: `<a href="redeem.html${r.status === "pending" ? "#pending" : ""}"><b>${esc(nameOf(r.uid))}</b> 兑换 ${esc(r.rewardName || "")}（${r.cost || 0} 分）</a>` }); });
-      wins.forEach(w => { const d = toDate(w.claimedAt); if (d) ev.push({ d, ic: "🏆", html: `<a href="prizes.html${w.status === "claimed" ? "#claimed" : ""}"><b>${esc(nameOf(w.uid))}</b> 领取了 ${esc(w.prizeName || "中奖奖品")}</a>` }); });
-      fS.docs.forEach(d => { const p = d.data(), at = toDate(p.createdAt); if (at) ev.push({ d: at, ic: "📰", html: `<a href="feed.html#pending"><b>${esc(p.authorName || nameOf(p.authorUid))}</b> 发了帖子，等你审核</a>` }); });
-      ev.sort((a, b) => b.d - a.d);
-      $("recentList").innerHTML = ev.length
-        ? ev.slice(0, 20).map(e => `<li><span class="ic">${e.ic}</span><span class="nm">${e.html}</span><span class="rt">${ago(e.d)}</span></li>`).join("")
-        : `<li class="none">还没有动态</li>`;
+      const add = (cat, d, ic, html) => { if (d) ev.push({ cat, d, ic, html }); };
+      const mLink = (uid, name) => `<a href="member.html?uid=${encodeURIComponent(uid)}"><b>${esc(name)}</b></a>`;
+      Object.values(members).forEach(m => add("member", toDate(m.createdAt), "🆕", `${mLink(m.uid, m.name || "新会员")} 注册成为会员`));
+      redemptions.filter(r => !r.test).forEach(r => {
+        add("member", toDate(r.createdAt), "🎁", `${mLink(r.uid, nameOf(r.uid))} <a href="redeem.html${r.status === "pending" ? "#pending" : ""}">兑换 ${esc(r.rewardName || "")}（${r.cost || 0} 分）</a>`);
+        add("member", toDate(r.addressUpdatedAt), "📦", `${mLink(r.uid, nameOf(r.uid))} <a href="redeem.html">修改了兑换 ${esc(r.rewardName || "")} 的收货地址</a>`);
+        add("member", toDate(r.receivedAt), "✅", `${mLink(r.uid, nameOf(r.uid))} <a href="redeem.html#done">确认收到 ${esc(r.rewardName || "")}</a>`);
+      });
+      wins.forEach(w => {
+        add("member", toDate(w.claimedAt), "🏆", `${mLink(w.uid, nameOf(w.uid))} <a href="prizes.html${w.status === "claimed" ? "#claimed" : ""}">领取了 ${esc(w.prizeName || "中奖奖品")}</a>`);
+        if (!w.addressUpdatedBy) add("member", toDate(w.addressUpdatedAt), "📦", `${mLink(w.uid, nameOf(w.uid))} <a href="prizes.html">修改了 ${esc(w.prizeName || "中奖奖品")} 的收货地址</a>`);
+        if (!w.adminCompleted) add("member", toDate(w.completedAt), "✅", `${mLink(w.uid, nameOf(w.uid))} <a href="prizes.html#completed">确认收到 ${esc(w.prizeName || "中奖奖品")}</a>`);
+      });
+      bS.docs.forEach(d => {
+        const b = d.data();
+        if (b.verifyOrder === "admin") return;   // 管理员代绑的算在「管理员」
+        add("member", toDate(b.createdAt), "🔗", `${mLink(b.uid, nameOf(b.uid))} 绑定了 ${b.platform === "shopee" ? "Shopee" : "TikTok"} 账号 ${esc(b.username || "")}`);
+      });
+      recent = ev;
+      renderRecent();
+      loadRecentExtra(nameOf);
 
       // 本月寿星（生日格式 YYYY-MM-DD）
       const now = new Date(), mm = now.getMonth() + 1, dd = now.getDate();
@@ -439,6 +460,62 @@
       todo.ready.n = null; renderTodo();
       readyWinners().then(list => { todo.ready.n = list.length; renderTodo(); })
         .catch(e => { console.warn("readyWinners", e); todo.ready.n = 0; renderTodo(); });
+    }
+
+    // ---------- 🕒 最近动态 ----------
+    let recent = [], extra = [], recentFilter = "all", logNote = "";
+    const ICON_ADMIN = { redeem: "🎁", prize: "🏆", member: "👤", points: "➕", feed: "📰", content: "📝", settings: "⚙️" };
+    function renderRecent() {
+      const list = [...recent, ...extra].filter(e => recentFilter === "all" || e.cat === recentFilter).sort((a, b) => b.d - a.d).slice(0, 40);
+      let html = list.map(e => `<li><span class="ic">${e.ic}</span><span class="nm">${e.html}</span><span class="rt">${ago(e.d)}</span></li>`).join("");
+      if (logNote && (recentFilter === "admin" || recentFilter === "all")) html += `<li class="none">${logNote}</li>`;
+      $("recentList").innerHTML = html || `<li class="none">还没有动态</li>`;
+    }
+    $("recentChips").addEventListener("click", e => {
+      const b = e.target.closest("button[data-f]");
+      if (!b) return;
+      recentFilter = b.dataset.f;
+      document.querySelectorAll("#recentChips button").forEach(x => x.classList.toggle("on", x === b));
+      renderRecent();
+    });
+
+    // Feed（最近 15 篇帖子 + 每篇最新 5 条回复）和管理员操作记录
+    async function loadRecentExtra(nameOf) {
+      const out = [];
+      const short = s => { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > 30 ? s.slice(0, 30) + "…" : s; };
+      try {
+        const ps = await getDocs(query(collection(db, "feedPosts"), orderBy("createdAt", "desc"), limit(15)));
+        const posts = ps.docs.map(d => ({ id: d.id, ...d.data() }));
+        posts.forEach(p => {
+          const who = esc(p.authorName || nameOf(p.authorUid));
+          const st = p.status === "pending" ? "，等你审核" : p.status === "rejected" ? "（已退回）" : "";
+          out.push({ cat: "feed", d: toDate(p.createdAt), ic: "📰",
+            html: `<a href="feed.html${p.status === "pending" ? "#pending" : ""}"><b>${who}</b> 发了帖子${st}</a>` });
+        });
+        const cs = await Promise.all(posts.map(p =>
+          getDocs(query(collection(db, "feedPosts", p.id, "comments"), orderBy("createdAt", "desc"), limit(5))).catch(() => null)));
+        cs.forEach((snap, i) => snap && snap.docs.forEach(d => {
+          const c = d.data(), p = posts[i];
+          out.push({ cat: "feed", d: toDate(c.createdAt), ic: "💬",
+            html: `<a href="feed.html"><b>${esc(c.authorName || nameOf(c.authorUid))}</b> 回复了 ${esc(p.authorName || "")} 的帖子 <span class="q">「${esc(short(c.text))}」</span></a>` });
+        }));
+      } catch (e) { console.warn("recent feed", e); }
+      logNote = "";
+      try {
+        const ls = await getDocs(query(collection(db, "adminLog"), orderBy("at", "desc"), limit(40)));
+        ls.docs.forEach(d => {
+          const l = d.data();
+          const who = esc(l.byName || String(l.by || "").split("@")[0] || "管理员");
+          const body = `<b>${who}</b> ${esc(l.text || "")}`;
+          out.push({ cat: "admin", d: toDate(l.at), ic: ICON_ADMIN[l.type] || "🛠️",
+            html: (l.link ? `<a href="${esc(l.link)}">${body}</a>` : body) + ` <span class="by">· 管理员</span>` });
+        });
+      } catch (e) {
+        console.warn("adminLog", e);
+        logNote = "管理员操作记录还没开启：请先更新 Firestore 规则（adminLog）";
+      }
+      extra = out.filter(x => x.d);
+      renderRecent();
     }
 
     // ---------- 俱乐部开关（和侧边栏同一个开关） ----------

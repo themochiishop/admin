@@ -82,7 +82,7 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, toDate, fmtDate } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, logAdmin, esc, toDate, fmtDate } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("notify");
@@ -130,6 +130,7 @@
     async function save(extra = {}) {
       const data = { ...collect(), ...extra, updatedAt: serverTimestamp(), updatedBy: me.email || "" };
       await setDoc(ref, data, { merge: true });
+      logAdmin("settings", extra.testRequestedAt ? "要求寄出测试邮件" : "修改了邮件提醒设定", "notify.html");
       render({ ...(await getDoc(ref)).data() });
     }
 

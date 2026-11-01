@@ -98,7 +98,7 @@
     import {
       collection, getDocs, doc, addDoc, deleteDoc, query, orderBy, limit, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, toDate, fmtDate } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, logAdmin, esc, toDate, fmtDate } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("announce");
@@ -161,7 +161,7 @@
       $("list").querySelectorAll("[data-del]").forEach(btn => btn.addEventListener("click", async () => {
         if (!confirm("删除这则公告？会员的铃铛里也会消失。")) return;
         btn.disabled = true;
-        try { await deleteDoc(doc(db, "announcements", btn.dataset.del)); await load(); }
+        try { await deleteDoc(doc(db, "announcements", btn.dataset.del)); logAdmin("content", "删除了一则会员公告", "announcements.html"); await load(); }
         catch (err) { alert("删除失败：" + err.message); btn.disabled = false; }
       }));
     }
@@ -196,6 +196,7 @@
           $("aLinkBox").classList.add("hidden");
           preview();
           setMsg("已发出 ✅", "ok");
+          logAdmin("content", `发出会员公告：${title}`, "announcements.html");
           await load();
         } catch (err) {
           setMsg("发送失败：" + err.message, "err");
