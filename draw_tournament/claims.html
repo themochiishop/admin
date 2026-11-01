@@ -16,6 +16,9 @@
     .item-done { opacity: .55; }
     .tag-T { background: #334155; color: #f1f5f9; }
     .tag-S { background: #ea580c; color: #fff; }
+    .club { background: #831843; color: #fbcfe8; border: 1px solid #db2777; }
+    .club-done { background: #064e3b; color: #a7f3d0; border: 1px solid #10b981; }
+    .club-off { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
@@ -46,6 +49,7 @@
 
   <main class="max-w-5xl mx-auto px-4 py-4">
     <div id="summary" class="flex flex-wrap gap-2 mb-4"></div>
+    <div id="clubHint" class="hidden mb-4 rounded-lg border border-pink-800 bg-pink-950/40 px-3 py-2 text-xs text-pink-200"></div>
     <div id="list" class="space-y-2"></div>
     <div id="footerTools" class="hidden mt-8 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
       <span>勾选和备注会自动保存（离开输入框即保存），只有后台账号看得到。</span>
@@ -73,6 +77,14 @@
     const esc = x => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const isAllowed = u => !!(u && !u.isAnonymous && (u.providerData || []).some(p => p && p.providerId === 'google.com') && ALLOWED.includes(String(u.email || '').toLowerCase()));
     const platformOf = o => { const c = String(o || '').trim().charAt(0); return c === '5' ? 'T' : c === '2' ? 'S' : ''; };
+
+    // 🎫 会员俱乐部「🏆 中奖奖品」的进度（下面的 module 脚本读取后放进 window.clubPrizes：订单号 → { status, id }）
+    const CLUB_ST = { unclaimed: '待领取', claimed: '待审核', approved: '待发货', shipped: '已发货', completed: '已完成', cancelled: '已取消' };
+    const normNo = o => String(o || '').replace(/\s/g, '').toUpperCase();
+    const clubOf = x => (window.clubPrizes || {})[normNo(x.orderNo)] || null;
+    const clubDone = x => { const c = clubOf(x); return !!c && (c.status === 'shipped' || c.status === 'completed'); };
+    const isDone = x => !!x.shipped || clubDone(x);   // 自己勾「已寄出」，或俱乐部那边已发货 = 已寄出
+    window.onClubPrizes = () => { fillSelect(); render(); };
 
     function login() {
       const p = new firebase.auth.GoogleAuthProvider();
@@ -103,7 +115,7 @@
     }
     function stats(id) {
       const it = itemsOf(id).filter(x => !x.removed);
-      return { total: it.length, contacted: it.filter(x => x.contacted).length, shipped: it.filter(x => x.shipped).length };
+      return { total: it.length, contacted: it.filter(x => x.contacted || clubOf(x)).length, shipped: it.filter(isDone).length };
     }
     function batchName(id) {
       const b = batches[id] || {};
@@ -144,21 +156,23 @@
         ${s.total - s.shipped ? `<span class="px-3 py-1.5 rounded bg-rose-950 border border-rose-700 text-xs text-rose-200">还有 <b>${s.total - s.shipped}</b> 位未寄出</span>` : '<span class="px-3 py-1.5 rounded bg-emerald-600 text-xs font-bold">✅ 全部寄出</span>'}`;
       $('footerTools').classList.remove('hidden');
       let items = itemsOf(curId);
-      if ($('onlyTodo').checked) items = items.filter(x => !x.shipped && !x.removed);
+      if ($('onlyTodo').checked) items = items.filter(x => !isDone(x) && !x.removed);
       if (!items.length) { list.innerHTML = '<p class="text-center text-slate-500 py-12 text-sm">🎉 没有未寄出的得主</p>'; return; }
       list.innerHTML = items.map(x => {
-        const p = platformOf(x.orderNo);
-        return `<div class="rounded-lg border ${x.removed ? 'border-rose-800 bg-rose-950/30' : 'border-slate-700 bg-slate-800/70'} p-3 ${x.shipped ? 'item-done' : ''}">
+        const p = platformOf(x.orderNo), c = clubOf(x), cd = clubDone(x);
+        const clubTag = c ? `<a href="../member-system/prizes.html" target="_blank" class="text-[10px] px-1.5 py-0.5 rounded ${cd ? 'club-done' : c.status === 'cancelled' ? 'club-off' : 'club'}" title="在会员系统「🏆 中奖奖品」处理">🎫 俱乐部：${esc(CLUB_ST[c.status] || c.status)}</a>` : '';
+        return `<div class="rounded-lg border ${x.removed ? 'border-rose-800 bg-rose-950/30' : 'border-slate-700 bg-slate-800/70'} p-3 ${isDone(x) ? 'item-done' : ''}">
           <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span class="text-amber-300 font-bold text-sm whitespace-nowrap">${esc(x.rank || '')}</span>
             <span class="font-bold text-slate-100">${esc(x.name || '')}</span>
             <span class="font-mono text-xs text-slate-300 break-all">${esc(x.orderNo || '-')}</span>
             ${p ? `<span class="text-[10px] px-1.5 py-0.5 rounded tag-${p}">${p === 'T' ? 'TikTok' : 'Shopee'}</span>` : ''}
             ${x.removed ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-700 text-white">名次已撤销</span>' : ''}
+            ${clubTag}
           </div>
           <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
             <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.contacted ? 'checked' : ''} onchange="setItem(this.dataset.k, 'contacted', this.checked)"> 已联系</label>
-            <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.shipped ? 'checked' : ''} onchange="setItem(this.dataset.k, 'shipped', this.checked)"> 已寄出</label>
+            ${cd && !x.shipped ? '<span class="text-sm text-emerald-300">✅ 已寄出（俱乐部）</span>' : `<label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.shipped ? 'checked' : ''} onchange="setItem(this.dataset.k, 'shipped', this.checked)"> 已寄出</label>`}
             <input type="text" data-k="${esc(x.key)}" value="${esc(x.note || '')}" placeholder="备注：已私讯 / 运单号…" onchange="setItem(this.dataset.k, 'note', this.value.trim())"
               class="flex-1 min-w-[180px] bg-slate-900 border border-slate-600 rounded px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-400">
           </div>
@@ -173,8 +187,8 @@
     function downloadCSV() {
       if (!curId) return;
       const q = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-      const rows = [['名次', '名字', '订单号', '平台', '已联系', '已寄出', '备注']].concat(itemsOf(curId).map(x =>
-        [x.rank + (x.removed ? '（已撤销）' : ''), x.name, x.orderNo, { T: 'TikTok', S: 'Shopee' }[platformOf(x.orderNo)] || '', x.contacted ? '✔' : '', x.shipped ? '✔' : '', x.note || '']));
+      const rows = [['名次', '名字', '订单号', '平台', '已联系', '已寄出', '会员俱乐部', '备注']].concat(itemsOf(curId).map(x =>
+        [x.rank + (x.removed ? '（已撤销）' : ''), x.name, x.orderNo, { T: 'TikTok', S: 'Shopee' }[platformOf(x.orderNo)] || '', x.contacted ? '✔' : '', isDone(x) ? '✔' : '', clubOf(x) ? CLUB_ST[clubOf(x).status] || clubOf(x).status : '', x.note || '']));
       const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = `Mochiishop_Claims_${curId}.csv`;
@@ -188,6 +202,36 @@
       const id = curId; curId = null;
       db.ref(`${BATCHES}/${id}`).remove().catch(e => alert('❌ 删除失败：' + (e.code || e.message)));
     }
+  </script>
+
+  <!-- 🎫 读取会员系统「🏆 中奖奖品」：同一个浏览器登录过会员系统后台才读得到 -->
+  <script type="module">
+    import { auth, db } from "../member-system/js/firebase-config.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { doc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const hint = document.getElementById("clubHint");
+    const RANK = { completed: 6, shipped: 5, approved: 4, claimed: 3, unclaimed: 2, cancelled: 1 };
+    const off = msg => { hint.innerHTML = msg; hint.classList.remove("hidden"); };
+    let started = false;
+    onAuthStateChanged(auth, async user => {
+      if (!user) { off('🎫 还没登录会员系统后台，看不到会员得奖者的俱乐部进度。<a href="../member-system/" target="_blank" class="underline font-bold">登录会员系统</a> 后重新整理这一页。'); return; }
+      if (started) return;
+      try { if (!(await getDoc(doc(db, "admins", user.uid))).exists()) { off("🎫 登录的会员系统账号不是管理员，看不到俱乐部进度。"); return; } }
+      catch (e) { return; }
+      started = true;
+      hint.classList.add("hidden");
+      onSnapshot(collection(db, "prizeWins"), snap => {
+        const map = {};
+        snap.docs.forEach(d => {
+          const w = d.data(), no = String(w.orderNo || "").replace(/\s/g, "").toUpperCase();
+          if (!no) return;
+          if (!map[no] || (RANK[w.status] || 0) > (RANK[map[no].status] || 0)) map[no] = { status: w.status, id: d.id };
+        });
+        window.clubPrizes = map;
+        if (window.onClubPrizes) window.onClubPrizes();
+      }, e => console.warn("prizeWins", e));
+    });
   </script>
 </body>
 </html>
