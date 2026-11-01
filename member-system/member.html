@@ -34,6 +34,7 @@
         </div>
         <div class="actions" style="margin:0">
           <a id="waBtn" href="#" target="_blank" class="btn btn-ok hidden">💬 WhatsApp 联系</a>
+          <a id="prizeBtn" href="prizes.html" class="btn btn-ghost">🏆 添加中奖</a>
           <a href="members.html" class="btn btn-ghost">← 会员列表</a>
         </div>
       </div>
@@ -151,6 +152,7 @@
     renderAdminNav("members");
 
     const uid = new URLSearchParams(location.search).get("uid");
+    if (uid) document.getElementById("prizeBtn").href = "prizes.html?uid=" + encodeURIComponent(uid);
     const now = () => new Date();
     let adminEmail = "";
 

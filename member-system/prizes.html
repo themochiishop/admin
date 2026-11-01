@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>中奖奖品 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .tabs { flex-wrap: wrap; }
+    .tabs button .cnt { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; }
+    .tabs button .cnt.zero { background: #cbd5e1; }
+    .step-h { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0f172a; margin: 18px 0 10px; }
+    .step-h:first-child { margin-top: 0; }
+    .step-h .n { width: 22px; height: 22px; border-radius: 50%; background: #db2777; color: #fff; font-size: .75rem; display: inline-flex; align-items: center; justify-content: center; }
+    .periods { display: flex; gap: 6px; flex-wrap: wrap; }
+    .periods button { padding: 6px 12px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font-weight: 600; color: #475569; font-size: .85rem; }
+    .periods button.on { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .prize-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .prize-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; font-size: .85rem; color: #0f172a; text-align: left; }
+    .prize-chip:hover { border-color: #db2777; }
+    .prize-chip.on { border-color: #db2777; background: #fdf2f8; box-shadow: 0 0 0 2px rgba(219,39,119,.15); }
+    .pthumb { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: #f1f5f9; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.1rem; }
+    .wtable { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .wtable th, .wtable td { text-align: left; padding: 8px 6px; border-top: 1px solid #f1f5f9; vertical-align: middle; }
+    .wtable th { color: #64748b; font-weight: 600; font-size: .78rem; border-top: none; }
+    .wtable td.act { text-align: right; white-space: nowrap; }
+    .wtable .btn { padding: 5px 10px; font-size: .8rem; }
+    @media (max-width: 640px) {
+      .wtable thead { display: none; }
+      .wtable tr { display: block; border-top: 1px solid #e2e8f0; padding: 8px 0; }
+      .wtable td { display: block; border: none; padding: 2px 0; }
+      .wtable td.act { text-align: left; padding-top: 6px; }
+    }
+    .mpick { position: relative; }
+    .mres { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 2px; max-height: 260px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+    .mres button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: .86rem; color: #0f172a; border-top: 1px solid #f1f5f9; }
+    .mres button:first-child { border-top: none; }
+    .mres button:hover { background: #fdf2f8; }
+    .chosen { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; margin-top: 4px; font-size: .88rem; }
+    .chosen .x { margin-left: auto; }
+    .dlv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+    @media (max-width: 600px) { .dlv { grid-template-columns: 1fr; } }
+    .dlv label { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; margin: 0; background: #fff; color: #0f172a; }
+    .dlv label:has(input:checked) { border-color: #db2777; background: #fdf2f8; }
+    .dlv input { width: auto; margin: 3px 0 0; }
+    .dlv b { display: block; font-size: .92rem; }
+    .dlv span { font-size: .8rem; color: #64748b; }
+    .dlv.bad label { border-color: #fca5a5; }
+    .req { color: #dc2626; }
+    .ship-form { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 14px; margin-top: 10px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
+    @media (max-width: 640px) { .grid3 { grid-template-columns: 1fr 1fr; } }
+    .addr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
+    .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; align-self: flex-start; }
+    .tag-blue { background: #e0f2fe; color: #0369a1; }
+    .item-row { display: flex; gap: 12px; align-items: flex-start; }
+    .item-row .pthumb { width: 52px; height: 52px; }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>🏆 中奖奖品</h2>
+          <p class="muted">从「每月抽奖」读取奖品和中奖名单，发给会员。会员在「我的兑换」上方看到领取提醒，按领取后进入待审核。</p>
+        </div>
+        <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+      </div>
+
+      <!-- ➕ 添加中奖 -->
+      <div class="panel">
+        <h3>➕ 添加中奖</h3>
+
+        <div class="step-h"><span class="n">1</span> 选择抽奖期数</div>
+        <div class="periods" id="periods"><span class="muted">载入中…</span></div>
+        <p class="msg err" id="drawErr"></p>
+
+        <div id="drawBox" class="hidden">
+          <div class="step-h"><span class="n">2</span> 中奖名单（自动对应会员）</div>
+          <p class="meta" style="margin:-4px 0 8px">先用订单编号找会员，找不到再用平台用户名找。按「选这位」会自动填好下面的表格。</p>
+          <div id="winners"></div>
+
+          <div class="step-h" style="margin-top:22px"><span class="n">3</span> 或者直接选奖品</div>
+          <div class="prize-chips" id="prizeChips"></div>
+        </div>
+
+        <form id="addForm" autocomplete="off" novalidate style="margin-top:22px">
+          <div class="step-h"><span class="n">4</span> 中奖资料</div>
+          <div class="grid2">
+            <label>奖品名称 <span class="req">*</span><input id="fPrize" maxlength="100" placeholder="选上面的奖品，或自己输入"></label>
+            <label>期数 <input id="fMonth" maxlength="40" placeholder="例如 October 2026"></label>
+          </div>
+
+          <label>会员 <span class="req">*</span>
+            <div class="mpick">
+              <input id="fMember" placeholder="🔍 搜索会员名称、电邮或平台用户名">
+              <div class="mres hidden" id="mRes"></div>
+            </div>
+            <div id="chosen"></div>
+          </label>
+
+          <div style="margin-bottom:12px">
+            <div style="font-size:.85rem;color:#475569">配送方式 <span class="req">*</span></div>
+            <div class="dlv" id="dlv">
+              <label><input type="radio" name="dlv" value="withOrder">
+                <div><b>📦 奖品随单发送</b><span>将与您购买的商品同包发货</span></div></label>
+              <label><input type="radio" name="dlv" value="separate">
+                <div><b>🚚 奖品单独包裹寄出</b><span>会员领取时要填收货地址</span></div></label>
+            </div>
+          </div>
+
+          <div class="ship-form" id="addShip">
+            <b>🚚 运单号（选填，之后也可以补）</b>
+            <div class="grid3" style="margin-top:10px">
+              <label>运输公司
+                <select data-f="carrier"></select>
+              </label>
+              <label class="other-name hidden">公司名称 <input data-f="carrierName" placeholder="例如 Pos Laju"></label>
+              <label>运单号 <input data-f="trackingNo"></label>
+            </div>
+            <label>查询链接（输入运单号后自动生成，可以改） <input data-f="trackingUrl" placeholder="https://…"></label>
+          </div>
+
+          <label style="margin-top:12px">给会员的留言（选填） <input id="fNote" maxlength="200" placeholder="例如：恭喜！奖品会和你的下一张订单一起寄出 🎁"></label>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="addBtn">💾 保存并通知会员</button>
+            <button type="button" class="btn btn-ghost" id="resetBtn">清空</button>
+          </div>
+          <p class="msg" id="addMsg"></p>
+        </form>
+      </div>
+
+      <!-- 📋 中奖记录 -->
+      <div class="tabs" id="tabs">
+        <button data-tab="unclaimed" class="active">待领取</button>
+        <button data-tab="claimed">待审核</button>
+        <button data-tab="approved">待发货</button>
+        <button data-tab="shipped">已发货</button>
+        <button data-tab="completed">已完成</button>
+        <button data-tab="cancelled">已取消</button>
+      </div>
+      <input id="search" placeholder="🔍 搜索编号、会员名称、奖品或期数" style="margin-bottom:12px">
+      <div id="panel"><p class="empty">载入中…</p></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    import {
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag,
+      normalizeUsername, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge
+    } from "./js/admin-common.js";
+
+    // 每月抽奖的资料库（和 www.themochiishop.com/monthly-draw/ 同一个，只读）
+    const drawApp = initializeApp({
+      apiKey: "AIzaSyDJrsKAjWqz0AmjEtBzz4CeswiskdQqASw",
+      authDomain: "admin-status-c3bdb.firebaseapp.com",
+      databaseURL: "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "admin-status-c3bdb",
+    }, "draw");
+    const rtdb = getDatabase(drawApp);
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("prizes");
+
+    const DLV = { withOrder: "📦 随单发送", separate: "🚚 单独包裹" };
+    const ST = { unclaimed: "待领取", claimed: "待审核", approved: "待发货", shipped: "已发货", completed: "已完成", cancelled: "已取消" };
+    const ST_TAG = { unclaimed: "tag-pink", claimed: "tag-warn", approved: "tag-blue", shipped: "tag-blue", completed: "tag-ok", cancelled: "" };
+    const MAX_IMG = 180000;   // 奖品图太大就不存（Firestore 单笔上限 1MB）
+
+    let adminEmail = "";
+    let trackTpl = { ...DEFAULT_TRACK_TPL };
+    let members = {};            // uid → 会员资料
+    let bindings = [];           // { uid, platform, username }
+    let wins = [];               // prizeWins
+    let periods = [], draw = null, drawId = "", drawMonth = "";
+    let pick = { uid: "", image: "", winnerName: "", orderNo: "" };
+    let tab = "unclaimed";
+
+    // ---------- 共用 ----------
+    const isImg = s => typeof s === "string" && /^(data:image\/|https:\/\/)/.test(s);
+    const thumbHTML = img => img ? `<img class="pthumb" src="${esc(img)}" alt="">` : `<span class="pthumb">🎁</span>`;
+    const carrierOpts = sel => CARRIERS.map(c => `<option value="${c.id}" ${c.id === sel ? "selected" : ""}>${c.label}</option>`).join("");
+    const memberLine = uid => {
+      const m = members[uid] || {};
+      const bs = bindings.filter(b => b.uid === uid);
+      return `<b>${esc(m.name || "(没有名字)")}</b> · ${esc(m.email || "")}${bs.length ? " · " + bs.map(b => `${platformTag(b.platform)} ${esc(b.username)}`).join(" ") : ""}`;
+    };
+    const splitPrize = p => {   // 「奖品 x2」→ 名称 + 数量（和公开页一样）
+      let name = String(p.n || "").trim(), q = Number(p.q) || 0;
+      if (!q) { const m = name.match(/^(.*?)\s*[x×]\s*(\d+)\s*$/i); if (m && m[1]) { name = m[1]; q = Number(m[2]); } }
+      return { name, q };
+    };
+    const normName = s => String(s || "").trim().replace(/\s*[x×]\s*\d+\s*$/i, "").toLowerCase();
+
+    function readShip(root) {
+      const v = f => ((root.querySelector(`[data-f="${f}"]`) || {}).value || "").trim();
+      const carrier = v("carrier") || "spx";
+      const c = CARRIERS.find(x => x.id === carrier) || CARRIERS[0];
+      return { carrier, carrierName: carrier === "other" ? v("carrierName") : c.name, trackingNo: v("trackingNo"), trackingUrl: v("trackingUrl") };
+    }
+    function autoUrl(root) {
+      const s = readShip(root);
+      const tpl = s.carrier === "other" ? "" : (trackTpl[s.carrier] || "");
+      if (tpl && s.trackingNo) root.querySelector('[data-f="trackingUrl"]').value = tpl.replace("{no}", encodeURIComponent(s.trackingNo));
+    }
+    function shipError(s, need) {
+      if (need && !s.trackingNo) return "请填写运单号";
+      if (s.trackingNo && !s.carrierName) return "请填写运输公司名称";
+      if (s.trackingUrl && !/^https:\/\//i.test(s.trackingUrl)) return "查询链接要以 https:// 开头";
+      return "";
+    }
+    // 运单表单的互动（新增表单和列表共用）
+    function bindShipEvents(root) {
+      root.addEventListener("input", e => {
+        const box = e.target.closest(".ship-form");
+        if (box && e.target.dataset.f === "trackingNo") autoUrl(box);
+      });
+      root.addEventListener("change", e => {
+        const box = e.target.closest(".ship-form");
+        if (!box || e.target.dataset.f !== "carrier") return;
+        box.querySelector(".other-name").classList.toggle("hidden", e.target.value !== "other");
+        if (e.target.value === "other") box.querySelector('[data-f="trackingUrl"]').value = "";
+        autoUrl(box);
+      });
+    }
+
+    // ---------- 载入 ----------
+    async function loadMembers() {
+      const [mS, bS] = await Promise.all([getDocs(collection(db, "members")), getDocs(collection(db, "bindings"))]);
+      members = {};
+      mS.docs.forEach(d => { members[d.id] = d.data(); });
+      bindings = bS.docs.map(d => d.data()).filter(b => b.uid && b.username);
+    }
+    async function loadWins() {
+      const s = await getDocs(collection(db, "prizeWins"));
+      wins = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderList();
+      if (draw) renderWinners();
+      refreshPrizeBadge();
+    }
+    async function loadPeriods() {
+      try {
+        const v = (await get(ref(rtdb, "homepage/drawIndex"))).val();
+        periods = (Array.isArray(v) ? v : Object.values(v || {})).filter(x => x && x.id && typeof x.month === "string" && x.month.trim());
+        $("drawErr").textContent = "";
+      } catch (e) {
+        periods = [];
+        $("drawErr").textContent = "读不到每月抽奖资料：" + e.message + "（仍然可以手动输入奖品）";
+      }
+      $("periods").innerHTML = periods.length
+        ? periods.map(p => `<button type="button" data-id="${esc(p.id)}" class="${p.id === drawId ? "on" : ""}">${esc(p.month)}</button>`).join("")
+        : `<span class="muted">还没有抽奖期数</span>`;
+    }
+    async function selectPeriod(id) {
+      drawId = id;
+      const p = periods.find(x => x.id === id);
+      drawMonth = p ? p.month.trim() : "";
+      $("fMonth").value = drawMonth;
+      document.querySelectorAll("#periods button").forEach(b => b.classList.toggle("on", b.dataset.id === id));
+      $("drawBox").classList.remove("hidden");
+      $("winners").innerHTML = `<p class="meta">载入中…</p>`;
+      $("prizeChips").innerHTML = "";
+      try { draw = (await get(ref(rtdb, "homepage/drawData/" + id))).val() || {}; }
+      catch (e) { draw = {}; $("winners").innerHTML = `<p class="msg err">载入失败：${esc(e.message)}</p>`; return; }
+      renderPrizes();
+      await renderWinners();
+    }
+
+    // ---------- 奖品清单 ----------
+    function prizeItems() {
+      if (!draw) return [];
+      let items = Array.isArray(draw.prizeItems) ? draw.prizeItems : Object.values(draw.prizeItems || {});
+      items = items.filter(x => x && typeof x.n === "string" && x.n.trim())
+        .map(x => ({ ...splitPrize(x), img: isImg(x.i) ? x.i : "" }));
+      if (!items.length) items = String(draw.prizes || "").split(/\n+/).map(s => s.trim()).filter(Boolean).map(n => ({ ...splitPrize({ n }), img: "" }));
+      return items;
+    }
+    function imageFor(name) {
+      const hit = prizeItems().find(p => normName(p.name) === normName(name));
+      return hit ? hit.img : "";
+    }
+    function renderPrizes() {
+      const items = prizeItems();
+      $("prizeChips").innerHTML = items.length ? items.map((p, i) => `
+        <button type="button" class="prize-chip" data-i="${i}">${thumbHTML(p.img)}<span>${esc(p.name)}${p.q > 1 ? ` <span class="muted">×${p.q}</span>` : ""}</span></button>`).join("")
+        : `<span class="muted">这一期没有奖品清单</span>`;
+    }
+    $("prizeChips").addEventListener("click", e => {
+      const b = e.target.closest(".prize-chip");
+      if (!b) return;
+      const p = prizeItems()[+b.dataset.i];
+      document.querySelectorAll(".prize-chip").forEach(x => x.classList.toggle("on", x === b));
+      $("fPrize").value = p.name;
+      pick.image = p.img;
+      pick.winnerName = ""; pick.orderNo = "";
+      $("fMember").focus();
+    });
+
+    // ---------- 中奖名单 + 自动找会员 ----------
+    function parseRows(text) {
+      const rows = [];
+      String(text || "").split(/\n+/).map(l => l.trim()).filter(Boolean).forEach(l => {
+        const c = l.split(/\s*\|\s*|\t+/).map(x => x.trim());
+        const low = c.join(" ").toLowerCase();
+        if (/winner/.test(low) && /(prize|order)/.test(low)) return;
+        if (c.length === 1) rows.push({ prize: "", winner: c[0], order: "" });
+        else rows.push({ prize: c[0], winner: c[1] || "", order: c[2] || "" });
+      });
+      return rows;
+    }
+    const orderCache = {};
+    async function uidByOrder(no) {
+      no = String(no || "").replace(/\s/g, "").toUpperCase();
+      if (!no || no.includes("*")) return "";
+      if (orderCache[no] !== undefined) return orderCache[no];
+      try { const s = await getDoc(doc(db, "orders", no)); orderCache[no] = s.exists() ? (s.data().uid || "") : ""; }
+      catch (e) { orderCache[no] = ""; }
+      return orderCache[no];
+    }
+    function uidByName(name) {
+      const u = normalizeUsername(name);
+      const hits = [...new Set(bindings.filter(b => b.username === u).map(b => b.uid))];
+      return hits.length === 1 ? hits[0] : "";
+    }
+    let winRows = [];
+    async function renderWinners() {
+      let groups = [draw.w1, draw.w2, draw.w3].map(parseRows).filter(g => g.length);
+      if (!groups.length && draw.winners) groups = [parseRows(draw.winners)];
+      const rows = groups.flat();
+      // 一行有几个名字（逗号分开）就拆成几行
+      winRows = [];
+      for (const r of rows) {
+        const names = String(r.winner).split(/[,，、;；]/).map(x => x.trim()).filter(Boolean);
+        if (names.length > 1) names.forEach(n => winRows.push({ prize: r.prize, winner: n, order: "" }));
+        else winRows.push(r);
+      }
+      for (const r of winRows) {
+        r.uid = (await uidByOrder(r.order)) || uidByName(r.winner);
+        r.how = r.uid ? (orderCache[String(r.order).replace(/\s/g, "").toUpperCase()] ? "订单" : "用户名") : "";
+        r.done = r.uid && wins.some(w => w.status !== "cancelled" && w.uid === r.uid && w.drawId === drawId && normName(w.prizeName) === normName(r.prize));
+      }
+      $("winners").innerHTML = winRows.length ? `
+        <table class="wtable">
+          <thead><tr><th>奖品</th><th>中奖者</th><th>订单编号</th><th>会员</th><th></th></tr></thead>
+          <tbody>${winRows.map((r, i) => `
+            <tr>
+              <td>${esc(r.prize || "—")}</td>
+              <td>${esc(r.winner || "—")}</td>
+              <td><code>${esc(r.order || "—")}</code></td>
+              <td>${r.uid ? `✅ ${esc((members[r.uid] || {}).name || "")} <span class="muted">（按${r.how}）</span>` : '<span class="muted">⚠️ 找不到会员，可以下面手动搜索</span>'}</td>
+              <td class="act">${r.done ? '<span class="tag tag-ok">已添加</span>' : `<button type="button" class="btn ${r.uid ? "btn-primary" : "btn-ghost"}" data-row="${i}">选这位</button>`}</td>
+            </tr>`).join("")}</tbody>
+        </table>` : `<p class="meta">这一期还没有中奖名单。</p>`;
+    }
+    $("winners").addEventListener("click", e => {
+      const b = e.target.closest("[data-row]");
+      if (!b) return;
+      const r = winRows[+b.dataset.row];
+      $("fPrize").value = splitPrize({ n: r.prize }).name;
+      pick.image = imageFor(r.prize);
+      pick.winnerName = r.winner; pick.orderNo = r.order;
+      document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
+      if (r.uid) chooseMember(r.uid);
+      else { chooseMember(""); $("fMember").value = r.winner; searchMembers(); $("fMember").focus(); }
+      $("addForm").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    // ---------- 搜索会员 ----------
+    function searchMembers() {
+      const q = $("fMember").value.trim().toLowerCase().replace(/^@/, "");
+      if (!q) { $("mRes").classList.add("hidden"); return; }
+      const hits = Object.entries(members).filter(([uid, m]) =>
+        (m.name || "").toLowerCase().includes(q) || (m.email || "").toLowerCase().includes(q)
+        || bindings.some(b => b.uid === uid && b.username.includes(q))).slice(0, 12);
+      $("mRes").innerHTML = hits.length
+        ? hits.map(([uid]) => `<button type="button" data-uid="${esc(uid)}">${memberLine(uid)}</button>`).join("")
+        : `<div class="meta" style="padding:10px 12px">找不到符合的会员</div>`;
+      $("mRes").classList.remove("hidden");
+    }
+    function chooseMember(uid) {
+      pick.uid = uid;
+      $("mRes").classList.add("hidden");
+      $("fMember").value = "";
+      $("fMember").classList.toggle("hidden", !!uid);
+      $("chosen").innerHTML = uid ? `<div class="chosen">👤 <div>${memberLine(uid)}</div>
+        <button type="button" class="btn btn-ghost x" id="unpick">换一位</button></div>` : "";
+    }
+    $("fMember").addEventListener("input", searchMembers);
+    $("fMember").addEventListener("focus", searchMembers);
+    $("mRes").addEventListener("click", e => { const b = e.target.closest("[data-uid]"); if (b) chooseMember(b.dataset.uid); });
+    $("chosen").addEventListener("click", e => { if (e.target.id === "unpick") { chooseMember(""); $("fMember").focus(); } });
+    document.addEventListener("click", e => { if (!e.target.closest(".mpick")) $("mRes").classList.add("hidden"); });
+
+    // ---------- 保存 ----------
+    $("addShip").querySelector('[data-f="carrier"]').innerHTML = carrierOpts("spx");
+    bindShipEvents($("addShip"));
+    $("dlv").addEventListener("change", () => $("dlv").classList.remove("bad"));
+    const addMsg = (t, ty) => { $("addMsg").textContent = t; $("addMsg").className = "msg" + (ty ? " " + ty : ""); };
+
+    function resetForm() {
+      $("fPrize").value = ""; $("fNote").value = "";
+      $("fMonth").value = drawMonth;
+      document.querySelectorAll('input[name="dlv"]').forEach(x => x.checked = false);
+      $("dlv").classList.remove("bad");
+      const box = $("addShip");
+      box.querySelector('[data-f="carrier"]').value = "spx";
+      box.querySelector(".other-name").classList.add("hidden");
+      ["carrierName", "trackingNo", "trackingUrl"].forEach(f => box.querySelector(`[data-f="${f}"]`).value = "");
+      pick = { uid: "", image: "", winnerName: "", orderNo: "" };
+      chooseMember("");
+      document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
+    }
+    $("resetBtn").addEventListener("click", () => { resetForm(); addMsg(""); });
+
+    $("addForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const prizeName = $("fPrize").value.trim();
+      const dlv = (document.querySelector('input[name="dlv"]:checked') || {}).value || "";
+      const ship = readShip($("addShip"));
+      if (!prizeName) { addMsg("请填写奖品名称", "err"); $("fPrize").focus(); return; }
+      if (!pick.uid) { addMsg("请选择会员", "err"); $("fMember").focus(); return; }
+      if (!dlv) { addMsg("请选择配送方式", "err"); $("dlv").classList.add("bad"); return; }
+      const se = shipError(ship, false);
+      if (se) { addMsg(se, "err"); return; }
+      const dup = wins.find(w => w.status !== "cancelled" && w.uid === pick.uid && normName(w.prizeName) === normName(prizeName)
+        && (w.drawId || "") === (drawId || "") && (w.drawMonth || "") === $("fMonth").value.trim());
+      if (dup && !confirm(`这位会员这一期已经有「${dup.prizeName}」了（${redeemCode(dup.id)}），还要再添加一次吗？`)) return;
+
+      const data = {
+        uid: pick.uid,
+        prizeName: prizeName.slice(0, 100),
+        prizeImage: pick.image && pick.image.length <= MAX_IMG ? pick.image : "",
+        drawId: drawId || "",
+        drawMonth: $("fMonth").value.trim().slice(0, 40),
+        winnerName: pick.winnerName || "",
+        orderNo: pick.orderNo || "",
+        delivery: dlv,
+        note: $("fNote").value.trim().slice(0, 200),
+        status: "unclaimed",
+        createdAt: serverTimestamp(),
+        createdBy: adminEmail,
+      };
+      if (ship.trackingNo) data.shipping = { ...ship, by: adminEmail };
+      $("addBtn").disabled = true;
+      try {
+        const r = await addDoc(collection(db, "prizeWins"), data);
+        addMsg(`✅ 已添加 ${redeemCode(r.id)}：${prizeName} → ${(members[pick.uid] || {}).name || ""}`, "ok");
+        resetForm();
+        tab = "unclaimed";
+        document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+        await loadWins();
+      } catch (err) { addMsg("保存失败：" + err.message, "err"); }
+      finally { $("addBtn").disabled = false; }
+    });
+
+    // ---------- 中奖记录列表 ----------
+    $("tabs").addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      tab = b.dataset.tab;
+      document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
+      renderList();
+    });
+    $("search").addEventListener("input", () => renderList());
+
+    function addrBox(w) {
+      const a = w.address;
+      if (!a) return "";
+      const txt = `${a.name}\n${a.phone}\n${a.line1}${a.line2 ? ", " + a.line2 : ""}\n${a.postcode} ${a.city}, ${a.state}\n${a.country || "Malaysia"}`;
+      return `
+        <div class="addr-box">📍 <b>${esc(a.name)}</b> · ${esc(fmtPhone(a.phone))}<br>
+          ${esc(a.line1)}${a.line2 ? ", " + esc(a.line2) : ""}<br>${esc(a.postcode)} ${esc(a.city)}, ${esc(a.state)}
+          <div class="actions" style="margin-top:6px">
+            <button class="btn btn-ghost" data-copy="${esc(txt)}">📋 复制地址</button>
+            <a class="btn btn-ghost" href="${esc(waLink(a.phone, `Hi ${a.name}, ini The Mochii Shop 💕 berkenaan hadiah cabutan bertuah ${w.prizeName}`))}" target="_blank">💬 WhatsApp</a>
+          </div></div>`;
+    }
+    function shipInfo(w) {
+      const s = w.shipping || {};
+      if (!s.trackingNo) return "";
+      return `<div class="addr-box">🚚 <b>${esc(s.carrierName || "")}</b> · <code>${esc(s.trackingNo)}</code>
+        ${s.trackingUrl ? `<div class="meta"><a href="${esc(s.trackingUrl)}" target="_blank">🔗 ${esc(s.trackingUrl)}</a></div>` : ""}
+        ${w.shippedAt ? `<div class="meta">发货 ${fmtDate(toDate(w.shippedAt), true)}</div>` : ""}</div>`;
+    }
+    function shipForm(w, buttons) {
+      const s = w.shipping || {};
+      const carrier = s.carrier || "spx";
+      return `
+        <div class="ship-form">
+          <b>🚚 运单号</b>
+          <div class="grid3" style="margin-top:10px">
+            <label>运输公司 <select data-f="carrier">${carrierOpts(carrier)}</select></label>
+            <label class="other-name ${carrier === "other" ? "" : "hidden"}">公司名称 <input data-f="carrierName" value="${esc(carrier === "other" ? s.carrierName || "" : "")}"></label>
+            <label>运单号 <input data-f="trackingNo" value="${esc(s.trackingNo || "")}"></label>
+          </div>
+          <label>查询链接 <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
+          <div class="actions">${buttons}</div>
+        </div>`;
+    }
+
+    function renderList() {
+      document.querySelectorAll("#tabs button").forEach(b => {
+        const n = wins.filter(w => w.status === b.dataset.tab).length;
+        const urgent = b.dataset.tab === "claimed" || b.dataset.tab === "approved";
+        b.innerHTML = b.textContent.replace(/\s*\d+$/, "") + (urgent || n ? ` <span class="cnt ${urgent && n ? "" : "zero"}">${n}</span>` : "");
+      });
+      const q = $("search").value.trim().toLowerCase().replace(/^#/, "");
+      let list = q
+        ? wins.filter(w => w.id.toLowerCase().startsWith(q) || (w.prizeName || "").toLowerCase().includes(q)
+            || (w.drawMonth || "").toLowerCase().includes(q) || ((members[w.uid] || {}).name || "").toLowerCase().includes(q))
+        : wins.filter(w => w.status === tab);
+      const at = w => toDate(w.completedAt) || toDate(w.shippedAt) || toDate(w.approvedAt) || toDate(w.claimedAt) || toDate(w.createdAt) || 0;
+      list.sort((a, b) => ["claimed", "approved"].includes(tab) ? at(a) - at(b) : at(b) - at(a));
+      list = list.slice(0, 150);
+
+      $("panel").innerHTML = list.length ? list.map(w => {
+        const m = members[w.uid] || {};
+        let body = "";
+        const cancelBtn = `<button class="btn btn-bad" data-act="cancel">取消这个中奖</button>`;
+        if (w.status === "unclaimed") {
+          body = `${shipForm(w, `<button class="btn btn-ghost" data-act="saveShip">💾 保存运单号</button>${cancelBtn}`)}
+            <div class="actions"><button class="btn btn-ghost" data-act="switchDlv">🔁 改为${DLV[w.delivery === "separate" ? "withOrder" : "separate"]}</button></div>`;
+        } else if (w.status === "claimed") {
+          body = `${addrBox(w)}
+            ${shipForm(w, `<button class="btn btn-ok" data-act="approve">✔ 审核通过（稍后发货）</button>
+              <button class="btn btn-primary" data-act="ship">🚚 通过并标记已发货</button>${cancelBtn}`)}`;
+        } else if (w.status === "approved") {
+          body = `${addrBox(w)}${shipForm(w, `<button class="btn btn-primary" data-act="ship">🚚 标记已发货</button>${cancelBtn}`)}`;
+        } else if (w.status === "shipped") {
+          body = `${shipInfo(w)}${addrBox(w)}
+            <div class="meta">会员还没按「确认收到」</div>
+            <div class="actions">
+              <button class="btn btn-ghost" data-act="editShip">✏️ 修改运单号</button>
+              <button class="btn btn-ok" data-act="complete">✔ 手动标记完成</button>
+            </div>`;
+        } else if (w.status === "completed") {
+          body = `${shipInfo(w)}<div class="meta">✅ ${w.adminCompleted ? "管理员标记完成" : "会员确认收到"} · ${fmtDate(toDate(w.completedAt), true)}</div>`;
+        } else {
+          body = `<div class="meta">已取消 ${fmtDate(toDate(w.cancelledAt), true)}${w.cancelNote ? " · 原因：" + esc(w.cancelNote) : ""}</div>`;
+        }
+        return `
+          <div class="item" data-id="${esc(w.id)}">
+            <div class="item-head">
+              <div class="item-row" style="flex:1;min-width:0">
+                ${thumbHTML(w.prizeImage)}
+                <div style="min-width:0">
+                  <div class="item-title">${esc(w.prizeName)} <span class="tag ${ST_TAG[w.status] || ""}">${ST[w.status] || w.status}</span>
+                    <span class="tag tag-blue">${DLV[w.delivery] || ""}</span></div>
+                  <div class="meta"><a href="member.html?uid=${encodeURIComponent(w.uid)}">${esc(m.name || "(资料不存在)")}</a> · ${esc(m.email || "")}
+                    ${w.drawMonth ? " · 🏆 " + esc(w.drawMonth) : ""}${w.winnerName ? " · 名单：" + esc(w.winnerName) : ""}${w.orderNo ? ` · <code>${esc(w.orderNo)}</code>` : ""}</div>
+                  <div class="meta">添加 ${fmtDate(toDate(w.createdAt), true)}${w.claimedAt ? " · 领取 " + fmtDate(toDate(w.claimedAt), true) : ""}${w.note ? " · 留言：" + esc(w.note) : ""}</div>
+                </div>
+              </div>
+              <code class="rno">${redeemCode(w.id)}</code>
+            </div>
+            ${body}
+          </div>`;
+      }).join("") : `<p class="empty">${q ? "找不到符合的记录" : "没有记录"}</p>`;
+    }
+    bindShipEvents($("panel"));
+
+    $("panel").addEventListener("click", async e => {
+      const copy = e.target.closest("[data-copy]");
+      if (copy) {
+        try { await navigator.clipboard.writeText(copy.dataset.copy); copy.textContent = "已复制 ✓"; }
+        catch { prompt("请手动复制：", copy.dataset.copy); }
+        return;
+      }
+      const act = e.target.dataset.act;
+      const item = e.target.closest(".item");
+      if (!act || !item) return;
+      const w = wins.find(x => x.id === item.dataset.id);
+      if (!w) return;
+      if (act === "editShip") {   // 已发货 → 显示表单修改（状态不变）
+        e.target.closest(".actions").outerHTML = shipForm(w, `<button class="btn btn-ghost" data-act="saveShip">💾 保存运单号</button>`);
+        return;
+      }
+      const box = item.querySelector(".ship-form");
+      const ship = box ? readShip(box) : null;
+      let upd = null;
+      if (act === "saveShip") {
+        const err = shipError(ship, false);
+        if (err) { alert(err); return; }
+        upd = { shipping: ship.trackingNo ? { ...ship, by: adminEmail } : null };
+      }
+      if (act === "switchDlv") {
+        const to = w.delivery === "separate" ? "withOrder" : "separate";
+        if (!confirm(`把配送方式改为「${DLV[to]}」？`)) return;
+        upd = { delivery: to };
+      }
+      if (act === "approve") upd = { status: "approved", approvedAt: serverTimestamp() };
+      if (act === "ship") {
+        const err = shipError(ship, true);
+        if (err) { alert(err); return; }
+        upd = { status: "shipped", shippedAt: serverTimestamp(), shipping: { ...ship, by: adminEmail } };
+        if (w.status === "claimed") upd.approvedAt = serverTimestamp();
+      }
+      if (act === "complete") {
+        if (!confirm("手动标记这个奖品已完成？")) return;
+        upd = { status: "completed", completedAt: serverTimestamp(), adminCompleted: true };
+      }
+      if (act === "cancel") {
+        const why = prompt(`取消「${w.prizeName}」？会员那边会显示已取消。\n\n原因（会员看得到，选填）：`, "");
+        if (why === null) return;
+        upd = { status: "cancelled", cancelledAt: serverTimestamp(), cancelNote: why.trim().slice(0, 200), cancelledBy: adminEmail };
+      }
+      if (!upd) return;
+      item.querySelectorAll("button").forEach(b => b.disabled = true);
+      try {
+        await updateDoc(doc(db, "prizeWins", w.id), upd);
+        await loadWins();
+      } catch (err) {
+        alert("操作失败：" + err.message);
+        item.querySelectorAll("button").forEach(b => b.disabled = false);
+      }
+    });
+
+    $("periods").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) selectPeriod(b.dataset.id); });
+    $("reloadBtn").addEventListener("click", async () => {
+      await Promise.all([loadMembers(), loadPeriods()]);
+      await loadWins();
+      if (drawId) selectPeriod(drawId);
+    });
+
+    requireAdmin(async user => {
+      adminEmail = user.email || "";
+      try {
+        const s = await getDoc(doc(db, "settings", "shipping"));
+        if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
+      } catch (e) {}
+      try {
+        await Promise.all([loadMembers(), loadPeriods()]);
+        await loadWins();
+        const uid = new URLSearchParams(location.search).get("uid");   // 从会员详情页过来
+        if (uid && members[uid]) chooseMember(uid);
+        if (periods.length) selectPeriod(periods[0].id);
+      } catch (e) {
+        $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

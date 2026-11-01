@@ -84,6 +84,18 @@ export async function refreshRedeemBadge() {
   } catch (e) { console.warn("redeem badge", e); }
 }
 
+// 导航「中奖奖品」旁边的红色数字：会员已领取（待审核）+ 待发货
+export async function refreshPrizeBadge() {
+  const el = document.getElementById("prizeBadge");
+  if (!el) return;
+  try {
+    const snap = await getDocs(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])));
+    const n = snap.size;
+    el.textContent = n > 99 ? "99+" : n;
+    el.hidden = !n;
+  } catch (e) { console.warn("prize badge", e); }
+}
+
 // 首页区块（会员前台 home.html 的 DEFAULT_SECTIONS 也要一致）
 export const HOME_SECTIONS = [
   { key: "hero",    label: "👋 你好 + 积分 + 等级（含右边 Feed 框）", on: true },
@@ -201,6 +213,7 @@ export function computeBalance(ledger, redemptions, excludeId) {
 export function renderAdminNav(active) {
   const links = [
     ["redeem", "index.html", '兑换管理 <span id="redeemBadge" class="nav-badge" hidden></span>'],
+    ["prizes", "prizes.html", '🏆 中奖奖品 <span id="prizeBadge" class="nav-badge" hidden></span>'],
     ["members", "members.html", "会员管理"],
     ["rewards", "rewards.html", "奖品管理"],
     ["perks", "perks.html", "🎁 额外福利"],
@@ -279,6 +292,7 @@ export function requireAdmin(onReady) {
     onReady(user);
     initClubSwitch(user);
     refreshRedeemBadge();
+    refreshPrizeBadge();
   });
 }
 
