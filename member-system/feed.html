@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>Feed 管理 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .tabs { flex-wrap: wrap; }
+    .tab-badge { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; line-height: 18px; }
+    .tab-badge[hidden] { display: none; }
+    .pics { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 12px; }
+    .pic { position: relative; width: 90px; height: 90px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; background: #f8fafc; }
+    .pic img { width: 100%; height: 100%; object-fit: cover; }
+    .pic button { position: absolute; top: 4px; right: 4px; border: 0; border-radius: 999px; width: 22px; height: 22px; background: rgba(15,23,42,.7); color: #fff; cursor: pointer; font-size: .75rem; }
+    .pic-add { width: 90px; height: 90px; border: 2px dashed #cbd5e1; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 1.6rem; cursor: pointer; background: #fff; }
+    .pic-add:hover { border-color: #db2777; color: #db2777; }
+    .post-row { display: flex; gap: 12px; }
+    .post-row .thumb { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; flex: none; background: #f1f5f9; }
+    .post-row .body { flex: 1; min-width: 0; }
+    .post-text { white-space: pre-line; color: #334155; font-size: .9rem; margin-top: 6px; max-height: 7.5em; overflow: hidden; }
+    .ttl { display: inline-block; font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 4px; color: #fff; vertical-align: 1px; }
+    .cmts { margin-top: 10px; border-top: 1px dashed #e2e8f0; padding-top: 8px; }
+    .cmt { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: .86rem; }
+    .cmt:last-child { border-bottom: 0; }
+    .cmt .who { font-weight: 600; color: #0f172a; }
+    .cmt .x { border: 0; background: none; color: #dc2626; cursor: pointer; font-size: .8rem; white-space: nowrap; }
+    .perm-table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-bottom: 14px; }
+    .perm-table th, .perm-table td { border-bottom: 1px solid #e2e8f0; padding: 9px 8px; text-align: left; }
+    .perm-table th { color: #64748b; font-weight: 600; font-size: .8rem; }
+    .perm-table select { margin: 0; }
+    .title-row { display: grid; grid-template-columns: 110px 1fr 1fr 1fr 70px 150px 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .title-row input, .title-row select { margin: 0; padding: 7px 8px; font-size: .88rem; }
+    .title-row input[type=color] { padding: 2px; height: 36px; }
+    .title-head { font-size: .78rem; color: #64748b; font-weight: 600; }
+    .search-hits .item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; }
+    .avatar-pv { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0; background: #f8fafc; }
+    .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-row select { width: auto; margin: 0; }
+    @media (max-width: 800px) {
+      .title-row { grid-template-columns: 1fr 1fr; }
+      .title-head { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>📰 Feed 管理</h2>
+          <p class="muted">发帖、审核会员投稿、设定各等级权限和头衔。公开帖会同时出现在网站首页「最新动态」。</p>
+        </div>
+        <a class="btn btn-ghost" href="https://www.themochiishop.com/memberclub/feed.html" target="_blank">👁 看会员 Feed</a>
+      </div>
+
+      <div class="tabs" id="tabs">
+        <button data-tab="post" class="active">✏️ 发帖</button>
+        <button data-tab="pending">⏳ 待审核 <span id="pendingBadge" class="tab-badge" hidden></span></button>
+        <button data-tab="all">📋 全部帖子</button>
+        <button data-tab="perm">🔐 权限设定</button>
+        <button data-tab="titles">🏷️ 头衔管理</button>
+      </div>
+
+      <!-- ① 发帖 -->
+      <section id="tab-post" class="panel">
+        <h3>发新帖子</h3>
+        <form id="postForm">
+          <label>内容
+            <textarea id="pText" rows="5" maxlength="2000" placeholder="写点什么…（最多 2000 字）"></textarea>
+          </label>
+          <div style="font-size:.85rem;color:#475569">图片（最多 3 张，会自动压缩）</div>
+          <div class="pics" id="pPics"></div>
+          <input type="file" id="pFile" accept="image/*" multiple class="hidden">
+          <div class="grid2">
+            <label>谁能看
+              <select id="pRank"></select>
+            </label>
+            <label class="inline" style="margin-top:26px"><input type="checkbox" id="pPin"> 📌 置顶</label>
+          </div>
+          <p class="muted" style="font-size:.8rem;margin-bottom:10px">「公开」= 所有人都能看，也会出现在网站首页。其他选项：等级不够的人会看到一张模糊的上锁卡片。</p>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" id="pSend">📰 发布</button>
+          </div>
+          <p id="pMsg" class="msg"></p>
+        </form>
+      </section>
+
+      <!-- ② 待审核 -->
+      <section id="tab-pending" class="hidden">
+        <div id="pendingList"><p class="empty">载入中…</p></div>
+      </section>
+
+      <!-- ③ 全部帖子 -->
+      <section id="tab-all" class="hidden">
+        <div class="filter-row">
+          <select id="fStatus">
+            <option value="">全部状态</option>
+            <option value="published">已发布</option>
+            <option value="rejected">已退回</option>
+          </select>
+          <button class="btn btn-ghost" id="reloadAll">🔄 重新载入</button>
+          <span class="muted" style="font-size:.82rem">显示最新 50 篇</span>
+        </div>
+        <div id="allList"><p class="empty">载入中…</p></div>
+      </section>
+
+      <!-- ④ 权限设定 -->
+      <section id="tab-perm" class="hidden">
+        <div class="panel">
+          <h3>各等级可以做什么</h3>
+          <table class="perm-table">
+            <thead><tr><th>动作</th><th>最低等级</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>❤️ 点赞</td><td>已注册会员</td><td class="muted">每人每帖一次（固定）</td></tr>
+              <tr><td>💬 回复</td><td><select id="replyRank"></select></td><td class="muted">还要已绑定订单（内部会员、有头衔的人除外）</td></tr>
+              <tr><td>✏️ 发帖</td><td><select id="postRank"></select></td><td class="muted">同样要已绑定订单</td></tr>
+              <tr><td>⚡ 发帖免审核</td><td><select id="autoRank"></select></td><td class="muted">低于这个等级的帖子要你批准才公开</td></tr>
+            </tbody>
+          </table>
+          <h3 style="margin-top:20px">店铺发帖身份</h3>
+          <p class="muted" style="font-size:.82rem;margin-bottom:10px">你在这里发的帖子，卡片上显示的名字和头像。</p>
+          <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+            <img id="shopAvatarPv" class="avatar-pv" alt="">
+            <div>
+              <button type="button" class="btn btn-ghost" id="shopAvatarBtn">换头像</button>
+              <button type="button" class="btn btn-ghost" id="shopAvatarClear">用俱乐部 logo</button>
+              <input type="file" id="shopAvatarFile" accept="image/*" class="hidden">
+            </div>
+          </div>
+          <div class="grid2">
+            <label>名字 <input id="shopName" maxlength="40" placeholder="The Mochii Shop"></label>
+            <label>头衔 <select id="shopTitle"></select></label>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="savePerm">💾 保存设定</button>
+          </div>
+          <p id="permMsg" class="msg"></p>
+        </div>
+      </section>
+
+      <!-- ⑤ 头衔管理 -->
+      <section id="tab-titles" class="hidden">
+        <div class="panel">
+          <h3>头衔清单</h3>
+          <p class="muted" style="font-size:.82rem;margin-bottom:12px">
+            权限：<b>只是标签</b> = 跟一般会员一样；<b>免审核发帖</b> = 不看等级、发帖直接公开；<b>管理</b> = 再加上可以在会员 Feed 删除别人的帖子和回复。
+            代号建好后不要再改（已发的帖子用代号对应）。
+          </p>
+          <div class="title-row title-head"><div>代号（英文）</div><div>中文</div><div>English</div><div>Melayu</div><div>颜色</div><div>权限</div><div></div></div>
+          <div id="titleRows"></div>
+          <div class="actions">
+            <button class="btn btn-ghost" id="addTitle">＋ 新增头衔</button>
+            <button class="btn btn-primary" id="saveTitles">💾 保存头衔清单</button>
+          </div>
+          <p id="titleMsg" class="msg"></p>
+        </div>
+
+        <div class="panel">
+          <h3>指定头衔给会员</h3>
+          <label>搜寻会员（名字或 email）
+            <input id="mSearch" placeholder="输入至少 2 个字">
+          </label>
+          <div id="mHits" class="search-hits"></div>
+          <h3 style="margin-top:18px">已有头衔的会员</h3>
+          <div id="assigned"><p class="empty">载入中…</p></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit,
+      serverTimestamp, writeBatch, getCountFromServer
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, esc, toDate, fmtDate, compressImage, TIER_LABELS } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("feed");
+
+    const CLUB_LOGO = "https://www.themochiishop.com/memberclub/img/member.jpg";
+    const MAX_PICS = 3;
+
+    // 谁能看（数字要和 Firestore 规则的 fdRankOf 一致）
+    const RANKS = [
+      { v: -1, label: "🌐 公开（所有人）" },
+      { v: 0,  label: "🎫 会员" },
+      { v: 1,  label: "🥈 银卡以上" },
+      { v: 2,  label: "🥇 金卡以上" },
+      { v: 3,  label: "💎 钻石以上" },
+      { v: 4,  label: "🖤 Black Elite" },
+    ];
+    const rankLabel = v => (RANKS.find(r => r.v === v) || RANKS[1]).label;
+    // 权限表用的等级（从会员开始，没有「公开」）
+    const MEMBER_RANKS = RANKS.filter(r => r.v >= 0).map(r => r.v === 0 ? { v: 0, label: "Mochii 会员" } : r);
+
+    const DEFAULT_TITLES = {
+      owner:    { zh: "店主",     en: "Owner",    ms: "Pemilik",   color: "#e11d48", perm: "mod" },
+      admin:    { zh: "管理员",   en: "Admin",    ms: "Pentadbir", color: "#7c3aed", perm: "mod" },
+      designer: { zh: "设计师",   en: "Designer", ms: "Pereka",    color: "#0891b2", perm: "post" },
+      internal: { zh: "内部会员", en: "Staff",    ms: "Staf",      color: "#64748b", perm: "none" },
+    };
+    const PERMS = [["none", "只是标签"], ["post", "免审核发帖"], ["mod", "管理"]];
+    const STATUS = { published: '<span class="tag tag-ok">已发布</span>', pending: '<span class="tag tag-warn">待审核</span>', rejected: '<span class="tag tag-bad">已退回</span>' };
+
+    let cfg = {};       // feedConfig/main
+    let me = null;
+
+    const opt = (list, val) => list.map(r => `<option value="${r.v}" ${r.v === val ? "selected" : ""}>${r.label}</option>`).join("");
+    const titles = () => cfg.titles || DEFAULT_TITLES;
+    function titleTag(id) {
+      const t = titles()[id];
+      return t ? `<span class="ttl" style="background:${esc(t.color || "#64748b")}">${esc(t.zh || id)}</span>` : "";
+    }
+    function authorLine(p) {
+      const tier = p.authorTier ? (TIER_LABELS[p.authorTier] || "") : "";
+      return `${esc(p.authorName || "")} ${tier ? `<span class="muted">${tier}</span>` : ""} ${titleTag(p.authorTitle)}`;
+    }
+    function setMsg(id, text, type) { $(id).textContent = text; $(id).className = "msg" + (type ? " " + type : ""); }
+
+    // ---------- 分页 ----------
+    $("tabs").addEventListener("click", e => {
+      const b = e.target.closest("button[data-tab]");
+      if (!b) return;
+      document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
+      ["post", "pending", "all", "perm", "titles"].forEach(k => $("tab-" + k).classList.toggle("hidden", k !== b.dataset.tab));
+      if (b.dataset.tab === "pending") loadPending();
+      if (b.dataset.tab === "all") loadAll();
+      if (b.dataset.tab === "titles") { renderTitleRows(); loadAssigned(); }
+    });
+
+    // ---------- 设定 ----------
+    async function loadCfg() {
+      const s = await getDoc(doc(db, "feedConfig", "main"));
+      cfg = s.exists() ? s.data() : {};
+      $("replyRank").innerHTML = opt(MEMBER_RANKS, cfg.replyRank ?? 0);
+      $("postRank").innerHTML = opt(MEMBER_RANKS, cfg.postRank ?? 1);
+      $("autoRank").innerHTML = opt(MEMBER_RANKS, cfg.autoRank ?? 2);
+      $("shopName").value = cfg.shopName || "";
+      $("shopTitle").innerHTML = `<option value="">（不显示头衔）</option>` +
+        Object.entries(titles()).map(([k, t]) => `<option value="${esc(k)}" ${k === (cfg.shopTitle ?? "owner") ? "selected" : ""}>${esc(t.zh || k)}</option>`).join("");
+      shopAvatar = cfg.shopAvatar || "";
+      $("shopAvatarPv").src = shopAvatar || CLUB_LOGO;
+    }
+
+    let shopAvatar = "";
+    $("shopAvatarBtn").onclick = () => $("shopAvatarFile").click();
+    $("shopAvatarClear").onclick = () => { shopAvatar = ""; $("shopAvatarPv").src = CLUB_LOGO; };
+    $("shopAvatarFile").onchange = async e => {
+      const f = e.target.files[0]; e.target.value = "";
+      if (!f) return;
+      shopAvatar = await compressImage(f, 160);
+      $("shopAvatarPv").src = shopAvatar;
+    };
+
+    $("savePerm").onclick = async () => {
+      const r = +$("replyRank").value, p = +$("postRank").value, a = +$("autoRank").value;
+      if (p < r) { setMsg("permMsg", "发帖的等级不能低于回复的等级", "err"); return; }
+      if (a < p) { setMsg("permMsg", "免审核的等级不能低于发帖的等级", "err"); return; }
+      try {
+        await setDoc(doc(db, "feedConfig", "main"), {
+          replyRank: r, postRank: p, autoRank: a,
+          shopName: $("shopName").value.trim(), shopTitle: $("shopTitle").value, shopAvatar,
+          titles: titles(), updatedAt: serverTimestamp(),
+        }, { merge: true });
+        await loadCfg();
+        setMsg("permMsg", "已保存 ✅", "ok");
+      } catch (err) { setMsg("permMsg", "保存失败：" + err.message, "err"); }
+    };
+
+    // ---------- 发帖 ----------
+    $("pRank").innerHTML = opt(RANKS, -1);
+    let pics = [];   // { full, file }
+    function renderPics() {
+      $("pPics").innerHTML = pics.map((p, i) => `<div class="pic"><img src="${p.full}"><button type="button" data-rm="${i}">✕</button></div>`).join("") +
+        (pics.length < MAX_PICS ? `<div class="pic-add" id="picAdd">＋</div>` : "");
+      const add = $("picAdd");
+      if (add) add.onclick = () => $("pFile").click();
+      $("pPics").querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { pics.splice(+b.dataset.rm, 1); renderPics(); });
+    }
+    renderPics();
+    $("pFile").onchange = async e => {
+      const files = [...e.target.files].slice(0, MAX_PICS - pics.length);
+      e.target.value = "";
+      for (const f of files) pics.push({ full: await compressImage(f, 960), file: f });
+      renderPics();
+    };
+
+    $("postForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const text = $("pText").value.trim();
+      if (!text && !pics.length) { setMsg("pMsg", "请写点内容或放一张图片", "err"); return; }
+      const minRank = +$("pRank").value;
+      if (!confirm(`发布这篇帖子？\n谁能看：${rankLabel(minRank)}`)) return;
+      $("pSend").disabled = true;
+      try {
+        const ref = doc(collection(db, "feedPosts"));
+        const batch = writeBatch(db);
+        batch.set(ref, {
+          type: "normal", status: "published", minRank,
+          authorUid: me.uid, authorName: cfg.shopName || "The Mochii Shop",
+          authorTier: "", authorTitle: cfg.shopTitle ?? "owner", avatar: cfg.shopAvatar || "",
+          thumb: pics.length ? await compressImage(pics[0].file, 24) : "",
+          imageCount: pics.length, pinned: $("pPin").checked, createdAt: serverTimestamp(),
+        });
+        batch.set(doc(db, "feedPosts", ref.id, "content", "main"), { text, images: pics.map(p => p.full) });
+        await batch.commit();
+        $("postForm").reset(); pics = []; renderPics(); $("pRank").innerHTML = opt(RANKS, -1);
+        setMsg("pMsg", "已发布 ✅", "ok");
+      } catch (err) {
+        setMsg("pMsg", "发布失败：" + err.message + (/size|exceed/i.test(err.message) ? "（图片太大，少放一张试试）" : ""), "err");
+      } finally { $("pSend").disabled = false; }
+    });
+
+    // ---------- 帖子卡片（待审核、全部帖子共用） ----------
+    async function withContent(rows) {
+      return Promise.all(rows.map(async p => {
+        const [c, cc, lc] = await Promise.all([
+          getDoc(doc(db, "feedPosts", p.id, "content", "main")),
+          getCountFromServer(collection(db, "feedPosts", p.id, "comments")),
+          getCountFromServer(collection(db, "feedPosts", p.id, "likes")),
+        ]);
+        return { ...p, content: c.exists() ? c.data() : { text: "", images: [] }, nCmt: cc.data().count, nLike: lc.data().count };
+      }));
+    }
+
+    function postCard(p, mode) {
+      const img = (p.content.images || [])[0];
+      const actions = mode === "pending" ? `
+          <button class="btn btn-ok" data-act="approve">✅ 批准公开</button>
+          <button class="btn btn-bad" data-act="reject">↩️ 退回</button>
+          <button class="btn btn-ghost" data-act="del">🗑 删除</button>` : `
+          <select data-act="rank" style="width:auto;margin:0">${opt(RANKS, p.minRank)}</select>
+          <button class="btn btn-ghost" data-act="pin">${p.pinned ? "取消置顶" : "📌 置顶"}</button>
+          <button class="btn btn-ghost" data-act="edit">✏️ 改文字</button>
+          <button class="btn btn-ghost" data-act="cmts">💬 回复（${p.nCmt}）</button>
+          <button class="btn btn-ghost" data-act="del">🗑 删除</button>`;
+      return `
+        <div class="item" data-id="${esc(p.id)}">
+          <div class="post-row">
+            ${img ? `<img class="thumb" src="${img}" alt="">` : ""}
+            <div class="body">
+              <div class="item-head">
+                <div>
+                  <div class="item-title">${authorLine(p)}</div>
+                  <div class="meta">${fmtDate(toDate(p.createdAt), true)} · ${rankLabel(p.minRank)} · 🖼 ${p.imageCount || 0} · ❤️ ${p.nLike} · 💬 ${p.nCmt}${p.pinned ? " · 📌 置顶" : ""}</div>
+                </div>
+                <div>${STATUS[p.status] || ""}</div>
+              </div>
+              <div class="post-text">${esc(p.content.text)}</div>
+              ${p.rejectReason ? `<div class="meta">退回原因：${esc(p.rejectReason)}</div>` : ""}
+            </div>
+          </div>
+          <div class="actions">${actions}</div>
+          <div class="cmts hidden"></div>
+        </div>`;
+    }
+
+    async function deletePost(id) {
+      const batch = writeBatch(db);
+      for (const sub of ["comments", "likes", "content"]) {
+        (await getDocs(collection(db, "feedPosts", id, sub))).forEach(d => batch.delete(d.ref));
+      }
+      batch.delete(doc(db, "feedPosts", id));
+      await batch.commit();
+    }
+
+    async function loadComments(box, id) {
+      const snap = await getDocs(query(collection(db, "feedPosts", id, "comments"), orderBy("createdAt", "asc")));
+      box.innerHTML = snap.empty ? `<p class="muted" style="font-size:.85rem">还没有回复</p>` : snap.docs.map(d => {
+        const c = d.data();
+        return `<div class="cmt"><div><span class="who">${authorLine(c)}</span>
+          ${c.replyTo ? `<span class="muted">回复 @${esc(c.replyTo.name || "")}</span>` : ""}：${esc(c.text)}
+          <div class="meta">${fmtDate(toDate(c.createdAt), true)}</div></div>
+          <button class="x" data-cdel="${esc(d.id)}">删除</button></div>`;
+      }).join("");
+      box.querySelectorAll("[data-cdel]").forEach(b => b.onclick = async () => {
+        if (!confirm("删除这条回复？")) return;
+        try { await deleteDoc(doc(db, "feedPosts", id, "comments", b.dataset.cdel)); await loadComments(box, id); }
+        catch (err) { alert("删除失败：" + err.message); }
+      });
+    }
+
+    function bindCards(container, reload) {
+      container.querySelectorAll(".item[data-id]").forEach(card => {
+        const id = card.dataset.id;
+        const post = doc(db, "feedPosts", id);
+        card.querySelectorAll("[data-act]").forEach(el => {
+          const act = el.dataset.act;
+          const run = async fn => { el.disabled = true; try { await fn(); await reload(); } catch (err) { alert("失败：" + err.message); el.disabled = false; } };
+          if (act === "rank") el.onchange = () => run(() => updateDoc(post, { minRank: +el.value }));
+          if (act === "pin") el.onclick = () => run(() => updateDoc(post, { pinned: el.textContent.includes("置顶") && !el.textContent.includes("取消") }));
+          if (act === "approve") el.onclick = () => run(() => updateDoc(post, { status: "published", reviewedAt: serverTimestamp() }));
+          if (act === "reject") el.onclick = () => {
+            const why = prompt("退回原因（会员会看到）", "内容不符合 Feed 规范");
+            if (why === null) return;
+            run(() => updateDoc(post, { status: "rejected", rejectReason: why.trim().slice(0, 200), reviewedAt: serverTimestamp() }));
+          };
+          if (act === "del") el.onclick = () => { if (confirm("删除这篇帖子？回复和点赞会一起删除，无法复原。")) run(() => deletePost(id)); };
+          if (act === "edit") el.onclick = async () => {
+            const cur = card.querySelector(".post-text").textContent;
+            const v = prompt("修改文字", cur);
+            if (v === null || v === cur) return;
+            run(() => updateDoc(doc(db, "feedPosts", id, "content", "main"), { text: v.slice(0, 2000) }));
+          };
+          if (act === "cmts") el.onclick = async () => {
+            const box = card.querySelector(".cmts");
+            box.classList.toggle("hidden");
+            if (!box.classList.contains("hidden")) { box.innerHTML = `<p class="muted">载入中…</p>`; await loadComments(box, id); }
+          };
+        });
+      });
+    }
+
+    // ---------- 待审核 ----------
+    async function loadPending() {
+      try {
+        const snap = await getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending")));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (toDate(a.createdAt) || 0) - (toDate(b.createdAt) || 0));
+        const rows = await withContent(list);
+        $("pendingBadge").hidden = !rows.length; $("pendingBadge").textContent = rows.length;
+        $("pendingList").innerHTML = rows.length ? rows.map(p => postCard(p, "pending")).join("") : `<p class="empty">没有待审核的帖子 🎉</p>`;
+        bindCards($("pendingList"), loadPending);
+      } catch (err) { $("pendingList").innerHTML = `<p class="empty">载入失败：${esc(err.message)}</p>`; }
+    }
+
+    // ---------- 全部帖子 ----------
+    async function loadAll() {
+      $("allList").innerHTML = `<p class="empty">载入中…</p>`;
+      try {
+        const st = $("fStatus").value;
+        const snap = await getDocs(query(collection(db, "feedPosts"), orderBy("createdAt", "desc"), limit(100)));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .filter(p => st ? p.status === st : p.status !== "pending").slice(0, 50);
+        const rows = await withContent(list);
+        $("allList").innerHTML = rows.length ? rows.map(p => postCard(p, "all")).join("") : `<p class="empty">还没有帖子</p>`;
+        bindCards($("allList"), loadAll);
+      } catch (err) { $("allList").innerHTML = `<p class="empty">载入失败：${esc(err.message)}</p>`; }
+    }
+    $("fStatus").onchange = loadAll;
+    $("reloadAll").onclick = loadAll;
+
+    // ---------- 头衔清单 ----------
+    let titleDraft = [];
+    function renderTitleRows() {
+      titleDraft = Object.entries(titles()).map(([id, t]) => ({ id, ...t, saved: true }));
+      drawTitleRows();
+    }
+    function drawTitleRows() {
+      $("titleRows").innerHTML = titleDraft.map((t, i) => `
+        <div class="title-row" data-i="${i}">
+          <input data-k="id" value="${esc(t.id)}" ${t.saved ? "readonly" : ""} placeholder="例如 designer">
+          <input data-k="zh" value="${esc(t.zh || "")}" placeholder="中文">
+          <input data-k="en" value="${esc(t.en || "")}" placeholder="English">
+          <input data-k="ms" value="${esc(t.ms || "")}" placeholder="Melayu">
+          <input data-k="color" type="color" value="${esc(t.color || "#64748b")}">
+          <select data-k="perm">${PERMS.map(([v, l]) => `<option value="${v}" ${v === t.perm ? "selected" : ""}>${l}</option>`).join("")}</select>
+          <button class="btn btn-ghost" data-rm="${i}" title="删除">✕</button>
+        </div>`).join("");
+      $("titleRows").querySelectorAll("[data-k]").forEach(el => el.oninput = () => {
+        titleDraft[+el.closest("[data-i]").dataset.i][el.dataset.k] = el.value.trim();
+      });
+      $("titleRows").querySelectorAll("[data-rm]").forEach(b => b.onclick = () => {
+        if (!confirm("删除这个头衔？已拿到这个头衔的会员会变回没有头衔。")) return;
+        titleDraft.splice(+b.dataset.rm, 1); drawTitleRows();
+      });
+    }
+    $("addTitle").onclick = () => { titleDraft.push({ id: "", zh: "", en: "", ms: "", color: "#64748b", perm: "none" }); drawTitleRows(); };
+    $("saveTitles").onclick = async () => {
+      const out = {};
+      for (const t of titleDraft) {
+        if (!/^[a-z][a-z0-9_]{1,19}$/.test(t.id)) { setMsg("titleMsg", `代号「${t.id}」要用小写英文开头、只能有英文数字和底线`, "err"); return; }
+        if (!t.zh) { setMsg("titleMsg", `「${t.id}」请填中文名称`, "err"); return; }
+        if (out[t.id]) { setMsg("titleMsg", `代号「${t.id}」重复了`, "err"); return; }
+        out[t.id] = { zh: t.zh, en: t.en || t.zh, ms: t.ms || t.en || t.zh, color: t.color || "#64748b", perm: t.perm || "none" };
+      }
+      try {
+        await setDoc(doc(db, "feedConfig", "main"), { titles: out, updatedAt: serverTimestamp() }, { merge: true });
+        cfg.titles = out; await loadCfg(); renderTitleRows(); loadAssigned();
+        setMsg("titleMsg", "已保存 ✅", "ok");
+      } catch (err) { setMsg("titleMsg", "保存失败：" + err.message, "err"); }
+    };
+
+    // ---------- 指定头衔 ----------
+    let members = null;
+    const titleOpts = cur => `<option value="">（没有头衔）</option>` +
+      Object.entries(titles()).map(([k, t]) => `<option value="${esc(k)}" ${k === cur ? "selected" : ""}>${esc(t.zh)}</option>`).join("");
+
+    async function setTitle(uid, name, title) {
+      if (title) await setDoc(doc(db, "feedTitles", uid), { title, name: name || "", at: serverTimestamp() });
+      else await deleteDoc(doc(db, "feedTitles", uid));
+      await loadAssigned();
+    }
+
+    let assignedMap = {};
+    async function loadAssigned() {
+      const snap = await getDocs(collection(db, "feedTitles"));
+      assignedMap = {};
+      snap.forEach(d => assignedMap[d.id] = d.data());
+      $("assigned").innerHTML = snap.empty ? `<p class="empty">还没有人有头衔</p>` : snap.docs.map(d => `
+        <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div>${esc(d.data().name || d.id)} ${titleTag(d.data().title)}</div>
+          <select data-uid="${esc(d.id)}" data-name="${esc(d.data().name || "")}" style="width:auto;margin:0">${titleOpts(d.data().title)}</select>
+        </div>`).join("");
+      $("assigned").querySelectorAll("select[data-uid]").forEach(s => s.onchange = () =>
+        setTitle(s.dataset.uid, s.dataset.name, s.value).catch(err => alert("失败：" + err.message)));
+    }
+
+    $("mSearch").addEventListener("input", async () => {
+      const k = $("mSearch").value.trim().toLowerCase();
+      if (k.length < 2) { $("mHits").innerHTML = ""; return; }
+      if (!members) {
+        $("mHits").innerHTML = `<p class="muted">载入会员名单…</p>`;
+        members = (await getDocs(collection(db, "members"))).docs.map(d => ({ uid: d.id, ...d.data() }));
+      }
+      const hits = members.filter(m => (m.name || "").toLowerCase().includes(k) || (m.email || "").toLowerCase().includes(k)).slice(0, 10);
+      $("mHits").innerHTML = hits.length ? hits.map(m => `
+        <div class="item">
+          <div><b>${esc(m.name || "（没名字）")}</b> <span class="muted">${esc(m.email || "")}</span>
+            ${m.internal && m.internal.on ? '<span class="tag tag-pink">内部会员</span>' : ""}</div>
+          <select data-uid="${esc(m.uid)}" data-name="${esc(m.name || "")}" style="width:auto;margin:0">${titleOpts((assignedMap[m.uid] || {}).title || "")}</select>
+        </div>`).join("") : `<p class="muted">找不到</p>`;
+      $("mHits").querySelectorAll("select[data-uid]").forEach(s => s.onchange = () =>
+        setTitle(s.dataset.uid, s.dataset.name, s.value).then(() => s.blur()).catch(err => alert("失败：" + err.message)));
+    });
+
+    // ---------- 开始 ----------
+    requireAdmin(async user => {
+      me = user;
+      try {
+        await loadCfg();
+        // 第一次使用：建立预设设定和头衔
+        if (!cfg.titles) {
+          await setDoc(doc(db, "feedConfig", "main"), {
+            replyRank: 0, postRank: 1, autoRank: 2, shopName: "The Mochii Shop", shopTitle: "owner",
+            shopAvatar: "", titles: DEFAULT_TITLES, updatedAt: serverTimestamp(),
+          }, { merge: true });
+          await loadCfg();
+        }
+        loadPending();
+      } catch (err) {
+        setMsg("pMsg", "载入设定失败：" + err.message, "err");
+      }
+    });
+  </script>
+</body>
+</html>
