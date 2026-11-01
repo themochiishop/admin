@@ -4,8 +4,20 @@ import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 import {
-  doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs
+  doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, addDoc
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+// ---------- 📋 管理员操作记录（总览「最近动态」的「管理员」） ----------
+// 每次操作成功后记一笔：谁、什么时候、做了什么。记录失败不影响操作本身
+// type：redeem 兑换 / prize 中奖 / member 会员 / points 积分 / feed / content 内容 / settings 设定
+export function logAdmin(type, text, link = "") {
+  const u = auth.currentUser;
+  if (!u) return;
+  addDoc(collection(db, "adminLog"), {
+    type, text: String(text || "").slice(0, 300), link: String(link || "").slice(0, 200),
+    by: u.email || "", byName: (u.displayName || "").slice(0, 60), at: serverTimestamp(),
+  }).catch(e => console.warn("adminLog", e.message));
+}
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -439,6 +451,7 @@ function initClubSwitch(user) {
     if (!confirm(msg)) return;
     try {
       await setDoc(ref, { open: !open, updatedAt: serverTimestamp(), updatedBy: user.email || "" }, { merge: true });
+      logAdmin("settings", open ? "关闭了会员俱乐部（维修中）" : "开放了会员俱乐部", "index.html");
     } catch (err) {
       alert("切换失败：" + err.message);
     }
