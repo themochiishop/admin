@@ -66,6 +66,7 @@
       <div class="tabs" id="tabs">
         <button data-tab="post" class="active">✏️ 发帖</button>
         <button data-tab="pending">⏳ 待审核 <span id="pendingBadge" class="tab-badge" hidden></span></button>
+        <button data-tab="reports">🚩 检举 <span id="reportBadge" class="tab-badge" hidden></span></button>
         <button data-tab="all">📋 全部帖子</button>
         <button data-tab="perm">🔐 权限设定</button>
         <button data-tab="titles">🏷️ 头衔管理</button>
@@ -93,6 +94,13 @@
           </div>
           <p id="pMsg" class="msg"></p>
         </form>
+      </section>
+
+      <!-- 🚩 检举 -->
+      <section id="tab-reports" class="hidden">
+        <p class="muted" style="font-size:.85rem;margin-bottom:10px">通过：留言变成 ***（原文保存在检举记录里，可以恢复）、帖子下架。驳回：保持原样。处理后检举的会员会在铃铛收到通知；被检举的人不会收到通知。</p>
+        <div id="reportList"><p class="empty">载入中…</p></div>
+        <details style="margin-top:16px"><summary>最近处理过的检举</summary><div id="reportDone" style="margin-top:10px"></div></details>
       </section>
 
       <!-- ② 待审核 -->
@@ -182,7 +190,7 @@
     import { db } from "./js/firebase-config.js";
     import {
       collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit,
-      serverTimestamp, writeBatch, getCountFromServer
+      serverTimestamp, writeBatch, getCountFromServer, deleteField
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { requireAdmin, renderAdminNav, refreshFeedBadge, logAdmin, esc, toDate, fmtDate, compressImage, TIER_LABELS } from "./js/admin-common.js";
 
@@ -238,8 +246,9 @@
       const b = e.target.closest("button[data-tab]");
       if (!b) return;
       document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
-      ["post", "pending", "all", "perm", "titles"].forEach(k => $("tab-" + k).classList.toggle("hidden", k !== b.dataset.tab));
+      ["post", "pending", "reports", "all", "perm", "titles"].forEach(k => $("tab-" + k).classList.toggle("hidden", k !== b.dataset.tab));
       if (b.dataset.tab === "pending") loadPending();
+      if (b.dataset.tab === "reports") loadReports();
       if (b.dataset.tab === "all") loadAll();
       if (b.dataset.tab === "titles") { renderTitleRows(); loadAssigned(); }
     });
@@ -250,9 +259,10 @@
     //   #post=帖子ID&c=回复ID     → 打开那篇帖子，并展开回复、标出那一条
     function showTab(k) {
       document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === k));
-      ["post", "pending", "all", "perm", "titles"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== k));
+      ["post", "pending", "reports", "all", "perm", "titles"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== k));
     }
     async function openFromHash() {
+      if (location.hash === "#reports") { document.querySelector('#tabs button[data-tab="reports"]').click(); return; }
       if (location.hash === "#pending") {
         document.querySelector('#tabs button[data-tab="pending"]').click();
         document.querySelectorAll(".side-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "feed.html#pending"));
@@ -434,7 +444,7 @@
       box.innerHTML = snap.empty ? `<p class="muted" style="font-size:.85rem">还没有回复</p>` : snap.docs.map(d => {
         const c = d.data();
         return `<div class="cmt" data-cid="${esc(d.id)}"><div><span class="who">${authorLine(c)}</span>
-          ${c.replyTo ? `<span class="muted">回复 @${esc(c.replyTo.name || "")}</span>` : ""}：${esc(c.text)}
+          ${c.replyTo ? `<span class="muted">回复 @${esc(c.replyTo.name || "")}</span>` : ""}：${c.hidden ? '<span class="tag tag-bad">已隐藏（检举）</span> ' : ""}${esc(c.text)}
           <div class="meta">${fmtDate(toDate(c.createdAt), true)}</div></div>
           <button class="x" data-cdel="${esc(d.id)}">删除</button></div>`;
       }).join("");
@@ -497,6 +507,121 @@
         $("pendingList").innerHTML = rows.length ? rows.map(p => postCard(p, "pending")).join("") : `<p class="empty">没有待审核的帖子 🎉</p>`;
         bindCards($("pendingList"), loadPending);
       } catch (err) { $("pendingList").innerHTML = `<p class="empty">载入失败：${esc(err.message)}</p>`; }
+    }
+
+    // ---------- 🚩 检举 ----------
+    const REASON = { spam: "广告 / 垃圾讯息", abuse: "不友善 / 骚扰", inappropriate: "不当内容", other: "其他" };
+    let reportGroups = [];
+    async function loadReports() {
+      try {
+        const [openS, doneS] = await Promise.all([
+          getDocs(query(collection(db, "feedReports"), where("status", "==", "open"))),
+          getDocs(query(collection(db, "feedReports"), where("status", "in", ["approved", "dismissed", "restored"]))),
+        ]);
+        const group = docs => {
+          const m = {};
+          docs.forEach(d => { const r = { id: d.id, ...d.data() }; (m[r.targetKey] = m[r.targetKey] || []).push(r); });
+          return Object.values(m).map(list => ({ key: list[0].targetKey, kind: list[0].kind, postId: list[0].postId,
+            commentId: list[0].commentId, list, at: Math.max(...list.map(r => +(toDate(r.decidedAt) || toDate(r.createdAt) || 0))) }));
+        };
+        reportGroups = group(openS.docs).sort((a, b) => b.list.length - a.list.length || b.at - a.at);
+        $("reportBadge").hidden = !reportGroups.length; $("reportBadge").textContent = reportGroups.length;
+        refreshFeedBadge();
+        const names = await memberNames();
+        // 读取被检举的内容（现在的样子）
+        const live = await Promise.all(reportGroups.map(async g => {
+          try {
+            if (g.kind === "post") {
+              const [ps, cs] = await Promise.all([getDoc(doc(db, "feedPosts", g.postId)), getDoc(doc(db, "feedPosts", g.postId, "content", "main"))]);
+              return ps.exists() ? { author: ps.data().authorName, status: ps.data().status, text: cs.exists() ? cs.data().text : "" } : null;
+            }
+            const c = await getDoc(doc(db, "feedPosts", g.postId, "comments", g.commentId));
+            return c.exists() ? { author: c.data().authorName, text: c.data().text, hidden: c.data().hidden } : null;
+          } catch (e) { return null; }
+        }));
+        $("reportList").innerHTML = reportGroups.length ? reportGroups.map((g, i) => {
+          const L = live[i], first = g.list[0];
+          const reasons = {};
+          g.list.forEach(r => reasons[r.reason] = (reasons[r.reason] || 0) + 1);
+          return `<div class="item" data-rk="${esc(g.key)}">
+            <div class="item-head"><div>
+              <div class="item-title">${g.kind === "post" ? "📰 帖子" : "💬 留言"} · ${esc((L && L.author) || "（已删除）")}</div>
+              <div class="meta">${g.list.length} 人检举 · ${Object.entries(reasons).map(([k, n]) => `${esc(REASON[k] || k)}${n > 1 ? " ×" + n : ""}`).join("、")}</div>
+            </div><span class="tag tag-bad">🚩 ${g.list.length}</span></div>
+            <div class="post-text" style="margin-top:6px">${esc((L ? L.text : first.text) || "（没有文字）")}</div>
+            ${g.list.filter(r => r.note).map(r => `<div class="meta">「${esc(r.note)}」— ${esc(names[r.reporterUid] || "会员")}</div>`).join("")}
+            <div class="actions">
+              ${L ? `<button class="btn btn-bad" data-ract="approve">✅ 通过（${g.kind === "post" ? "下架帖子" : "隐藏留言"}）</button>` : ""}
+              <button class="btn btn-ghost" data-ract="dismiss">↩️ 驳回</button>
+              <a class="btn btn-ghost" href="feed.html#post=${encodeURIComponent(g.postId)}${g.commentId ? "&c=" + encodeURIComponent(g.commentId) : ""}">查看帖子</a>
+            </div></div>`;
+        }).join("") : `<p class="empty">没有待处理的检举 🎉</p>`;
+        $("reportList").querySelectorAll("[data-ract]").forEach(b => b.onclick = () => decideReport(b.closest("[data-rk]").dataset.rk, b.dataset.ract, b));
+        // 最近处理过的
+        const done = group(doneS.docs).sort((a, b) => b.at - a.at).slice(0, 30);
+        const ST = { approved: '<span class="tag tag-bad">已通过</span>', dismissed: '<span class="tag">已驳回</span>', restored: '<span class="tag tag-ok">已恢复</span>' };
+        $("reportDone").innerHTML = done.length ? done.map(g => {
+          const r = g.list[0];
+          return `<div class="item"><div class="item-head"><div>
+            <div class="item-title">${g.kind === "post" ? "📰 帖子" : "💬 留言"} · ${g.list.length} 人检举 ${ST[r.status] || ""}</div>
+            <div class="meta">${fmtDate(toDate(r.decidedAt), true)} · ${esc(r.decidedBy || "")}</div></div>
+            ${r.status === "approved" && g.kind === "comment" && r.original != null ? `<button class="btn btn-ghost" data-restore="${esc(g.key)}">恢复留言</button>` : ""}</div>
+            <div class="post-text">${esc(r.original ?? r.text ?? "")}</div></div>`;
+        }).join("") : `<p class="empty">还没有</p>`;
+        $("reportDone").querySelectorAll("[data-restore]").forEach(b => b.onclick = () => restoreReport(b.dataset.restore, done, b));
+      } catch (err) { $("reportList").innerHTML = `<p class="empty">载入失败：${esc(err.message)}（请确认 Firestore 规则已加上 feedReports）</p>`; }
+    }
+
+    async function decideReport(key, act, btn) {
+      const g = reportGroups.find(x => x.key === key);
+      if (!g) return;
+      const label = g.kind === "post" ? "帖子" : "留言";
+      if (act === "approve" && !confirm(g.kind === "post" ? "通过检举，下架这篇帖子？" : "通过检举，把这条留言隐藏成 ***？\n原文会保存在检举记录里，之后可以恢复。")) return;
+      if (act === "dismiss" && !confirm("驳回检举？内容保持原样。")) return;
+      btn.disabled = true;
+      try {
+        const batch = writeBatch(db);
+        const upd = { status: act === "approve" ? "approved" : "dismissed", decidedAt: serverTimestamp(), decidedBy: me.email || "" };
+        if (act === "approve") {
+          if (g.kind === "post") {
+            batch.update(doc(db, "feedPosts", g.postId), { status: "rejected", rejectReason: "违反社群规范（检举）", reviewedAt: serverTimestamp() });
+          } else {
+            const cref = doc(db, "feedPosts", g.postId, "comments", g.commentId);
+            const cs = await getDoc(cref);
+            if (cs.exists()) {
+              upd.original = cs.data().text || "";
+              batch.update(cref, { text: "***", hidden: true, hiddenAt: serverTimestamp() });
+            }
+          }
+        }
+        g.list.forEach(r => batch.update(doc(db, "feedReports", r.id), upd));
+        await batch.commit();
+        logAdmin("feed", `${act === "approve" ? (g.kind === "post" ? "检举通过，下架" : "检举通过，隐藏") : "驳回检举："}${label}（${g.list.length} 人检举）`,
+          `feed.html#post=${g.postId}${g.commentId ? "&c=" + g.commentId : ""}`);
+        await loadReports();
+      } catch (err) { alert("失败：" + err.message); btn.disabled = false; }
+    }
+
+    async function restoreReport(key, done, btn) {
+      const g = done.find(x => x.key === key);
+      if (!g || !confirm("恢复这条留言的原文？")) return;
+      btn.disabled = true;
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(db, "feedPosts", g.postId, "comments", g.commentId), { text: g.list[0].original || "", hidden: deleteField(), hiddenAt: deleteField() });
+        g.list.forEach(r => batch.update(doc(db, "feedReports", r.id), { status: "restored", decidedAt: serverTimestamp(), decidedBy: me.email || "" }));
+        await batch.commit();
+        logAdmin("feed", "恢复了被隐藏的留言", `feed.html#post=${g.postId}&c=${g.commentId}`);
+        await loadReports();
+      } catch (err) { alert("失败：" + err.message); btn.disabled = false; }
+    }
+
+    let nameCache = null;
+    async function memberNames() {
+      if (nameCache) return nameCache;
+      nameCache = {};
+      try { (await getDocs(collection(db, "members"))).forEach(d => nameCache[d.id] = d.data().name || ""); } catch (e) {}
+      return nameCache;
     }
 
     // ---------- 全部帖子 ----------
@@ -615,6 +740,7 @@
           await loadCfg();
         }
         loadPending();
+        loadReports();
         openFromHash();
       } catch (err) {
         setMsg("pMsg", "载入设定失败：" + err.message, "err");
