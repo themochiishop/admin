@@ -4,33 +4,124 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/jpeg" href="../logo.png">
-  <title>兑换管理 · 会员系统 Admin</title>
+  <title>总览 · 会员系统 Admin</title>
   <link rel="stylesheet" href="css/admin.css">
   <style>
-    .tabs { flex-wrap: wrap; }
-    .tabs button .cnt { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; }
-    .tabs button .cnt.zero { background: #cbd5e1; }
-    .addr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: .88rem; line-height: 1.6; margin-top: 8px; }
-    .ship-form { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 14px; margin-top: 10px; }
-    .ship-form .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
-    .ship-form .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 10px; }
-    @media (max-width: 640px) { .ship-form .grid3, .ship-form .grid4 { grid-template-columns: 1fr 1fr; } }
-    .photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .photos .ph-wrap { position: relative; }
-    .photos .ph-wrap button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #dc2626; color: #fff; font-size: .7rem; cursor: pointer; }
-    .kind { font-size: .7rem; }
-    .tag-blue { background: #e0f2fe; color: #0369a1; }
-    .problem { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 8px 12px; font-size: .85rem; margin-top: 8px; }
-    .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; }
-    .mode-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: .86rem; }
-    .mode-row label { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
-    .mode-row input { width: auto; margin: 0; }
-    .prize-alert { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #fff1f2; border: 1px solid #fda4af; color: #9f1239;
-      border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; text-decoration: none; font-size: .9rem; }
-    .prize-alert:hover { background: #ffe4e6; }
-    .prize-alert b { font-size: .95rem; }
-    .prize-alert .go { margin-left: auto; font-weight: 700; white-space: nowrap; }
+    .container { max-width: 1120px; }
+    .ov-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .ov-head h2 { font-size: 1.4rem; color: #0f172a; }
+    .ov-head p { color: #64748b; font-size: .85rem; margin-top: 2px; }
+    .ov-head .right { display: flex; align-items: center; gap: 10px; font-size: .8rem; color: #94a3b8; }
+
+    /* ===== 便当盒 ===== */
+    .bento {
+      display: grid; gap: 14px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-areas:
+        "todo  todo  mem    pts"
+        "todo  todo  tier   tier"
+        "month stock recent recent"
+        "bday  club  recent recent"
+        "quick quick quick  notify";
+    }
+    .t-todo { grid-area: todo; } .t-mem { grid-area: mem; } .t-pts { grid-area: pts; }
+    .t-tier { grid-area: tier; } .t-month { grid-area: month; } .t-stock { grid-area: stock; }
+    .t-recent { grid-area: recent; } .t-bday { grid-area: bday; } .t-club { grid-area: club; }
+    .t-quick { grid-area: quick; } .t-notify { grid-area: notify; }
+    @media (max-width: 1179px) {
+      .bento {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+          "todo  todo" "mem pts" "tier tier" "month stock" "recent recent" "bday club" "notify quick";
+      }
+    }
+    @media (max-width: 559px) {
+      .bento { grid-template-columns: minmax(0, 1fr); gap: 12px;
+        grid-template-areas: "todo" "mem" "pts" "tier" "month" "stock" "recent" "bday" "club" "notify" "quick"; }
+    }
+
+    .tile {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 18px;
+      display: flex; flex-direction: column; min-width: 0; color: inherit;
+      transition: border-color .15s, box-shadow .15s, transform .15s;
+    }
+    a.tile:hover { border-color: #cbd5e1; box-shadow: 0 8px 18px rgba(15,23,42,.06); transform: translateY(-2px); }
+    .tile-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .8rem; font-weight: 700; color: #64748b; margin-bottom: 10px; }
+    .tile-h .go { font-weight: 600; color: #94a3b8; font-size: .78rem; white-space: nowrap; }
+    a.tile:hover .tile-h .go { color: #db2777; }
+    .big { font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+    .big small { font-size: .85rem; font-weight: 600; color: #64748b; margin-left: 4px; letter-spacing: 0; }
+    .sub { font-size: .82rem; color: #64748b; margin-top: 6px; line-height: 1.55; }
+    .sub b { color: #0f172a; font-variant-numeric: tabular-nums; }
+    .up { color: #16a34a; font-weight: 700; }
+    .down { color: #dc2626; font-weight: 700; }
+    .loading { color: #cbd5e1; }
+
+    /* 待处理 */
+    .t-todo { padding: 18px 20px; }
+    .t-todo.busy { background: linear-gradient(160deg, #fdf2f8 0%, #fff 55%); border-color: #f9a8d4; }
+    .t-todo.clear { background: linear-gradient(160deg, #f0fdf4 0%, #fff 55%); border-color: #bbf7d0; }
+    .todo-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+    .todo-top .big { font-size: 2.6rem; }
+    .t-todo.busy .todo-top .big { color: #db2777; }
+    .t-todo.clear .todo-top .big { color: #16a34a; }
+    .todo-top .lbl { font-size: .9rem; color: #475569; font-weight: 600; }
+    .todo-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (max-width: 559px) { .todo-list { grid-template-columns: 1fr; } }
+    .todo-row {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
+      background: #fff; border: 1px solid #e2e8f0; color: #0f172a; font-size: .86rem;
+    }
+    .todo-row:hover { border-color: #db2777; }
+    .todo-row .ic { font-size: 1.05rem; width: 22px; text-align: center; }
+    .todo-row .tx { flex: 1; min-width: 0; }
+    .todo-row .tx small { display: block; color: #94a3b8; font-size: .72rem; }
+    .todo-row .n { font-weight: 800; font-size: 1.05rem; min-width: 30px; text-align: center; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #94a3b8; font-variant-numeric: tabular-nums; }
+    .todo-row.has .n { background: #e11d48; color: #fff; }
+    .todo-row:not(.has) { color: #94a3b8; }
+    .todo-done { margin-top: 12px; font-size: .85rem; color: #15803d; font-weight: 600; }
+
+    /* 等级分布 */
+    .tier-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #f1f5f9; gap: 2px; }
+    .tier-bar span { display: block; height: 100%; min-width: 3px; }
+    .tier-legend { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+    @media (max-width: 559px) { .tier-legend { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .tier-legend div { font-size: .74rem; color: #64748b; min-width: 0; }
+    .tier-legend b { display: block; font-size: 1.1rem; color: #0f172a; font-variant-numeric: tabular-nums; }
+    .tier-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+
+    /* 清单 */
+    .list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .list li { display: flex; align-items: center; gap: 8px; font-size: .84rem; padding: 6px 0; border-top: 1px solid #f1f5f9; min-width: 0; }
+    .list li:first-child { border-top: 0; }
+    .list .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #0f172a; }
+    .list .rt { color: #94a3b8; font-size: .76rem; white-space: nowrap; }
+    .list a { color: #0f172a; }
+    .list a:hover { color: #db2777; }
+    .t-recent .list li { padding: 8px 0; }
+    .t-recent .ic { width: 22px; text-align: center; flex-shrink: 0; }
+    .none { color: #94a3b8; font-size: .84rem; padding: 6px 0; }
+
+    /* 俱乐部 */
+    .club-state { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 800; color: #0f172a; }
+    .club-state .lamp { width: 12px; height: 12px; border-radius: 50%; background: #cbd5e1; box-shadow: 0 0 0 4px #f1f5f9; }
+    .club-state.on .lamp { background: #16a34a; box-shadow: 0 0 0 4px #dcfce7; }
+    .club-state.off .lamp { background: #dc2626; box-shadow: 0 0 0 4px #fee2e2; }
+    .tile .btn { align-self: flex-start; margin-top: auto; }
+    .t-club .btn { margin-top: 12px; }
+
+    /* 快捷 */
+    .quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    @media (max-width: 1179px) { .quick { grid-template-columns: 1fr 1fr; } }
+    .quick a {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      padding: 12px 6px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0;
+      color: #0f172a; font-size: .82rem; font-weight: 600; text-align: center;
+    }
+    .quick a span { font-size: 1.25rem; }
+    .quick a:hover { border-color: #db2777; background: #fdf2f8; }
+
+    .err-box { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: .88rem; }
   </style>
 </head>
 <body>
@@ -40,527 +131,343 @@
     <header id="adminHeader"></header>
 
     <div class="container">
-      <div class="page-head">
+      <div class="ov-head">
         <div>
-          <h2>兑换管理</h2>
-          <p class="muted">批准后才扣积分。优惠券自动带入券码；实体奖品批准后到「待发货」填物流资料。每月抽奖的中奖奖品在「🏆 中奖奖品」处理。</p>
+          <h2 id="hello">📊 总览</h2>
+          <p>先看「待处理」，再看会员和积分的变化。点任何一格都会跳到对应的页面。</p>
         </div>
-        <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+        <div class="right">
+          <span id="updated"></span>
+          <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+        </div>
       </div>
 
-      <!-- 🏆 中奖奖品有要处理的才显示 -->
-      <a id="prizeAlert" class="prize-alert hidden" href="prizes.html"></a>
+      <div id="errBox" class="err-box hidden"></div>
 
-      <div class="tabs" id="tabs">
-        <button data-tab="pending" class="active">待审核</button>
-        <button data-tab="toShip">待发货</button>
-        <button data-tab="shipped">已发货</button>
-        <button data-tab="done">已完成</button>
-        <button data-tab="closed">已拒绝 / 取消</button>
+      <div class="bento">
+        <!-- 🔔 待处理 -->
+        <section class="tile t-todo" id="tTodo">
+          <div class="tile-h"><span>🔔 待处理</span></div>
+          <div class="todo-top"><span class="big" id="todoTotal">–</span><span class="lbl" id="todoLbl">件事要处理</span></div>
+          <div class="todo-list" id="todoList"></div>
+        </section>
+
+        <!-- 👥 会员 -->
+        <a class="tile t-mem" href="members.html">
+          <div class="tile-h"><span>👥 会员</span><span class="go">会员列表 →</span></div>
+          <div class="big" id="memTotal">–</div>
+          <div class="sub" id="memSub"><span class="loading">载入中…</span></div>
+        </a>
+
+        <!-- 💰 积分 -->
+        <a class="tile t-pts" href="members.html">
+          <div class="tile-h"><span>💰 流通中的可用积分</span></div>
+          <div class="big" id="ptsTotal">–</div>
+          <div class="sub" id="ptsSub"><span class="loading">载入中…</span></div>
+        </a>
+
+        <!-- 🏅 等级分布 -->
+        <a class="tile t-tier" href="members.html">
+          <div class="tile-h"><span>🏅 等级分布</span><span class="go" id="tierNote"></span></div>
+          <div class="tier-bar" id="tierBar"></div>
+          <div class="tier-legend" id="tierLegend"></div>
+        </a>
+
+        <!-- 🛍️ 本月兑换 -->
+        <a class="tile t-month" href="redeem.html#done">
+          <div class="tile-h"><span>🛍️ 本月兑换</span><span class="go">→</span></div>
+          <div class="big" id="monthCount">–</div>
+          <div class="sub" id="monthSub"><span class="loading">载入中…</span></div>
+        </a>
+
+        <!-- 🎫 库存提醒 -->
+        <a class="tile t-stock" href="rewards.html">
+          <div class="tile-h"><span>🎫 券码与库存</span><span class="go">商城奖品 →</span></div>
+          <div id="stockBody"><span class="none">载入中…</span></div>
+        </a>
+
+        <!-- 🕒 最近动态 -->
+        <section class="tile t-recent">
+          <div class="tile-h"><span>🕒 最近动态</span></div>
+          <ul class="list" id="recentList"><li class="none">载入中…</li></ul>
+        </section>
+
+        <!-- 🎂 本月寿星 -->
+        <a class="tile t-bday" href="members.html">
+          <div class="tile-h"><span id="bdayTitle">🎂 本月寿星</span></div>
+          <div class="big" id="bdayCount">–</div>
+          <ul class="list" id="bdayList"></ul>
+        </a>
+
+        <!-- 🟢 俱乐部 -->
+        <section class="tile t-club">
+          <div class="tile-h"><span>🏠 会员俱乐部</span></div>
+          <div class="club-state" id="clubState"><span class="lamp"></span><span id="clubText">读取中…</span></div>
+          <div class="sub" id="clubSub"></div>
+          <button class="btn btn-ghost" id="clubBtn" type="button">切换</button>
+        </section>
+
+        <!-- ⚡ 快捷 -->
+        <section class="tile t-quick">
+          <div class="tile-h"><span>⚡ 快捷操作</span></div>
+          <div class="quick">
+            <a href="announcements.html"><span>📢</span>发公告</a>
+            <a href="rewards.html"><span>🛍️</span>新增奖品</a>
+            <a href="feed.html"><span>✨</span>发 Feed</a>
+            <a href="home.html"><span>🏠</span>首页设定</a>
+          </div>
+        </section>
+
+        <!-- 📧 邮件提醒 -->
+        <a class="tile t-notify" href="notify.html">
+          <div class="tile-h"><span>📧 邮件提醒</span><span class="go">设定 →</span></div>
+          <div class="big" id="notifyCount">–</div>
+          <div class="sub" id="notifySub"></div>
+        </a>
       </div>
-
-      <input id="search" placeholder="🔍 搜索兑换编号（例如 #A1B2C3）、会员名称或奖品" style="margin-bottom:12px">
-      <div id="panel"><p class="empty">载入中…</p></div>
-
-      <details class="panel" style="margin-top:20px">
-        <summary style="cursor:pointer;font-weight:700">🔗 运输公司查询链接</summary>
-        <p class="meta" style="margin:10px 0">填物流资料时，输入单号就会自动生成查询链接，<code>{no}</code> 会换成追踪单号。第一次请用真实单号测试链接能不能打开，不对的话在这里改。</p>
-        <div class="grid2">
-          <label>SPX Express <input id="tplSpx"></label>
-          <label>J&amp;T Express <input id="tplJnt"></label>
-        </div>
-        <div class="actions"><button class="btn btn-primary" id="tplSave">保存</button></div>
-        <p id="tplMsg" class="msg"></p>
-      </details>
-
     </div>
   </div>
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, query, where, getDocs, getDoc, doc, limit, setDoc, updateDoc,
-      writeBatch, serverTimestamp, increment
-    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
-      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode, readyWinners
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners
     } from "./js/admin-common.js";
+    import {
+      collection, getDocs, getDoc, doc, query, where, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const $ = id => document.getElementById(id);
-    renderAdminNav("redeem");
+    renderAdminNav("overview");
 
-    let all = [];
-    const members = {};   // uid → 会员资料
-    const ledgers = {};   // uid → 积分流水
-    let tab = "pending";
-    let trackTpl = { ...DEFAULT_TRACK_TPL };
-    let adminEmail = "";
-    const shipPhotos = {};   // 兑换 ID → 待上传的包裹照片
+    const TIERS = [
+      { key: "mochii",  color: "#f9a8d4" },
+      { key: "silver",  color: "#94a3b8" },
+      { key: "gold",    color: "#f59e0b" },
+      { key: "diamond", color: "#38bdf8" },
+      { key: "black",   color: "#0f172a" },
+    ];
+    // 和 notify.html 的 EVENTS 一致（预设开或关）
+    const NOTIFY_DEFAULTS = { newMember: true, redemption: true, prize: true, feedPending: true, address: false, problemStale: false, newBinding: false };
 
-    const isGift = r => r.kind === "gift";
-    // 🧪 测试兑换：批准时选的；测试的不扣库存、不用掉券码库、不算进数据
-    const isTest = r => r.test === true;
-    const isInternal = uid => !!(members[uid] && members[uid].internal && members[uid].internal.on);
-    const TABS = {
-      pending: r => r.status === "pending",
-      toShip:  r => isGift(r) && (r.status === "approved" || r.status === "problem"),
-      shipped: r => isGift(r) && r.status === "shipped",
-      done:    r => r.status === "completed" || (!isGift(r) && r.status === "approved"),
-      closed:  r => r.status === "rejected" || r.status === "cancelled",
+    const num = n => Number(n || 0).toLocaleString("en-US");
+    const DONE_STATUSES = ["approved", "shipped", "completed", "problem"];
+
+    function ago(d) {
+      if (!d) return "";
+      const s = (Date.now() - d.getTime()) / 1000;
+      if (s < 60) return "刚刚";
+      if (s < 3600) return Math.floor(s / 60) + " 分钟前";
+      if (s < 86400) return Math.floor(s / 3600) + " 小时前";
+      if (s < 172800) return "昨天";
+      if (s < 7 * 86400) return Math.floor(s / 86400) + " 天前";
+      return fmtDate(d);
+    }
+    const monthStart = (offset = 0) => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth() + offset, 1); };
+
+    // ---------- 🔔 待处理 ----------
+    const todo = {
+      rPending: { ic: "🎁", t: "兑换待审核", href: "redeem.html#pending", n: null },
+      rShip:    { ic: "📦", t: "兑换待发货", href: "redeem.html#toShip", n: null },
+      pClaimed: { ic: "🏆", t: "中奖待审核", href: "prizes.html#claimed", n: null },
+      pShip:    { ic: "🚚", t: "中奖待发货", href: "prizes.html#approved", n: null },
+      feed:     { ic: "⏳", t: "Feed 投稿待审核", href: "feed.html#pending", n: null },
+      ready:    { ic: "🔗", t: "得奖者已绑定，待发奖", href: "prizes.html", n: null },
     };
-    const EMPTY = {
-      pending: "目前没有待审核的兑换 🎉", toShip: "没有要发货的奖品 📦", shipped: "没有运送中的包裹",
-      done: "还没有完成的兑换", closed: "没有记录",
-    };
-
-    $("tabs").addEventListener("click", e => {
-      const b = e.target.closest("button");
-      if (!b) return;
-      tab = b.dataset.tab;
-      document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
-      render();
-    });
-
-    // 🏆 中奖奖品：会员已领取（待审核）+ 待发货
-    async function loadPrizeAlert() {
-      try {
-        const [s, ready] = await Promise.all([
-          getDocs(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"]))),
-          readyWinners().catch(() => []),
-        ]);
-        const list = s.docs.map(d => d.data());
-        const a = list.filter(p => p.status === "claimed").length, b = list.length - a, r = ready.length;
-        const parts = [r && `${r} 位得奖者已绑定，等你发奖`, a && `${a} 笔会员已领取，待审核`, b && `${b} 笔待发货`].filter(Boolean);
-        $("prizeAlert").innerHTML = `<b>🏆 中奖奖品</b><span>${parts.join(" · ")}</span><span class="go">去处理 ➔</span>`;
-        $("prizeAlert").classList.toggle("hidden", !parts.length);
-      } catch (e) { console.warn("prize alert", e); }
+    function renderTodo() {
+      const rows = Object.values(todo);
+      const total = rows.reduce((s, r) => s + (r.n || 0), 0);
+      const loaded = rows.filter(r => r.n !== null).length;
+      $("todoTotal").textContent = loaded ? total : "–";
+      $("todoLbl").textContent = total ? "件事要处理" : (loaded === rows.length ? "全部处理完了" : "件事要处理");
+      $("tTodo").classList.toggle("busy", total > 0);
+      $("tTodo").classList.toggle("clear", loaded === rows.length && total === 0);
+      $("todoList").innerHTML = rows.map(r => `
+        <a class="todo-row ${r.n ? "has" : ""}" href="${r.href}">
+          <span class="ic">${r.ic}</span>
+          <span class="tx">${r.t}</span>
+          <span class="n">${r.n === null ? "…" : r.n}</span>
+        </a>`).join("") +
+        (loaded === rows.length && !total ? `<div class="todo-done" style="grid-column:1/-1">✓ 目前没有要处理的事，休息一下 ☕</div>` : "");
     }
 
+    // ---------- 主要资料 ----------
     async function load() {
-      loadPrizeAlert();
-      $("panel").innerHTML = `<p class="empty">载入中…</p>`;
-      const snap = await getDocs(collection(db, "redemptions"));
-      all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .map(r => ({ ...r, createdAt: toDate(r.createdAt), decidedAt: toDate(r.decidedAt) }));
+      $("errBox").classList.add("hidden");
+      const [mS, bS, lS, rS, wS, fS, rwS, cS, sS, nS] = await Promise.all([
+        getDocs(collection(db, "members")),
+        getDocs(collection(db, "bindings")),
+        getDocs(collection(db, "pointsLedger")),
+        getDocs(collection(db, "redemptions")),
+        getDocs(collection(db, "prizeWins")),
+        getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending"))),
+        getDocs(collection(db, "rewards")),
+        getDocs(collection(db, "coupons")),
+        getDocs(collection(db, "rewardSecrets")),
+        getDoc(doc(db, "adminSettings", "notify")).catch(() => null),
+      ]);
 
-      const recent = all.filter(r => !TABS.closed(r) && !TABS.done(r))
-        .concat(all.filter(r => TABS.closed(r) || TABS.done(r))
-          .sort((a, b) => (b.decidedAt || b.createdAt || 0) - (a.decidedAt || a.createdAt || 0)).slice(0, 150));
-      await Promise.all([...new Set(recent.map(r => r.uid))].map(async uid => {
-        if (members[uid]) return;
-        const s = await getDoc(doc(db, "members", uid));
-        members[uid] = s.exists() ? s.data() : { name: "(资料不存在)" };
-      }));
-      await Promise.all([...new Set(all.filter(TABS.pending).map(r => r.uid))].map(async uid => {
-        const s = await getDocs(query(collection(db, "pointsLedger"), where("uid", "==", uid)));
-        ledgers[uid] = s.docs.map(d => d.data());
-      }));
-      render();
-      refreshRedeemBadge();
-    }
+      const members = {};
+      mS.docs.forEach(d => members[d.id] = { uid: d.id, ...d.data() });
+      const nameOf = uid => (members[uid] || {}).name || "会员";
+      const isInternal = uid => !!(members[uid] && members[uid].internal && members[uid].internal.on);
+      const redemptions = rS.docs.map(d => ({ id: d.id, ...d.data() }));
+      const wins = wS.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // ---------- 共用显示 ----------
-    const kindTag = r => isGift(r) ? '<span class="tag tag-blue kind">🎁 实体</span>' : '<span class="tag kind">🎫 优惠券</span>';
-    const addrText = a => a ? `${a.name}\n${a.phone}\n${a.line1}${a.line2 ? ", " + a.line2 : ""}\n${a.postcode} ${a.city}, ${a.state}\n${a.country || "Malaysia"}` : "";
-    function addrBox(r) {
-      const a = r.address;
-      if (!a) return "";
-      return `
-        <div class="addr-box">
-          📍 <b>${esc(a.name)}</b> · ${esc(fmtPhone(a.phone))}<br>
-          ${esc(a.line1)}${a.line2 ? ", " + esc(a.line2) : ""}<br>${esc(a.postcode)} ${esc(a.city)}, ${esc(a.state)}
-          ${r.addressUpdatedAt ? `<div class="meta">会员于 ${fmtDate(toDate(r.addressUpdatedAt), true)} 修改过地址</div>` : ""}
-          <div class="actions" style="margin-top:6px">
-            <button class="btn btn-ghost" data-act="copyAddr">📋 复制地址</button>
-            <a class="btn btn-ghost" href="${esc(waLink(a.phone, `Hi ${a.name}, ini The Mochii Shop 💕 berkenaan ganjaran ${r.rewardName}`))}" target="_blank">💬 WhatsApp</a>
-          </div>
-        </div>`;
-    }
-    function shipInfo(r) {
-      const s = r.shipping || {};
-      return `
-        <div class="addr-box">
-          🚚 <b>${esc(s.carrierName || "")}</b> · <code style="word-break:break-all">${esc(s.trackingNo || "")}</code>
-          ${s.trackingUrl ? `<div class="meta" style="word-break:break-all"><a href="${esc(s.trackingUrl)}" target="_blank">🔗 ${esc(s.trackingUrl)}</a></div>` : ""}
-          <div class="meta">发货 ${fmtDate(toDate(r.shippedAt), true)}${s.weightKg ? ` · ${esc(s.weightKg)} kg` : ""}${s.dims && s.dims.l ? ` · ${esc(s.dims.l)}×${esc(s.dims.w)}×${esc(s.dims.h)} cm` : ""}${s.by ? " · " + esc(s.by) : ""}</div>
-          ${s.note ? `<div class="meta">留言：${esc(s.note)}</div>` : ""}
-          ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}">`).join("")}</div>` : ""}
-        </div>`;
-    }
-    function head(r, extra = "") {
-      const m = members[r.uid] || {};
-      return `
-        <div class="item-head">
-          <div style="min-width:0;flex:1">
-            <div class="item-title">${kindTag(r)} ${isTest(r) ? '<span class="tag tag-warn">🧪 测试</span> ' : ""}${esc(r.rewardName)} · ${r.cost} 分 ${extra}</div>
-            <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a>${isInternal(r.uid) ? ' <span class="tag tag-pink">🏷️ 内部会员</span>' : ""} · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
-          </div>
-          <code class="rno">${redeemCode(r.id)}</code>
-        </div>`;
-    }
+      // 待处理
+      todo.rPending.n = redemptions.filter(r => r.status === "pending").length;
+      todo.rShip.n = redemptions.filter(r => r.kind === "gift" && (r.status === "approved" || r.status === "problem")).length;
+      todo.pClaimed.n = wins.filter(w => w.status === "claimed").length;
+      todo.pShip.n = wins.filter(w => w.status === "approved").length;
+      todo.feed.n = fS.size;
+      renderTodo();
 
-    // ---------- 发货表单 ----------
-    function shipForm(r) {
-      const s = r.shipping || {};
-      const carrier = s.carrier || "spx";
-      const photos = shipPhotos[r.id] || s.photos || [];
-      shipPhotos[r.id] = photos;
-      return `
-        <div class="ship-form">
-          <b>${r.status === "problem" ? "🔁 重新发货" : "🚚 填写物流资料"}</b>
-          <div class="grid3" style="margin-top:10px">
-            <label>运输公司
-              <select data-f="carrier">
-                ${CARRIERS.map(c => `<option value="${c.id}" ${c.id === carrier ? "selected" : ""}>${c.label}</option>`).join("")}
-              </select>
-            </label>
-            <label class="other-name ${carrier === "other" ? "" : "hidden"}">公司名称 <input data-f="carrierName" value="${esc(carrier === "other" ? s.carrierName || "" : "")}" placeholder="例如 Pos Laju"></label>
-            <label>追踪单号 <input data-f="trackingNo" value="${esc(s.trackingNo || "")}" autocomplete="off"></label>
-          </div>
-          <label>查询链接（输入单号后自动生成，可以改） <input data-f="trackingUrl" value="${esc(s.trackingUrl || "")}" placeholder="https://…"></label>
-          <div class="grid4">
-            <label>重量 kg <input data-f="weightKg" type="number" step="0.01" min="0" value="${esc(s.weightKg || "")}"></label>
-            <label>长 cm <input data-f="l" type="number" step="0.1" min="0" value="${esc((s.dims || {}).l || "")}"></label>
-            <label>宽 cm <input data-f="w" type="number" step="0.1" min="0" value="${esc((s.dims || {}).w || "")}"></label>
-            <label>高 cm <input data-f="h" type="number" step="0.1" min="0" value="${esc((s.dims || {}).h || "")}"></label>
-          </div>
-          <label>包裹照片（最多 3 张，选填） <input type="file" accept="image/*" multiple data-f="photos"></label>
-          <div class="photos">${photos.map((p, i) => `<span class="ph-wrap"><img src="${esc(p)}"><button type="button" data-delphoto="${i}">✕</button></span>`).join("")}</div>
-          <label>给会员的留言（选填） <input data-f="note" maxlength="200" value="${esc(s.note || "")}" placeholder="例如：已加送一个小礼物 🎁"></label>
-          <div class="actions">
-            <button class="btn btn-ok" data-act="ship">📦 标记已发货</button>
-            <button class="btn btn-bad" data-act="cancel">取消并退回积分</button>
-          </div>
-        </div>`;
-    }
+      // 会员（统计不算内部会员）
+      const real = Object.values(members).filter(m => !isInternal(m.uid));
+      const boundUids = new Set(bS.docs.map(d => d.data().uid));
+      const bound = real.filter(m => boundUids.has(m.uid)).length;
+      const thisMonth = monthStart(0), lastMonth = monthStart(-1);
+      const newThis = real.filter(m => (toDate(m.createdAt) || 0) >= thisMonth).length;
+      const newLast = real.filter(m => { const d = toDate(m.createdAt); return d && d >= lastMonth && d < thisMonth; }).length;
+      const nInternal = Object.keys(members).length - real.length;
+      $("memTotal").innerHTML = `${num(real.length)}<small>人</small>`;
+      $("memSub").innerHTML = `本月新增 <b>+${newThis}</b>${newLast ? `（上月 ${newLast}）` : ""}<br>
+        已绑定 <b>${real.length ? Math.round(bound / real.length * 100) : 0}%</b>（${bound} 人）${nInternal ? ` · 内部 ${nInternal}` : ""}`;
 
-    function render() {
-      // 分页数字
-      document.querySelectorAll("#tabs button").forEach(b => {
-        const n = all.filter(TABS[b.dataset.tab]).length;
-        const urgent = b.dataset.tab === "pending" || b.dataset.tab === "toShip";
-        b.innerHTML = b.textContent.replace(/\s*\d+$/, "") + (urgent || n ? ` <span class="cnt ${urgent && n ? "" : "zero"}">${n}</span>` : "");
+      // 积分
+      const ledgers = {}, redByUid = {};
+      lS.docs.forEach(d => { const x = d.data(); (ledgers[x.uid] = ledgers[x.uid] || []).push(x); });
+      redemptions.forEach(r => (redByUid[r.uid] = redByUid[r.uid] || []).push(r));
+      let spendable = 0, pending = 0, negative = 0;
+      real.forEach(m => {
+        const b = computeBalance(ledgers[m.uid] || [], redByUid[m.uid] || []);
+        spendable += b.spendable; pending += b.pending;
+        if (b.spendable < 0) negative++;
       });
+      $("ptsTotal").innerHTML = `${num(spendable)}<small>分</small>`;
+      $("ptsSub").innerHTML = `待确认 <b>${num(pending)}</b> 分（14 天后入账）${negative ? `<br><span class="down">${negative} 位会员积分是负数</span>` : ""}`;
 
-      const q = $("search").value.trim().toLowerCase().replace(/^#/, "");
-      let list = all.filter(TABS[tab]);
-      if (q) list = all.filter(r => r.id.toLowerCase().startsWith(q)
-        || (r.rewardName || "").toLowerCase().includes(q)
-        || ((members[r.uid] || {}).name || "").toLowerCase().includes(q));
-      if (tab === "pending" || tab === "toShip") list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      else list.sort((a, b) => (toDate(b.completedAt) || toDate(b.shippedAt) || b.decidedAt || b.createdAt || 0)
-                             - (toDate(a.completedAt) || toDate(a.shippedAt) || a.decidedAt || a.createdAt || 0));
-      if (tab === "done" || tab === "closed") list = list.slice(0, 100);
+      // 等级分布
+      const tierCount = {};
+      real.forEach(m => { const t = TIERS.some(x => x.key === m.tier) ? m.tier : "mochii"; tierCount[t] = (tierCount[t] || 0) + 1; });
+      const tTotal = real.length || 1;
+      $("tierBar").innerHTML = TIERS.filter(t => tierCount[t.key])
+        .map(t => `<span style="flex:${tierCount[t.key]};background:${t.color}" title="${esc(TIER_LABELS[t.key])}：${tierCount[t.key]}"></span>`).join("");
+      $("tierLegend").innerHTML = TIERS.map(t => `
+        <div><b>${tierCount[t.key] || 0}</b><i style="background:${t.color}"></i>${esc(TIER_LABELS[t.key])}
+          <span class="muted">${Math.round((tierCount[t.key] || 0) / tTotal * 100)}%</span></div>`).join("");
+      $("tierNote").textContent = "不含内部会员";
 
-      $("panel").innerHTML = list.length ? list.map(r => {
-        let body = "";
-        if (tab === "pending") {
-          const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
-          body = `
-            <div class="meta">会员可用积分：<b>${bal.spendable}</b>
-              ${bal.spendable >= r.cost ? '<span class="tag tag-ok">足够</span>' : '<span class="tag tag-bad">不足</span>'}
-              ${bal.reserved ? ` · 其他审核中 ${bal.reserved} 分` : ""}${bal.pending ? ` · 待确认 ${bal.pending} 分` : ""}</div>
-            ${addrBox(r)}
-            <div class="mode-row">
-              <span class="meta">这一笔是：</span>
-              <label><input type="radio" name="mode_${esc(r.id)}" value="real" checked> ✅ 真实兑换</label>
-              <label><input type="radio" name="mode_${esc(r.id)}" value="test"> 🧪 测试（不扣库存、不用券码库、不算进数据）</label>
-            </div>
-            <div class="actions">
-              <input class="note-input" placeholder="备注（选填，会员看得到）">
-              <button class="btn btn-ok" data-act="approve">✔ 批准</button>
-              <button class="btn btn-bad" data-act="reject">✕ 拒绝</button>
-            </div>`;
-        } else if (tab === "toShip") {
-          body = `
-            ${r.status === "problem" ? `<div class="problem">⚠️ 配送异常${r.problemNote ? "：" + esc(r.problemNote) : ""}（${fmtDate(toDate(r.problemAt), true)}）</div>` : ""}
-            ${r.note ? `<div class="meta">审核备注：${esc(r.note)}</div>` : ""}
-            ${addrBox(r)}
-            ${shipForm(r)}`;
-        } else if (tab === "shipped") {
-          const autoAt = toDate(r.shippedAt) ? new Date(toDate(r.shippedAt).getTime() + 14 * 86400000) : null;
-          body = `
-            ${shipInfo(r)}${addrBox(r)}
-            <div class="meta">会员还没确认收货${autoAt ? `，${fmtDate(autoAt)} 会自动完成` : ""}</div>
-            <div class="actions">
-              <button class="btn btn-ghost" data-act="problem">⚠️ 标记配送异常</button>
-              <button class="btn btn-ghost" data-act="reopen">✏️ 修改物流资料</button>
-              <button class="btn btn-ok" data-act="complete">✔ 手动标记完成</button>
-            </div>`;
-        } else if (tab === "done") {
-          const rc = r.receipt || {};
-          body = `
-            ${r.couponCode ? `<div class="meta">券码：<code>${esc(r.couponCode)}</code></div>` : ""}
-            ${isGift(r) ? shipInfo(r) : ""}
-            ${isGift(r) ? `<div class="addr-box">✅ ${r.autoCompleted ? "自动完成" : r.adminCompleted ? "管理员标记完成" : "会员确认收货"} · ${fmtDate(toDate(r.completedAt), true)}
-              ${rc.comment ? `<div>「${esc(rc.comment)}」</div>` : ""}
-              ${rc.photo ? `<div class="photos"><img src="${esc(rc.photo)}" style="width:120px;height:120px"></div>` : ""}</div>` : ""}
-            ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}`;
-        } else {
-          body = `
-            <div class="meta">${r.status === "rejected" ? "已拒绝" : r.adminCancelled ? "管理员取消（积分已退回）" : "会员自己取消"}
-              ${r.cancelledAt ? " · " + fmtDate(toDate(r.cancelledAt), true) : ""}</div>
-            ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}
-            ${r.cancelNote ? `<div class="meta">取消原因：${esc(r.cancelNote)}</div>` : ""}`;
+      // 本月兑换（不算测试兑换）
+      const decided = redemptions.filter(r => !r.test && DONE_STATUSES.includes(r.status));
+      const inRange = (r, a, b) => { const d = toDate(r.decidedAt) || toDate(r.createdAt); return d && d >= a && (!b || d < b); };
+      const mThis = decided.filter(r => inRange(r, thisMonth));
+      const mLast = decided.filter(r => inRange(r, lastMonth, thisMonth));
+      const ptsThis = mThis.reduce((s, r) => s + (r.cost || 0), 0);
+      const top = {};
+      mThis.forEach(r => top[r.rewardName || "?"] = (top[r.rewardName || "?"] || 0) + 1);
+      const topName = Object.entries(top).sort((a, b) => b[1] - a[1])[0];
+      const diff = mThis.length - mLast.length;
+      $("monthCount").innerHTML = `${mThis.length}<small>笔</small>`;
+      $("monthSub").innerHTML = `用掉 <b>${num(ptsThis)}</b> 分 · 上月 ${mLast.length} 笔
+        ${mLast.length || mThis.length ? `<span class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "↑" : "↓"}${Math.abs(diff)}</span>` : ""}
+        ${topName ? `<br>最热门：<b>${esc(topName[0])}</b>` : ""}`;
+
+      // 券码与库存：上架中的奖品
+      const secrets = {};
+      sS.docs.forEach(d => secrets[d.id] = d.data());
+      const pool = {};
+      cS.docs.forEach(d => { const c = d.data(); if (!c.used) pool[c.rewardId] = (pool[c.rewardId] || 0) + 1; });
+      const warn = [];
+      rwS.docs.forEach(d => {
+        const r = { id: d.id, ...d.data() };
+        if (!r.active) return;
+        if (r.type === "coupon" && !(secrets[r.id] || {}).couponCode) {
+          const left = pool[r.id] || 0;
+          if (left < 5) warn.push({ name: r.name, left, unit: "组券码", bad: left === 0 });
+        } else if (typeof r.stock === "number" && r.stock <= 3) {
+          warn.push({ name: r.name, left: r.stock, unit: "件库存", bad: r.stock <= 0 });
         }
-        const testBtn = tab === "pending" || tab === "closed" ? ""
-          : `<div class="actions" style="margin-top:6px"><button class="btn btn-ghost" data-act="toggleTest">${isTest(r) ? "改为 ✅ 真实兑换" : "改为 🧪 测试"}</button></div>`;
-        return `<div class="item" data-id="${esc(r.id)}">${head(r)}${body}${testBtn}</div>`;
-      }).join("") : `<p class="empty">${EMPTY[tab]}</p>`;
-    }
-
-    // ---------- 批准 / 拒绝 ----------
-    async function approve(r, note, test) {
-      const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
-      const reward = rewardSnap.exists() ? rewardSnap.data() : null;
-
-      const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
-      if (bal.spendable < r.cost &&
-          !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return false;
-      if (!test && reward && typeof reward.stock === "number" && reward.stock <= 0 &&
-          !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return false;
-
-      // 优惠券：共用优惠码（存在只有管理员能读的 rewardSecrets）；没有就从券码库取一组
-      let couponCode = null, fromPool = false;
-      if (reward && reward.type === "coupon") {
-        const secret = await getDoc(doc(db, "rewardSecrets", r.rewardId));
-        const shared = (secret.exists() && secret.data().couponCode) || reward.couponCode || null;
-        if (shared) {
-          couponCode = shared;
-        } else if (test) {
-          couponCode = "TEST-" + r.id.slice(0, 6).toUpperCase();   // 测试：不用掉券码库
-        } else {
-          const cs = await getDocs(query(collection(db, "coupons"),
-            where("rewardId", "==", r.rewardId), where("used", "==", false), limit(1)));
-          if (cs.empty) {
-            alert("这个优惠券奖品还没设定优惠码，券码库也用完了。请先到「奖品管理」设定优惠码。");
-            return false;
-          }
-          couponCode = cs.docs[0].id;
-          fromPool = true;
-        }
-      }
-
-      const batch = writeBatch(db);
-      const update = { status: "approved", decidedAt: serverTimestamp() };
-      if (test) update.test = true;
-      if (note) update.note = note;
-      if (couponCode) update.couponCode = couponCode;
-      batch.update(doc(db, "redemptions", r.id), update);
-      batch.set(doc(collection(db, "pointsLedger")), {
-        uid: r.uid, delta: -r.cost, reason: "兑换：" + r.rewardName, orderNo: null,
-        redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
       });
-      if (fromPool) {
-        batch.update(doc(db, "coupons", couponCode), {
-          used: true, usedBy: r.uid, redemptionId: r.id, usedAt: serverTimestamp()
-        });
-      }
-      if (!test && reward && typeof reward.stock === "number") {
-        batch.update(doc(db, "rewards", r.rewardId), { stock: increment(-1) });
-      }
-      await batch.commit();
-      return true;
+      warn.sort((a, b) => a.left - b.left);
+      const activeN = rwS.docs.filter(d => d.data().active).length;
+      $("stockBody").innerHTML = warn.length ? `
+        <div class="big" style="color:#dc2626">${warn.length}<small>个快用完</small></div>
+        <ul class="list" style="margin-top:8px">${warn.slice(0, 4).map(w => `
+          <li><span class="nm">${esc(w.name)}</span><span class="tag ${w.bad ? "tag-bad" : "tag-warn"}">剩 ${w.left} ${w.unit}</span></li>`).join("")}</ul>`
+        : `<div class="big" style="color:#16a34a">✓</div><div class="sub">${activeN} 个上架奖品，券码和库存都够用</div>`;
+
+      // 最近动态
+      const ev = [];
+      Object.values(members).forEach(m => { const d = toDate(m.createdAt); if (d) ev.push({ d, ic: "🆕", html: `<a href="member.html?uid=${encodeURIComponent(m.uid)}"><b>${esc(m.name || "新会员")}</b> 注册成为会员</a>` }); });
+      redemptions.forEach(r => { const d = toDate(r.createdAt); if (d && !r.test) ev.push({ d, ic: "🎁", html: `<a href="redeem.html${r.status === "pending" ? "#pending" : ""}"><b>${esc(nameOf(r.uid))}</b> 兑换 ${esc(r.rewardName || "")}（${r.cost || 0} 分）</a>` }); });
+      wins.forEach(w => { const d = toDate(w.claimedAt); if (d) ev.push({ d, ic: "🏆", html: `<a href="prizes.html${w.status === "claimed" ? "#claimed" : ""}"><b>${esc(nameOf(w.uid))}</b> 领取了 ${esc(w.prizeName || "中奖奖品")}</a>` }); });
+      fS.docs.forEach(d => { const p = d.data(), at = toDate(p.createdAt); if (at) ev.push({ d: at, ic: "📰", html: `<a href="feed.html#pending"><b>${esc(p.authorName || nameOf(p.authorUid))}</b> 发了帖子，等你审核</a>` }); });
+      ev.sort((a, b) => b.d - a.d);
+      $("recentList").innerHTML = ev.length
+        ? ev.slice(0, 8).map(e => `<li><span class="ic">${e.ic}</span><span class="nm">${e.html}</span><span class="rt">${ago(e.d)}</span></li>`).join("")
+        : `<li class="none">还没有动态</li>`;
+
+      // 本月寿星（生日格式 YYYY-MM-DD）
+      const now = new Date(), mm = now.getMonth() + 1, dd = now.getDate();
+      const bdays = Object.values(members).map(m => {
+        const x = String(m.birthday || "").match(/^\d{4}-(\d{2})-(\d{2})/);
+        return x && +x[1] === mm ? { m, day: +x[2] } : null;
+      }).filter(Boolean).sort((a, b) => a.day - b.day);
+      $("bdayTitle").textContent = `🎂 ${mm} 月寿星`;
+      $("bdayCount").innerHTML = `${bdays.length}<small>人</small>`;
+      $("bdayList").innerHTML = bdays.length
+        ? bdays.slice(0, 4).map(b => `<li><span class="nm">${b.day === dd ? "🎉 " : ""}${esc(b.m.name || "会员")}</span><span class="rt">${b.day === dd ? "今天" : `${mm}/${b.day}`}</span></li>`).join("")
+          + (bdays.length > 4 ? `<li class="none">还有 ${bdays.length - 4} 位…</li>` : "")
+        : `<li class="none">这个月没有寿星</li>`;
+
+      // 邮件提醒
+      const cfg = nS && nS.exists() ? nS.data() : {};
+      const evs = cfg.events || {};
+      const onN = Object.keys(NOTIFY_DEFAULTS).filter(k => evs[k] ?? NOTIFY_DEFAULTS[k]).length;
+      const emails = (cfg.emails || []).length;
+      $("notifyCount").innerHTML = `${onN}<small>/ ${Object.keys(NOTIFY_DEFAULTS).length} 项开启</small>`;
+      $("notifySub").innerHTML = emails
+        ? `寄到 <b>${emails}</b> 个邮箱 · ${cfg.mode === "daily" ? "每天汇总一次" : "马上寄出"}`
+        : `<span class="down">还没设定收件邮箱</span>`;
+
+      const t = new Date();
+      $("updated").textContent = `更新于 ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+
+      // 得奖者已绑定、还没发奖（要读抽奖网站，比较慢，放最后）
+      todo.ready.n = null; renderTodo();
+      readyWinners().then(list => { todo.ready.n = list.length; renderTodo(); })
+        .catch(e => { console.warn("readyWinners", e); todo.ready.n = 0; renderTodo(); });
     }
 
-    async function reject(r, note) {
-      if (!confirm(`拒绝「${r.rewardName}」的兑换申请？积分不会被扣除。`)) return false;
-      const update = { status: "rejected", decidedAt: serverTimestamp() };
-      if (note) update.note = note;
-      await updateDoc(doc(db, "redemptions", r.id), update);
-      return true;
-    }
-
-    // ---------- 已批准后取消：退回积分、加回库存 ----------
-    async function cancelApproved(r) {
-      const why = prompt(`取消「${r.rewardName}」并退回 ${r.cost} 分给会员？\n\n原因（会员看得到，选填，例如：缺货）：`, "");
-      if (why === null) return false;
-      const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
-      const reward = rewardSnap.exists() ? rewardSnap.data() : null;
-      const batch = writeBatch(db);
-      batch.update(doc(db, "redemptions", r.id), {
-        status: "cancelled", adminCancelled: true, cancelledAt: serverTimestamp(), cancelNote: why.trim(), cancelledBy: adminEmail
+    // ---------- 俱乐部开关（和侧边栏同一个开关） ----------
+    function watchClub() {
+      onSnapshot(doc(db, "settings", "club"), s => {
+        const open = s.exists() && s.data().open === true;
+        $("clubState").className = "club-state " + (open ? "on" : "off");
+        $("clubText").textContent = open ? "开放中" : "维修中";
+        $("clubSub").textContent = open ? "会员可以注册、登录和兑换。" : "会员看到「正在装修俱乐部」，无法登录。";
+        $("clubBtn").textContent = open ? "关闭俱乐部" : "开放俱乐部";
       });
-      batch.set(doc(collection(db, "pointsLedger")), {
-        uid: r.uid, delta: r.cost, reason: "兑换取消退回：" + r.rewardName, orderNo: null,
-        redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
-      });
-      if (!r.test && reward && typeof reward.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
-      await batch.commit();
-      return true;
+      $("clubBtn").addEventListener("click", () => $("clubSwitch").click());
     }
 
-    // ---------- 发货 ----------
-    function readShip(item) {
-      const v = f => (item.querySelector(`[data-f="${f}"]`) || {}).value || "";
-      const carrier = v("carrier");
-      const c = CARRIERS.find(x => x.id === carrier) || CARRIERS[0];
-      const num = x => x === "" ? null : Number(x);
-      return {
-        carrier,
-        carrierName: carrier === "other" ? v("carrierName").trim() : c.name,
-        trackingNo: v("trackingNo").trim(),
-        trackingUrl: v("trackingUrl").trim(),
-        weightKg: num(v("weightKg")),
-        dims: { l: num(v("l")), w: num(v("w")), h: num(v("h")) },
-        note: v("note").trim(),
-      };
+    function run() {
+      $("reloadBtn").disabled = true;
+      load().catch(e => {
+        $("errBox").textContent = "载入失败：" + e.message;
+        $("errBox").classList.remove("hidden");
+      }).finally(() => { $("reloadBtn").disabled = false; });
     }
+    $("reloadBtn").addEventListener("click", run);
 
-    $("search").addEventListener("input", () => render());
-
-    // 输入单号 / 换运输公司时，自动生成查询链接
-    function autoUrl(item) {
-      const s = readShip(item);
-      const tpl = s.carrier === "other" ? "" : (trackTpl[s.carrier] || "");
-      if (tpl && s.trackingNo) item.querySelector('[data-f="trackingUrl"]').value = tpl.replace("{no}", encodeURIComponent(s.trackingNo));
-    }
-    $("panel").addEventListener("input", e => {
-      const item = e.target.closest(".item");
-      if (item && e.target.dataset.f === "trackingNo") autoUrl(item);
-    });
-    $("panel").addEventListener("change", async e => {
-      const item = e.target.closest(".item");
-      if (!item) return;
-      const f = e.target.dataset.f;
-      if (f === "carrier") {
-        item.querySelector(".other-name").classList.toggle("hidden", e.target.value !== "other");
-        if (e.target.value === "other") item.querySelector('[data-f="trackingUrl"]').value = "";
-        autoUrl(item);
-      }
-      if (f === "photos") {
-        const id = item.dataset.id;
-        const list = shipPhotos[id] || [];
-        for (const file of [...e.target.files].slice(0, 3 - list.length)) {
-          let url = await compressImage(file, 640);
-          if (url.length > 220000) url = await compressImage(file, 420);
-          list.push(url);
-        }
-        shipPhotos[id] = list;
-        const keep = readShip(item);
-        render();
-        restoreShip(id, keep);
-      }
-    });
-    // 重新画面后把正在填的资料放回去
-    function restoreShip(id, s) {
-      const item = document.querySelector(`.item[data-id="${CSS.escape(id)}"]`);
-      if (!item) return;
-      const set = (f, v) => { const el = item.querySelector(`[data-f="${f}"]`); if (el && v != null) el.value = v; };
-      set("carrier", s.carrier); set("carrierName", s.carrier === "other" ? s.carrierName : "");
-      set("trackingNo", s.trackingNo); set("trackingUrl", s.trackingUrl); set("weightKg", s.weightKg ?? "");
-      set("l", s.dims.l ?? ""); set("w", s.dims.w ?? ""); set("h", s.dims.h ?? ""); set("note", s.note);
-      item.querySelector(".other-name").classList.toggle("hidden", s.carrier !== "other");
-    }
-
-    $("panel").addEventListener("click", async e => {
-      const item = e.target.closest(".item");
-      if (!item) return;
-      const r = all.find(x => x.id === item.dataset.id);
-      if (!r) return;
-
-      const del = e.target.dataset.delphoto;
-      if (del !== undefined) {
-        const keep = readShip(item);
-        shipPhotos[r.id].splice(+del, 1);
-        render(); restoreShip(r.id, keep);
-        return;
-      }
-      const act = e.target.dataset.act;
-      if (!act) return;
-
-      if (act === "copyAddr") {
-        try { await navigator.clipboard.writeText(addrText(r.address)); e.target.textContent = "已复制 ✓"; }
-        catch { prompt("请手动复制：", addrText(r.address)); }
-        return;
-      }
-      if (act === "reopen") {
-        // 已发货 → 回到待发货修改（状态维持已发货，只是在这里重新填）
-        tab = "toShip";
-        r._reopen = true;
-        r.status = "approved";
-        document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === "toShip"));
-        render();
-        return;
-      }
-
-      const buttons = item.querySelectorAll("button");
-      buttons.forEach(b => b.disabled = true);
-      try {
-        let ok = true;
-        if (act === "approve") {
-          const mode = item.querySelector(`input[name="mode_${CSS.escape(r.id)}"]:checked`);
-          ok = await approve(r, item.querySelector(".note-input").value.trim(), !!mode && mode.value === "test");
-        }
-        if (act === "toggleTest") {
-          // 批准后改为测试 / 真实：库存跟着调整
-          const toTest = !isTest(r);
-          if (!confirm(toTest ? "改为 🧪 测试？库存会加回 1，这笔不算进数据。" : "改为 ✅ 真实兑换？库存会扣 1。")) ok = false;
-          else {
-            const rs = await getDoc(doc(db, "rewards", r.rewardId));
-            const batch = writeBatch(db);
-            batch.update(doc(db, "redemptions", r.id), { test: toTest });
-            if (rs.exists() && typeof rs.data().stock === "number" && r.status !== "cancelled" && r.status !== "rejected") {
-              batch.update(doc(db, "rewards", r.rewardId), { stock: increment(toTest ? 1 : -1) });
-            }
-            await batch.commit();
-          }
-        }
-        if (act === "reject") ok = await reject(r, item.querySelector(".note-input").value.trim());
-        if (act === "cancel") ok = await cancelApproved(r);
-        if (act === "ship") {
-          const s = readShip(item);
-          if (!s.carrierName) { alert("请填写运输公司名称"); ok = false; }
-          else if (!s.trackingNo) { alert("请填写追踪单号"); ok = false; }
-          else if (s.trackingUrl && !/^https:\/\//i.test(s.trackingUrl)) { alert("查询链接要以 https:// 开头"); ok = false; }
-          else {
-            await updateDoc(doc(db, "redemptions", r.id), {
-              status: "shipped",
-              shippedAt: serverTimestamp(),
-              shipping: { ...s, photos: shipPhotos[r.id] || [], by: adminEmail },
-              problemNote: null,
-            });
-            delete shipPhotos[r.id];
-          }
-        }
-        if (act === "problem") {
-          const why = prompt("配送异常的原因（会员看得到，例如：地址不完整、包裹被退回）：", "");
-          if (why === null) ok = false;
-          else await updateDoc(doc(db, "redemptions", r.id), { status: "problem", problemAt: serverTimestamp(), problemNote: why.trim() });
-        }
-        if (act === "complete") {
-          if (!confirm("手动标记这笔兑换已完成？")) ok = false;
-          else await updateDoc(doc(db, "redemptions", r.id), { status: "completed", completedAt: serverTimestamp(), adminCompleted: true });
-        }
-        if (ok) await load();
-        else buttons.forEach(b => b.disabled = false);
-      } catch (err) {
-        alert("操作失败：" + err.message);
-        buttons.forEach(b => b.disabled = false);
-      }
-    });
-
-    // ---------- 查询链接模板 ----------
-    $("tplSave").addEventListener("click", async () => {
-      trackTpl = { spx: $("tplSpx").value.trim(), jnt: $("tplJnt").value.trim() };
-      try {
-        await setDoc(doc(db, "settings", "shipping"), { trackTpl, updatedAt: serverTimestamp() }, { merge: true });
-        $("tplMsg").textContent = "已保存 ✅"; $("tplMsg").className = "msg ok";
-      } catch (err) { $("tplMsg").textContent = "保存失败：" + err.message; $("tplMsg").className = "msg err"; }
-    });
-
-    $("reloadBtn").addEventListener("click", () => load());
-
-    requireAdmin(async user => {
-      adminEmail = user.email || "";
-      try {
-        const s = await getDoc(doc(db, "settings", "shipping"));
-        if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
-      } catch (e) {}
-      $("tplSpx").value = trackTpl.spx || "";
-      $("tplJnt").value = trackTpl.jnt || "";
-      load().catch(e => { $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`; });
+    renderTodo();
+    requireAdmin(user => {
+      const h = new Date().getHours();
+      const hi = h < 5 ? "夜深了" : h < 12 ? "早安" : h < 18 ? "午安" : "晚上好";
+      $("hello").textContent = `📊 总览 · ${hi}${user.displayName ? "，" + user.displayName.split(" ")[0] : ""}`;
+      watchClub();
+      run();
     });
   </script>
 </body>

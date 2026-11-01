@@ -36,7 +36,7 @@ export function tierHTML(tier) {
 }
 export const TIER_ORDER = { mochii: 0, silver: 1, gold: 2, diamond: 3, black: 4 };
 
-// 商城分类：可在「奖品管理 › 商城分类」自订（存在 settings/shop）；还没设定过就用这份预设
+// 商城分类：可在「商城奖品 › 商城分类」自订（存在 settings/shop）；还没设定过就用这份预设
 export const DEFAULT_SHOP_CATS = [
   { id: "coupon",   icon: "🎫", zh: "优惠券",   en: "Coupons",        ms: "Kupon" },
   { id: "bracelet", icon: "📿", zh: "手链",     en: "Bracelets",      ms: "Gelang" },
@@ -58,7 +58,7 @@ export const CARRIERS = [
   { id: "jnt",   name: "J&T Express", label: "J&T Express" },
   { id: "other", name: "",            label: "其他（自己填写）" },
 ];
-// 查询链接模板：输入单号后自动生成链接（{no} = 单号），可在「兑换管理」页面底部修改
+// 查询链接模板：输入单号后自动生成链接（{no} = 单号），可在「兑换审核」页面底部修改
 export const DEFAULT_TRACK_TPL = {
   spx: "https://spx.com.my/track?{no}",
   jnt: "https://www.jtexpress.my/tracking/{no}",
@@ -69,7 +69,7 @@ export function redeemCode(id) {
   return "#" + String(id || "").slice(0, 6).toUpperCase();
 }
 
-// 导航「兑换管理」旁边的红色数字：待审核 + 待发货（含配送异常）
+// 导航「兑换审核」旁边的红色数字：待审核 + 待发货（含配送异常）
 export async function refreshRedeemBadge() {
   const el = document.getElementById("redeemBadge");
   if (!el) return;
@@ -82,6 +82,7 @@ export async function refreshRedeemBadge() {
     el.textContent = n > 99 ? "99+" : n;
     el.hidden = !n;
   } catch (e) { console.warn("redeem badge", e); }
+  updateSideDot();
 }
 
 // 导航「中奖奖品」旁边的红色数字：会员已领取（待审核）+ 待发货
@@ -94,6 +95,7 @@ export async function refreshPrizeBadge() {
     el.textContent = n > 99 ? "99+" : n;
     el.hidden = !n;
   } catch (e) { console.warn("prize badge", e); }
+  updateSideDot();
 }
 
 // ---------- ⏳ 已绑定、还没发奖的得奖者 ----------
@@ -249,32 +251,94 @@ export function computeBalance(ledger, redemptions, excludeId) {
   return { available, pending, reserved, spendable: available - reserved };
 }
 
-// ---------- 顶部导航 ----------
+// ---------- 侧边栏导航（分组） ----------
+// active：页面代号；Feed 页面网址带 #pending 时，亮「Feed 审核」
+export const NAV_GROUPS = [
+  { label: "", items: [
+    ["overview", "index.html", "📊", "总览"],
+  ] },
+  { label: "待处理", items: [
+    ["redeem", "redeem.html", "🔔", "兑换审核", "redeemBadge"],
+    ["prizes", "prizes.html", "🏆", "中奖奖品", "prizeBadge"],
+    ["feedReview", "feed.html#pending", "⏳", "Feed 审核", "feedBadge"],
+  ] },
+  { label: "会员", items: [
+    ["members", "members.html", "👥", "会员列表"],
+  ] },
+  { label: "商城", items: [
+    ["rewards", "rewards.html", "🛍️", "商城奖品"],
+    ["perks", "perks.html", "🎁", "额外福利"],
+  ] },
+  { label: "内容", items: [
+    ["home", "home.html", "🏠", "首页设定"],
+    ["feed", "feed.html", "✨", "Feed 管理"],
+    ["announce", "announcements.html", "📢", "会员公告"],
+    ["storehelp", "storehelp.html", "❓", "商店帮助"],
+  ] },
+  { label: "设定", items: [
+    ["notify", "notify.html", "📧", "邮件提醒"],
+  ] },
+];
+
 export function renderAdminNav(active) {
-  const links = [
-    ["redeem", "index.html", '兑换管理 <span id="redeemBadge" class="nav-badge" hidden></span>'],
-    ["prizes", "prizes.html", '🏆 中奖奖品 <span id="prizeBadge" class="nav-badge" hidden></span>'],
-    ["members", "members.html", "会员管理"],
-    ["rewards", "rewards.html", "奖品管理"],
-    ["perks", "perks.html", "🎁 额外福利"],
-    ["home", "home.html", "🏠 首页设定"],
-        ["feed", "feed.html", "📰 Feed"],
-    ["announce", "announcements.html", "📢 会员公告"],
-    ["storehelp", "storehelp.html", "❓ 商店帮助"],
-    ["notify", "notify.html", "📧 邮件提醒"],
-    ["back", "../", "← 返回控制台"],
-  ];
-  document.getElementById("adminHeader").innerHTML = `
-    <div class="brand">Mochiishop/admin · 会员系统</div>
-    <nav>
-      ${links.map(([k, href, t]) => `<a href="${href}" class="${k === active ? "active" : ""}">${t}</a>`).join("")}
+  if (active === "feed" && location.hash === "#pending") active = "feedReview";
+  document.body.classList.add("has-side");
+  const head = document.getElementById("adminHeader");
+  head.className = "side";
+  head.innerHTML = `
+    <div class="side-top">
+      <button class="side-burger" id="sideBurger" type="button" aria-label="打开菜单">☰<span class="side-dot" id="sideDot" hidden></span></button>
+      <a class="side-brand" href="index.html">Mochiishop/admin<small>会员系统</small></a>
+    </div>
+    <nav class="side-scroll">
+      ${NAV_GROUPS.map(g => `
+        <div class="side-group">
+          ${g.label ? `<div class="side-label">${g.label}</div>` : ""}
+          ${g.items.map(([k, href, ic, t, badge]) => `
+            <a href="${href}" class="side-link ${k === active ? "active" : ""}">
+              <span class="ic">${ic}</span><span class="tx">${t}</span>
+              ${badge ? `<span id="${badge}" class="nav-badge" hidden></span>` : ""}
+            </a>`).join("")}
+        </div>`).join("")}
+    </nav>
+    <div class="side-foot">
       <a href="#" id="clubSwitch" class="club-switch">俱乐部…</a>
-      <a href="#" id="adminLogout">登出</a>
-    </nav>`;
+      <a href="../" class="side-link"><span class="ic">←</span><span class="tx">返回控制台</span></a>
+      <a href="#" id="adminLogout" class="side-link"><span class="ic">⎋</span><span class="tx">登出</span></a>
+    </div>
+    <div class="side-scrim" id="sideScrim"></div>`;
   document.getElementById("adminLogout").addEventListener("click", e => {
     e.preventDefault();
     signOut(auth);
   });
+  const toggle = on => document.body.classList.toggle("side-open", on);
+  document.getElementById("sideBurger").addEventListener("click", () => toggle(!document.body.classList.contains("side-open")));
+  document.getElementById("sideScrim").addEventListener("click", () => toggle(false));
+  head.querySelectorAll(".side-scroll a").forEach(a => a.addEventListener("click", () => toggle(false)));
+}
+
+// 手机顶部 ☰ 上的红色数字：三个待处理加起来
+function updateSideDot() {
+  const dot = document.getElementById("sideDot");
+  if (!dot) return;
+  const n = ["redeemBadge", "prizeBadge", "feedBadge"].reduce((s, id) => {
+    const el = document.getElementById(id);
+    return s + (el && !el.hidden ? (parseInt(el.textContent, 10) || 0) : 0);
+  }, 0);
+  dot.textContent = n > 99 ? "99+" : n;
+  dot.hidden = !n;
+}
+
+// 导航「Feed 审核」旁边的红色数字：会员投稿待审核
+export async function refreshFeedBadge() {
+  const el = document.getElementById("feedBadge");
+  if (!el) return;
+  try {
+    const snap = await getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending")));
+    el.textContent = snap.size > 99 ? "99+" : snap.size;
+    el.hidden = !snap.size;
+  } catch (e) { console.warn("feed badge", e); }
+  updateSideDot();
 }
 
 // ---------- 管理员检查 ----------
@@ -335,6 +399,7 @@ export function requireAdmin(onReady) {
     initClubSwitch(user);
     refreshRedeemBadge();
     refreshPrizeBadge();
+    refreshFeedBadge();
   });
 }
 

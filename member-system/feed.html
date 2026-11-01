@@ -180,7 +180,7 @@
       collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit,
       serverTimestamp, writeBatch, getCountFromServer
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, esc, toDate, fmtDate, compressImage, TIER_LABELS } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, refreshFeedBadge, esc, toDate, fmtDate, compressImage, TIER_LABELS } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("feed");
@@ -239,6 +239,14 @@
       if (b.dataset.tab === "all") loadAll();
       if (b.dataset.tab === "titles") { renderTitleRows(); loadAssigned(); }
     });
+
+    // 侧边栏「Feed 审核」：网址带 #pending 就打开待审核分页
+    function openFromHash() {
+      if (location.hash !== "#pending") return;
+      document.querySelector('#tabs button[data-tab="pending"]').click();
+      document.querySelectorAll(".side-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "feed.html#pending"));
+    }
+    window.addEventListener("hashchange", openFromHash);
 
     // ---------- 设定 ----------
     async function loadCfg() {
@@ -431,6 +439,7 @@
           .sort((a, b) => (toDate(a.createdAt) || 0) - (toDate(b.createdAt) || 0));
         const rows = await withContent(list);
         $("pendingBadge").hidden = !rows.length; $("pendingBadge").textContent = rows.length;
+        refreshFeedBadge();
         $("pendingList").innerHTML = rows.length ? rows.map(p => postCard(p, "pending")).join("") : `<p class="empty">没有待审核的帖子 🎉</p>`;
         bindCards($("pendingList"), loadPending);
       } catch (err) { $("pendingList").innerHTML = `<p class="empty">载入失败：${esc(err.message)}</p>`; }
@@ -550,6 +559,7 @@
           await loadCfg();
         }
         loadPending();
+        openFromHash();
       } catch (err) {
         setMsg("pMsg", "载入设定失败：" + err.message, "err");
       }

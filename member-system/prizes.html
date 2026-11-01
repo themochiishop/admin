@@ -244,6 +244,12 @@
     let periods = [], draw = null, drawId = "", drawMonth = "";
     let pick = { uid: "", image: "", winnerName: "", orderNo: "" };
     let tab = "unclaimed";
+    // 从总览点进来时网址会带分页，例如 #toShip
+    { const h = location.hash.slice(1);
+      if (h && document.querySelector(`#tabs button[data-tab="${h}"]`)) {
+        tab = h;
+        document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+      } }
 
     // ---------- 共用 ----------
     const isImg = s => typeof s === "string" && /^(data:image\/|https:\/\/)/.test(s);
