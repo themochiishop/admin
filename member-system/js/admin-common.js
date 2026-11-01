@@ -24,7 +24,7 @@ export const COUPON_FORMATS = [
 
 // 会员等级（显示用；规则以 Google 表格同步脚本的 MS_TIERS 为准）
 export const TIER_LABELS = {
-   mochii: "Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石", black: "🖤 Black Elite"
+   mochii: "Mochii 会员", silver: "🥈 银卡", gold: "🥇 金卡", diamond: "💎 钻石", black: "♛ Black Elite"
 };
 
 // 列表用：Mochii 会员显示会员俱乐部 logo
