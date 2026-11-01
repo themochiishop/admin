@@ -91,8 +91,8 @@ body.has-side #app { padding-left: 228px; }
     position: fixed; left: 0; width: 260px; max-width: 82vw; background: var(--navy);
     transform: translateX(-105%); transition: transform .22s ease; z-index: 52;
   }
-  .side-scroll { top: 54px; bottom: 186px; border-top: 1px solid #1e293b; }
-  .side-foot { bottom: 0; height: 186px; justify-content: flex-end; }
+  .side-scroll { top: 54px; bottom: 224px; border-top: 1px solid #1e293b; }
+  .side-foot { bottom: 0; height: 224px; justify-content: flex-end; }
   body.side-open .side-scroll, body.side-open .side-foot { transform: none; }
   body.side-open .side-scrim { display: block; position: fixed; inset: 54px 0 0 0; background: rgba(15,23,42,.45); z-index: 51; }
   body.side-open { overflow: hidden; }

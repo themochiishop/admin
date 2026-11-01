@@ -304,6 +304,7 @@ export function renderAdminNav(active) {
     <div class="side-foot">
       <a href="#" id="clubSwitch" class="club-switch">俱乐部…</a>
       <a href="#" id="themeBtn" class="side-link theme-btn"></a>
+      <a href="../hub/" class="side-link"><span class="ic">📱</span><span class="tx">Mochii Hub</span></a>
       <a href="../" class="side-link"><span class="ic">←</span><span class="tx">返回控制台</span></a>
       <a href="#" id="adminLogout" class="side-link"><span class="ic">⎋</span><span class="tx">登出</span></a>
     </div>

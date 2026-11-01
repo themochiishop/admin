@@ -38,7 +38,17 @@
     .dashboard-header h3 { font-size: 1.35rem; color: #0f172a; margin-bottom: 2px; }
     .dashboard-header p { color: #64748b; font-size: 0.85rem; }
     
-    .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
+    .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
+    /* 分组标题 */
+    .group-title { display: flex; align-items: center; gap: 10px; margin: 26px 0 12px; font-size: .82rem; font-weight: 700; color: #64748b; letter-spacing: .08em; }
+    .group-title::after { content: ""; flex: 1; height: 1px; background: #e2e8f0; }
+    .group-title:first-of-type { margin-top: 6px; }
+    .card-hub .card-icon { background: #f5efe2; color: #8a6d2f; }
+    .btn-hub { background: #1c1722; }
+    .btn-hub:hover { background: #2e2636; }
+    .card-invoice .card-icon { background: #f1f5f9; color: #334155; }
+    .btn-slate { background: #475569; }
+    .btn-slate:hover { background: #334155; }
     
     .card {
       background: #ffffff;
@@ -180,11 +190,23 @@
   <div class="admin-container">
     <div class="dashboard-header">
       <h3>工具与控制台 Dashboard</h3>
-      <p>欢迎回来！处理 COD 手动 AWB 打印、直播大转盘、每月抽奖晋级控盘、买家订单查询与动态更新。</p>
+      <p>欢迎回来！工具按用途分成「直播」「订单」「会员与内容」三组；手机上开播和查看待处理，用 Mochii Hub。</p>
     </div>
 
+    <!-- ===== 直播 ===== -->
+    <div class="group-title">🎥 直播</div>
     <div class="action-grid">
-      <!-- 1. 幸运大转盘 Wheel -->
+      <!-- Mochii Hub：手机开播、开播通知、今天要处理 -->
+      <div class="card card-hub">
+        <div>
+          <div class="card-icon">📱</div>
+          <div class="card-title">Mochii Hub</div>
+          <div class="card-desc">手机专用：一键开播、复制开播通知、查看今天要处理的事。建议加到手机主画面。</div>
+        </div>
+        <a href="hub/" class="card-btn btn-hub" target="_blank">打开 Mochii Hub 📱</a>
+      </div>
+
+      <!-- 幸运大转盘 Wheel -->
       <div class="card card-wheel">
         <div>
           <div class="card-icon">🎡</div>
@@ -194,58 +216,7 @@
         <a href="wheel/" class="card-btn btn-blue">打开大转盘 🎡</a>
       </div>
 
-      <!-- 2. 买家订单查询 buyer-order-search -->
-      <div class="card card-search">
-        <div>
-          <div class="card-icon">🔍</div>
-          <div class="card-title">订单查询 Order Search</div>
-          <div class="card-desc">快速检索全渠道买家订单详细信息、物流状态与记录。</div>
-        </div>
-        <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
-      </div>
-
-      <!-- 3. 新增：图库管理 Gallery (插在订单查询之后) -->
-      <div class="card card-gallery">
-        <div>
-          <div class="card-icon">🖼️</div>
-          <div class="card-title">图库管理 Gallery</div>
-          <div class="card-desc">管理并在前台展示高清图库，支持分类浏览、全屏查看与后台一键上传。</div>
-        </div>
-        <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
-      </div>
-
-      <!-- 4. Mochii Feed（会员系统） -->
-      <div class="card card-status">
-        <div>
-          <div class="card-head">
-            <div class="card-icon">📰</div>
-            <a id="feedAlertLink" class="claim-link" href="member-system/feed.html" title="会员投稿待审核">⏳ 待审核<span id="feedAlertCount" class="claim-count" hidden></span></a>
-          </div>
-          <div class="card-title">Mochii Feed</div>
-          <div class="card-desc">发布店铺动态（公开帖会显示在网站首页）、审核会员投稿、管理头衔与权限。</div>
-        </div>
-        <a href="member-system/feed.html" class="card-btn btn-purple">Feed 管理 📰</a>
-      </div>
-  <!-- 新增：订单录入 Order Entry -->
-      <div class="card card-entry">
-        <div>
-          <div class="card-icon">📝</div>
-          <div class="card-title">订单录入 Order Entry</div>
-          <div class="card-desc">在网页直接录入订单，写进「第 1 张表单回复」并马上同步会员积分。</div>
-        </div>
-        <a href="order-entry/" class="card-btn btn-teal" target="_blank" >录入订单 📝</a>
-      </div>
-      <!-- 5. COD 面单打印系统 -->
-      <div class="card card-cod">
-        <div>
-          <div class="card-icon">📦</div>
-          <div class="card-title">COD 手动 AWB 打印</div>
-          <div class="card-desc">规避 Shopee COD 2小时延迟，手动即时生成/打印 AWB 面单。</div>
-        </div>
-        <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
-      </div>
-     
-      <!-- 6. 每月抽奖 Monthly Draw -->
+      <!-- 每月抽奖 Monthly Draw -->
       <div class="card card-draw">
         <div>
           <div class="card-head">
@@ -257,8 +228,56 @@
         </div>
         <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
       </div>
+    </div>
 
-      <!-- 7. 会员系统 member-system -->
+    <!-- ===== 订单 ===== -->
+    <div class="group-title">🧾 订单</div>
+    <div class="action-grid">
+      <!-- 订单录入 Order Entry -->
+      <div class="card card-entry">
+        <div>
+          <div class="card-icon">📝</div>
+          <div class="card-title">订单录入 Order Entry</div>
+          <div class="card-desc">在网页直接录入订单，写进「第 1 张表单回复」并马上同步会员积分。</div>
+        </div>
+        <a href="order-entry/" class="card-btn btn-teal" target="_blank" >录入订单 📝</a>
+      </div>
+
+      <!-- 买家订单查询 buyer-order-search -->
+      <div class="card card-search">
+        <div>
+          <div class="card-icon">🔍</div>
+          <div class="card-title">订单查询 Order Search</div>
+          <div class="card-desc">快速检索全渠道买家订单详细信息、物流状态与记录。</div>
+        </div>
+        <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
+      </div>
+
+      <!-- COD 面单打印系统 -->
+      <div class="card card-cod">
+        <div>
+          <div class="card-icon">📦</div>
+          <div class="card-title">COD 手动 AWB 打印</div>
+          <div class="card-desc">规避 Shopee COD 2小时延迟，手动即时生成/打印 AWB 面单。</div>
+        </div>
+        <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
+      </div>
+
+      <!-- Purchase Order & Invoice -->
+      <div class="card card-invoice">
+        <div>
+          <div class="card-icon">🧾</div>
+          <div class="card-title">Purchase Order & Invoice</div>
+          <div class="card-desc">开立采购单（PO）与发票（Invoice），可直接列印。</div>
+        </div>
+        <a href="invoice/" class="card-btn btn-slate" target="_blank">开立单据 🧾</a>
+      </div>
+    </div>
+
+    <!-- ===== 会员与内容 ===== -->
+    <div class="group-title">🎫 会员与内容</div>
+    <div class="action-grid">
+      <!-- 会员系统 member-system -->
       <div class="card card-member">
         <div>
           <div class="card-head">
@@ -266,9 +285,32 @@
             <a id="memberAlertLink" class="claim-link" href="member-system/redeem.html" title="积分兑换 + 中奖奖品的审核与发货">🔔 兑换审核<span id="memberAlertCount" class="claim-count" hidden></span></a>
           </div>
           <div class="card-title">Member Club</div>
-          <div class="card-desc">审核会员积分兑换与中奖奖品领取，管理会员、奖品与优惠券码库。</div>
+          <div class="card-desc">会员系统总览：审核兑换与中奖奖品、管理会员、商城奖品与券码库。</div>
         </div>
         <a href="member-system/" class="card-btn btn-member">进入会员系统 🎫</a>
+      </div>
+
+      <!-- Mochii Feed（会员系统） -->
+      <div class="card card-status">
+        <div>
+          <div class="card-head">
+            <div class="card-icon">📰</div>
+            <a id="feedAlertLink" class="claim-link" href="member-system/feed.html#pending" title="会员投稿待审核">⏳ 待审核<span id="feedAlertCount" class="claim-count" hidden></span></a>
+          </div>
+          <div class="card-title">Mochii Feed</div>
+          <div class="card-desc">发布店铺动态（公开帖会显示在网站首页）、审核会员投稿、管理头衔与权限。</div>
+        </div>
+        <a href="member-system/feed.html" class="card-btn btn-purple">Feed 管理 📰</a>
+      </div>
+
+      <!-- 图库管理 Gallery -->
+      <div class="card card-gallery">
+        <div>
+          <div class="card-icon">🖼️</div>
+          <div class="card-title">图库管理 Gallery</div>
+          <div class="card-desc">管理并在前台展示高清图库，支持分类浏览、全屏查看与后台一键上传。</div>
+        </div>
+        <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
       </div>
     </div>
 
