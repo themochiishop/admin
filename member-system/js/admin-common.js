@@ -357,14 +357,24 @@ function updateSideDot() {
   dot.hidden = !n;
 }
 
-// 导航「Feed 审核」旁边的红色数字：会员投稿待审核
+// 导航「Feed 审核」旁边的红色数字：会员投稿待审核 + 待处理的检举（同一个内容算一件）
+export async function openReportCount() {
+  try {
+    const s = await getDocs(query(collection(db, "feedReports"), where("status", "==", "open")));
+    return new Set(s.docs.map(d => d.data().targetKey)).size;
+  } catch (e) { return 0; }   // 还没加 feedReports 规则时当作 0
+}
 export async function refreshFeedBadge() {
   const el = document.getElementById("feedBadge");
   if (!el) return;
   try {
-    const snap = await getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending")));
-    el.textContent = snap.size > 99 ? "99+" : snap.size;
-    el.hidden = !snap.size;
+    const [snap, nr] = await Promise.all([
+      getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending"))),
+      openReportCount(),
+    ]);
+    const n = snap.size + nr;
+    el.textContent = n > 99 ? "99+" : n;
+    el.hidden = !n;
   } catch (e) { console.warn("feed badge", e); }
   updateSideDot();
 }
