@@ -96,6 +96,46 @@ export async function refreshPrizeBadge() {
   } catch (e) { console.warn("prize badge", e); }
 }
 
+// ---------- ⏳ 已绑定、还没发奖的得奖者 ----------
+// 读网站 Monthly Draw 最近几期的得奖名单（公开资料），用订单编号找会员（orders/{单号}.uid），
+// 去掉已经在「🏆 中奖奖品」里的（同一个订单编号，任何状态都算）。回传 [{ drawId, month, prize, winner, order, uid }]
+const DRAW_DB = "https://admin-status-c3bdb-default-rtdb.asia-southeast1.firebasedatabase.app";
+export const READY_PERIODS = 3;   // 只看最近几期
+export function parseWinnerRows(text) {
+  const rows = [];
+  String(text || "").split(/\n+/).map(l => l.trim()).filter(Boolean).forEach(l => {
+    const c = l.split(/\s*\|\s*|\t+/).map(x => x.trim());
+    const low = c.join(" ").toLowerCase();
+    if (/winner/.test(low) && /(prize|order)/.test(low)) return;   // 标题行
+    if (c.length === 1) rows.push({ prize: "", winner: c[0], order: "" });
+    else rows.push({ prize: c[0], winner: c[1] || "", order: c[2] || "" });
+  });
+  return rows;
+}
+export const normOrderNo = s => String(s || "").replace(/\s/g, "").toUpperCase();
+export async function readyWinners() {
+  const get = async path => { const r = await fetch(`${DRAW_DB}/${path}.json`); return r.ok ? r.json() : null; };
+  const idx = await get("homepage/drawIndex");
+  const periods = (Array.isArray(idx) ? idx : Object.values(idx || {}))
+    .filter(x => x && x.id && typeof x.month === "string" && x.month.trim()).slice(0, READY_PERIODS);
+  const winSnap = await getDocs(collection(db, "prizeWins"));
+  const done = new Set(winSnap.docs.map(d => normOrderNo(d.data().orderNo)).filter(Boolean));
+  const out = [];
+  for (const p of periods) {
+    const d = (await get("homepage/drawData/" + p.id)) || {};
+    let rows = [d.w1, d.w2, d.w3].flatMap(parseWinnerRows);
+    if (!rows.length && d.winners) rows = parseWinnerRows(d.winners);
+    for (const r of rows) {
+      const no = normOrderNo(r.order);
+      if (!no || no.includes("*") || done.has(no)) continue;
+      let uid = "";
+      try { const s = await getDoc(doc(db, "orders", no)); uid = s.exists() ? (s.data().uid || "") : ""; } catch (e) {}
+      if (uid) { out.push({ drawId: p.id, month: p.month.trim(), prize: r.prize, winner: r.winner, order: no, uid }); done.add(no); }
+    }
+  }
+  return out;
+}
+
 // 首页区块（会员前台 home.html 的 DEFAULT_SECTIONS 也要一致）
 export const HOME_SECTIONS = [
   { key: "hero",    label: "👋 你好 + 积分 + 等级（含右边 Feed 框）", on: true },

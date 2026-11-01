@@ -361,6 +361,7 @@
   <!-- 兑换审核提醒：积分兑换 + 中奖奖品的待审核、待发货（在本机登录过会员系统后台就会显示） -->
   <script type="module">
     import { auth, db } from "./member-system/js/firebase-config.js";
+    import { readyWinners } from "./member-system/js/admin-common.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       doc, getDoc, collection, query, where, onSnapshot
@@ -379,15 +380,16 @@
       started = true;
 
       // 积分兑换：待审核 + 实体奖品待发货（含配送异常）；中奖奖品：会员已领取（待审核）+ 待发货
-      const c = { rPending: 0, rShip: 0, pClaimed: 0, pShip: 0 };
+      const c = { rPending: 0, rShip: 0, pClaimed: 0, pShip: 0, pReady: 0 };
       function show() {
-        const n = c.rPending + c.rShip + c.pClaimed + c.pShip;
+        const n = c.rPending + c.rShip + c.pClaimed + c.pShip + c.pReady;
         count.hidden = !n;
         count.textContent = n > 99 ? "99+" : n;
         link.classList.toggle("has-todo", !!n);
         const parts = [];
         if (c.rPending) parts.push(`积分兑换待审核 ${c.rPending}`);
         if (c.rShip) parts.push(`兑换奖品待发货 ${c.rShip}`);
+        if (c.pReady) parts.push(`得奖者已绑定待发奖 ${c.pReady}`);
         if (c.pClaimed) parts.push(`中奖奖品待审核 ${c.pClaimed}`);
         if (c.pShip) parts.push(`中奖奖品待发货 ${c.pShip}`);
         link.title = n ? parts.join(" · ") : "兑换审核（目前没有待处理的要求）";
@@ -409,6 +411,10 @@
         c.pShip = list.filter(p => p.status === "approved").length;
         show();
       }, e => console.warn("prizeWins alert", e));
+      // 得奖者已注册并绑定中奖订单、还没发奖（每 10 分钟重新检查一次）
+      const checkReady = () => readyWinners().then(r => { c.pReady = r.length; show(); }).catch(e => console.warn("ready winners", e));
+      checkReady();
+      setInterval(checkReady, 600000);
     });
   </script>
   <script>

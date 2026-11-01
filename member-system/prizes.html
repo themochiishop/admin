@@ -67,6 +67,12 @@
     .addr-edit { background: #fff; border: 1px solid #fbcfe8; border-radius: 10px; padding: 12px; margin-top: 8px; }
     .addr-edit .grid3 { margin-top: 0; }
     .deadline.soon { color: #dc2626; font-weight: 700; }
+    .ready-box { background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; }
+    .ready-box b.h { color: #9a3412; }
+    .ready-box ul { list-style: none; margin-top: 8px; }
+    .ready-box li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid #fed7aa; font-size: .88rem; }
+    .ready-box li:first-child { border-top: none; }
+    .ready-box li .btn { margin-left: auto; padding: 5px 12px; font-size: .8rem; }
     .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; align-self: flex-start; }
     .tag-blue { background: #e0f2fe; color: #0369a1; }
     .item-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -91,6 +97,8 @@
       <!-- ➕ 添加中奖 -->
       <div class="panel">
         <h3>➕ 添加中奖</h3>
+        <!-- ⏳ 得奖者已注册并绑定中奖订单，还没发奖 -->
+        <div id="readyBox" class="ready-box hidden"></div>
 
         <div class="step-h"><span class="n">1</span> 选择抽奖期数</div>
         <div class="periods" id="periods"><span class="muted">载入中…</span></div>
@@ -198,7 +206,7 @@
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag, normalizePhone, isValidPhone,
-      normalizeUsername, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, compressImage
+      normalizeUsername, readyWinners, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, compressImage
     } from "./js/admin-common.js";
 
     // 每月抽奖的资料库（和 www.themochiishop.com/monthly-draw/ 同一个，只读）
@@ -329,6 +337,7 @@
       renderList();
       if (draw) renderWinners();
       refreshPrizeBadge();
+      loadReady();
     }
     async function loadPeriods() {
       try {
@@ -444,6 +453,32 @@
             </tr>`).join("")}</tbody>
         </table>` : `<p class="meta">这一期还没有中奖名单。</p>`;
     }
+    // ---------- ⏳ 已绑定、等你发奖的得奖者 ----------
+    let ready = [];
+    async function loadReady() {
+      try { ready = await readyWinners(); } catch (e) { console.warn("ready", e); ready = []; }
+      $("readyBox").innerHTML = ready.length ? `
+        <b class="h">⏳ ${ready.length} 位得奖者已注册并绑定中奖订单，等你设定配送方式</b>
+        <ul>${ready.map((r, i) => `<li>
+          <span>🏆 <b>${esc(r.prize || "—")}</b> · ${esc(r.month)}</span>
+          <span>👤 ${esc((members[r.uid] || {}).name || r.winner)} <code>${esc(r.order)}</code></span>
+          <button type="button" class="btn btn-primary" data-ready="${i}">选这位</button></li>`).join("")}</ul>` : "";
+      $("readyBox").classList.toggle("hidden", !ready.length);
+    }
+    $("readyBox").addEventListener("click", async e => {
+      const b = e.target.closest("[data-ready]");
+      if (!b) return;
+      const r = ready[+b.dataset.ready];
+      if (drawId !== r.drawId) await selectPeriod(r.drawId);   // 换到那一期（带出奖品图）
+      $("fPrize").value = splitPrize({ n: r.prize }).name;
+      pick.image = imageFor(r.prize);
+      pick.winnerName = r.winner; pick.orderNo = r.order; $("fOrderNo").value = r.order;
+      $("fMonth").value = r.month;
+      document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
+      chooseMember(r.uid);
+      $("addForm").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     $("winners").addEventListener("click", e => {
       const b = e.target.closest("[data-row]");
       if (!b) return;

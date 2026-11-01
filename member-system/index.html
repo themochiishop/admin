@@ -84,7 +84,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
-      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode
+      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode, readyWinners
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -125,13 +125,15 @@
     // 🏆 中奖奖品：会员已领取（待审核）+ 待发货
     async function loadPrizeAlert() {
       try {
-        const s = await getDocs(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])));
+        const [s, ready] = await Promise.all([
+          getDocs(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"]))),
+          readyWinners().catch(() => []),
+        ]);
         const list = s.docs.map(d => d.data());
-        const a = list.filter(p => p.status === "claimed").length, b = list.length - a;
-        $("prizeAlert").innerHTML = `<b>🏆 中奖奖品</b>
-          ${a ? `<span>${a} 笔会员已领取，待审核</span>` : ""}${a && b ? "<span>·</span>" : ""}${b ? `<span>${b} 笔待发货</span>` : ""}
-          <span class="go">去处理 ➔</span>`;
-        $("prizeAlert").classList.toggle("hidden", !list.length);
+        const a = list.filter(p => p.status === "claimed").length, b = list.length - a, r = ready.length;
+        const parts = [r && `${r} 位得奖者已绑定，等你发奖`, a && `${a} 笔会员已领取，待审核`, b && `${b} 笔待发货`].filter(Boolean);
+        $("prizeAlert").innerHTML = `<b>🏆 中奖奖品</b><span>${parts.join(" · ")}</span><span class="go">去处理 ➔</span>`;
+        $("prizeAlert").classList.toggle("hidden", !parts.length);
       } catch (e) { console.warn("prize alert", e); }
     }
 
