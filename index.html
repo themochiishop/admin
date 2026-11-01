@@ -336,17 +336,23 @@
           if (!ok) { count.hidden = true; link.classList.remove('has-todo'); return; }
           if (started) return;
           started = true;
-          firebase.database().ref('draw_private/claimBatches').on('value', snap => {
+          // 会员俱乐部「🏆 中奖奖品」已发货的订单号（下面的会员系统脚本放进 window.clubShippedOrders），也算已寄出
+          let last = {};
+          const norm = o => String(o || '').replace(/\s/g, '').toUpperCase();
+          const recount = () => {
+            const club = window.clubShippedOrders || new Set();
             let left = 0, months = 0;
-            Object.values(snap.val() || {}).forEach(b => {
-              const n = Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.shipped).length;
+            Object.values(last).forEach(b => {
+              const n = Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.shipped && !club.has(norm(x.orderNo))).length;
               if (n) { left += n; months++; }
             });
             count.hidden = !left;
             count.textContent = left;
             link.classList.toggle('has-todo', !!left);
             link.title = left ? `${left} 位得主未寄出${months > 1 ? `（${months} 场）` : ''}` : '得奖者联系与寄送进度（全部已寄出）';
-          }, () => { count.hidden = true; });
+          };
+          window.addEventListener('club-prizes', recount);
+          firebase.database().ref('draw_private/claimBatches').on('value', snap => { last = snap.val() || {}; recount(); }, () => { count.hidden = true; });
         });
       } catch (e) { console.warn('领奖提醒载入失败', e); }
     })();
@@ -392,6 +398,11 @@
         c.rShip = list.filter(r => r.kind === "gift" && r.status !== "pending").length;
         show();
       }, e => console.warn("redemptions alert", e));
+      // 已发货 / 已完成的中奖奖品 → 告诉「🎁 领奖追踪」提醒这些得主已寄出
+      onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["shipped", "completed"])), snap => {
+        window.clubShippedOrders = new Set(snap.docs.map(d => String(d.data().orderNo || "").replace(/\s/g, "").toUpperCase()).filter(Boolean));
+        window.dispatchEvent(new Event("club-prizes"));
+      }, e => console.warn("prizeWins shipped", e));
       onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])), snap => {
         const list = snap.docs.map(d => d.data());
         c.pClaimed = list.filter(p => p.status === "claimed").length;

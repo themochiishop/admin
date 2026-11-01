@@ -111,7 +111,10 @@
             <label>奖品名称 <span class="req">*</span><input id="fPrize" maxlength="100" placeholder="选上面的奖品，或自己输入"></label>
             <label>期数 <input id="fMonth" maxlength="40" placeholder="例如 October 2026"></label>
           </div>
-          <label style="max-width:260px">领取期限（超过还没领取，系统会自动作废） <input id="fDeadline" type="date"></label>
+          <div class="grid2">
+            <label>中奖订单编号（「🎁 领奖追踪」靠它自动对应） <input id="fOrderNo" class="mono" maxlength="40" placeholder="按「选这位」会自动填好"></label>
+            <label>领取期限（超过还没领取，系统会自动作废） <input id="fDeadline" type="date"></label>
+          </div>
 
           <label>会员 <span class="req">*</span>
             <div class="mpick">
@@ -381,7 +384,7 @@
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.toggle("on", x === b));
       $("fPrize").value = p.name;
       pick.image = p.img;
-      pick.winnerName = ""; pick.orderNo = "";
+      pick.winnerName = ""; pick.orderNo = ""; $("fOrderNo").value = "";
       $("fMember").focus();
     });
 
@@ -447,7 +450,7 @@
       const r = winRows[+b.dataset.row];
       $("fPrize").value = splitPrize({ n: r.prize }).name;
       pick.image = imageFor(r.prize);
-      pick.winnerName = r.winner; pick.orderNo = r.order;
+      pick.winnerName = r.winner; pick.orderNo = r.order; $("fOrderNo").value = r.order || "";
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
       if (r.uid) chooseMember(r.uid);
       else { chooseMember(""); $("fMember").value = r.winner; searchMembers(); $("fMember").focus(); }
@@ -574,6 +577,7 @@
       shipPhotos.__add = [];
       drawPhotos(box);
       pick = { uid: "", image: "", winnerName: "", orderNo: "" };
+      $("fOrderNo").value = "";
       chooseMember("");
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
     }
@@ -602,7 +606,7 @@
         drawId: drawId || "",
         drawMonth: $("fMonth").value.trim().slice(0, 40),
         winnerName: pick.winnerName || "",
-        orderNo: pick.orderNo || "",
+        orderNo: $("fOrderNo").value.replace(/\s/g, "").toUpperCase().slice(0, 40),
         delivery: dlv,
         note: $("fNote").value.trim().slice(0, 200),
         status: "unclaimed",
