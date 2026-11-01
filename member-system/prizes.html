@@ -64,6 +64,9 @@
     .note-mgr .nrow { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
     .note-mgr .nrow input { margin: 0; }
     .note-mgr .nrow .btn { padding: 6px 10px; flex-shrink: 0; }
+    .addr-edit { background: #fff; border: 1px solid #fbcfe8; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .addr-edit .grid3 { margin-top: 0; }
+    .deadline.soon { color: #dc2626; font-weight: 700; }
     .rno { font-size: .72rem; color: #64748b; flex-shrink: 0; align-self: flex-start; }
     .tag-blue { background: #e0f2fe; color: #0369a1; }
     .item-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -108,6 +111,7 @@
             <label>奖品名称 <span class="req">*</span><input id="fPrize" maxlength="100" placeholder="选上面的奖品，或自己输入"></label>
             <label>期数 <input id="fMonth" maxlength="40" placeholder="例如 October 2026"></label>
           </div>
+          <label style="max-width:260px">领取期限（超过还没领取，系统会自动作废） <input id="fDeadline" type="date"></label>
 
           <label>会员 <span class="req">*</span>
             <div class="mpick">
@@ -190,7 +194,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag,
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag, normalizePhone, isValidPhone,
       normalizeUsername, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, compressImage
     } from "./js/admin-common.js";
 
@@ -207,6 +211,16 @@
     renderAdminNav("prizes");
 
     const DLV = { withOrder: "📦 随单发送", separate: "🚚 单独包裹" };
+    const PRIZE_CLAIM_DAYS = 30;          // 领取期限（和 prize-watch.gs 的 MS_PRIZE_CLAIM_DAYS 一致）
+    const PRIZE_AUTO_COMPLETE_DAYS = 14;  // 发货后自动完成（和 prize-watch.gs 一致）
+    const MY_STATES = ["Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan", "Pahang", "Perak", "Perlis", "Pulau Pinang",
+      "Sabah", "Sarawak", "Selangor", "Terengganu", "W.P. Kuala Lumpur", "W.P. Labuan", "W.P. Putrajaya"];
+    const p2 = n => String(n).padStart(2, "0");
+    const ymd = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const endOfDay = str => { const [y, m, d] = String(str).split("-").map(Number); return y ? new Date(y, m - 1, d, 23, 59, 59) : null; };
+    const plusDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); x.setHours(23, 59, 59, 0); return x; };
+    // 领取期限：有设定就用设定的，没有就是添加日 + 30 天
+    const deadlineOf = w => toDate(w.expiresAt) || (toDate(w.createdAt) ? plusDays(toDate(w.createdAt), PRIZE_CLAIM_DAYS) : null);
     const ST = { unclaimed: "待领取", claimed: "待审核", approved: "待发货", shipped: "已发货", completed: "已完成", cancelled: "已取消" };
     const ST_TAG = { unclaimed: "tag-pink", claimed: "tag-warn", approved: "tag-blue", shipped: "tag-blue", completed: "tag-ok", cancelled: "" };
     const MAX_IMG = 180000;   // 奖品图太大就不存（Firestore 单笔上限 1MB）
@@ -550,6 +564,7 @@
     function resetForm() {
       $("fPrize").value = ""; $("fNote").value = "";
       $("fMonth").value = drawMonth;
+      $("fDeadline").value = ymd(plusDays(new Date(), PRIZE_CLAIM_DAYS));
       document.querySelectorAll('input[name="dlv"]').forEach(x => x.checked = false);
       $("dlv").classList.remove("bad");
       const box = $("addShip");
@@ -576,6 +591,8 @@
       if (se) { addMsg(se, "err"); return; }
       const dup = wins.find(w => w.status !== "cancelled" && w.uid === pick.uid && normName(w.prizeName) === normName(prizeName)
         && (w.drawId || "") === (drawId || "") && (w.drawMonth || "") === $("fMonth").value.trim());
+      const expiresAt = endOfDay($("fDeadline").value);
+      if (!expiresAt || expiresAt < new Date()) { addMsg("请选择今天以后的领取期限", "err"); $("fDeadline").focus(); return; }
       if (dup && !confirm(`这位会员这一期已经有「${dup.prizeName}」了（${redeemCode(dup.id)}），还要再添加一次吗？`)) return;
 
       const data = {
@@ -589,6 +606,7 @@
         delivery: dlv,
         note: $("fNote").value.trim().slice(0, 200),
         status: "unclaimed",
+        expiresAt,
         createdAt: serverTimestamp(),
         createdBy: adminEmail,
       };
@@ -616,15 +634,54 @@
     });
     $("search").addEventListener("input", () => renderList());
 
+    function addrEditHTML(w) {
+      const a = w.address || {};
+      const st = MY_STATES.includes(a.state) ? a.state : "";
+      return `
+        <div class="addr-edit">
+          <b>📍 ${w.address ? "修改收货地址" : "填写收货地址"}</b>
+          <div class="grid2" style="margin-top:8px">
+            <label>收件人 <input data-a="name" maxlength="60" value="${esc(a.name || "")}"></label>
+            <label>电话 <input data-a="phone" value="${esc(a.phone || "")}" placeholder="012-345 6789"></label>
+          </div>
+          <label>地址 <input data-a="line1" maxlength="120" value="${esc(a.line1 || "")}"></label>
+          <label>地址第 2 行（选填） <input data-a="line2" maxlength="120" value="${esc(a.line2 || "")}"></label>
+          <div class="grid3">
+            <label>邮编 <input data-a="postcode" maxlength="5" inputmode="numeric" value="${esc(a.postcode || "")}"></label>
+            <label>城市 <input data-a="city" maxlength="60" value="${esc(a.city || "")}"></label>
+            <label>州属 <select data-a="state"><option value="">请选择</option>${MY_STATES.map(x => `<option ${x === st ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+          </div>
+          <div class="actions" style="margin-top:0">
+            <button class="btn btn-primary" data-act="saveAddr">💾 保存地址</button>
+            <button class="btn btn-ghost" data-act="cancelAddr">取消</button>
+          </div>
+        </div>`;
+    }
+    function readAddr(item) {
+      const v = k => ((item.querySelector(`.addr-edit [data-a="${k}"]`) || {}).value || "").trim();
+      const a = { name: v("name").slice(0, 60), phone: normalizePhone(v("phone")), line1: v("line1").slice(0, 120), line2: v("line2").slice(0, 120),
+        postcode: v("postcode"), city: v("city").slice(0, 60), state: v("state"), country: "Malaysia" };
+      if (!a.name) return { error: "请填写收件人" };
+      if (!isValidPhone(a.phone)) return { error: "电话号码格式不对" };
+      if (!a.line1) return { error: "请填写地址" };
+      if (!/^\d{5}$/.test(a.postcode)) return { error: "邮编要 5 位数字" };
+      if (!a.city) return { error: "请填写城市" };
+      if (!a.state) return { error: "请选择州属" };
+      return { address: a };
+    }
     function addrBox(w) {
       const a = w.address;
-      if (!a) return "";
+      const canEdit = w.delivery === "separate" && ["claimed", "approved", "shipped"].includes(w.status);
+      if (!a) return canEdit ? `<div class="addr-box" style="border-color:#fdba74;background:#fff7ed">⚠️ 单独包裹还没有收货地址
+          <div class="actions" style="margin-top:6px"><button class="btn btn-primary" data-act="editAddr">➕ 填写地址</button></div></div>` : "";
       const txt = `${a.name}\n${a.phone}\n${a.line1}${a.line2 ? ", " + a.line2 : ""}\n${a.postcode} ${a.city}, ${a.state}\n${a.country || "Malaysia"}`;
       return `
         <div class="addr-box">📍 <b>${esc(a.name)}</b> · ${esc(fmtPhone(a.phone))}<br>
           ${esc(a.line1)}${a.line2 ? ", " + esc(a.line2) : ""}<br>${esc(a.postcode)} ${esc(a.city)}, ${esc(a.state)}
+          ${w.addressUpdatedAt ? `<div class="meta">${w.addressUpdatedBy ? "管理员" : "会员"}于 ${fmtDate(toDate(w.addressUpdatedAt), true)} 修改过地址</div>` : ""}
           <div class="actions" style="margin-top:6px">
             <button class="btn btn-ghost" data-copy="${esc(txt)}">📋 复制地址</button>
+            ${canEdit ? `<button class="btn btn-ghost" data-act="editAddr">✏️ 修改地址</button>` : ""}
             <a class="btn btn-ghost" href="${esc(waLink(a.phone, `Hi ${a.name}, ini The Mochii Shop 💕 berkenaan hadiah cabutan bertuah ${w.prizeName}`))}" target="_blank">💬 WhatsApp</a>
           </div></div>`;
     }
@@ -674,26 +731,31 @@
         const m = members[w.uid] || {};
         let body = "";
         const cancelBtn = `<button class="btn btn-bad" data-act="cancel">取消这个中奖</button>`;
+        const switchBtn = `<button class="btn btn-ghost" data-act="switchDlv">🔁 改为${DLV[w.delivery === "separate" ? "withOrder" : "separate"]}</button>`;
         if (w.status === "unclaimed") {
-          body = `${shipForm(w, `<button class="btn btn-ghost" data-act="saveShip">💾 保存运单号</button>${cancelBtn}`)}
-            <div class="actions"><button class="btn btn-ghost" data-act="switchDlv">🔁 改为${DLV[w.delivery === "separate" ? "withOrder" : "separate"]}</button></div>`;
+          const end = deadlineOf(w);
+          const left = end ? Math.ceil((end - Date.now()) / 86400000) : null;
+          body = `<div class="meta deadline${left !== null && left <= 7 ? " soon" : ""}">⏰ 领取期限 ${end ? fmtDate(end) : "-"}${left !== null ? `（${left > 0 ? "剩 " + left + " 天" : "已过期，系统会自动作废"}）` : ""}</div>
+            ${shipForm(w, `<button class="btn btn-ghost" data-act="saveShip">💾 保存运单号</button>${cancelBtn}`)}
+            <div class="actions">${switchBtn}<button class="btn btn-ghost" data-act="extend">⏰ 延长 ${PRIZE_CLAIM_DAYS} 天</button></div>`;
         } else if (w.status === "claimed") {
-          body = `${addrBox(w)}
+          body = `${addrBox(w)}<div class="actions" style="margin-top:6px">${switchBtn}</div>
             ${shipForm(w, `<button class="btn btn-ok" data-act="approve">✔ 审核通过（稍后发货）</button>
               <button class="btn btn-primary" data-act="ship">🚚 通过并标记已发货</button>${cancelBtn}`)}`;
         } else if (w.status === "approved") {
-          body = `${addrBox(w)}${shipForm(w, `<button class="btn btn-primary" data-act="ship">🚚 标记已发货</button>${cancelBtn}`)}`;
+          body = `${addrBox(w)}<div class="actions" style="margin-top:6px">${switchBtn}</div>${shipForm(w, `<button class="btn btn-primary" data-act="ship">🚚 标记已发货</button>${cancelBtn}`)}`;
         } else if (w.status === "shipped") {
           body = `${shipInfo(w)}${addrBox(w)}
-            <div class="meta">会员还没按「确认收到」</div>
+            <div class="meta">会员还没按「确认收到」${toDate(w.shippedAt) ? `，${fmtDate(plusDays(toDate(w.shippedAt), PRIZE_AUTO_COMPLETE_DAYS))} 会自动完成` : ""}</div>
             <div class="actions">
               <button class="btn btn-ghost" data-act="editShip">✏️ 修改运单号</button>
               <button class="btn btn-ok" data-act="complete">✔ 手动标记完成</button>
             </div>`;
         } else if (w.status === "completed") {
-          body = `${shipInfo(w)}<div class="meta">✅ ${w.adminCompleted ? "管理员标记完成" : "会员确认收到"} · ${fmtDate(toDate(w.completedAt), true)}</div>`;
+          body = `${shipInfo(w)}<div class="meta">✅ ${w.adminCompleted ? "管理员标记完成" : w.autoCompleted ? "发货 " + PRIZE_AUTO_COMPLETE_DAYS + " 天后自动完成" : "会员确认收到"} · ${fmtDate(toDate(w.completedAt), true)}</div>`;
         } else {
-          body = `<div class="meta">已取消 ${fmtDate(toDate(w.cancelledAt), true)}${w.cancelNote ? " · 原因：" + esc(w.cancelNote) : ""}</div>`;
+          body = `<div class="meta">${w.autoExpired ? "⏰ 超过领取期限，系统自动作废" : "已取消"} ${fmtDate(toDate(w.cancelledAt), true)}${w.cancelNote && !w.autoExpired ? " · 原因：" + esc(w.cancelNote) : ""}</div>
+            <div class="actions"><button class="btn btn-ghost" data-act="reopen">↩️ 恢复为待领取（再给 ${PRIZE_CLAIM_DAYS} 天）</button></div>`;
         }
         return `
           <div class="item" data-id="${esc(w.id)}">
@@ -733,9 +795,30 @@
         e.target.closest(".actions").outerHTML = shipForm(w, `<button class="btn btn-ghost" data-act="saveShip">💾 保存运单号</button>`);
         return;
       }
+      if (act === "editAddr") {
+        if (!item.querySelector(".addr-edit")) e.target.closest(".actions, .addr-box").insertAdjacentHTML("afterend", addrEditHTML(w));
+        return;
+      }
+      if (act === "cancelAddr") { item.querySelector(".addr-edit").remove(); return; }
       const box = item.querySelector(".ship-form");
       const ship = box ? readShip(box) : null;
       let upd = null;
+      if (act === "saveAddr") {
+        const r = readAddr(item);
+        if (r.error) { alert(r.error); return; }
+        upd = { address: r.address, addressUpdatedAt: serverTimestamp(), addressUpdatedBy: adminEmail };
+      }
+      if (act === "extend") {
+        const base = new Date(Math.max(Date.now(), (deadlineOf(w) || new Date()).getTime()));
+        const next = plusDays(base, PRIZE_CLAIM_DAYS);
+        if (!confirm(`把领取期限延长到 ${fmtDate(next)}？`)) return;
+        upd = { expiresAt: next };
+      }
+      if (act === "reopen") {
+        const next = plusDays(new Date(), PRIZE_CLAIM_DAYS);
+        if (!confirm(`恢复为「待领取」，领取期限到 ${fmtDate(next)}？会员那边会再次看到领取按钮。`)) return;
+        upd = { status: "unclaimed", expiresAt: next, autoExpired: false, cancelNote: "", reopenedAt: serverTimestamp(), reopenedBy: adminEmail };
+      }
       if (act === "saveShip") {
         const err = shipError(ship, false);
         if (err) { alert(err); return; }
@@ -744,7 +827,8 @@
       }
       if (act === "switchDlv") {
         const to = w.delivery === "separate" ? "withOrder" : "separate";
-        if (!confirm(`把配送方式改为「${DLV[to]}」？`)) return;
+        const needAddr = to === "separate" && w.status !== "unclaimed" && !w.address;
+        if (!confirm(`把配送方式改为「${DLV[to]}」？${needAddr ? "\n\n会员已经领取过了，改完请帮会员填写收货地址。" : ""}`)) return;
         upd = { delivery: to };
       }
       if (act === "approve") upd = { status: "approved", approvedAt: serverTimestamp() };
@@ -789,6 +873,7 @@
         if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
       } catch (e) {}
       try {
+        $("fDeadline").value = ymd(plusDays(new Date(), PRIZE_CLAIM_DAYS));
         await Promise.all([loadMembers(), loadPeriods(), loadNotes()]);
         await loadWins();
         const uid = new URLSearchParams(location.search).get("uid");   // 从会员详情页过来
