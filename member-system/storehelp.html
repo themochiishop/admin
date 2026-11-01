@@ -17,7 +17,10 @@
     .ord .btn { padding: 4px 10px; }
     .cat-head { font-size: .82rem; font-weight: 800; color: #64748b; margin: 18px 0 8px; letter-spacing: .03em; }
     .editing { outline: 2px solid #db2777; }
-  </style>
+      .note-h { font-size: .8rem; color: #475569; font-weight: 600; margin: 4px 0 6px; }
+    .grid3n { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
+    @media (max-width: 640px) { .grid3n { grid-template-columns: 1fr; } }
+</style>
 </head>
 <body>
   <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
@@ -48,6 +51,12 @@
             <label>English <input id="waClubEn" maxlength="40" placeholder="Club tech support"></label>
             <label>Bahasa Melayu <input id="waClubMs" maxlength="40" placeholder="Sokongan teknikal kelab"></label>
           </div>
+          <div class="note-h">负责处理（显示在按钮下面，选填）</div>
+          <div class="grid3n">
+            <label>中文 <input id="waClubNoteZh" maxlength="80" placeholder="积分、兑换、中奖领奖、登录问题"></label>
+            <label>English <input id="waClubNoteEn" maxlength="100" placeholder="Points, redemptions, prizes, login"></label>
+            <label>Bahasa Melayu <input id="waClubNoteMs" maxlength="100" placeholder="Mata, penebusan, hadiah, log masuk"></label>
+          </div>
         </div>
 
         <div class="lang-box">
@@ -59,6 +68,12 @@
             <label>Bahasa Melayu <input id="waStoreMs" maxlength="40" placeholder="Khidmat pelanggan"></label>
             <label>Shopee 店铺链接 <input id="cShopee" type="url" placeholder="https://shopee.com.my/…"></label>
             <label>TikTok Shop 链接 <input id="cTiktok" type="url" placeholder="https://www.tiktok.com/@…"></label>
+          </div>
+          <div class="note-h">负责处理（显示在 WhatsApp 按钮下面，选填）</div>
+          <div class="grid3n">
+            <label>中文 <input id="waStoreNoteZh" maxlength="80" placeholder="订单、发货、退换货等日常问题"></label>
+            <label>English <input id="waStoreNoteEn" maxlength="100" placeholder="Orders, shipping, returns and everyday questions"></label>
+            <label>Bahasa Melayu <input id="waStoreNoteMs" maxlength="100" placeholder="Pesanan, penghantaran, pemulangan dan soalan harian"></label>
           </div>
         </div>
         <div class="actions">
@@ -355,6 +370,8 @@
       LBL.forEach(l => {
         $("waClub" + l).value = (h.waClubLabel || {})[l.toLowerCase()] || "";
         $("waStore" + l).value = (h.waStoreLabel || {})[l.toLowerCase()] || "";
+        $("waClubNote" + l).value = (h.waClubNote || {})[l.toLowerCase()] || "";
+        $("waStoreNote" + l).value = (h.waStoreNote || {})[l.toLowerCase()] || "";
       });
       $("cShopee").value = h.shopee || "";
       $("cTiktok").value = h.tiktok || "";
@@ -369,6 +386,7 @@
       const data = {
         waClub: digits("waClub"), waClubLabel: readLabel("waClub"),
         waStore: digits("waStore"), waStoreLabel: readLabel("waStore"),
+        waClubNote: readLabel("waClubNote"), waStoreNote: readLabel("waStoreNote"),
         whatsapp: deleteField(),
         shopee, tiktok,
       };
