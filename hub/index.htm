@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <!-- 🔐 权限检查：没登录或没有「hub」权限会跳回控制台 -->
-  <script type="module">import { guard } from "/js/admin-guard.js"; guard("hub");</script>
+  <script type="module">import { guard } from "/js/admin-guard.js"; window.hubAccess = guard("hub");</script>
   <meta charset="UTF-8">
   <meta name="color-scheme" content="light">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -230,9 +230,9 @@
       <h2>入口</h2>
       <a href="https://admin.themochiishop.com/" target="_blank" rel="noopener"><span>工具与控制台 Dashboard</span><span>→</span></a>
             <a href="https://www.themochiishop.com/home-editor/"><span>网站后台编辑</span><span>→</span></a>
-      <a href="https://admin.themochiishop.com/member-system/index.html"><span>Mochiishop/admin · 会员系统</span><span>→</span></a>
+      <a data-perm="member" hidden href="https://admin.themochiishop.com/member-system/index.html"><span>Mochiishop/admin · 会员系统</span><span>→</span></a>
       <a href="https://www.themochiishop.com/" target="_blank" rel="noopener"><span>查看网站</span><span>→</span></a>    
-    <a href="https://admin.themochiishop.com/invoice/" target="_blank" rel="noopener"><span>Purchase Order & Invoice </span><span>→</span></a>   
+    <a data-perm="invoice" hidden href="https://admin.themochiishop.com/invoice/" target="_blank" rel="noopener"><span>Purchase Order & Invoice </span><span>→</span></a>   
     </div>
   </div>
 </div>
@@ -629,17 +629,25 @@
        在这台设备登录过会员系统后台、抽奖后台就会显示数字；没登录会显示「去登录」 -->
   <script type="module">
     const list = document.getElementById("todoList");
+    // 👥 按控制台的管理员权限：只显示这个人有权限的项目和入口
+    const { can } = await import("/js/admin-guard.js");
+    const acc = await window.hubAccess;
+    document.querySelectorAll("[data-perm]").forEach(el => { el.hidden = !can(acc, el.dataset.perm); });
     const ROWS = [
-      { k: "rPending", ic: "🎁", t: "兑换待审核",     href: "/member-system/redeem.html#pending", src: "ms" },
-      { k: "rShip",    ic: "📦", t: "兑换待发货",     href: "/member-system/redeem.html#toShip",  src: "ms" },
-      { k: "pClaimed", ic: "🏆", t: "中奖待审核",     href: "/member-system/prizes.html#claimed", src: "ms" },
-      { k: "pShip",    ic: "🚚", t: "中奖待发货",     href: "/member-system/prizes.html#approved", src: "ms" },
-      { k: "feed",     ic: "⏳", t: "Feed 投稿待审核", href: "/member-system/feed.html#pending",   src: "ms" },
-      { k: "reports",  ic: "🚩", t: "Feed 检举待处理", href: "/member-system/feed.html#reports",   src: "ms" },
-      { k: "claims",   ic: "🎀", t: "领奖追踪未寄出", href: "/draw_tournament/claims.html",       src: "draw" },
-    ];
+      { k: "rPending", ic: "🎁", t: "兑换待审核",     href: "/member-system/redeem.html#pending", src: "ms", perm: "member" },
+      { k: "rShip",    ic: "📦", t: "兑换待发货",     href: "/member-system/redeem.html#toShip",  src: "ms", perm: "member" },
+      { k: "pClaimed", ic: "🏆", t: "中奖待审核",     href: "/member-system/prizes.html#claimed", src: "ms", perm: "member" },
+      { k: "pShip",    ic: "🚚", t: "中奖待发货",     href: "/member-system/prizes.html#approved", src: "ms", perm: "member" },
+      { k: "feed",     ic: "⏳", t: "Feed 投稿待审核", href: "/member-system/feed.html#pending",   src: "ms", perm: "feed" },
+      { k: "reports",  ic: "🚩", t: "Feed 检举待处理", href: "/member-system/feed.html#reports",   src: "ms", perm: "feed" },
+      { k: "claims",   ic: "🎀", t: "领奖追踪未寄出", href: "/draw_tournament/claims.html",       src: "draw", perm: "draw.claims" },
+    ].filter(r => can(acc, r.perm));
+    const useMs = ROWS.some(r => r.src === "ms"), useDraw = ROWS.some(r => r.src === "draw");
+    if (!ROWS.length) document.getElementById("todoCard").hidden = true;
     const n = {};             // 数字；null = 读取中
-    const login = { ms: null, draw: null };   // true 已登录、false 没登录、null 读取中
+    const login = {};   // true 已登录、false 没登录、null 读取中（只放有权限的系统）
+    if (useMs) login.ms = null;
+    if (useDraw) login.draw = null;
     ROWS.forEach(r => n[r.k] = null);
 
     function render() {
@@ -668,7 +676,7 @@
     render();
 
     // ---------- 会员系统（Firestore） ----------
-    (async () => {
+    if (useMs) (async () => {
       try {
         const { auth, db } = await import("/member-system/js/firebase-config.js");
         const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js");
@@ -703,7 +711,7 @@
     })();
 
     // ---------- 每月抽奖：领奖追踪（Realtime Database） ----------
-    (async () => {
+    if (useDraw) (async () => {
       try {
         const V = "https://www.gstatic.com/firebasejs/10.14.1/";
         const { initializeApp } = await import(V + "firebase-app.js");
