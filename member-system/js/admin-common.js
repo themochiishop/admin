@@ -410,6 +410,25 @@ export function requireAdmin(onReady) {
     if (!isAdmin) {
       app.classList.add("hidden");
       gate.classList.remove("hidden");
+      // 不是店主：显示「没有权限，请联系店主」（Firebase 设定步骤只给店主看）
+      const acc = await getAccess(user);
+      if (!acc.owner) {
+        const has = can(acc, "member") || can(acc, "feed");
+        gate.innerHTML = `
+          <div class="gate-card">
+            <h2>🔒 没有会员系统的权限</h2>
+            <p>已登录：${esc(user.email || "")}</p>
+            <p>${acc.reason === "disabled" ? "这个账号已被停用。"
+              : has ? "权限还在设定中：请先回控制台登录一次，再重新打开这一页。"
+              : "这个账号没有「Member Club」的权限，需要的话请联系店主。"}</p>
+            <div class="actions" style="justify-content:center">
+              <a class="btn btn-primary" href="/">回控制台</a>
+              <button id="gateLogout" class="btn btn-ghost">换一个账号</button>
+            </div>
+          </div>`;
+        document.getElementById("gateLogout").addEventListener("click", () => signOut(auth));
+        return;
+      }
       gate.innerHTML = `
         <div class="gate-card">
           <h2>🔒 没有管理员权限</h2>
