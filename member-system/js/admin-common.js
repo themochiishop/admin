@@ -1,5 +1,6 @@
 // member-system 后台共用功能
 import { auth, db } from "./firebase-config.js";
+import { getAccess, can } from "/js/admin-guard.js";
 import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -427,6 +428,26 @@ export function requireAdmin(onReady) {
         try { await navigator.clipboard.writeText(user.uid); e.target.textContent = "已复制 ✓"; }
         catch { prompt("请手动复制：", user.uid); }
       });
+      document.getElementById("gateLogout").addEventListener("click", () => signOut(auth));
+      return;
+    }
+
+    // 👥 控制台的管理员权限：Feed 页面要「Mochii Feed」，其他页面要「Member Club」
+    const need = /\/feed\.html$/.test(location.pathname) ? "feed" : "member";
+    const access = await getAccess(user);
+    if (!can(access, need)) {
+      app.classList.add("hidden");
+      gate.classList.remove("hidden");
+      gate.innerHTML = `
+        <div class="gate-card">
+          <h2>🔒 没有这项权限</h2>
+          <p>已登录：${esc(user.email || "")}</p>
+          <p>${access.reason === "disabled" ? "这个账号已被停用。" : `这个账号没有「${need === "feed" ? "Mochii Feed" : "Member Club"}」的权限，需要的话请联系店主。`}</p>
+          <div class="actions" style="justify-content:center">
+            <a class="btn btn-primary" href="/">回控制台</a>
+            <button id="gateLogout" class="btn btn-ghost">换一个账号</button>
+          </div>
+        </div>`;
       document.getElementById("gateLogout").addEventListener("click", () => signOut(auth));
       return;
     }

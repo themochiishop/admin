@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <!-- 🔐 权限检查：没登录或没有「hub」权限会跳回控制台 -->
+  <script type="module">import { guard } from "/js/admin-guard.js"; guard("hub");</script>
   <meta charset="UTF-8">
   <meta name="color-scheme" content="light">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">

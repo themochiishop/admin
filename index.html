@@ -6,79 +6,118 @@
   <link rel="icon" type="image/jpeg" href="logo.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <title>The Mochii Shop - Admin 管理控制台</title>
+  <!-- 白色 / 暗黑模式：和会员系统后台共用同一个设定 -->
+  <script src="member-system/js/theme.js"></script>
   <style>
+    /* ===== 颜色：白色模式（预设）与暗黑模式 ===== */
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f9; --card: #fff; --soft: #f1f5f9; --line: #e2e8f0; --line2: #cbd5e1;
+      --ink: #0f172a; --text: #333; --muted: #64748b; --faint: #94a3b8;
+      --head: #0f172a; --head-line: transparent; --shadow: rgba(0,0,0,.08); --icon-mix: 12%;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0b1120; --card: #131c2e; --soft: #1e293b; --line: #263449; --line2: #3a4a63;
+      --ink: #f1f5f9; --text: #d5dde8; --muted: #94a3b8; --faint: #6b7b93;
+      --head: #070b16; --head-line: #1e293b; --shadow: rgba(0,0,0,.4); --icon-mix: 20%;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #f4f6f9;
-      color: #333;
+      background-color: var(--bg);
+      color: var(--text);
       line-height: 1.4;
+      transition: background-color .2s;
     }
     header {
-      background: #0f172a;
+      background: var(--head);
+      border-bottom: 1px solid var(--head-line);
       color: #fff;
-      padding: 14px 28px;
+      padding: 12px 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    .brand { font-size: 1.00rem; font-weight: 700; display: flex; align-items: center; gap: 12px; }
-    .nav-links a { color: #cbd5e1; text-decoration: none; font-size: 0.88rem; }
-    .nav-links a:hover { color: #fff; }
+    .brand { font-size: 1.00rem; font-weight: 700; display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+    .nav-links { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .nav-links a.home { color: #cbd5e1; text-decoration: none; font-size: 0.88rem; margin-left: 4px; white-space: nowrap; }
+    .nav-links a.home:hover { color: #fff; }
+    .hd-btn {
+      display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px; border-radius: 999px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #e2e8f0;
+      font-size: .82rem; font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap; font-family: inherit;
+    }
+    .hd-btn:hover { background: rgba(255,255,255,.16); color: #fff; }
+    .hd-btn.icon { width: 34px; padding: 0; justify-content: center; font-size: 1rem; }
+    .user-chip { position: relative; }
+    .user-chip img, .user-chip .av {
+      width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: #334155;
+      display: inline-flex; align-items: center; justify-content: center; font-size: .72rem; color: #fff;
+    }
+    .user-chip .em { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+    .user-menu {
+      position: absolute; right: 0; top: 42px; z-index: 50; min-width: 230px; background: var(--card); color: var(--text);
+      border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 30px var(--shadow); padding: 12px;
+    }
+    .user-menu .who { font-weight: 700; color: var(--ink); font-size: .9rem; }
+    .user-menu .mail { font-size: .78rem; color: var(--muted); margin: 2px 0 8px; word-break: break-all; }
+    .user-menu .role { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); margin-bottom: 10px; }
+    .user-menu button { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--line2); background: var(--soft); color: var(--ink); font-weight: 600; cursor: pointer; font-family: inherit; }
+
     .admin-container { max-width: 1050px; margin: 30px auto; padding: 0 15px; }
     .dashboard-header {
-      background: #ffffff;
+      background: var(--card);
       padding: 15px 30px;
       border-radius: 12px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--line);
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       margin-bottom: 15px;
     }
-    .dashboard-header h3 { font-size: 1.35rem; color: #0f172a; margin-bottom: 2px; }
-    .dashboard-header p { color: #64748b; font-size: 0.85rem; }
-    
+    .dashboard-header h3 { font-size: 1.35rem; color: var(--ink); margin-bottom: 2px; }
+    .dashboard-header p { color: var(--muted); font-size: 0.85rem; }
+
     .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
     /* 分组标题 */
-    .group-title { display: flex; align-items: center; gap: 10px; margin: 26px 0 12px; font-size: .82rem; font-weight: 700; color: #64748b; letter-spacing: .08em; }
-    .group-title::after { content: ""; flex: 1; height: 1px; background: #e2e8f0; }
-    .group-title:first-of-type { margin-top: 6px; }
-    .card-hub .card-icon { background: #f5efe2; color: #8a6d2f; }
-    .btn-hub { background: #1c1722; }
-    .btn-hub:hover { background: #2e2636; }
-    .card-invoice .card-icon { background: #f1f5f9; color: #334155; }
-    .btn-slate { background: #475569; }
-    .btn-slate:hover { background: #334155; }
-    
+    .group-title { display: flex; align-items: center; gap: 10px; margin: 26px 0 12px; font-size: .82rem; font-weight: 700; color: var(--muted); letter-spacing: .08em; }
+    .group-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+    .group:first-of-type .group-title { margin-top: 6px; }
+    .empty-all { text-align: center; color: var(--muted); padding: 40px 20px; background: var(--card); border: 1px dashed var(--line2); border-radius: 12px; }
+
     .card {
-      background: #ffffff;
+      background: var(--card);
       border-radius: 12px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--line);
       padding: 22px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       transition: all 0.25s ease;
     }
-    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.08); border-color: #cbd5e1; }
-    .card-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 14px; }
-    .card-draw .card-icon { background: #fef3c7; color: #d97706; }
-    .card-cod .card-icon { background: #fff3ed; color: #ff5722; }
-    .card-wheel .card-icon { background: #eff6ff; color: #2563eb; }
-    .card-search .card-icon { background: #f0fdf4; color: #16a34a; }
-    .card-status .card-icon { background: #faf5ff; color: #9333ea; }
-    
-    /* 新增：图库卡片的图标颜色 */
-    .card-gallery .card-icon { background: #e0f2fe; color: #0284c7; }
-    .card-entry .card-icon { background: #ecfeff; color: #0891b2; }
-    .btn-teal { background: #0891b2; }
-    .btn-teal:hover { background: #0e7490; }
-     .card-invoice .card-icon { background: #e8eef5; color: #1F4E79; }
-    .btn-navy { background: #1F4E79; }
-    .btn-navy:hover { background: #173d5f; }
-    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
-    .card-desc { font-size: 0.85rem; color: #64748b; margin-bottom: 18px; line-height: 1.5; }
-    
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px var(--shadow); border-color: var(--line2); }
+    /* 图标底色：用每张卡片的主色，白色 / 暗黑模式都自动调深浅 */
+    .card-icon {
+      width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 14px;
+      background: color-mix(in srgb, var(--ic, #64748b) var(--icon-mix), transparent); color: var(--ic, #64748b);
+    }
+    .card-hub { --ic: #8a6d2f; }
+    .card-wheel { --ic: #2563eb; }
+    .card-draw { --ic: #d97706; }
+    .card-entry { --ic: #0891b2; }
+    .card-invoice { --ic: #1F4E79; }
+    .card-search { --ic: #16a34a; }
+    .card-cod { --ic: #ff5722; }
+    .card-member { --ic: #db2777; }
+    .card-status { --ic: #9333ea; }
+    .card-gallery { --ic: #0284c7; }
+    :root[data-theme="dark"] .card-invoice { --ic: #60a5fa; }
+    :root[data-theme="dark"] .card-hub { --ic: #d4b26a; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+    .card-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+
     .card-btn {
       width: 100%;
       padding: 10px 14px;
@@ -94,25 +133,29 @@
       color: #fff;
       border: none;
       cursor: pointer;
+      font-family: inherit;
     }
-    
+    .btn-hub { background: #1c1722; }
+    .btn-hub:hover { background: #2e2636; }
+    :root[data-theme="dark"] .btn-hub { background: #3a2f45; }
+    :root[data-theme="dark"] .btn-hub:hover { background: #4a3d57; }
+    .btn-teal { background: #0891b2; }
+    .btn-teal:hover { background: #0e7490; }
+    .btn-navy { background: #1F4E79; }
+    .btn-navy:hover { background: #173d5f; }
+    :root[data-theme="dark"] .btn-navy { background: #2563a8; }
     .btn-amber { background: #d97706; }
     .btn-amber:hover { background: #b45309; }
-    .btn-orange, .btn-cod { background: #ff5722; }
-    .btn-orange:hover, .btn-cod:hover { background: #f4511e; }
+    .btn-orange { background: #ff5722; }
+    .btn-orange:hover { background: #f4511e; }
     .btn-blue { background: #2563eb; }
     .btn-blue:hover { background: #1d4ed8; }
     .btn-green { background: #16a34a; }
     .btn-green:hover { background: #15803d; }
     .btn-purple { background: #9333ea; }
     .btn-purple:hover { background: #7e22ce; }
-    
-    /* 新增：图库按钮颜色 */
     .btn-gallery { background: #0284c7; }
     .btn-gallery:hover { background: #0369a1; }
-
-    /* 新增：会员系统卡片与按钮颜色 */
-    .card-member .card-icon { background: #fdf2f8; color: #db2777; }
     .btn-member { background: #db2777; }
     .btn-member:hover { background: #be185d; }
 
@@ -129,7 +172,8 @@
     }
     .modal-overlay.active { display: flex; }
     .modal-card {
-      background: #ffffff;
+      background: var(--card);
+      border: 1px solid var(--line);
       border-radius: 16px;
       width: 90%;
       max-width: 420px;
@@ -142,11 +186,11 @@
       position: absolute;
       top: 16px; right: 16px;
       background: none; border: none;
-      font-size: 1.2rem; cursor: pointer; color: #94a3b8;
+      font-size: 1.2rem; cursor: pointer; color: var(--faint);
     }
-    .modal-close:hover { color: #0f172a; }
-    .modal-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
-    .modal-desc { font-size: 0.88rem; color: #64748b; margin-bottom: 20px; }
+    .modal-close:hover { color: var(--ink); }
+    .modal-title { font-size: 1.25rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+    .modal-desc { font-size: 0.88rem; color: var(--muted); margin-bottom: 20px; }
     .modal-links { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
     .modal-link-btn {
       padding: 12px 16px;
@@ -162,159 +206,229 @@
     }
     .btn-admin-portal { background: #0f172a; color: #fbbf24; }
     .btn-admin-portal:hover { background: #1e293b; }
-    .btn-public-portal { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
-    .btn-public-portal:hover { background: #e2e8f0; }
+    :root[data-theme="dark"] .btn-admin-portal { background: #020617; border: 1px solid var(--line2); }
+    .btn-public-portal { background: var(--soft); color: var(--ink); border: 1px solid var(--line2); }
+    .btn-public-portal:hover { background: var(--line); }
     .btn-test-portal { background: #fdf4ff; color: #a21caf; border: 1px dashed #e879f9; }
     .btn-test-portal:hover { background: #fae8ff; }
+    :root[data-theme="dark"] .btn-test-portal { background: rgba(192,38,211,.12); color: #f0abfc; }
+
     /* 卡片图标右边的提醒按钮：每月抽奖【领奖追踪】、会员系统【兑换审核】共用 */
     .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
     .claim-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: #e0f2fe; border: 1px solid #7dd3fc;
       color: #0369a1; font-size: 0.8rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all .2s; }
     .claim-link:hover { background: #bae6fd; }
+    :root[data-theme="dark"] .claim-link { background: rgba(14,165,233,.12); border-color: rgba(125,211,252,.35); color: #7dd3fc; }
     .claim-link.has-todo { background: #fff1f2; border-color: #fda4af; color: #be123c; animation: claimBlink 1.2s ease-in-out infinite; }
+    :root[data-theme="dark"] .claim-link.has-todo { background: rgba(225,29,72,.15); border-color: rgba(253,164,175,.45); color: #fda4af; }
     .claim-link.has-todo .claim-count { animation: claimDot 1.2s ease-in-out infinite; }
-    @keyframes claimBlink { 0%, 100% { box-shadow: 0 0 0 0 rgba(225,29,72,.5); } 50% { box-shadow: 0 0 0 7px rgba(225,29,72,0); background: #ffe4e6; } }
+    @keyframes claimBlink { 0%, 100% { box-shadow: 0 0 0 0 rgba(225,29,72,.5); } 50% { box-shadow: 0 0 0 7px rgba(225,29,72,0); } }
     @keyframes claimDot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
     @media (prefers-reduced-motion: reduce) { .claim-link.has-todo, .claim-link.has-todo .claim-count { animation: none; } }
     .claim-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #e11d48; color: #fff; font-size: 0.72rem; display: inline-flex; align-items: center; justify-content: center; }
-    .claim-count[hidden] { display: none; }
 
-    footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 0.85rem; }
+    /* ===== 登录画面 ===== */
+    .gate {
+      position: fixed; inset: 0; z-index: 2000; background: var(--bg);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .gate-card {
+      width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: 30px 26px; text-align: center; box-shadow: 0 12px 30px var(--shadow);
+    }
+    .gate-card .logo { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; margin-bottom: 12px; }
+    .gate-card h2 { font-size: 1.2rem; color: var(--ink); margin-bottom: 6px; }
+    .gate-card p { font-size: .88rem; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+    .gate-card code { font-size: .82rem; background: var(--soft); padding: 2px 6px; border-radius: 6px; color: var(--ink); word-break: break-all; }
+    .g-btn {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 11px 14px; border-radius: 10px;
+      border: 1px solid var(--line2); background: var(--card); color: var(--ink); font-weight: 700; font-size: .92rem; cursor: pointer; font-family: inherit;
+    }
+    .g-btn:hover { background: var(--soft); }
+    .g-btn + .g-btn { margin-top: 8px; }
+    .g-err { color: #dc2626; font-size: .82rem; margin-top: 10px; min-height: 1em; }
+    .spin { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: #db2777; border-radius: 50%; margin: 6px auto 12px; animation: sp 0.8s linear infinite; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+
+    /* 提示条 */
+    .toast {
+      position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 3000; max-width: calc(100% - 32px);
+      background: #be123c; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+    }
+
+    footer { text-align: center; margin-top: 40px; padding: 20px; color: var(--faint); font-size: 0.85rem; }
+
+    @media (max-width: 640px) {
+      header { padding: 10px 14px; }
+      .user-chip .em, .nav-links a.home .tx, .hd-btn .tx { display: none; }
+      .hd-btn.user-chip { width: 34px; padding: 0; justify-content: center; }
+      .dashboard-header { padding: 14px 18px; }
+    }
   </style>
 </head>
 <body>
+  <!-- 🔐 登录 / 没有权限 -->
+  <div id="gate" class="gate">
+    <div class="gate-card" id="gateCard"><div class="spin"></div><p>载入中…</p></div>
+  </div>
+
   <header>
     <div class="brand">Mochiishop/admin</div>
     <div class="nav-links">
-      <a href="https://www.themochiishop.com" target="_blank">返回主页 ➔</a>
+      <button id="themeBtn" class="hd-btn icon" title="切换白色 / 暗黑模式" aria-label="切换白色 / 暗黑模式">🌙</button>
+      <a id="staffLink" class="hd-btn" href="staff.html" title="管理员与权限" hidden>👥<span class="tx"> 管理员</span></a>
+      <div class="user-chip-wrap" style="position:relative" id="userWrap" hidden>
+        <button id="userBtn" class="hd-btn user-chip" aria-haspopup="true"><span id="userAv" class="av">?</span><span class="em" id="userEm"></span></button>
+        <div id="userMenu" class="user-menu" hidden>
+          <div class="who" id="umName"></div>
+          <div class="mail" id="umMail"></div>
+          <div class="role" id="umRole"></div>
+          <button id="logoutBtn">登出 / 换账号</button>
+        </div>
+      </div>
+      <a class="home" href="https://www.themochiishop.com" target="_blank"><span class="tx">返回主页 </span>➔</a>
     </div>
   </header>
 
   <div class="admin-container">
     <div class="dashboard-header">
       <h3>工具与控制台 Dashboard</h3>
-      <p>欢迎回来！工具按用途分成「直播」「订单」「会员与内容」三组；手机上开播和查看待处理，用 Mochii Hub。</p>
+      <p id="welcome">欢迎回来！工具按用途分成「直播」「订单」「会员与内容」三组；手机上开播和查看待处理，用 Mochii Hub。</p>
     </div>
 
     <!-- ===== 直播 ===== -->
-    <div class="group-title">🎥 直播</div>
-    <div class="action-grid">
-      <!-- Mochii Hub：手机开播、开播通知、今天要处理 -->
-      <div class="card card-hub">
-        <div>
-          <div class="card-icon">📱</div>
-          <div class="card-title">Mochii Hub</div>
-          <div class="card-desc">手机专用：一键开播、复制开播通知、查看今天要处理的事。建议加到手机主画面。</div>
-        </div>
-        <a href="hub/" class="card-btn btn-hub" target="_blank">打开 Mochii Hub 📱</a>
-      </div>
-
-      <!-- 幸运大转盘 Wheel -->
-      <div class="card card-wheel">
-        <div>
-          <div class="card-icon">🎡</div>
-          <div class="card-title">幸运大转盘 wheel</div>
-          <div class="card-desc">直播抽奖大转盘，支持现场同步名单与多时间段快照记忆。</div>
-        </div>
-        <a href="wheel/" class="card-btn btn-blue">打开大转盘 🎡</a>
-      </div>
-
-      <!-- 每月抽奖 Monthly Draw -->
-      <div class="card card-draw">
-        <div>
-          <div class="card-head">
-            <div class="card-icon">🎁</div>
-            <a id="drawClaimLink" class="claim-link" href="./draw_tournament/claims.html" target="_blank" title="得奖者联系与寄送进度">🎁 领奖追踪<span id="drawClaimCount" class="claim-count" hidden></span></a>
+    <section class="group">
+      <div class="group-title">🎥 直播</div>
+      <div class="action-grid">
+        <!-- Mochii Hub：手机开播、开播通知、今天要处理 -->
+        <div class="card card-hub" data-perm="hub">
+          <div>
+            <div class="card-icon">📱</div>
+            <div class="card-title">Mochii Hub</div>
+            <div class="card-desc">手机专用：一键开播、复制开播通知、查看今天要处理的事。建议加到手机主画面。</div>
           </div>
-          <div class="card-title">每月抽奖 Monthly Draw</div>
-          <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
+          <a href="hub/" class="card-btn btn-hub" target="_blank">打开 Mochii Hub 📱</a>
         </div>
-        <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
+
+        <!-- 幸运大转盘 Wheel -->
+        <div class="card card-wheel" data-perm="wheel">
+          <div>
+            <div class="card-icon">🎡</div>
+            <div class="card-title">幸运大转盘 wheel</div>
+            <div class="card-desc">直播抽奖大转盘，支持现场同步名单与多时间段快照记忆。</div>
+          </div>
+          <a href="wheel/" class="card-btn btn-blue">打开大转盘 🎡</a>
+        </div>
+
+        <!-- 每月抽奖 Monthly Draw -->
+        <div class="card card-draw" data-perm="draw">
+          <div>
+            <div class="card-head">
+              <div class="card-icon">🎁</div>
+              <a id="drawClaimLink" class="claim-link" data-perm="draw.claims" href="./draw_tournament/claims.html" target="_blank" title="得奖者联系与寄送进度">🎁 领奖追踪<span id="drawClaimCount" class="claim-count" hidden></span></a>
+            </div>
+            <div class="card-title">每月抽奖 Monthly Draw</div>
+            <div class="card-desc">多轮实时晋级控盘系统，包含主播直播控制台与公开展示榜大屏。</div>
+          </div>
+          <button onclick="openDrawModal()" class="card-btn btn-amber">进入每月抽奖 🎁</button>
+        </div>
       </div>
-    </div>
+    </section>
 
     <!-- ===== 订单 ===== -->
-    <div class="group-title">🧾 订单</div>
-    <div class="action-grid">
-      <!-- 订单录入 Order Entry -->
-      <div class="card card-entry">
-        <div>
-          <div class="card-icon">📝</div>
-          <div class="card-title">订单录入 Order Entry</div>
-          <div class="card-desc">在网页直接录入订单，写进「第 1 张表单回复」并马上同步会员积分。</div>
+    <section class="group">
+      <div class="group-title">🧾 订单</div>
+      <div class="action-grid">
+        <!-- 订单录入 Order Entry -->
+        <div class="card card-entry" data-perm="entry">
+          <div>
+            <div class="card-icon">📝</div>
+            <div class="card-title">订单录入 Order Entry</div>
+            <div class="card-desc">在网页直接录入订单，写进「第 1 张表单回复」并马上同步会员积分。</div>
+          </div>
+          <a href="order-entry/" class="card-btn btn-teal" target="_blank">录入订单 📝</a>
         </div>
-        <a href="order-entry/" class="card-btn btn-teal" target="_blank" >录入订单 📝</a>
-      </div>
-       <!-- 新增：PO / Invoice -->
-      <div class="card card-invoice">
-        <div>
-          <div class="card-icon">📄</div>
-          <div class="card-title">PO / Invoice</div>
-          <div class="card-desc">开采购单和发票，客户与供应商名单同步，一键下载或分享 PDF。</div>
-        </div>
-        <a href="invoice/" class="card-btn btn-navy" target="_blank">开单 📄</a>
-      </div>
 
-      <!-- 买家订单查询 buyer-order-search -->
-      <div class="card card-search">
-        <div>
-          <div class="card-icon">🔍</div>
-          <div class="card-title">订单查询 Order Search</div>
-          <div class="card-desc">快速检索全渠道买家订单详细信息、物流状态与记录。</div>
+        <!-- PO / Invoice -->
+        <div class="card card-invoice" data-perm="invoice">
+          <div>
+            <div class="card-icon">📄</div>
+            <div class="card-title">PO / Invoice</div>
+            <div class="card-desc">开采购单和发票，客户与供应商名单同步，一键下载或分享 PDF。</div>
+          </div>
+          <a href="invoice/" class="card-btn btn-navy" target="_blank">开单 📄</a>
         </div>
-        <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
-      </div>
 
-      <!-- COD 面单打印系统 -->
-      <div class="card card-cod">
-        <div>
-          <div class="card-icon">📦</div>
-          <div class="card-title">COD 手动 AWB 打印</div>
-          <div class="card-desc">规避 Shopee COD 2小时延迟，手动即时生成/打印 AWB 面单。</div>
+        <!-- 买家订单查询 buyer-order-search -->
+        <div class="card card-search" data-perm="search">
+          <div>
+            <div class="card-icon">🔍</div>
+            <div class="card-title">订单查询 Order Search</div>
+            <div class="card-desc">快速检索全渠道买家订单详细信息、物流状态与记录。</div>
+          </div>
+          <a href="buyer-order-search/" class="card-btn btn-green">买家订单查询 🔍</a>
         </div>
-        <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
+
+        <!-- COD 面单打印系统 -->
+        <div class="card card-cod" data-perm="cod">
+          <div>
+            <div class="card-icon">📦</div>
+            <div class="card-title">COD 手动 AWB 打印</div>
+            <div class="card-desc">规避 Shopee COD 2小时延迟，手动即时生成/打印 AWB 面单。</div>
+          </div>
+          <a href="cod/" class="card-btn btn-orange">进入 COD 打印系统 ➔</a>
+        </div>
       </div>
- </div>
+    </section>
+
     <!-- ===== 会员与内容 ===== -->
-    <div class="group-title">🎫 会员与内容</div>
-    <div class="action-grid">
-      <!-- 会员系统 member-system -->
-      <div class="card card-member">
-        <div>
-          <div class="card-head">
-            <div class="card-icon">🎫</div>
-            <a id="memberAlertLink" class="claim-link" href="member-system/redeem.html" title="积分兑换 + 中奖奖品的审核与发货">🔔 兑换审核<span id="memberAlertCount" class="claim-count" hidden></span></a>
+    <section class="group">
+      <div class="group-title">🎫 会员与内容</div>
+      <div class="action-grid">
+        <!-- 会员系统 member-system -->
+        <div class="card card-member" data-perm="member">
+          <div>
+            <div class="card-head">
+              <div class="card-icon">🎫</div>
+              <a id="memberAlertLink" class="claim-link" href="member-system/redeem.html" title="积分兑换 + 中奖奖品的审核与发货">🔔 兑换审核<span id="memberAlertCount" class="claim-count" hidden></span></a>
+            </div>
+            <div class="card-title">Member Club 管理</div>
+            <div class="card-desc">会员系统总览：审核兑换与中奖奖品、管理会员、商城奖品与券码库。</div>
           </div>
-          <div class="card-title">Member Club 管理</div>
-          <div class="card-desc">会员系统总览：审核兑换与中奖奖品、管理会员、商城奖品与券码库。</div>
+          <a href="member-system/" class="card-btn btn-member">进入会员系统 🎫</a>
         </div>
-        <a href="member-system/" class="card-btn btn-member">进入会员系统 🎫</a>
-      </div>
 
-      <!-- Mochii Feed（会员系统） -->
-      <div class="card card-status">
-        <div>
-          <div class="card-head">
-            <div class="card-icon">📰</div>
-            <a id="feedAlertLink" class="claim-link" href="member-system/feed.html#pending" title="会员投稿待审核">⏳ 待审核<span id="feedAlertCount" class="claim-count" hidden></span></a>
+        <!-- Mochii Feed（会员系统） -->
+        <div class="card card-status" data-perm="feed">
+          <div>
+            <div class="card-head">
+              <div class="card-icon">📰</div>
+              <a id="feedAlertLink" class="claim-link" href="member-system/feed.html#pending" title="会员投稿待审核">⏳ 待审核<span id="feedAlertCount" class="claim-count" hidden></span></a>
+            </div>
+            <div class="card-title">Mochii Feed</div>
+            <div class="card-desc">发布店铺动态（公开帖会显示在网站首页）、审核会员投稿、管理头衔与权限。</div>
           </div>
-          <div class="card-title">Mochii Feed</div>
-          <div class="card-desc">发布店铺动态（公开帖会显示在网站首页）、审核会员投稿、管理头衔与权限。</div>
+          <a href="member-system/feed.html" class="card-btn btn-purple">Feed 管理 📰</a>
         </div>
-        <a href="member-system/feed.html" class="card-btn btn-purple">Feed 管理 📰</a>
-      </div>
 
-      <!-- 图库管理 Gallery -->
-      <div class="card card-gallery">
-        <div>
-          <div class="card-icon">🖼️</div>
-          <div class="card-title">图库管理 Gallery</div>
-          <div class="card-desc">管理并在前台展示高清图库，支持分类浏览、全屏查看与后台一键上传。</div>
+        <!-- 图库管理 Gallery -->
+        <div class="card card-gallery" data-perm="gallery">
+          <div>
+            <div class="card-icon">🖼️</div>
+            <div class="card-title">图库管理 Gallery</div>
+            <div class="card-desc">管理并在前台展示高清图库，支持分类浏览、全屏查看与后台一键上传。</div>
+          </div>
+          <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
         </div>
-        <button onclick="openGalleryModal()" class="card-btn btn-gallery">进入图库管理 🖼️</button>
       </div>
+    </section>
+
+    <div id="emptyAll" class="empty-all" hidden>
+      <div style="font-size:2rem;margin-bottom:6px">🔒</div>
+      这个账号还没有被分配任何功能，请联系店主。
     </div>
-</div>
+
     <footer>© 2026 themochiishop. All rights reserved.</footer>
   </div>
 
@@ -324,15 +438,15 @@
       <button onclick="closeDrawModal()" class="modal-close">✕</button>
       <div style="font-size: 2.5rem; margin-bottom: 10px;">🏆</div>
       <div class="modal-title">每月抽奖活动入口</div>
-      <div class="modal-desc">密码验证通过！请选择您要前往的系统页面：</div>
+      <div class="modal-desc">请选择您要前往的系统页面：</div>
       <div class="modal-links">
-        <a href="./draw_tournament/admin.html" class="modal-link-btn btn-admin-portal" target="_blank">
+        <a href="./draw_tournament/admin.html" class="modal-link-btn btn-admin-portal" data-perm="draw.console" target="_blank">
           🎬 进入抽奖控制台 (Admin)
         </a>
         <a href="https://www.themochiishop.com/live-draw/" class="modal-link-btn btn-public-portal" target="_blank">
           🏆 打开买家公开普及大屏 (Public)
         </a>
-        <a href="https://www.themochiishop.com/live-draw/?test=1" class="modal-link-btn btn-test-portal" target="_blank">
+        <a href="https://www.themochiishop.com/live-draw/?test=1" class="modal-link-btn btn-test-portal" data-perm="draw.test" target="_blank">
           🧪 测试大屏 (Test)
         </a>
       </div>
@@ -347,23 +461,23 @@
       <div class="modal-title">图库系统入口</div>
       <div class="modal-desc">请选择您要前往的图库页面：</div>
       <div class="modal-links">
-        <!-- 注意这里加了 target="_blank" 方便新标签页打开，不需要可以删掉 -->
-        <a href="./gallery/viewer.html" class="modal-link-btn btn-admin-portal" target="_blank">
+        <a href="./gallery/viewer.html" class="modal-link-btn btn-admin-portal" data-perm="gallery.view" target="_blank">
           👁️ 查看前台展示页 (Viewer)
         </a>
-        <a href="./gallery/upload.html" class="modal-link-btn btn-public-portal" target="_blank">
+        <a href="./gallery/upload.html" class="modal-link-btn btn-public-portal" data-perm="gallery.upload" target="_blank">
           📤 进入后台上传页 (Upload)
         </a>
       </div>
     </div>
   </div>
 
-  <!-- 领奖提醒：读取抽奖系统的领奖清单（在本机登录过抽奖后台就会显示） -->
+  <!-- 领奖提醒：读取抽奖系统的领奖清单（在本机登录过抽奖后台、而且有「领奖追踪」权限才会显示） -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script>
-    (function () {
+    // 控制台确认有「每月抽奖 › 领奖追踪」权限后，才会呼叫这个
+    window.startDrawAlert = function () {
       try {
         firebase.initializeApp({
           apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
@@ -374,6 +488,7 @@
           messagingSenderId: "803720903757",
           appId: "1:803720903757:web:8b561daabc0d69af9e7004"
         });
+        // 抽奖系统自己的名单（第二阶段会改成跟着管理员页面自动同步）
         const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com', 'ivychongsingyee@gmail.com'];
         let started = false;
         firebase.auth().onAuthStateChanged(u => {
@@ -401,30 +516,157 @@
           firebase.database().ref('draw_private/claimBatches').on('value', snap => { last = snap.val() || {}; recount(); }, () => { count.hidden = true; });
         });
       } catch (e) { console.warn('领奖提醒载入失败', e); }
-    })();
+    };
   </script>
 
-  <!-- 兑换审核提醒：积分兑换 + 中奖奖品的待审核、待发货（在本机登录过会员系统后台就会显示） -->
+  <!-- 登录、权限、提醒 -->
   <script type="module">
     import { auth, db } from "./member-system/js/firebase-config.js";
     import { readyWinners } from "./member-system/js/admin-common.js";
+    import { getAccess, can, recordLogin, googleLogin, logout, permLabel, OWNER_EMAIL } from "./js/admin-guard.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       doc, getDoc, collection, query, where, onSnapshot
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-    const link = document.getElementById("memberAlertLink");
-    const count = document.getElementById("memberAlertCount");
-    let started = false;
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+    // ---------- 🌙 白色 / 暗黑模式（和会员系统后台共用） ----------
+    function paintTheme() {
+      const dark = document.documentElement.getAttribute("data-theme") === "dark";
+      $("themeBtn").textContent = dark ? "☀️" : "🌙";
+      $("themeBtn").title = dark ? "切换成白色模式" : "切换成暗黑模式";
+    }
+    paintTheme();
+    $("themeBtn").addEventListener("click", () => {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("msAdminTheme", next); } catch (e) {}
+      paintTheme();
+    });
+
+    // ---------- 网址参数：子页面跳回来的（login=… / denied=… / next=…） ----------
+    const params = new URLSearchParams(location.search);
+    const pLogin = params.get("login"), pDenied = params.get("denied");
+    const pNext = params.get("next") || "";
+    const safeNext = pNext.startsWith("/") && !pNext.startsWith("//") ? pNext : "";
+    if (pLogin || pDenied || pNext) history.replaceState(null, "", location.pathname);
+
+    function toast(text) {
+      const t = document.createElement("div");
+      t.className = "toast"; t.textContent = text;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 5000);
+    }
+
+    // ---------- 登录画面 ----------
+    function gate(html) { $("gate").hidden = false; $("gateCard").innerHTML = html; }
+    function gateLogin(errText = "") {
+      gate(`
+        <img class="logo" src="logo.png" alt="">
+        <h2>Mochii 管理控制台</h2>
+        <p>${pLogin ? `要打开「${esc(permLabel(pLogin))}」，请先登录。` : "请用管理员 Google 账号登录"}</p>
+        <button class="g-btn" id="gLogin"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>使用 Google 登录</button>
+        <div class="g-err" id="gErr">${esc(errText)}</div>`);
+      $("gLogin").onclick = async () => {
+        $("gErr").textContent = "";
+        try { await googleLogin(); } catch (e) { $("gErr").textContent = "登录失败：" + e.message; }
+      };
+    }
+    function gateNoAccess(user, a) {
+      const why = a.reason === "disabled" ? "这个账号已被停用。"
+        : a.reason === "error" ? "读取权限失败：" + esc(a.error || "") + "（请检查网络，或确认 Firestore 规则已更新）"
+        : "这个账号还不在管理员名单里。";
+      gate(`
+        <div style="font-size:2.4rem;margin-bottom:6px">🔒</div>
+        <h2>没有权限</h2>
+        <p>${why}<br>已登录：<code>${esc(user.email || "")}</code></p>
+        <p style="font-size:.8rem">请把上面的 email 发给店主（${OWNER_EMAIL}），加进名单后重新整理这个页面。</p>
+        <button class="g-btn" id="gCopy">📋 复制我的 email</button>
+        <button class="g-btn" id="gOut">换一个账号</button>`);
+      $("gCopy").onclick = async e => {
+        try { await navigator.clipboard.writeText(user.email || ""); e.target.textContent = "已复制 ✓"; }
+        catch { prompt("请手动复制：", user.email || ""); }
+      };
+      $("gOut").onclick = () => logout().then(() => location.reload());
+    }
+
+    // ---------- 按权限显示 ----------
+    function applyPerms(a) {
+      document.querySelectorAll("[data-perm]").forEach(el => { el.hidden = !can(a, el.dataset.perm); });
+      let any = false;
+      document.querySelectorAll("section.group").forEach(g => {
+        const has = [...g.querySelectorAll(".card")].some(c => !c.hidden);
+        g.hidden = !has;
+        any = any || has;
+      });
+      $("emptyAll").hidden = any;
+    }
+
+    function renderUser(user, a) {
+      $("userWrap").hidden = false;
+      $("staffLink").hidden = !a.owner;
+      $("userEm").textContent = user.email || "";
+      $("userAv").outerHTML = user.photoURL
+        ? `<img id="userAv" src="${esc(user.photoURL)}" alt="" referrerpolicy="no-referrer">`
+        : `<span id="userAv" class="av">${esc((a.name || user.email || "?").slice(0, 1).toUpperCase())}</span>`;
+      $("umName").textContent = a.name || user.displayName || "";
+      $("umMail").textContent = user.email || "";
+      $("umRole").textContent = a.owner ? "👑 店主 · 全部权限" : (a.title ? a.title + " · " : "") + "管理员";
+      $("welcome").textContent = `欢迎回来，${a.name || user.displayName || ""}！` +
+        (a.owner ? "按右上角「👥 管理员」可以管理谁能进来、能用哪些功能。" : "下面是你可以使用的功能。");
+    }
+    $("userBtn").addEventListener("click", e => { e.stopPropagation(); $("userMenu").hidden = !$("userMenu").hidden; });
+    document.addEventListener("click", e => { if (!e.target.closest("#userWrap")) $("userMenu").hidden = true; });
+    $("logoutBtn").addEventListener("click", () => logout().then(() => location.replace("/")));
+
+    // ---------- 开始 ----------
+    let started = false;
     onAuthStateChanged(auth, async user => {
-      if (!user) { count.hidden = true; link.classList.remove("has-todo"); return; }
+      if (!user) {
+        if (started) { location.reload(); return; }   // 别的分页登出了
+        gateLogin();
+        return;
+      }
       if (started) return;
+      gate(`<div class="spin"></div><p>检查权限中…</p>`);
+      const a = await getAccess(user);
+      if (!a.ok) { gateNoAccess(user, a); return; }
+      started = true;
+      window.dashAccess = a;
+      await recordLogin(user, a);
+
+      // 从子页面跳来登录的：有权限就直接回去
+      if (pLogin && safeNext && can(a, pLogin)) { location.replace(safeNext); return; }
+
+      $("gate").hidden = true;
+      applyPerms(a);
+      renderUser(user, a);
+      if (pDenied) toast(`🔒 你没有「${permLabel(pDenied)}」的权限，需要的话请联系店主。`);
+      else if (pLogin && !can(a, pLogin)) toast(`🔒 你没有「${permLabel(pLogin)}」的权限。`);
+
+      if (can(a, "draw.claims") && window.startDrawAlert) window.startDrawAlert();
+      if (can(a, "member") || can(a, "feed")) startMemberAlerts(user, a);
+    });
+
+    // ---------- 🔔 兑换审核 / ⏳ Feed 待审核提醒 ----------
+    async function startMemberAlerts(user, a) {
       try {
         if (!(await getDoc(doc(db, "admins", user.uid))).exists()) return;
       } catch (e) { return; }
-      started = true;
 
+      if (can(a, "feed")) {
+        onSnapshot(query(collection(db, "feedPosts"), where("status", "==", "pending")), snap => {
+          const n = snap.size, fl = $("feedAlertLink"), fc = $("feedAlertCount");
+          fc.hidden = !n; fc.textContent = n > 99 ? "99+" : n;
+          fl.classList.toggle("has-todo", !!n);
+          fl.title = n ? `${n} 篇会员投稿待审核` : "会员投稿待审核（目前没有）";
+        }, e => console.warn("feed alert", e));
+      }
+      if (!can(a, "member")) return;
+
+      const link = $("memberAlertLink"), count = $("memberAlertCount");
       // 积分兑换：待审核 + 实体奖品待发货（含配送异常）；中奖奖品：会员已领取（待审核）+ 待发货
       const c = { rPending: 0, rShip: 0, pClaimed: 0, pShip: 0, pReady: 0 };
       function show() {
@@ -451,13 +693,6 @@
         window.clubShippedOrders = new Set(snap.docs.map(d => String(d.data().orderNo || "").replace(/\s/g, "").toUpperCase()).filter(Boolean));
         window.dispatchEvent(new Event("club-prizes"));
       }, e => console.warn("prizeWins shipped", e));
-      // 📰 Feed：会员投稿待审核
-      onSnapshot(query(collection(db, "feedPosts"), where("status", "==", "pending")), snap => {
-        const n = snap.size, fl = document.getElementById("feedAlertLink"), fc = document.getElementById("feedAlertCount");
-        fc.hidden = !n; fc.textContent = n > 99 ? "99+" : n;
-        fl.classList.toggle("has-todo", !!n);
-        fl.title = n ? `${n} 篇会员投稿待审核` : "会员投稿待审核（目前没有）";
-      }, e => console.warn("feed alert", e));
       onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])), snap => {
         const list = snap.docs.map(d => d.data());
         c.pClaimed = list.filter(p => p.status === "claimed").length;
@@ -468,26 +703,19 @@
       const checkReady = () => readyWinners().then(r => { c.pReady = r.length; show(); }).catch(e => console.warn("ready winners", e));
       checkReady();
       setInterval(checkReady, 600000);
-    });
+    }
   </script>
   <script>
-    // 每月抽奖弹窗逻辑
+    // 每月抽奖弹窗（密码已拿掉，改成看登录账号的权限）
     function openDrawModal() {
-      const pwd = prompt("请输入6位数密码");
-      if (pwd === null) return;
-      if (pwd === "023457") {
-        document.getElementById('drawModalOverlay').classList.add('active');
-      } else {
-        alert("🔒 密码错误，请重新输入！");
-      }
+      document.getElementById('drawModalOverlay').classList.add('active');
     }
     function closeDrawModal() {
       document.getElementById('drawModalOverlay').classList.remove('active');
     }
 
-    // 图库弹窗逻辑
+    // 图库弹窗
     function openGalleryModal() {
-      // 如果图库也需要密码，可以在这里加，不需要的话就直接显示
       document.getElementById('galleryModalOverlay').classList.add('active');
     }
     function closeGalleryModal() {
@@ -496,15 +724,9 @@
 
     // 点击弹窗外部关闭弹窗
     window.onclick = function(event) {
-      const drawOverlay = document.getElementById('drawModalOverlay');
-      const galleryOverlay = document.getElementById('galleryModalOverlay');
-      if (event.target === drawOverlay) {
-        closeDrawModal();
-      }
-      if (event.target === galleryOverlay) {
-        closeGalleryModal();
-      }
-    }
+      if (event.target === document.getElementById('drawModalOverlay')) closeDrawModal();
+      if (event.target === document.getElementById('galleryModalOverlay')) closeGalleryModal();
+    };
   </script>
 </body>
 </html>

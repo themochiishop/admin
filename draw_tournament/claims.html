@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <!-- 🔐 权限检查：没登录或没有「draw.claims」权限会跳回控制台 -->
+  <script type="module">import { guard } from "/js/admin-guard.js"; guard("draw.claims");</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎁 领奖追踪 - Mochiishop</title>

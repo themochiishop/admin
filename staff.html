@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="logo.png">
+  <title>管理员与权限 - Mochii Admin</title>
+  <script src="member-system/js/theme.js"></script>
+  <!-- 只有店主可以进来 -->
+  <script type="module">import { guard } from "/js/admin-guard.js"; guard("staff");</script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f9; --card: #fff; --soft: #f1f5f9; --soft2: #f8fafc; --line: #e2e8f0; --line2: #cbd5e1;
+      --ink: #0f172a; --text: #333; --muted: #64748b; --faint: #94a3b8; --head: #0f172a;
+      --pink: #db2777; --pink-bg: #fdf2f8; --pink-line: #f9a8d4;
+      --ok: #16a34a; --ok-bg: #f0fdf4; --bad: #dc2626; --bad-bg: #fef2f2; --warn: #b45309; --warn-bg: #fffbeb;
+      --shadow: rgba(15,23,42,.08);
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0b1120; --card: #131c2e; --soft: #1e293b; --soft2: #172136; --line: #263449; --line2: #3a4a63;
+      --ink: #f1f5f9; --text: #d5dde8; --muted: #94a3b8; --faint: #6b7b93; --head: #070b16;
+      --pink-bg: rgba(219,39,119,.13); --pink-line: rgba(249,168,212,.4);
+      --ok: #86efac; --ok-bg: rgba(22,163,74,.13); --bad: #fca5a5; --bad-bg: rgba(220,38,38,.13); --warn: #fcd34d; --warn-bg: rgba(217,119,6,.12);
+      --shadow: rgba(0,0,0,.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden], .hidden { display: none !important; }
+    html, body { height: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.4; display: flex; flex-direction: column; }
+    header { background: var(--head); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex: none; border-bottom: 1px solid var(--line); }
+    header .brand { font-weight: 700; flex: 1; }
+    header .brand a { color: #cbd5e1; text-decoration: none; font-weight: 400; }
+    header .brand a:hover { color: #fff; }
+    .hd-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14); color: #e2e8f0; cursor: pointer; font-size: 1rem; }
+    .hd-btn:hover { background: rgba(255,255,255,.16); }
+    input, select, textarea, button { font-family: inherit; }
+    input[type=text], input[type=email], input[type=search] {
+      width: 100%; padding: 9px 11px; font-size: .92rem; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); outline: none;
+    }
+    input:focus { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(219,39,119,.15); }
+    input[readonly] { background: var(--soft); color: var(--muted); }
+    label.f { display: block; font-size: .82rem; font-weight: 600; color: var(--ink); margin-bottom: 10px; }
+    label.f input { margin-top: 4px; }
+    .muted { color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 13px; border-radius: 8px; font-size: .86rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+    .btn:disabled { opacity: .55; cursor: default; }
+    .btn-primary { background: var(--pink); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #be185d; }
+    .btn-ghost { background: var(--soft); color: var(--ink); border-color: var(--line2); }
+    .btn-ghost:hover:not(:disabled) { background: var(--line); }
+    .btn-bad { background: var(--bad-bg); color: var(--bad); border-color: rgba(220,38,38,.35); }
+    .btn-ok { background: var(--ok-bg); color: var(--ok); border-color: rgba(22,163,74,.35); }
+    .tag { display: inline-flex; align-items: center; font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--soft); color: var(--muted); white-space: nowrap; }
+    .tag-ok { background: var(--ok-bg); color: var(--ok); }
+    .tag-bad { background: var(--bad-bg); color: var(--bad); }
+    .tag-warn { background: var(--warn-bg); color: var(--warn); }
+    .tag-pink { background: var(--pink-bg); color: var(--pink); }
+    .msg { font-size: .84rem; }
+    .msg.ok { color: var(--ok); }
+    .msg.err { color: var(--bad); }
+
+    /* ===== 模板1：左边列表、右边编辑，各自滚动 ===== */
+    .rw-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(320px, 5fr) 7fr; gap: 14px; padding: 14px; max-width: 1400px; width: 100%; margin: 0 auto; }
+    .rw-left, .rw-right { min-height: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .rw-toolbar { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .rw-top { display: flex; align-items: center; gap: 8px; }
+    .rw-top h2, .rw-top h3 { flex: 1; font-size: 1.1rem; color: var(--ink); }
+    .rw-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .rw-chips button { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: .76rem; font-weight: 600; cursor: pointer; }
+    .rw-chips button.on { background: var(--pink); border-color: var(--pink); color: #fff; }
+    .rw-chips button .n { opacity: .7; margin-left: 3px; }
+    .rw-list { flex: 1; overflow-y: auto; padding: 6px; }
+    .rw-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+    .rw-row:hover { background: var(--soft2); }
+    .rw-row.sel { background: var(--pink-bg); border-color: var(--pink-line); }
+    .rw-row.off .nm, .rw-row.off .av { opacity: .5; }
+    .av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--soft); color: var(--muted);
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; }
+    .rw-row .tx { flex: 1; min-width: 0; }
+    .rw-row .nm { font-weight: 700; font-size: .9rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rw-row .em { font-size: .74rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rw-row .sb { font-size: .72rem; color: var(--muted); display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 3px; }
+    .empty { color: var(--muted); font-size: .88rem; padding: 20px; text-align: center; }
+
+    .rw-empty { margin: auto; text-align: center; color: var(--muted); font-size: .9rem; padding: 30px; line-height: 1.7; }
+    .rw-editor { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+    .rw-ehead { display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; }
+    .rw-ehead h3 { font-size: 1.05rem; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rw-back { display: none; }
+    .quick { padding: 0 16px 10px; border-bottom: 1px solid var(--line); font-size: .8rem; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .rw-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+    .rw-sec { border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; margin-bottom: 10px; }
+    .rw-sec > summary { cursor: pointer; font-weight: 700; font-size: .9rem; color: var(--ink); padding: 10px 0; list-style: none; }
+    .rw-sec > summary::-webkit-details-marker { display: none; }
+    .rw-sec > summary::after { content: "▾"; float: right; color: var(--muted); }
+    .rw-sec:not([open]) > summary::after { content: "▸"; }
+    .rw-sec[open] { padding-bottom: 10px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+    .rw-foot { border-top: 1px solid var(--line); padding: 10px 16px; display: grid; gap: 6px; }
+    .rw-foot .msg:empty { display: none; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* 权限树 */
+    .presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .presets .btn { padding: 5px 10px; font-size: .78rem; }
+    .pt-group { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+    .pt-gt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--soft2); font-weight: 700; font-size: .84rem; color: var(--ink); cursor: pointer; }
+    .pt-gt .cnt { margin-left: auto; font-weight: 600; font-size: .74rem; color: var(--muted); }
+    .pt-item { border-top: 1px solid var(--line); }
+    .pt-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 28px; cursor: pointer; font-size: .88rem; color: var(--ink); }
+    .pt-row .note { font-size: .74rem; color: var(--muted); }
+    .pt-subs { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 0 10px 9px 54px; }
+    .pt-sub { display: inline-flex; align-items: center; gap: 6px; font-size: .84rem; color: var(--text); cursor: pointer; }
+    input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--pink); cursor: pointer; flex: none; }
+    .switch-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--ink); cursor: pointer; margin-bottom: 4px; }
+    .info { font-size: .8rem; color: var(--muted); line-height: 1.8; }
+    .info code { font-size: .76rem; background: var(--soft); padding: 1px 5px; border-radius: 5px; color: var(--ink); }
+    .note-box { font-size: .78rem; color: var(--muted); background: var(--soft2); border: 1px dashed var(--line2); border-radius: 10px; padding: 8px 10px; margin-top: 8px; line-height: 1.6; }
+
+    @media (max-width: 899px) {
+      .rw-layout { grid-template-columns: 1fr; padding: 10px; }
+      .rw-right { display: none; }
+      body.rw-editing .rw-left { display: none; }
+      body.rw-editing .rw-right { display: flex; }
+      .rw-back { display: inline-flex; }
+      .grid2 { grid-template-columns: 1fr; }
+      .pt-subs { padding-left: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><a href="./">Mochiishop/admin</a> › 👥 管理员与权限</div>
+    <button id="themeBtn" class="hd-btn" title="切换白色 / 暗黑模式">🌙</button>
+  </header>
+
+  <div class="rw-layout">
+    <!-- 👈 左边：人员列表 -->
+    <aside class="rw-left">
+      <div class="rw-toolbar">
+        <div class="rw-top">
+          <h2>管理员名单</h2>
+          <button id="newBtn" class="btn btn-primary">＋ 新增管理员</button>
+        </div>
+        <input id="search" type="search" placeholder="🔍 搜索名字、email、职称" autocomplete="off">
+        <div class="rw-chips" id="chips"></div>
+      </div>
+      <div id="list" class="rw-list"><p class="empty">载入中…</p></div>
+    </aside>
+
+    <!-- 👉 右边：编辑 -->
+    <section class="rw-right" id="right">
+      <div id="emptyPane" class="rw-empty">
+        <div style="font-size:2rem">👈</div>
+        选择左边的人来编辑权限，<br>或按「＋ 新增管理员」。
+      </div>
+
+      <div id="editor" class="rw-editor hidden">
+        <div class="rw-ehead">
+          <button type="button" class="btn btn-ghost rw-back" id="backBtn">← 返回列表</button>
+          <h3 id="edTitle">新增管理员</h3>
+        </div>
+        <div class="quick" id="quick"></div>
+        <form id="form" class="rw-editor" style="flex:1;min-height:0" autocomplete="off">
+          <div class="rw-body">
+            <details class="rw-sec" open><summary>👤 基本资料</summary>
+              <div class="grid2">
+                <label class="f">Google 账号 email
+                  <input type="email" id="fEmail" placeholder="example@gmail.com" required>
+                </label>
+                <label class="f">名字（控制台显示）
+                  <input type="text" id="fName" maxlength="40" placeholder="例如 Ivy">
+                </label>
+                <label class="f">职称（选填）
+                  <input type="text" id="fTitle" maxlength="20" placeholder="例如 主播 / 客服 / 设计师">
+                </label>
+              </div>
+              <label class="switch-row"><input type="checkbox" id="fActive" checked> 启用（取消勾选 = 停用，不能登录控制台，资料保留）</label>
+            </details>
+
+            <details class="rw-sec" open><summary>🔑 权限 <span class="muted" id="permCount" style="font-weight:600;font-size:.8rem"></span></summary>
+              <div class="presets" id="presets"></div>
+              <div id="tree"></div>
+              <div class="note-box">
+                勾上层会全选下层；下层只勾一部分时，上层显示「半勾」。<br>
+                「Member Club」或「Mochii Feed」勾了，会自动加进会员系统的管理员名单；两个都取消，会自动移除。
+              </div>
+            </details>
+
+            <details class="rw-sec" id="infoSec"><summary>ℹ️ 登录记录</summary>
+              <div class="info" id="info"></div>
+            </details>
+          </div>
+          <div class="rw-foot">
+            <p id="formMsg" class="msg"></p>
+            <div class="actions">
+              <button type="submit" class="btn btn-primary" id="saveBtn">💾 保存</button>
+              <button type="button" class="btn btn-ghost" id="cancelBtn">取消</button>
+              <button type="button" class="btn btn-bad hidden" id="delBtn" style="margin-left:auto">🗑 删除</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./member-system/js/firebase-config.js";
+    import { logAdmin } from "./member-system/js/admin-common.js";
+    import { PERM_TREE, PRESETS, allPerms, can, countPerms, TOTAL_PERMS, normEmail, OWNER_EMAIL, isOwnerUser } from "./js/admin-guard.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import {
+      collection, getDocs, getDoc, doc, setDoc, deleteDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const toDate = v => v && typeof v.toDate === "function" ? v.toDate() : (v ? new Date(v) : null);
+    const p2 = n => String(n).padStart(2, "0");
+    const fmtDate = d => d ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}` : "";
+    function ago(d) {
+      if (!d) return "";
+      const m = (Date.now() - d.getTime()) / 60000;
+      if (m < 60) return "刚刚";
+      if (m < 1440) return Math.floor(m / 60) + " 小时前";
+      if (m < 1440 * 30) return Math.floor(m / 1440) + " 天前";
+      return fmtDate(d).slice(0, 10);
+    }
+
+    // ---------- 🌙 白色 / 暗黑模式 ----------
+    function paintTheme() { $("themeBtn").textContent = document.documentElement.getAttribute("data-theme") === "dark" ? "☀️" : "🌙"; }
+    paintTheme();
+    $("themeBtn").onclick = () => {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("msAdminTheme", next); } catch (e) {}
+      paintTheme();
+    };
+
+    let staff = [];          // 名单
+    let me = null;           // 店主自己
+    let cur = null;          // 正在编辑的 email；"new" = 新增；"owner" = 店主
+    let dirty = false;
+    let fSt = "all", fText = "";
+
+    // ---------- 载入 ----------
+    async function load() {
+      const snap = await getDocs(collection(db, "staff"));
+      staff = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.active === false) - (b.active === false) || String(a.name || a.id).localeCompare(String(b.name || b.id)));
+      render();
+      syncAllAdmins();
+    }
+
+    // ---------- 会员系统管理员名单（admins/{uid}）同步 ----------
+    // 有 Member Club 或 Feed 权限、而且已启用 → 要在名单里；否则移除。还没登录过（没有 UID）的先跳过
+    const needsAdmin = s => s.active !== false && (can({ ok: true, perms: s.perms }, "member") || can({ ok: true, perms: s.perms }, "feed"));
+    async function syncAdmin(s) {
+      if (!s.uid || (me && s.uid === me.uid)) return null;
+      const ref = doc(db, "admins", s.uid);
+      const has = (await getDoc(ref)).exists();
+      const need = needsAdmin(s);
+      if (need && !has) { await setDoc(ref, { email: s.id, name: s.name || "", fromStaff: true, createdAt: serverTimestamp() }); return "added"; }
+      if (!need && has) { await deleteDoc(ref); return "removed"; }
+      return null;
+    }
+    async function syncAllAdmins() {
+      for (const s of staff) {
+        try { await syncAdmin(s); } catch (e) { console.warn("同步会员系统管理员失败", s.id, e.message); }
+      }
+    }
+
+    // ---------- 👈 列表 ----------
+    const stOf = s => s.active === false ? "off" : "on";
+    function filtered() {
+      const q = fText.trim().toLowerCase();
+      return staff.filter(s => (fSt === "all" || stOf(s) === fSt) &&
+        (!q || [s.id, s.name, s.title].some(x => String(x || "").toLowerCase().includes(q))));
+    }
+    function avatar(url, name) {
+      return url ? `<img class="av" src="${esc(url)}" alt="" referrerpolicy="no-referrer">`
+        : `<span class="av">${esc(String(name || "?").slice(0, 1).toUpperCase())}</span>`;
+    }
+    function render() {
+      const cnt = k => staff.filter(s => stOf(s) === k).length;
+      $("chips").innerHTML = [["all", "全部", staff.length], ["on", "✅ 启用中", cnt("on")], ["off", "⛔ 已停用", cnt("off")]]
+        .map(([k, t, n]) => `<button data-st="${k}" class="${fSt === k ? "on" : ""}">${t}<span class="n">${n}</span></button>`).join("");
+
+      const ownerRow = `
+        <div class="rw-row${cur === "owner" ? " sel" : ""}" data-id="owner">
+          ${avatar(me && me.photoURL, "店")}
+          <div class="tx">
+            <div class="nm">👑 ${esc((me && me.displayName) || "店主")}</div>
+            <div class="em">${OWNER_EMAIL}</div>
+            <div class="sb"><span class="tag tag-pink">店主 · 全部权限</span></div>
+          </div>
+        </div>`;
+      const list = filtered();
+      $("list").innerHTML = (fSt === "off" || fText.trim() ? "" : ownerRow) + (list.length ? list.map(s => {
+        const n = countPerms(s.perms), last = toDate(s.lastLoginAt);
+        return `
+          <div class="rw-row${s.id === cur ? " sel" : ""}${s.active === false ? " off" : ""}" data-id="${esc(s.id)}">
+            ${avatar(s.photoURL, s.name || s.id)}
+            <div class="tx">
+              <div class="nm">${esc(s.name || s.id)}${s.title ? ` <span class="tag">${esc(s.title)}</span>` : ""}</div>
+              <div class="em">${esc(s.id)}</div>
+              <div class="sb">
+                ${s.active === false ? '<span class="tag tag-bad">⛔ 已停用</span>' : '<span class="tag tag-ok">启用中</span>'}
+                <span class="tag">${n} / ${TOTAL_PERMS} 项</span>
+                ${last ? `<span>最近登录 ${ago(last)}</span>` : '<span class="tag tag-warn">还没登录过</span>'}
+              </div>
+            </div>
+          </div>`;
+      }).join("") : `<p class="empty">${staff.length ? "没有符合条件的人" : "还没有其他管理员，按「＋ 新增管理员」开始"}</p>`);
+    }
+    $("chips").onclick = e => { const b = e.target.closest("[data-st]"); if (b) { fSt = b.dataset.st; render(); } };
+    $("search").oninput = e => { fText = e.target.value; render(); };
+    $("list").onclick = e => {
+      const row = e.target.closest(".rw-row");
+      if (!row || row.dataset.id === cur || !okToLeave()) return;
+      if (row.dataset.id === "owner") openOwner();
+      else openForm(staff.find(s => s.id === row.dataset.id));
+    };
+
+    // ---------- 🔑 权限树 ----------
+    function buildTree() {
+      $("presets").innerHTML = '<span class="muted" style="font-size:.78rem;align-self:center">套用模板：</span>' +
+        PRESETS.map(p => `<button type="button" class="btn btn-ghost" data-preset="${p.id}">${p.label}</button>`).join("");
+      $("tree").innerHTML = PERM_TREE.map((g, gi) => `
+        <div class="pt-group">
+          <label class="pt-gt"><input type="checkbox" data-g="${gi}"> ${esc(g.group)}<span class="cnt" data-gc="${gi}"></span></label>
+          ${g.items.map(it => `
+            <div class="pt-item">
+              <label class="pt-row"><input type="checkbox" data-gi="${gi}" data-p="${it.id}"> ${it.icon} ${esc(it.label)}
+                ${it.note ? `<span class="note">· ${esc(it.note)}</span>` : ""}</label>
+              ${it.subs ? `<div class="pt-subs">${it.subs.map(s => `
+                <label class="pt-sub"><input type="checkbox" data-gi="${gi}" data-parent="${it.id}" data-p="${it.id}.${s.id}"> ${esc(s.label)}</label>`).join("")}</div>` : ""}
+            </div>`).join("")}
+        </div>`).join("");
+    }
+    buildTree();
+    const box = key => $("tree").querySelector(`input[data-p="${key}"]`);
+
+    // 把资料里的权限放进勾选框
+    function setTree(perms) {
+      perms = perms || {};
+      PERM_TREE.forEach(g => g.items.forEach(it => {
+        const v = perms[it.id];
+        if (it.subs) it.subs.forEach(s => { box(it.id + "." + s.id).checked = v === true || !!(v && v[s.id] === true); });
+        else box(it.id).checked = v === true;
+      }));
+      refreshTree();
+    }
+    // 从勾选框读出权限
+    function readTree() {
+      const p = {};
+      PERM_TREE.forEach(g => g.items.forEach(it => {
+        if (it.subs) {
+          const o = {};
+          it.subs.forEach(s => { if (box(it.id + "." + s.id).checked) o[s.id] = true; });
+          if (Object.keys(o).length) p[it.id] = o;
+        } else if (box(it.id).checked) p[it.id] = true;
+      }));
+      return p;
+    }
+    // 更新上层的全勾 / 半勾
+    function refreshTree() {
+      PERM_TREE.forEach((g, gi) => {
+        let on = 0, total = 0;
+        g.items.forEach(it => {
+          if (it.subs) {
+            const n = it.subs.filter(s => box(it.id + "." + s.id).checked).length;
+            const b = box(it.id);
+            b.checked = n === it.subs.length; b.indeterminate = n > 0 && n < it.subs.length;
+            on += n; total += it.subs.length;
+          } else { on += box(it.id).checked ? 1 : 0; total++; }
+        });
+        const gb = $("tree").querySelector(`input[data-g="${gi}"]`);
+        gb.checked = on === total; gb.indeterminate = on > 0 && on < total;
+        $("tree").querySelector(`[data-gc="${gi}"]`).textContent = `${on} / ${total}`;
+      });
+      $("permCount").textContent = `· 已勾 ${countPerms(readTree())} / ${TOTAL_PERMS} 项`;
+    }
+    $("tree").addEventListener("change", e => {
+      const t = e.target;
+      if (t.dataset.g !== undefined) {           // 整组
+        PERM_TREE[+t.dataset.g].items.forEach(it => {
+          box(it.id).checked = t.checked;
+          (it.subs || []).forEach(s => { box(it.id + "." + s.id).checked = t.checked; });
+        });
+      } else if (!t.dataset.parent) {            // 一项（带下层的话全选 / 全取消）
+        const it = PERM_TREE[+t.dataset.gi].items.find(x => x.id === t.dataset.p);
+        (it.subs || []).forEach(s => { box(it.id + "." + s.id).checked = t.checked; });
+      }
+      refreshTree();
+    });
+    $("presets").addEventListener("click", e => {
+      const b = e.target.closest("[data-preset]");
+      if (!b) return;
+      const p = PRESETS.find(x => x.id === b.dataset.preset);
+      setTree(p.perms === "all" ? allPerms() : p.perms);
+      dirty = true;
+    });
+
+    // ---------- 👉 编辑区 ----------
+    const okToLeave = () => !dirty || confirm("还没保存，要放弃修改吗？");
+    function showEditor(on) {
+      $("editor").classList.toggle("hidden", !on);
+      $("emptyPane").classList.toggle("hidden", on);
+      document.body.classList.toggle("rw-editing", on);
+    }
+    function closeEditor() { cur = null; dirty = false; showEditor(false); render(); }
+    $("form").addEventListener("input", () => { dirty = true; });
+    $("form").addEventListener("change", () => { dirty = true; });
+    $("backBtn").onclick = $("cancelBtn").onclick = () => { if (okToLeave()) closeEditor(); };
+    $("newBtn").onclick = () => { if (okToLeave()) openForm(null); };
+
+    function setFormLocked(locked) {
+      ["fEmail", "fName", "fTitle", "fActive"].forEach(id => { $(id).disabled = locked; });
+      $("tree").querySelectorAll("input").forEach(x => { x.disabled = locked; });
+      $("presets").classList.toggle("hidden", locked);
+      $("saveBtn").classList.toggle("hidden", locked);
+    }
+
+    function openOwner() {
+      cur = "owner"; dirty = false;
+      showEditor(true);
+      $("edTitle").textContent = "👑 店主";
+      $("quick").innerHTML = '<span class="tag tag-pink">店主 · 全部权限</span> 店主固定拥有全部权限，不能修改或停用。';
+      $("fEmail").value = OWNER_EMAIL; $("fEmail").readOnly = true;
+      $("fName").value = (me && me.displayName) || ""; $("fTitle").value = "店主"; $("fActive").checked = true;
+      setTree(allPerms());
+      setFormLocked(true);
+      $("delBtn").classList.add("hidden");
+      $("infoSec").classList.add("hidden");
+      $("formMsg").textContent = "";
+      render();
+    }
+
+    function openForm(s, keepMsg = false) {
+      cur = s ? s.id : "new";
+      showEditor(true);
+      setFormLocked(false);
+      $("edTitle").textContent = s ? (s.name || s.id) : "＋ 新增管理员";
+      $("fEmail").value = s ? s.id : ""; $("fEmail").readOnly = !!s;
+      $("fName").value = s ? (s.name || "") : "";
+      $("fTitle").value = s ? (s.title || "") : "";
+      $("fActive").checked = s ? s.active !== false : true;
+      setTree(s ? s.perms : {});
+      $("delBtn").classList.toggle("hidden", !s);
+      $("infoSec").classList.toggle("hidden", !s);
+      if (s) {
+        const last = toDate(s.lastLoginAt);
+        $("quick").innerHTML = `
+          ${s.active === false ? '<span class="tag tag-bad">⛔ 已停用</span>' : '<span class="tag tag-ok">启用中</span>'}
+          <span class="tag">${countPerms(s.perms)} / ${TOTAL_PERMS} 项</span>
+          ${last ? `最近登录 ${ago(last)}` : '<span class="tag tag-warn">还没登录过</span>'}
+          <span style="margin-left:auto"></span>
+          <button type="button" class="btn ${s.active === false ? "btn-ok" : "btn-ghost"}" id="qToggle" style="padding:4px 10px;font-size:.78rem">${s.active === false ? "✅ 重新启用" : "⛔ 停用"}</button>`;
+        $("qToggle").onclick = () => quickToggle(s);
+        $("info").innerHTML = `
+          最近登录：${last ? fmtDate(last) : "还没登录过"}<br>
+          Google 名称：${esc(s.authName || "-")}<br>
+          UID：${s.uid ? `<code>${esc(s.uid)}</code>` : "（第一次登录控制台后才有）"}<br>
+          会员系统管理员：${!s.uid ? "等对方第一次登录控制台后自动加入" : needsAdmin(s) ? "✅ 在名单里" : "— 不在名单里"}<br>
+          新增：${fmtDate(toDate(s.createdAt)) || "-"}　最后修改：${fmtDate(toDate(s.updatedAt)) || "-"}`;
+      } else {
+        $("quick").innerHTML = '新增后，请对方用这个 Google 账号打开 <b>admin.themochiishop.com</b> 登录。';
+      }
+      if (!keepMsg) $("formMsg").textContent = "";
+      $("right").querySelector(".rw-body").scrollTop = 0;
+      dirty = false;
+      render();
+      if (!s) $("fEmail").focus();
+    }
+
+    async function quickToggle(s) {
+      const on = s.active === false;
+      if (!confirm(on ? `重新启用「${s.name || s.id}」？` : `停用「${s.name || s.id}」？\n停用后不能登录控制台和各个页面（资料和权限会保留，可以随时重新启用）。`)) return;
+      try {
+        await setDoc(doc(db, "staff", s.id), { active: on, updatedAt: serverTimestamp(), updatedBy: OWNER_EMAIL }, { merge: true });
+        s.active = on;
+        await syncAdmin(s).catch(e => console.warn(e));
+        logAdmin("settings", `${on ? "重新启用" : "停用"}了管理员「${s.name || s.id}」`, "../staff.html");
+        dirty = false;
+        await load();
+        openForm(staff.find(x => x.id === s.id));
+      } catch (e) { alert("失败：" + e.message); }
+    }
+
+    // ---------- 💾 保存 ----------
+    $("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      if (cur === "owner") return;
+      const msg = (t, type) => { $("formMsg").textContent = t; $("formMsg").className = "msg " + type; };
+      const email = normEmail($("fEmail").value);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg("请输入正确的 Google 账号 email", "err"); return; }
+      if (email === OWNER_EMAIL) { msg("店主已经拥有全部权限，不用加进名单", "err"); return; }
+      const isNew = cur === "new";
+      if (isNew && staff.some(s => s.id === email)) { msg("这个 email 已经在名单里了", "err"); return; }
+      const perms = readTree();
+      if (!countPerms(perms) && !confirm("一项权限都没有勾，对方登录后会看到空白控制台。确定保存？")) return;
+      const data = {
+        email, name: $("fName").value.trim().slice(0, 40), title: $("fTitle").value.trim().slice(0, 20),
+        active: $("fActive").checked, perms, updatedAt: serverTimestamp(), updatedBy: OWNER_EMAIL,
+      };
+      if (isNew) data.createdAt = serverTimestamp();
+      $("saveBtn").disabled = true;
+      try {
+        await setDoc(doc(db, "staff", email), data, { merge: !isNew });
+        const old = staff.find(s => s.id === email) || {};
+        let sync = null;
+        try { sync = await syncAdmin({ ...old, ...data, id: email }); }
+        catch (err) { console.warn(err); sync = "fail"; }
+        logAdmin("settings", `${isNew ? "新增" : "修改"}了管理员「${data.name || email}」的权限`, "../staff.html");
+        dirty = false;
+        await load();
+        openForm(staff.find(s => s.id === email), true);
+        msg("已保存 ✅" + (sync === "added" ? "（已加进会员系统管理员名单）" : sync === "removed" ? "（已从会员系统管理员名单移除）"
+          : sync === "fail" ? "（会员系统管理员名单同步失败，请检查 Firestore 规则）" : ""), sync === "fail" ? "err" : "ok");
+      } catch (err) {
+        msg("保存失败：" + err.message, "err");
+      } finally { $("saveBtn").disabled = false; }
+    });
+
+    // ---------- 🗑 删除 ----------
+    $("delBtn").onclick = async () => {
+      const s = staff.find(x => x.id === cur);
+      if (!s) return;
+      if (!confirm(`从名单删除「${s.name || s.id}」？\n删除后对方不能再进控制台。只是暂时不让他用的话，用「停用」就好。`)) return;
+      try {
+        if (s.uid) { try { await deleteDoc(doc(db, "admins", s.uid)); } catch (e) { console.warn(e); } }
+        await deleteDoc(doc(db, "staff", s.id));
+        logAdmin("settings", `删除了管理员「${s.name || s.id}」`, "../staff.html");
+        dirty = false;
+        await load();
+        closeEditor();
+      } catch (e) { alert("删除失败：" + e.message); }
+    };
+
+    window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+    onAuthStateChanged(auth, user => {
+      if (!user || !isOwnerUser(user) || me) return;
+      me = user;
+      load().catch(e => { $("list").innerHTML = `<p class="empty">载入失败：${esc(e.message)}<br>请确认 Firestore 规则已经加上 staff 那一段。</p>`; });
+    });
+  </script>
+</body>
+</html>
