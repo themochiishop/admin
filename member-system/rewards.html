@@ -822,8 +822,12 @@ showPreview(currentImage);
       btn.disabled = true;
       try {
         const rs = await getDocs(query(collection(db, "redemptions"), where("rewardId", "==", id)));
-        const busy = rs.docs.filter(d => ["pending", "approved", "problem", "shipped"].includes(d.data().status)).length;
-        if (busy) {
+        // 优惠券批准后就算完成；只有实体奖品的「已批准 / 运送中」才算还在处理
+        const busy = rs.docs.filter(d => {
+          const x = d.data();
+          if (["pending", "problem"].includes(x.status)) return true;
+          return x.kind === "gift" && ["approved", "shipped"].includes(x.status);
+        }).length;        if (busy) {
           alert(`还有 ${busy} 笔兑换在处理中（待审核 / 待发货 / 运送中），不能删除。\n请先到「兑换审核」处理完，或先把这个奖品下架。`);
           return;
         }
