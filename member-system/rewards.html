@@ -22,6 +22,13 @@
     .end-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .end-row input[type=datetime-local] { width: auto; margin: 0; }
     .end-row label { margin: 0; }
+    .open-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+    .open-box .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; font-size: .88rem; }
+    .open-box .row:last-child { margin-bottom: 0; }
+    .open-box label { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
+    .open-box input[type=radio] { width: auto; margin: 0; }
+    .open-box input[type=date], .open-box input[type=datetime-local] { width: auto; margin: 0; }
+    .open-box .k { color: var(--muted); min-width: 64px; }
   </style>
 </head>
 <body>
@@ -89,6 +96,23 @@
             <p class="meta">完整优惠码：<b id="rcfull">-</b>（所有兑换者共用这个码）</p>
           </div>
           <label class="inline"><input type="checkbox" id="ractive" checked> 上架（会员看得到）</label>
+          <div class="open-box">
+            <div class="row"><span class="k">开放状态</span>
+              <label><input type="radio" name="ropen" value="open" checked> ✅ 已开放</label>
+              <label><input type="radio" name="ropen" value="soon"> 🔒 未开放（看得到、不能兑换）</label>
+            </div>
+            <div id="rsoonBox" class="hidden">
+              <div class="row"><span class="k">显示方式</span>
+                <label><input type="radio" name="rmode" value="date" checked> 普通（只显示日期）</label>
+                <label><input type="radio" name="rmode" value="countdown"> 倒数（24 小时内倒计时）</label>
+              </div>
+              <div class="row"><span class="k" id="ropenK">开放日期</span>
+                <input type="date" id="ropenDate">
+                <input type="datetime-local" id="ropenTime" class="hidden">
+                <span class="muted" style="font-size:.78rem" id="ropenHint">选填。不填：显示「即将开放」，由你手动开放；填了：当天 00:00 自动开放</span>
+              </div>
+            </div>
+          </div>
           <div class="end-row">
             <label class="inline"><input type="checkbox" id="rendOn"> ⏰ 设定下架时间（即将下架）</label>
             <input type="datetime-local" id="rend" class="hidden">
@@ -319,6 +343,38 @@ $("rimageRemove").addEventListener("click", () => {
     });
 
     // ---------- ⏰ 下架时间 ----------
+    // ---------- 🔒 未开放 ----------
+    const openVal = () => document.querySelector("input[name=ropen]:checked").value;
+    const modeVal = () => document.querySelector("input[name=rmode]:checked").value;
+    function updateOpenUI() {
+      const soon = openVal() === "soon", cd = modeVal() === "countdown";
+      $("rsoonBox").classList.toggle("hidden", !soon);
+      $("ropenDate").classList.toggle("hidden", cd);
+      $("ropenTime").classList.toggle("hidden", !cd);
+      $("ropenK").textContent = cd ? "开放时间" : "开放日期";
+      $("ropenHint").textContent = cd
+        ? "选填。超过 24 小时前显示日期和时间，24 小时内每秒倒数；时间到自动开放"
+        : "选填。不填：显示「即将开放」，由你手动开放；填了：当天 00:00 自动开放";
+    }
+    document.querySelectorAll("input[name=ropen], input[name=rmode]").forEach(el => el.addEventListener("change", updateOpenUI));
+    // 普通：那天 00:00（马来西亚时间）；倒数：填的时间
+    function readOpen() {
+      if (openVal() !== "soon") return { comingSoon: false, openAt: null, openMode: "date" };
+      const cd = modeVal() === "countdown";
+      let at = null;
+      if (cd && $("ropenTime").value) at = new Date($("ropenTime").value);
+      if (!cd && $("ropenDate").value) at = new Date($("ropenDate").value + "T00:00:00+08:00");
+      return { comingSoon: true, openMode: cd ? "countdown" : "date", openAt: at ? Timestamp.fromDate(at) : null };
+    }
+    function openInfo(r) {
+      if (!r.comingSoon) return "";
+      const at = toDate(r.openAt);
+      if (at && at <= new Date()) return ` · <span class="tag tag-ok">✅ 已在 ${fmtDate(at, r.openMode === "countdown")} 自动开放</span>`;
+      if (!at) return ` · <span class="tag tag-warn">🔒 未开放（手动）</span>`;
+      return ` · <span class="tag tag-warn">🔒 ${fmtDate(at, r.openMode === "countdown")} 开放${r.openMode === "countdown" ? "（倒数）" : ""}</span>`;
+    }
+    const isLocked = r => r.comingSoon && !(toDate(r.openAt) && toDate(r.openAt) <= new Date());
+
     function endInfo(r) {
       const end = toDate(r.endAt);
       if (!end) return "";
@@ -373,7 +429,7 @@ $("rimageRemove").addEventListener("click", () => {
                 ${r.description ? `<div class="meta">${esc(r.description)}</div>` : ""}
                 <div class="meta">
                   ${catLabel(catOf(r, cats))} · 库存：${typeof r.stock === "number" ? r.stock : "不限"}
-                  ${endInfo(r)}
+                  ${endInfo(r)}${openInfo(r)}
                                    ${isCoupon && r.couponCode ? ` · 优惠码：<b>${esc(r.couponCode)}</b>（共用）` : ""}
                   ${isCoupon && !r.couponCode ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
                     ${cs.unused === 0 ? '<span class="tag tag-bad">需补充</span>' : cs.unused < 5 ? '<span class="tag tag-warn">快用完</span>' : ""}` : ""}
@@ -383,6 +439,7 @@ $("rimageRemove").addEventListener("click", () => {
             <div class="actions">
               <button class="btn btn-ghost" data-act="edit">编辑</button>
               <button class="btn btn-ghost" data-act="toggle">${r.active ? "下架" : "上架"}</button>
+              <button class="btn btn-ghost" data-act="openNow">${isLocked(r) ? "✅ 立即开放" : "🔒 设为未开放"}</button>
               ${isCoupon && !r.couponCode ? `<button class="btn btn-ghost" data-act="codes">＋ 补充券码</button>` : ""}            </div>
             ${isCoupon ? `
               <div class="codes-box hidden" style="margin-top:10px">
@@ -413,6 +470,13 @@ $("rimageRemove").addEventListener("click", () => {
       $("rend").classList.toggle("hidden", !end);
       $("rend").value = end ? toLocalInput(end) : "";
       $("ractive").checked = r ? !!r.active : true;
+      const soon = !!(r && r.comingSoon);
+      document.querySelector(`input[name=ropen][value=${soon ? "soon" : "open"}]`).checked = true;
+      document.querySelector(`input[name=rmode][value=${r && r.openMode === "countdown" ? "countdown" : "date"}]`).checked = true;
+      const oa = r ? toDate(r.openAt) : null;
+      $("ropenDate").value = oa ? toLocalInput(oa).slice(0, 10) : "";
+      $("ropenTime").value = oa ? toLocalInput(oa) : "";
+      updateOpenUI();
             const cf = fmtOf(r && r.couponFormat);
       $("rcformat").value = cf.id;
       $("rcsuffix").value = r && r.couponCode ? r.couponCode.slice(cf.prefix.length) : "";
@@ -440,9 +504,15 @@ showPreview(currentImage);
         category: $("rcat").value,
         endAt: $("rendOn").checked && $("rend").value ? Timestamp.fromDate(new Date($("rend").value)) : null,
         active: $("ractive").checked,
+        ...readOpen(),
         image: currentImage,
         updatedAt: serverTimestamp()
       };
+      if (data.comingSoon && data.openAt && data.openAt.toDate() <= new Date()) {
+        $("formMsg").textContent = "开放时间要在现在之后（想马上开放就选「已开放」）";
+        $("formMsg").className = "msg err";
+        return;
+      }
       if (data.endAt && data.endAt.toDate() <= new Date()) {
         $("formMsg").textContent = "下架时间要在现在之后";
         $("formMsg").className = "msg err";
@@ -500,6 +570,19 @@ showPreview(currentImage);
       }
       if (act === "edit") openForm(r);
 
+      if (act === "openNow") {
+        const locking = !isLocked(r);
+        if (!confirm(locking ? `把「${r.name}」设为未开放？\n会员看得到，但不能兑换。之后可以按「编辑」设定开放日期。` : `马上开放「${r.name}」？会员可以立即兑换。`)) return;
+        e.target.disabled = true;
+        try {
+          await updateDoc(doc(db, "rewards", r.id), locking
+            ? { comingSoon: true, openAt: null, openMode: "date", updatedAt: serverTimestamp() }
+            : { comingSoon: false, openAt: null, updatedAt: serverTimestamp() });
+          logAdmin("content", `${locking ? "设为未开放" : "开放了"}商城奖品「${r.name}」`, "rewards.html");
+          await load();
+        } catch (err) { alert("失败：" + err.message); e.target.disabled = false; }
+        return;
+      }
       if (act === "toggle") {
         e.target.disabled = true;
         try {
