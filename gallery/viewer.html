@@ -1,360 +1,206 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Gallery Viewer</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; overflow: hidden; background-color: #0d1117; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #c9d1d9; }
-        .app-container { display: flex; flex-direction: column; height: 100%; }
-        .top-nav {
-            padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;
-            background: rgba(13, 17, 23, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05); z-index: 10; flex-shrink: 0;
-        }
-        .nav-title { font-size: 1.1rem; font-weight: 600; letter-spacing: 1px; color: #ffffff; }
-        .cat-tabs { display: flex; gap: 0.5rem; overflow-x: auto; }
-        .cat-tabs::-webkit-scrollbar { display: none; }
-        .cat-btn {
-            background: transparent; border: 1px solid transparent; color: #8b949e;
-            padding: 0.4rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.9rem; transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-        .cat-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
-        .cat-btn.active { color: #58a6ff; background: rgba(88, 166, 255, 0.1); border-color: rgba(88, 166, 255, 0.2); }
-        .main-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 1.5rem; position: relative; min-height: 0; }
-        .slider-viewport {
-            width: 100%; height: 100%; max-width: 1200px; background: #161b22; border-radius: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            position: relative; overflow: hidden; display: flex; align-items: center;
-        }
-        .slider-track { display: flex; width: 100%; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform; }
-        .slide { flex: 0 0 100%; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-        .slide img {
-            max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
-            border-radius: 0.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); cursor: zoom-in;
-            user-select: none; -webkit-user-drag: none; transition: transform 0.2s;
-        }
-        .slide img:hover { transform: scale(1.02); }
-        .nav-btn {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            background: rgba(13, 17, 23, 0.6); border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px); color: #ffffff; width: 3rem; height: 3rem; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: all 0.2s; z-index: 10;
-        }
-        .nav-btn:hover { background: rgba(88, 166, 255, 0.2); border-color: rgba(88, 166, 255, 0.5); color: #58a6ff; }
-        .prev-btn { left: 2rem; }
-        .next-btn { right: 2rem; }
-        .bottom-bar {
-            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
-            background: rgba(13, 17, 23, 0.7); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.5rem 1.2rem; border-radius: 2rem;
-            display: flex; align-items: center; gap: 1rem; z-index: 10;
-        }
-        .page-indicator { font-size: 0.9rem; font-family: monospace; color: #8b949e; min-width: 3.5em; text-align: center; }
-        .dots { display: flex; gap: 0.5rem; align-items: center; }
-        .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: none; cursor: pointer; transition: all 0.3s; padding: 0; }
-        .dot.active { background: #58a6ff; box-shadow: 0 0 8px rgba(88, 166, 255, 0.6); transform: scale(1.3); }
-        .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #8b949e; font-size: 0.9rem; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-        .lightbox { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 9999; display: none; justify-content: center; align-items: center; overflow: hidden; touch-action: none; }
-        .lightbox.active { display: flex; }
-        .lb-track { display: flex; height: 100%; width: 100%; transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-        .lb-slide { flex: 0 0 100%; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 1rem; }
-        .lb-slide img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; cursor: grab; }
-        .lb-slide img:active { cursor: grabbing; }
-        .lb-close { position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(255, 255, 255, 0.1); border: none; color: #fff; width: 3rem; height: 3rem; border-radius: 50%; font-size: 1.5rem; cursor: pointer; z-index: 10000; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
-        .lb-close:hover { background: rgba(255, 255, 255, 0.2); }
-        .lb-indicator { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); color: #fff; font-size: 1rem; background: rgba(0, 0, 0, 0.5); padding: 0.4rem 1rem; border-radius: 1rem; pointer-events: none; }
-        @media (max-width: 768px) {
-            .top-nav { padding: 0.8rem; flex-direction: column; gap: 0.8rem; align-items: flex-start; }
-            .cat-tabs { width: 100%; }
-            .slide { padding: 0.5rem; }
-            .prev-btn { left: 0.5rem; width: 2.4rem; height: 2.4rem; }
-            .next-btn { right: 0.5rem; width: 2.4rem; height: 2.4rem; }
-            .bottom-bar { bottom: 1rem; padding: 0.4rem 1rem; gap: 0.8rem; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" type="image/png" href="logo.png">
+  <title>Gallery Viewer</title>
+  <!-- 🔐 权限检查：没登录或没有「图库 › 查看前台」权限会跳回控制台 -->
+  <script type="module">import { guard } from "/js/admin-guard.js"; guard("gallery.view");</script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; overflow: hidden; background: #0d1117; color: #c9d1d9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    .app { display: flex; flex-direction: column; height: 100%; }
+    .top { display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: rgba(13,17,23,.85); border-bottom: 1px solid rgba(255,255,255,.06); flex: none; }
+    .title { font-size: 1.05rem; font-weight: 600; color: #fff; letter-spacing: 1px; white-space: nowrap; }
+    .tabs { display: flex; gap: 6px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { background: transparent; border: 1px solid transparent; color: #8b949e; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: .9rem; white-space: nowrap; font-family: inherit; }
+    .tab:hover { color: #fff; background: rgba(255,255,255,.05); }
+    .tab.on { color: #58a6ff; background: rgba(88,166,255,.1); border-color: rgba(88,166,255,.25); }
+    .tab small { opacity: .6; margin-left: 4px; }
+    .live-btn { background: #da3633; color: #fff; border: 0; border-radius: 8px; padding: 7px 12px; font-size: .85rem; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .live-btn:hover { background: #f85149; }
+
+    .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; padding: 14px 14px 10px; gap: 10px; }
+    .viewport { position: relative; width: 100%; max-width: 1200px; flex: 1; min-height: 0; background: #161b22; border-radius: 14px; overflow: hidden; touch-action: pan-y; user-select: none; }
+    .track { display: flex; height: 100%; transition: transform .35s ease; will-change: transform; }
+    .track.dragging { transition: none; }
+    .slide { flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 10px; }
+    .slide img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; -webkit-user-drag: none; }
+    .nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12);
+      background: rgba(13,17,23,.6); color: #fff; font-size: 1.3rem; cursor: pointer; z-index: 3; display: flex; align-items: center; justify-content: center; }
+    .nav:hover { background: rgba(88,166,255,.35); }
+    .nav.prev { left: 12px; } .nav.next { right: 12px; }
+    .idx { position: absolute; top: 10px; right: 12px; background: rgba(13,17,23,.7); color: #fff; font-size: .8rem; padding: 3px 10px; border-radius: 999px; z-index: 3; }
+    .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8b949e; font-size: .95rem; text-align: center; padding: 20px; line-height: 1.7; }
+    .cap { min-height: 1.5em; font-size: 1rem; color: #e6edf3; text-align: center; max-width: 1200px; }
+    .strip { display: flex; gap: 6px; overflow-x: auto; max-width: 1200px; width: 100%; padding: 2px 2px 6px; scrollbar-width: thin; flex: none; }
+    .strip button { flex: none; width: 54px; height: 54px; border-radius: 8px; overflow: hidden; border: 2px solid transparent; padding: 0; background: #21262d; cursor: pointer; opacity: .55; }
+    .strip button.on { border-color: #58a6ff; opacity: 1; }
+    .strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* 🎥 直播模式：全屏，只剩图片 */
+    body.live .top, body.live .strip { display: none; }
+    body.live .stage { padding: 0; gap: 0; background: #000; }
+    body.live .viewport { max-width: none; border-radius: 0; background: #000; }
+    body.live .slide { padding: 0; }
+    body.live .slide img { border-radius: 0; }
+    body.live .nav { opacity: 0; }
+    body.live .nav:hover { opacity: 1; }
+    body.live .cap { position: fixed; left: 0; right: 0; bottom: 18px; max-width: none; text-shadow: 0 2px 8px rgba(0,0,0,.9); font-size: 1.3rem; z-index: 4; pointer-events: none; }
+    .live-exit { display: none; position: fixed; top: 12px; left: 12px; z-index: 5; background: rgba(0,0,0,.5); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 6px 12px; font-size: .8rem; cursor: pointer; opacity: .35; font-family: inherit; }
+    .live-exit:hover { opacity: 1; }
+    body.live .live-exit { display: block; }
+    /* 直播模式：点画面左边三分之一 = 上一张，右边 = 下一张 */
+    .tapzone { display: none; position: absolute; top: 0; bottom: 0; width: 33%; z-index: 2; cursor: pointer; }
+    body.live .tapzone { display: block; }
+    .tapzone.l { left: 0; } .tapzone.r { right: 0; }
+
+    @media (max-width: 640px) {
+      .top { padding: 10px 12px; gap: 8px; }
+      .title { display: none; }
+      .nav { width: 36px; height: 36px; font-size: 1.1rem; }
+      .strip button { width: 44px; height: 44px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="app-container">
-        <div class="top-nav">
-            <div class="nav-title">GALLERY</div>
-            <div class="cat-tabs" id="topBar"></div>
-        </div>
-        <div class="main-container">
-            <div class="slider-viewport" id="sliderViewport">
-                <div class="loading" id="loadingText">READING DATA...</div>
-                <div class="slider-track" id="sliderTrack"></div>
-                <button class="nav-btn prev-btn" id="prevBtn">←</button>
-                <button class="nav-btn next-btn" id="nextBtn">→</button>
-                <div class="bottom-bar">
-                    <span class="page-indicator" id="pageIndicator">0 / 0</span>
-                    <div class="dots" id="dotsContainer"></div>
-                </div>
-            </div>
-        </div>
+  <div class="app">
+    <div class="top">
+      <div class="title">GALLERY</div>
+      <div class="tabs" id="tabs"></div>
+      <button class="live-btn" id="liveBtn" title="全屏，只显示图片；左右键或点画面两边翻页">🎥 直播模式</button>
     </div>
-    <div class="lightbox" id="lightbox">
-        <button class="lb-close" id="lbCloseBtn">×</button>
-        <div class="lb-track" id="lbTrack"></div>
-        <div class="lb-indicator" id="lbIndicator">1 / 1</div>
+    <div class="stage" id="stage">
+      <div class="viewport" id="vp">
+        <div class="track" id="track"></div>
+        <button class="nav prev" id="prev" aria-label="上一张">‹</button>
+        <button class="nav next" id="next" aria-label="下一张">›</button>
+        <div class="tapzone l" id="tapL"></div>
+        <div class="tapzone r" id="tapR"></div>
+        <div class="idx" id="idx">0 / 0</div>
+        <div class="msg" id="msg">载入中…</div>
+      </div>
+      <div class="cap" id="cap"></div>
+      <div class="strip" id="strip"></div>
     </div>
+  </div>
+  <button class="live-exit" id="liveExit">✕ 离开直播模式（Esc）</button>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  <script type="module">
+    import { gdb, esc, byOrder } from "./gal.js";
+    import { collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBCkb5eDLElnQZ8Pt3Ud5euOmdkCo4QxqM",
-            authDomain: "my-gallery-43e8a.firebaseapp.com",
-            projectId: "my-gallery-43e8a",
-            storageBucket: "my-gallery-43e8a.firebasestorage.app",
-            messagingSenderId: "616009345293",
-            appId: "1:616009345293:web:a61335e41cd7158014a844",
-            measurementId: "G-47Q10H9FM3"
-        };
+    const $ = id => document.getElementById(id);
+    const LAST = "mochiiGalleryAlbum";
+    let albums = [], list = [], cur = null, idx = 0, unsubPhotos = null, counts = {};
 
-        const app = initializeApp(firebaseConfig);
-        const storage = getStorage(app);
-        const db = getFirestore(app);
+    // ---------- 相册 ----------
+    onSnapshot(collection(gdb, "albums"), s => {
+      albums = s.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
+      if (!albums.length) { showMsg("还没有相册。<br>请到「图库管理」新增相册，或按「📦 整理旧图片」。"); $("tabs").innerHTML = ""; return; }
+      let want = cur;
+      if (!want) { try { want = localStorage.getItem(LAST); } catch (e) {} }
+      if (!albums.some(a => a.id === want)) want = albums[0].id;
+      renderTabs();
+      if (want !== cur) pick(want);
+    }, e => showMsg("读取失败：" + esc(e.message)));
 
-        const track = document.getElementById('sliderTrack');
-        const viewport = document.getElementById('sliderViewport');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const pageIndicator = document.getElementById('pageIndicator');
-        const dotsContainer = document.getElementById('dotsContainer');
-        const loadingText = document.getElementById('loadingText');
-        const topBar = document.getElementById('topBar');
-        const lightbox = document.getElementById('lightbox');
-        const lbCloseBtn = document.getElementById('lbCloseBtn');
-        const lbTrack = document.getElementById('lbTrack');
-        const lbIndicator = document.getElementById('lbIndicator');
+    function renderTabs() {
+      $("tabs").innerHTML = albums.map(a => `<button class="tab${a.id === cur ? " on" : ""}" data-id="${esc(a.id)}">${esc(a.name || "未命名")}${counts[a.id] != null ? `<small>${counts[a.id]}</small>` : ""}</button>`).join("");
+    }
+    $("tabs").addEventListener("click", e => { const b = e.target.closest(".tab"); if (b && b.dataset.id !== cur) pick(b.dataset.id); });
 
-        let currentIndex = 0;
-        let slideWidth = 0;
-        let totalSlides = 0;
-        let currentCategory = '1';
-        let currentImageUrls = [];
+    // ---------- 图片（即时更新：后台改了，前台马上跟着变） ----------
+    function pick(id) {
+      cur = id; idx = 0;
+      try { localStorage.setItem(LAST, id); } catch (e) {}
+      renderTabs();
+      showMsg("载入中…");
+      if (unsubPhotos) unsubPhotos();
+      unsubPhotos = onSnapshot(query(collection(gdb, "photos"), where("album", "==", id)), s => {
+        const keepId = list[idx] && list[idx].id;
+        list = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.album === id && !p.hidden).sort(byOrder);
+        counts[id] = list.length; renderTabs();
+        const k = list.findIndex(p => p.id === keepId);
+        idx = k >= 0 ? k : Math.min(idx, Math.max(0, list.length - 1));
+        renderSlides();
+      }, e => showMsg("读取失败：" + esc(e.message)));
+    }
 
-        // 初始化顶部目录
-        async function initTopBar() {
-            const defaultCategories = { "1": "目录 01", "2": "目录 02", "3": "目录 03", "4": "目录 04", "5": "目录 05" };
-            let categories = defaultCategories;
-            
-            try {
-                const docRef = doc(db, "settings", "gallery_categories");
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    categories = docSnap.data();
-                }
-            } catch (error) {
-                console.error("获取云端目录名失败", error);
-            }
+    function showMsg(html) { $("msg").innerHTML = html; $("msg").hidden = !html; }
+    function renderSlides() {
+      if (!list.length) {
+        $("track").innerHTML = ""; $("strip").innerHTML = ""; $("cap").textContent = "";
+        showMsg("这本相册暂无图片"); update(); return;
+      }
+      showMsg("");
+      $("track").innerHTML = list.map((p, i) => `<div class="slide"><img data-src="${esc(p.url)}" alt="" draggable="false"${Math.abs(i - idx) <= 1 ? ` src="${esc(p.url)}"` : ""}></div>`).join("");
+      $("strip").innerHTML = list.map((p, i) => `<button data-i="${i}"><img src="${esc(p.thumb || p.url)}" alt="" loading="lazy"></button>`).join("");
+      update();
+    }
+    // 只载入目前这张和前后各一张（加快速度、省流量）
+    function loadNear() {
+      $("track").querySelectorAll("img").forEach((im, i) => { if (Math.abs(i - idx) <= 1 && !im.getAttribute("src")) im.src = im.dataset.src; });
+    }
+    function update() {
+      const n = list.length;
+      $("track").style.transform = `translateX(${-idx * 100}%)`;
+      $("idx").textContent = n ? `${idx + 1} / ${n}` : "0 / 0";
+      $("prev").hidden = $("next").hidden = n < 2;
+      $("cap").textContent = n ? (list[idx].caption || "") : "";
+      $("strip").querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === idx));
+      const on = $("strip").querySelector("button.on");
+      if (on) on.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+      loadNear();
+    }
+    const go = i => { if (!list.length) return; idx = (i + list.length) % list.length; update(); };
+    $("prev").onclick = () => go(idx - 1);
+    $("next").onclick = () => go(idx + 1);
+    // 刚刚是滑动的话，不要再算一次点击
+    let swiped = false;
+    $("tapL").onclick = () => { if (!swiped) go(idx - 1); };
+    $("tapR").onclick = () => { if (!swiped) go(idx + 1); };
+    $("strip").addEventListener("click", e => { const b = e.target.closest("[data-i]"); if (b) go(+b.dataset.i); });
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") go(idx - 1);
+      else if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); go(idx + 1); }
+      else if (e.key === "Escape" && document.body.classList.contains("live")) setLive(false);
+    });
 
-            topBar.innerHTML = '';
-            for (const [key, name] of Object.entries(categories)) {
-                const btn = document.createElement('button');
-                btn.className = `cat-btn ${key === '1' ? 'active' : ''}`;
-                btn.dataset.cat = key;
-                btn.textContent = name;
-                topBar.appendChild(btn);
-            }
-            
-            fetchImages(); // 渲染完名字后，立刻抓取第一目录的图片
-        }
+    // 手指 / 滑鼠左右滑
+    let sx = null, dx = 0;
+    const vp = $("vp");
+    vp.addEventListener("pointerdown", e => { if (e.target.closest(".nav")) return; sx = e.clientX; dx = 0; swiped = false; $("track").classList.add("dragging"); });
+    window.addEventListener("pointermove", e => {
+      if (sx === null) return;
+      dx = e.clientX - sx;
+      $("track").style.transform = `translateX(calc(${-idx * 100}% + ${dx}px))`;
+    });
+    window.addEventListener("pointerup", () => {
+      if (sx === null) return;
+      $("track").classList.remove("dragging");
+      const w = vp.clientWidth || 1;
+      sx = null;
+      swiped = Math.abs(dx) > 10;
+      if (dx > w * 0.15) go(idx - 1); else if (dx < -w * 0.15) go(idx + 1); else update();
+    });
 
-        topBar.addEventListener('click', (e) => {
-            if (e.target.classList.contains('cat-btn')) {
-                document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                currentCategory = e.target.dataset.cat;
-                currentIndex = 0;
-                track.innerHTML = ''; 
-                loadingText.style.display = 'block';
-                fetchImages();
-            }
-        });
-
-        async function fetchImages() {
-            try {
-                const folderRef = ref(storage, currentCategory); 
-                const result = await listAll(folderRef);
-                // 倒序：最新上传的在最前面
-                const sortedItems = result.items.sort((a, b) => b.name.localeCompare(a.name));
-                const urls = await Promise.all(sortedItems.map(item => getDownloadURL(item)));
-                currentImageUrls = urls;
-
-                loadingText.style.display = 'none';
-                if (urls.length === 0) {
-                    loadingText.textContent = "暂无图片";
-                    loadingText.style.display = 'block';
-                    totalSlides = 0;
-                    updateSlider();
-                    dotsContainer.innerHTML = '';
-                    return;
-                }
-                renderImages(urls);
-            } catch (error) {
-                console.error(error);
-                loadingText.textContent = "加载失败";
-            }
-        }
-
-        function renderImages(urls) {
-            track.innerHTML = '';
-            totalSlides = urls.length;
-            urls.forEach((src, index) => {
-                const slide = document.createElement('div');
-                slide.className = 'slide';
-                const img = document.createElement('img');
-                img.src = src; 
-                img.loading = 'lazy';
-                img.addEventListener('click', () => openLightbox(index));
-                img.onload = () => requestAnimationFrame(measureAndUpdate);
-                slide.appendChild(img);
-                track.appendChild(slide);
-            });
-            createDots();
-            measureAndUpdate();
-        }
-
-        function createDots() {
-            dotsContainer.innerHTML = '';
-            for (let i = 0; i < totalSlides; i++) {
-                const dot = document.createElement('button');
-                dot.className = `dot ${i === currentIndex ? 'active' : ''}`;
-                dot.addEventListener('click', () => goToSlide(i));
-                dotsContainer.appendChild(dot);
-            }
-        }
-
-        function updateSlider() {
-            if (totalSlides === 0) {
-                pageIndicator.textContent = `0 / 0`;
-                track.style.transform = `translateX(0px)`;
-                return;
-            }
-            const offset = -currentIndex * slideWidth;
-            track.style.transform = `translateX(${offset}px)`;
-            pageIndicator.textContent = `${currentIndex + 1} / ${totalSlides}`;
-            const dots = dotsContainer.querySelectorAll('.dot');
-            dots.forEach((dot, idx) => dot.classList.toggle('active', idx === currentIndex));
-            const showNav = totalSlides > 1;
-            prevBtn.style.display = showNav ? 'flex' : 'none';
-            nextBtn.style.display = showNav ? 'flex' : 'none';
-        }
-
-        function measureAndUpdate() {
-            if (viewport) slideWidth = viewport.clientWidth;
-            updateSlider();
-        }
-
-        function goToSlide(index) {
-            if (totalSlides === 0) return;
-            if (index < 0) currentIndex = totalSlides - 1;
-            else if (index >= totalSlides) currentIndex = 0;
-            else currentIndex = index;
-            updateSlider();
-        }
-
-        prevBtn.addEventListener('click', () => goToSlide(currentIndex - 1));
-        nextBtn.addEventListener('click', () => goToSlide(currentIndex + 1));
-        window.addEventListener('resize', () => requestAnimationFrame(measureAndUpdate));
-        if (window.ResizeObserver) {
-            new ResizeObserver(() => requestAnimationFrame(measureAndUpdate)).observe(viewport);
-        }
-
-        // 全屏逻辑
-        let lbCurrentIndex = 0;
-        let lbSlideWidth = window.innerWidth;
-        let startX = 0;
-        let isDragging = false;
-        let currentTranslate = 0;
-
-        function openLightbox(index) {
-            lbCurrentIndex = index;
-            lbTrack.innerHTML = '';
-            currentImageUrls.forEach((src) => {
-                const slide = document.createElement('div');
-                slide.className = 'lb-slide';
-                const img = document.createElement('img');
-                img.src = src;
-                slide.appendChild(img);
-                lbTrack.appendChild(slide);
-            });
-            document.body.style.overflow = 'hidden';
-            lightbox.classList.add('active');
-            lbSlideWidth = window.innerWidth;
-            updateLightboxPosition(false);
-        }
-
-        function closeLightbox() {
-            lightbox.classList.remove('active');
-            document.body.style.overflow = '';
-            currentIndex = lbCurrentIndex;
-            updateSlider();
-        }
-
-        function updateLightboxPosition(animate = true) {
-            if (animate) lbTrack.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-            else lbTrack.style.transition = 'none';
-            const offset = -lbCurrentIndex * lbSlideWidth;
-            lbTrack.style.transform = `translateX(${offset}px)`;
-            lbIndicator.textContent = `${lbCurrentIndex + 1} / ${currentImageUrls.length}`;
-        }
-
-        lbCloseBtn.addEventListener('click', closeLightbox);
-        window.addEventListener('keydown', (e) => {
-            if (!lightbox.classList.contains('active')) return;
-            if (e.key === 'Escape') closeLightbox();
-            if (e.key === 'ArrowLeft' && lbCurrentIndex > 0) { lbCurrentIndex--; updateLightboxPosition(); }
-            if (e.key === 'ArrowRight' && lbCurrentIndex < currentImageUrls.length - 1) { lbCurrentIndex++; updateLightboxPosition(); }
-        });
-
-        window.addEventListener('resize', () => {
-            if (lightbox.classList.contains('active')) {
-                lbSlideWidth = window.innerWidth;
-                updateLightboxPosition(false);
-            }
-        });
-
-        const getPositionX = (e) => e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-        function dragStart(e) {
-            if (e.target.closest('.lb-close')) return;
-            startX = getPositionX(e);
-            isDragging = true;
-            lbTrack.style.transition = 'none';
-        }
-        function dragMove(e) {
-            if (!isDragging) return;
-            const currentX = getPositionX(e);
-            const diff = currentX - startX;
-            currentTranslate = -lbCurrentIndex * lbSlideWidth + diff;
-            lbTrack.style.transform = `translateX(${currentTranslate}px)`;
-        }
-        function dragEnd(e) {
-            if (!isDragging) return;
-            isDragging = false;
-            const currentX = e.type.includes('mouse') ? e.pageX : e.changedTouches[0].clientX;
-            const diff = currentX - startX;
-            if (diff < -50 && lbCurrentIndex < currentImageUrls.length - 1) lbCurrentIndex++;
-            else if (diff > 50 && lbCurrentIndex > 0) lbCurrentIndex--;
-            updateLightboxPosition(true);
-        }
-        lbTrack.addEventListener('mousedown', dragStart);
-        window.addEventListener('mousemove', dragMove);
-        window.addEventListener('mouseup', dragEnd);
-        lbTrack.addEventListener('touchstart', dragStart, { passive: true });
-        lbTrack.addEventListener('touchmove', dragMove, { passive: true });
-        lbTrack.addEventListener('touchend', dragEnd);
-        lbTrack.addEventListener('dragstart', (e) => e.preventDefault());
-
-        // 启动
-        initTopBar();
-    </script>
+    // ---------- 🎥 直播模式 ----------
+    function setLive(on) {
+      document.body.classList.toggle("live", on);
+      const el = document.documentElement;
+      try {
+        if (on && el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {});
+        if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      } catch (e) {}
+    }
+    $("liveBtn").onclick = () => setLive(true);
+    $("liveExit").onclick = () => setLive(false);
+    document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) document.body.classList.remove("live"); });
+  </script>
 </body>
 </html>

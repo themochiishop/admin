@@ -1,324 +1,584 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <!-- 🔐 权限检查：没登录或没有「gallery.upload」权限会跳回控制台 -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="logo.png">
+  <title>图库管理 - Mochii Admin</title>
+  <script src="../member-system/js/theme.js"></script>
+  <!-- 🔐 权限检查：没登录或没有「图库 › 管理」权限会跳回控制台 -->
   <script type="module">import { guard } from "/js/admin-guard.js"; guard("gallery.upload");</script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>上传 - Gallery Admin</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background-color: #0d1117; min-height: 100vh; display: flex;
-            justify-content: center; align-items: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #c9d1d9; padding: 1.5rem;
-        }
-        
-        .card {
-            width: 100%; max-width: 520px; background: #161b22; 
-            border-radius: 1rem; padding: 2.5rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            position: relative;
-        }
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f9; --card: #fff; --soft: #f1f5f9; --soft2: #f8fafc; --line: #e2e8f0; --line2: #cbd5e1;
+      --ink: #0f172a; --text: #333; --muted: #64748b; --faint: #94a3b8; --head: #0f172a;
+      --acc: #0284c7; --acc-d: #0369a1; --acc-bg: #e0f2fe; --acc-line: #7dd3fc;
+      --ok: #16a34a; --ok-bg: #f0fdf4; --bad: #dc2626; --bad-bg: #fef2f2; --warn: #b45309; --warn-bg: #fffbeb;
+      --shadow: rgba(15,23,42,.08);
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0b1120; --card: #131c2e; --soft: #1e293b; --soft2: #172136; --line: #263449; --line2: #3a4a63;
+      --ink: #f1f5f9; --text: #d5dde8; --muted: #94a3b8; --faint: #6b7b93; --head: #070b16;
+      --acc-bg: rgba(14,165,233,.14); --acc-line: rgba(125,211,252,.4);
+      --ok: #86efac; --ok-bg: rgba(22,163,74,.13); --bad: #fca5a5; --bad-bg: rgba(220,38,38,.13); --warn: #fcd34d; --warn-bg: rgba(217,119,6,.12);
+      --shadow: rgba(0,0,0,.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden], .hidden { display: none !important; }
+    html, body { height: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.4; display: flex; flex-direction: column; }
+    header { background: var(--head); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex: none; border-bottom: 1px solid var(--line); }
+    header .brand { font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    header .brand a { color: #cbd5e1; text-decoration: none; font-weight: 400; }
+    .hd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; min-width: 34px; padding: 0 10px; border-radius: 999px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #e2e8f0; cursor: pointer; font-size: .82rem; font-weight: 600; text-decoration: none; font-family: inherit; white-space: nowrap; }
+    .hd-btn:hover { background: rgba(255,255,255,.16); }
+    input, select, button { font-family: inherit; }
+    input[type=text], input[type=email], input[type=password], select {
+      padding: 8px 10px; font-size: .9rem; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); outline: none; }
+    input:focus, select:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(2,132,199,.15); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 12px; border-radius: 8px; font-size: .84rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; white-space: nowrap; }
+    .btn:disabled { opacity: .55; cursor: default; }
+    .btn-primary { background: var(--acc); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--acc-d); }
+    .btn-ghost { background: var(--soft); color: var(--ink); border-color: var(--line2); }
+    .btn-ghost:hover:not(:disabled) { background: var(--line); }
+    .btn-bad { background: var(--bad-bg); color: var(--bad); border-color: rgba(220,38,38,.35); }
+    .btn-sm { padding: 4px 9px; font-size: .76rem; }
+    .tag { display: inline-flex; align-items: center; gap: 3px; font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--soft); color: var(--muted); white-space: nowrap; }
+    .tag-acc { background: var(--acc-bg); color: var(--acc); }
+    .tag-warn { background: var(--warn-bg); color: var(--warn); }
+    .muted { color: var(--muted); }
+    .msg { font-size: .84rem; min-height: 1em; }
+    .msg.ok { color: var(--ok); } .msg.err { color: var(--bad); }
 
-        h2 { color: #ffffff; margin-bottom: 2rem; font-weight: 500; font-size: 1.4rem; letter-spacing: 0.5px; }
-        
-        .form-group { margin-bottom: 1.5rem; }
-        label { display: block; color: #8b949e; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 500; }
-        
-        input[type="email"], input[type="password"], select {
-            width: 100%; padding: 0.8rem 1rem; border-radius: 0.5rem;
-            background: #0d1117; color: #ffffff; border: 1px solid #30363d;
-            font-size: 0.95rem; outline: none; transition: border-color 0.2s;
-        }
-        input:focus, select:focus { border-color: #58a6ff; }
+    /* ===== 图库登录 ===== */
+    .gate { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .gate-card { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px; box-shadow: 0 12px 30px var(--shadow); display: grid; gap: 10px; }
+    .gate-card h2 { font-size: 1.15rem; color: var(--ink); text-align: center; }
+    .gate-card p { font-size: .84rem; color: var(--muted); text-align: center; line-height: 1.6; }
+    .gate-card label { font-size: .8rem; font-weight: 600; color: var(--ink); display: grid; gap: 4px; }
 
-        .category-row {
-            display: flex; gap: 0.5rem;
-        }
-        .category-row select { flex: 1; }
-        .edit-btn {
-            background: #21262d; color: #c9d1d9; border: 1px solid #30363d;
-            border-radius: 0.5rem; padding: 0 1rem; cursor: pointer;
-            font-size: 1rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-        }
-        .edit-btn:hover { background: #30363d; color: #fff; }
+    /* ===== 模板1：左边相册、右边图片 ===== */
+    .rw-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 3fr) 7fr; gap: 14px; padding: 14px; max-width: 1500px; width: 100%; margin: 0 auto; }
+    .rw-left, .rw-right { min-height: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .rw-toolbar { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .rw-top { display: flex; align-items: center; gap: 8px; }
+    .rw-top h2 { flex: 1; font-size: 1.1rem; color: var(--ink); }
+    .rw-list { flex: 1; overflow-y: auto; padding: 6px; }
+    .al-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+    .al-row:hover { background: var(--soft2); }
+    .al-row.sel { background: var(--acc-bg); border-color: var(--acc-line); }
+    .al-row .cv { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: var(--soft); flex: none; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .al-row .tx { flex: 1; min-width: 0; }
+    .al-row .nm { font-weight: 700; font-size: .9rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .al-row .sb { font-size: .74rem; color: var(--muted); display: flex; gap: 5px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
+    .drag { cursor: grab; color: var(--faint); padding: 4px; font-size: .9rem; user-select: none; touch-action: none; }
+    .left-foot { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 6px; }
+    .left-foot p { font-size: .76rem; color: var(--muted); line-height: 1.5; }
+    .empty { color: var(--muted); font-size: .88rem; padding: 26px 14px; text-align: center; line-height: 1.7; }
 
-        .drop-zone {
-            border: 1px dashed #30363d; border-radius: 0.75rem; padding: 3rem 1rem;
-            text-align: center; color: #8b949e; cursor: pointer; 
-            transition: all 0.2s ease; background: #0d1117;
-            margin-bottom: 1.5rem;
-        }
-        .drop-zone:hover, .drop-zone.dragover { 
-            border-color: #58a6ff; background: rgba(88, 166, 255, 0.05); color: #58a6ff; 
-        }
-        .drop-zone input[type="file"] { display: none; }
+    .rw-empty { margin: auto; text-align: center; color: var(--muted); font-size: .9rem; padding: 30px; line-height: 1.7; }
+    .ed { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+    .ed-head { padding: 12px 16px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .ed-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .ed-row input[type=text] { flex: 1; min-width: 160px; font-weight: 700; font-size: 1rem; }
+    .back { display: none; }
+    .ed-body { flex: 1; overflow-y: auto; padding: 12px 16px 20px; }
+    .drop { display: block; line-height: 1.7; border: 2px dashed var(--line2); border-radius: 12px; padding: 16px; text-align: center; color: var(--muted); font-size: .86rem; cursor: pointer; background: var(--soft2); transition: all .15s; }
+    .drop:hover, .drop.over { border-color: var(--acc); background: var(--acc-bg); color: var(--acc); }
+    .drop b { color: var(--ink); }
+    .queue { display: grid; gap: 4px; margin-top: 8px; }
+    .q-item { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
+    .q-item .bar { flex: 1; height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+    .q-item .bar i { display: block; height: 100%; width: 0; background: var(--acc); transition: width .2s; }
+    .q-item.done .bar i { background: var(--ok); }
+    .q-item.err { color: var(--bad); }
+    .q-item .nm { width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 14px 0 10px; font-size: .82rem; }
+    .tools .count { color: var(--muted); margin-right: auto; }
+    .multibar { position: sticky; top: -12px; z-index: 3; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 10px; border-radius: 10px;
+      background: var(--acc-bg); border: 1px solid var(--acc-line); margin-bottom: 10px; font-size: .82rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .ph { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--soft2); display: flex; flex-direction: column; }
+    .ph .im { position: relative; aspect-ratio: 1; background: var(--soft); cursor: grab; }
+    .ph .im img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+    .ph.off .im img { opacity: .35; filter: grayscale(.6); }
+    .ph .badges { position: absolute; top: 6px; left: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+    .ph .badges .tag { background: rgba(15,23,42,.75); color: #fff; }
+    .ph .chk { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; accent-color: var(--acc); }
+    .ph .cap { font-size: .76rem; color: var(--text); padding: 5px 7px 0; min-height: 1.6em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ph .cap.none { color: var(--faint); }
+    .ph .acts { display: flex; justify-content: space-between; padding: 4px 4px 6px; }
+    .ph .acts button { flex: 1; background: none; border: 0; cursor: pointer; font-size: .95rem; padding: 4px 0; border-radius: 6px; color: var(--muted); }
+    .ph .acts button:hover { background: var(--soft); }
+    .grid.multi .ph .im { cursor: pointer; }
+    .grid.multi .ph.picked { outline: 3px solid var(--acc); outline-offset: -3px; }
+    .sortable-ghost { opacity: .35; }
+    .tip { font-size: .76rem; color: var(--muted); margin-top: 12px; line-height: 1.6; }
+    .busy { position: fixed; inset: 0; z-index: 90; background: rgba(15,23,42,.55); display: flex; align-items: center; justify-content: center; color: #fff; font-size: .95rem; font-weight: 700; padding: 20px; text-align: center; }
 
-        .btn {
-            width: 100%; padding: 0.8rem; border-radius: 0.5rem; 
-            font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-        .btn-primary { background: #238636; color: white; border-color: rgba(240,246,252,0.1); }
-        .btn-primary:hover:not(:disabled) { background: #2ea043; }
-        .btn-primary:disabled { background: #21262d; color: #8b949e; cursor: not-allowed; border-color: transparent; }
-        
-        .status-msg { margin-top: 1rem; text-align: center; font-size: 0.85rem; color: #8b949e; }
-        .status-msg.success { color: #3fb950; }
-        .status-msg.error { color: #f85149; }
-
-        .logout-btn { 
-            position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; 
-            border: none; color: #8b949e; cursor: pointer; font-size: 0.85rem; 
-        }
-        .logout-btn:hover { color: #f85149; }
-
-        .progress-bar { width: 100%; height: 6px; background: #0d1117; border-radius: 3px; margin: 1.5rem 0; overflow: hidden; display: none; border: 1px solid #30363d; }
-        .progress-fill { height: 100%; width: 0%; background: #58a6ff; transition: width 0.2s; }
-    </style>
+    @media (max-width: 899px) {
+      .rw-layout { grid-template-columns: 1fr; padding: 10px; }
+      .rw-right { display: none; }
+      body.editing .rw-left { display: none; }
+      body.editing .rw-right { display: flex; }
+      .back { display: inline-flex; }
+      .grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+      header .hd-btn .tx { display: none; }
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <div class="brand"><a href="../">Mochiishop/admin</a> › 🖼️ 图库管理</div>
+    <a class="hd-btn" href="viewer.html" target="_blank">👁️<span class="tx"> 打开前台</span></a>
+    <button class="hd-btn" id="galOut" hidden title="登出图库账号">⎋<span class="tx"> 登出图库</span></button>
+    <button class="hd-btn" id="themeBtn" title="切换白色 / 暗黑模式">🌙</button>
+  </header>
 
-    <div class="card" id="loginSection">
-        <h2>Admin Login</h2>
-        <div class="form-group">
-            <label>邮箱</label>
-            <input type="email" id="emailInput" placeholder="admin@example.com">
+  <!-- 🔑 图库账号登录（my-gallery 项目，一律 mail@themochiishop.com） -->
+  <div class="gate" id="gate" hidden>
+    <form class="gate-card" id="loginForm">
+      <h2>🖼️ 登录图库</h2>
+      <p>图库用自己的账号（跟控制台的 Google 登录分开）。这台设备登录一次就会记住。</p>
+      <label>Email <input type="email" id="lEmail" autocomplete="username"></label>
+      <label>密码 <input type="password" id="lPass" autocomplete="current-password"></label>
+      <button class="btn btn-primary" type="submit" id="lBtn">登录</button>
+      <p class="msg err" id="lMsg"></p>
+    </form>
+  </div>
+
+  <div class="rw-layout" id="main" hidden>
+    <!-- 👈 相册 -->
+    <aside class="rw-left">
+      <div class="rw-toolbar">
+        <div class="rw-top">
+          <h2>相册</h2>
+          <button class="btn btn-primary" id="newAlbum">＋ 新增相册</button>
         </div>
-        <div class="form-group">
-            <label>密码</label>
-            <input type="password" id="passwordInput" placeholder="••••••••">
+      </div>
+      <div class="rw-list" id="albumList"><p class="empty">载入中…</p></div>
+      <div class="left-foot" id="migrateBox" hidden>
+        <p>📦 旧的 5 个目录还没整理。按一次，会变成 5 本相册，前台才看得到这些图片。</p>
+        <button class="btn btn-ghost" id="migrateBtn">📦 整理旧图片</button>
+      </div>
+    </aside>
+
+    <!-- 👉 这本相册 -->
+    <section class="rw-right">
+      <div class="rw-empty" id="emptyPane">
+        <div style="font-size:2rem">👈</div>
+        选择左边的相册，<br>或按「＋ 新增相册」。
+      </div>
+      <div class="ed hidden" id="ed">
+        <div class="ed-head">
+          <div class="ed-row">
+            <button class="btn btn-ghost back" id="backBtn">←</button>
+            <input type="text" id="aName" maxlength="40" placeholder="相册名称">
+            <select id="aVis"></select>
+            <button class="btn btn-bad btn-sm" id="aDel">🗑 删除相册</button>
+          </div>
+          <div class="muted" style="font-size:.76rem" id="visHint"></div>
         </div>
-        <button class="btn btn-primary" id="loginBtn">登录系统</button>
-        <div class="status-msg" id="loginMsg"></div>
-    </div>
+        <div class="ed-body">
+          <label class="drop" id="drop">
+            <input type="file" id="fileIn" accept="image/*" multiple hidden>
+            📤 <b>拖图片进来</b>，或点这里选图片（可以一次多张）<br>
+            <span style="font-size:.76rem">会自动压缩成直播用的大小（长边 1600 像素），新上传的放在最前面</span>
+          </label>
+          <div class="queue" id="queue"></div>
 
-    <div class="card" id="uploadSection" style="display: none;">
-        <button class="logout-btn" id="logoutBtn">退出</button>
-        <h2>上传资源</h2>
-
-        <div class="form-group">
-            <label>目标目录</label>
-            <div class="category-row">
-                <select id="categorySelect"></select>
-                <button class="edit-btn" id="editCategoryBtn" title="修改目录名称">✎</button>
-            </div>
+          <div class="tools">
+            <span class="count" id="count"></span>
+            <button class="btn btn-ghost btn-sm" id="multiBtn">☑️ 多选</button>
+          </div>
+          <div class="multibar" id="multiBar" hidden>
+            <b id="pickN">已选 0 张</b>
+            <button class="btn btn-ghost btn-sm" id="pickAll">全选</button>
+            <button class="btn btn-ghost btn-sm" data-bulk="hide">🙈 隐藏</button>
+            <button class="btn btn-ghost btn-sm" data-bulk="show">👁 显示</button>
+            <select id="moveTo" style="padding:4px 8px;font-size:.78rem"></select>
+            <button class="btn btn-ghost btn-sm" data-bulk="move">移动</button>
+            <button class="btn btn-bad btn-sm" data-bulk="del">🗑 删除</button>
+            <button class="btn btn-ghost btn-sm" id="multiDone" style="margin-left:auto">完成</button>
+          </div>
+          <div class="grid" id="grid"></div>
+          <p class="tip">拖动图片可以调整前台的播放顺序。⭐ 设为封面 · 🔄 更换图片（位置不变）· 🙈 隐藏（前台看不到，不会删除）· ✏️ 说明文字（前台显示在图片下方）· 🗑 删除</p>
         </div>
+      </div>
+    </section>
+  </div>
 
-        <div class="drop-zone" id="dropZone">
-            <input type="file" id="fileInput" accept="image/*" multiple>
-            <p>点击选择，或将文件拖拽至此</p>
-            <p style="font-size:0.75rem; margin-top:0.5rem; opacity:0.5;">支持多选，不限大小</p>
-        </div>
+  <input type="file" id="replaceIn" accept="image/*" hidden>
+  <div class="busy" id="busy" hidden></div>
 
-        <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-        <button class="btn btn-primary" id="uploadBtn" disabled>开始上传</button>
-        <div class="status-msg" id="statusMsg"></div>
-    </div>
+  <script type="module">
+    import { gauth, gdb, gst, GAL_EMAIL, BIG, THUMB, VIS, esc, byOrder, compress } from "./gal.js";
+    import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import {
+      collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import {
+      ref, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject, listAll
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getStorage, ref, uploadBytesResumable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    const $ = id => document.getElementById(id);
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBCkb5eDLElnQZ8Pt3Ud5euOmdkCo4QxqM",
-            authDomain: "my-gallery-43e8a.firebaseapp.com",
-            projectId: "my-gallery-43e8a",
-            storageBucket: "my-gallery-43e8a.firebasestorage.app",
-            messagingSenderId: "616009345293",
-            appId: "1:616009345293:web:a61335e41cd7158014a844",
-            measurementId: "G-47Q10H9FM3"
-        };
+    // ---------- 🌙 白色 / 暗黑模式（和控制台共用） ----------
+    const paintTheme = () => { $("themeBtn").textContent = document.documentElement.getAttribute("data-theme") === "dark" ? "☀️" : "🌙"; };
+    paintTheme();
+    $("themeBtn").onclick = () => {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("msAdminTheme", next); } catch (e) {}
+      paintTheme();
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const storage = getStorage(app);
-        const auth = getAuth(app);
-        const db = getFirestore(app); // 初始化 Firestore
+    let albums = [], photos = [], cur = null, multi = false, picked = new Set();
+    let migrated = true, unsubs = [];
+    const busy = t => { $("busy").hidden = !t; $("busy").textContent = t || ""; };
+    const albumPhotos = id => photos.filter(p => p.album === id).sort(byOrder);
+    const thumbOf = p => p.thumb || p.url;
 
-        const loginSection = document.getElementById('loginSection');
-        const uploadSection = document.getElementById('uploadSection');
-        const loginBtn = document.getElementById('loginBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const loginMsg = document.getElementById('loginMsg');
-        
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const categorySelect = document.getElementById('categorySelect');
-        const editCategoryBtn = document.getElementById('editCategoryBtn');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        const statusMsg = document.getElementById('statusMsg');
+    // ---------- 🔑 图库登录 ----------
+    $("lEmail").value = GAL_EMAIL;
+    $("loginForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      $("lBtn").disabled = true; $("lMsg").textContent = "";
+      try { await signInWithEmailAndPassword(gauth, $("lEmail").value.trim(), $("lPass").value); }
+      catch (err) {
+        $("lMsg").textContent = /invalid|wrong|user-not-found/.test(err.code || "") ? "Email 或密码不对" : "登录失败：" + (err.code || err.message);
+      } finally { $("lBtn").disabled = false; }
+    });
+    $("galOut").onclick = () => { if (confirm("登出图库账号？")) signOut(gauth); };
 
-        let selectedFiles = [];
-        let categories = {}; // 存放从云端抓取的目录名字
+    onAuthStateChanged(gauth, u => {
+      unsubs.forEach(f => f()); unsubs = [];
+      const ok = !!u && String(u.email || "").toLowerCase() === GAL_EMAIL;
+      $("gate").hidden = ok; $("main").hidden = !ok; $("galOut").hidden = !u;
+      if (u && !ok) $("lMsg").textContent = `登录的是 ${u.email}，图库只能用 ${GAL_EMAIL}`;
+      if (!ok) return;
+      start();
+    });
 
-        // ==========================================
-        // 1. 目录名称管理 (从 Firebase 数据库读写)
-        // ==========================================
-        const defaultCategories = { "1": "目录 01", "2": "目录 02", "3": "目录 03", "4": "目录 04", "5": "目录 05" };
+    // ---------- 读取（即时更新） ----------
+    function start() {
+      unsubs.push(onSnapshot(collection(gdb, "albums"), s => {
+        albums = s.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder);
+        if (cur && !albums.some(a => a.id === cur)) closeEd();
+        render();
+      }, e => { $("albumList").innerHTML = `<p class="empty">读取失败：${esc(e.message)}<br>请确认图库的 Firestore 规则。</p>`; }));
+      unsubs.push(onSnapshot(collection(gdb, "photos"), s => {
+        photos = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+      }, e => console.warn("photos", e)));
+      getDoc(doc(gdb, "settings", "galleryV2")).then(s => { migrated = s.exists(); $("migrateBox").hidden = migrated; }).catch(() => {});
+    }
 
-        // 从云端抓取目录名字
-        async function fetchCategoriesFromCloud() {
-            try {
-                const docRef = doc(db, "settings", "gallery_categories");
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    categories = docSnap.data();
-                } else {
-                    // 如果云端还没数据，就先用默认的，并上传一次到云端
-                    categories = { ...defaultCategories };
-                    await setDoc(docRef, categories);
-                }
-            } catch (error) {
-                console.error("获取目录失败:", error);
-                categories = { ...defaultCategories }; // 失败则用默认兜底
-            }
-            renderCategoryOptions();
+    // ---------- 👈 相册列表 ----------
+    let albumSortable = null;
+    function render() {
+      $("albumList").innerHTML = albums.length ? albums.map(a => {
+        const list = albumPhotos(a.id), shown = list.filter(p => !p.hidden).length;
+        const cover = list.find(p => p.id === a.cover) || list[0];
+        const v = VIS[a.vis] || VIS.staff;
+        return `<div class="al-row${a.id === cur ? " sel" : ""}" data-id="${esc(a.id)}">
+          <span class="drag" title="拖动排序">⠿</span>
+          ${cover ? `<img class="cv" src="${esc(thumbOf(cover))}" alt="" loading="lazy">` : '<span class="cv">🖼️</span>'}
+          <div class="tx"><div class="nm">${esc(a.name || "未命名相册")}</div>
+            <div class="sb"><span class="tag">${v.icon} ${v.label}</span>${list.length} 张${shown < list.length ? ` · ${list.length - shown} 张隐藏` : ""}</div></div>
+        </div>`;
+      }).join("") : `<p class="empty">还没有相册。<br>按「＋ 新增相册」${migrated ? "" : "，或按下面的「📦 整理旧图片」"}。</p>`;
+      if (window.Sortable && !albumSortable) {
+        albumSortable = Sortable.create($("albumList"), {
+          handle: ".drag", animation: 150, ghostClass: "sortable-ghost",
+          onEnd: () => saveOrder("albums", [...$("albumList").querySelectorAll(".al-row")].map(r => r.dataset.id)),
+        });
+      }
+      renderEd();
+    }
+    $("albumList").addEventListener("click", e => {
+      const row = e.target.closest(".al-row");
+      if (!row || e.target.closest(".drag")) return;
+      openEd(row.dataset.id);
+    });
+
+    async function saveOrder(col, ids) {
+      const b = writeBatch(gdb);
+      ids.forEach((id, i) => b.update(doc(gdb, col, id), { order: i }));
+      try { await b.commit(); } catch (e) { alert("保存顺序失败：" + e.message); }
+    }
+
+    $("newAlbum").onclick = async () => {
+      const name = (prompt("新相册的名称（例如：手链相册、盲盒相册）", "") || "").trim();
+      if (!name) return;
+      const order = albums.length ? Math.max(...albums.map(a => a.order ?? 0)) + 1 : 0;
+      try {
+        const r = await addDoc(collection(gdb, "albums"), { name: name.slice(0, 40), vis: "staff", order, cover: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        openEd(r.id);
+      } catch (e) { alert("新增失败：" + e.message); }
+    };
+
+    // ---------- 👉 这本相册 ----------
+    $("aVis").innerHTML = Object.entries(VIS).map(([k, v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join("");
+    function openEd(id) { cur = id; multi = false; picked.clear(); document.body.classList.add("editing"); render(); }
+    function closeEd() { cur = null; document.body.classList.remove("editing"); render(); }
+    $("backBtn").onclick = closeEd;
+
+    let gridSortable = null, lastHeadId = null;
+    function renderEd() {
+      const a = albums.find(x => x.id === cur);
+      $("ed").classList.toggle("hidden", !a);
+      $("emptyPane").classList.toggle("hidden", !!a);
+      if (!a) return;
+      // 正在打字时不要盖掉
+      if (lastHeadId !== a.id || document.activeElement !== $("aName")) $("aName").value = a.name || "";
+      $("aVis").value = a.vis || "staff";
+      $("visHint").textContent = (VIS[a.vis] || VIS.staff).hint;
+      lastHeadId = a.id;
+      const list = albumPhotos(a.id);
+      const hiddenN = list.filter(p => p.hidden).length;
+      $("count").textContent = `${list.length} 张${hiddenN ? `（${hiddenN} 张隐藏）` : ""}`;
+      $("moveTo").innerHTML = '<option value="">移动到…</option>' + albums.filter(x => x.id !== a.id).map(x => `<option value="${esc(x.id)}">${esc(x.name || "未命名")}</option>`).join("");
+      $("multiBar").hidden = !multi;
+      $("multiBtn").hidden = multi || !list.length;
+      $("pickN").textContent = `已选 ${picked.size} 张`;
+      $("grid").classList.toggle("multi", multi);
+      const coverId = a.cover || (list[0] && list[0].id);
+      $("grid").innerHTML = list.length ? list.map(p => `
+        <div class="ph${p.hidden ? " off" : ""}${picked.has(p.id) ? " picked" : ""}" data-id="${esc(p.id)}">
+          <div class="im">
+            <img src="${esc(thumbOf(p))}" alt="" loading="lazy">
+            <div class="badges">${p.id === coverId ? '<span class="tag">⭐ 封面</span>' : ""}${p.hidden ? '<span class="tag">🙈 隐藏</span>' : ""}${p.legacy ? '<span class="tag" title="旧图片还没压缩：按 🔄 重新上传原图，前台会更快">旧图</span>' : ""}</div>
+            ${multi ? `<input type="checkbox" class="chk" ${picked.has(p.id) ? "checked" : ""}>` : ""}
+          </div>
+          <div class="cap${p.caption ? "" : " none"}">${esc(p.caption || "（没有说明）")}</div>
+          ${multi ? "" : `<div class="acts">
+            <button data-act="cover" title="设为封面">⭐</button>
+            <button data-act="replace" title="更换图片">🔄</button>
+            <button data-act="hide" title="${p.hidden ? "显示" : "隐藏"}">${p.hidden ? "👁" : "🙈"}</button>
+            <button data-act="cap" title="说明文字">✏️</button>
+            <button data-act="del" title="删除">🗑</button>
+          </div>`}
+        </div>`).join("") : '<p class="empty" style="grid-column:1/-1">这本相册还没有图片，把图片拖到上面就可以上传。</p>';
+      if (window.Sortable) {
+        if (gridSortable) gridSortable.destroy();
+        gridSortable = multi || !list.length ? null : Sortable.create($("grid"), {
+          animation: 150, ghostClass: "sortable-ghost", filter: ".acts", preventOnFilter: false, delay: 150, delayOnTouchOnly: true,
+          onEnd: () => saveOrder("photos", [...$("grid").querySelectorAll(".ph")].map(r => r.dataset.id)),
+        });
+      }
+    }
+
+    // 相册名称、谁能看：改了马上保存
+    $("aName").addEventListener("change", async () => {
+      const name = $("aName").value.trim();
+      if (!name) { $("aName").value = (albums.find(a => a.id === cur) || {}).name || ""; return; }
+      try { await updateDoc(doc(gdb, "albums", cur), { name: name.slice(0, 40), updatedAt: serverTimestamp() }); } catch (e) { alert("保存失败：" + e.message); }
+    });
+    $("aVis").addEventListener("change", async () => {
+      try { await updateDoc(doc(gdb, "albums", cur), { vis: $("aVis").value, updatedAt: serverTimestamp() }); } catch (e) { alert("保存失败：" + e.message); }
+    });
+    $("aDel").onclick = async () => {
+      const a = albums.find(x => x.id === cur);
+      if (!a) return;
+      const list = albumPhotos(a.id);
+      if (list.length) {
+        const typed = prompt(`删除相册「${a.name}」和里面的 ${list.length} 张图片？删除后无法复原。\n只想留图片的话，先用「多选 → 移动」把图片搬走。\n\n请输入相册名称确认：`, "");
+        if (typed === null) return;
+        if (typed.trim() !== String(a.name || "").trim()) { alert("名称不对，没有删除。"); return; }
+      } else if (!confirm(`删除空相册「${a.name}」？`)) return;
+      busy("删除中…");
+      try {
+        for (const p of list) await removePhoto(p);
+        await deleteDoc(doc(gdb, "albums", a.id));
+        closeEd();
+      } catch (e) { alert("删除失败：" + e.message); }
+      finally { busy(""); }
+    };
+
+    // ---------- 📤 上传 ----------
+    const META = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
+    function putFile(path, blob, onPct) {
+      return new Promise((resolve, reject) => {
+        const t = uploadBytesResumable(ref(gst, path), blob, META);
+        t.on("state_changed", s => onPct && onPct(s.bytesTransferred / (s.totalBytes || 1)), reject, resolve);
+      });
+    }
+    // 压缩、上传两个版本，回传要写进 photos 的栏位
+    async function uploadImage(id, file, onPct) {
+      const big = await compress(file, BIG, 0.85);
+      const th = await compress(file, THUMB, 0.8);
+      const path = `p/${id}.jpg`, thumbPath = `p/${id}_t.jpg`;
+      await putFile(path, big.blob, x => onPct && onPct(0.1 + x * 0.8));
+      await uploadBytes(ref(gst, thumbPath), th.blob, META);
+      const [url, thumb] = await Promise.all([getDownloadURL(ref(gst, path)), getDownloadURL(ref(gst, thumbPath))]);
+      onPct && onPct(1);
+      return { url, thumb, path, thumbPath, w: big.w, h: big.h, legacy: false };
+    }
+    async function delObj(path) {
+      if (!path) return;
+      try { await deleteObject(ref(gst, path)); } catch (e) { if (e.code !== "storage/object-not-found") throw e; }
+    }
+    async function removePhoto(p) {
+      await delObj(p.path);
+      if (p.thumbPath && p.thumbPath !== p.path) await delObj(p.thumbPath);
+      await deleteDoc(doc(gdb, "photos", p.id));
+    }
+
+    async function uploadFiles(files) {
+      files = [...files].filter(f => f.type.startsWith("image/") || /\.(heic|heif)$/i.test(f.name));
+      if (!files.length || !cur) return;
+      const album = cur;
+      const list = albumPhotos(album);
+      const base = (list.length ? Math.min(...list.map(p => p.order ?? 0)) : 0) - files.length;   // 新的放最前面
+      const rows = files.map(f => {
+        const el = document.createElement("div");
+        el.className = "q-item";
+        el.innerHTML = `<span class="nm">${esc(f.name)}</span><span class="bar"><i></i></span><span class="st">等待中</span>`;
+        $("queue").appendChild(el);
+        return el;
+      });
+      for (let i = 0; i < files.length; i++) {
+        const el = rows[i], st = el.querySelector(".st"), bar = el.querySelector("i");
+        try {
+          st.textContent = "压缩中";
+          const id = doc(collection(gdb, "photos")).id;
+          const f = await uploadImage(id, files[i], x => { bar.style.width = Math.round(x * 100) + "%"; st.textContent = Math.round(x * 100) + "%"; });
+          await setDoc(doc(gdb, "photos", id), { album, order: base + i, caption: "", hidden: false, ...f, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+          el.classList.add("done"); st.textContent = "✓";
+        } catch (e) {
+          el.classList.add("err"); st.textContent = "失败：" + (e.code || e.message);
         }
+      }
+      setTimeout(() => rows.forEach(r => { if (r.classList.contains("done")) r.remove(); }), 2500);
+    }
+    $("fileIn").addEventListener("change", e => { uploadFiles(e.target.files); e.target.value = ""; });
+    const drop = $("drop");
+    ["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+    drop.addEventListener("drop", e => uploadFiles(e.dataTransfer.files));
 
-        function renderCategoryOptions() {
-            categorySelect.innerHTML = '';
-            for (const [key, name] of Object.entries(categories)) {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = name;
-                categorySelect.appendChild(option);
-            }
+    // ---------- 每张图片的按钮 ----------
+    let replacing = null;
+    $("grid").addEventListener("click", async e => {
+      const card = e.target.closest(".ph");
+      if (!card) return;
+      const p = photos.find(x => x.id === card.dataset.id);
+      if (!p) return;
+      if (multi) {
+        picked.has(p.id) ? picked.delete(p.id) : picked.add(p.id);
+        renderEd();
+        return;
+      }
+      const act = (e.target.closest("[data-act]") || {}).dataset?.act;
+      if (!act) return;
+      try {
+        if (act === "cover") await updateDoc(doc(gdb, "albums", p.album), { cover: p.id, updatedAt: serverTimestamp() });
+        if (act === "hide") await updateDoc(doc(gdb, "photos", p.id), { hidden: !p.hidden, updatedAt: serverTimestamp() });
+        if (act === "cap") {
+          const v = prompt("说明文字（前台显示在图片下方，例如款式名称或价格；留空 = 不显示）", p.caption || "");
+          if (v !== null) await updateDoc(doc(gdb, "photos", p.id), { caption: v.trim().slice(0, 80), updatedAt: serverTimestamp() });
         }
-
-        // 修改目录名称，并保存到云端
-        editCategoryBtn.addEventListener('click', async () => {
-            const currentKey = categorySelect.value;
-            const oldName = categories[currentKey];
-            
-            const newName = prompt(`修改目录 [${currentKey}] 的名称：`, oldName);
-            
-            if (newName !== null && newName.trim() !== "") {
-                categories[currentKey] = newName.trim();
-                
-                // 保存到 Firestore
-                try {
-                    const docRef = doc(db, "settings", "gallery_categories");
-                    await setDoc(docRef, categories);
-                    
-                    renderCategoryOptions();
-                    categorySelect.value = currentKey; 
-                    statusMsg.textContent = "目录名称已保存到云端！";
-                    statusMsg.className = "status-msg success";
-                    setTimeout(() => { statusMsg.textContent = ""; }, 2000);
-                } catch (error) {
-                    statusMsg.textContent = "保存失败，请确保已登录";
-                    statusMsg.className = "status-msg error";
-                }
-            }
-        });
-
-        // ==========================================
-        // 2. 认证与上传逻辑
-        // ==========================================
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                loginSection.style.display = 'none';
-                uploadSection.style.display = 'block';
-                fetchCategoriesFromCloud(); // 登录成功后拉取云端名称
-            } else {
-                loginSection.style.display = 'block';
-                uploadSection.style.display = 'none';
-            }
-        });
-
-        loginBtn.addEventListener('click', async () => {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            loginMsg.textContent = "验证中...";
-            loginMsg.className = "status-msg";
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                loginMsg.textContent = "认证失败，请检查账号密码";
-                loginMsg.className = "status-msg error";
-            }
-        });
-
-        logoutBtn.addEventListener('click', () => signOut(auth));
-
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            handleFiles(e.dataTransfer.files);
-        });
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-        function handleFiles(files) {
-            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-            if (imageFiles.length === 0) return;
-            selectedFiles = imageFiles;
-            dropZone.innerHTML = `<p style="color:#58a6ff; font-weight:500;">已选择 ${selectedFiles.length} 张图片</p><p style="font-size:0.75rem; margin-top:0.5rem;">点击重新选择</p>`;
-            uploadBtn.disabled = false;
-            statusMsg.textContent = "";
+        if (act === "replace") { replacing = p; $("replaceIn").click(); }
+        if (act === "del") {
+          if (!confirm("删除这张图片？删除后无法复原。\n（只是暂时不想给观众看的话，用 🙈 隐藏就好）")) return;
+          busy("删除中…");
+          await removePhoto(p);
+          const a = albums.find(x => x.id === p.album);
+          if (a && a.cover === p.id) await updateDoc(doc(gdb, "albums", a.id), { cover: null });
         }
+      } catch (err) { alert("失败：" + err.message); }
+      finally { busy(""); }
+    });
 
-        uploadBtn.addEventListener('click', async () => {
-            if (selectedFiles.length === 0) return;
-            const category = categorySelect.value;
-            const categoryName = categories[category];
+    // 🔄 更换：同一个位置换新图（旧图片的文件会删掉）
+    $("replaceIn").addEventListener("change", async e => {
+      const file = e.target.files[0], p = replacing;
+      e.target.value = ""; replacing = null;
+      if (!file || !p) return;
+      busy("上传新图片中…");
+      try {
+        const f = await uploadImage(p.id, file, x => busy(`上传新图片中… ${Math.round(x * 100)}%`));
+        if (p.path && p.path !== f.path) await delObj(p.path);                       // 旧图（原本的目录里）
+        if (p.thumbPath && ![f.path, f.thumbPath, p.path].includes(p.thumbPath)) await delObj(p.thumbPath);
+        await updateDoc(doc(gdb, "photos", p.id), { ...f, updatedAt: serverTimestamp() });
+      } catch (err) { alert("更换失败：" + err.message); }
+      finally { busy(""); }
+    });
 
-            uploadBtn.disabled = true;
-            progressBar.style.display = 'block';
-            progressFill.style.width = '0%';
-            statusMsg.textContent = "正在传输...";
-            statusMsg.className = "status-msg";
+    // ---------- ☑️ 多选 ----------
+    $("multiBtn").onclick = () => { multi = true; picked.clear(); renderEd(); };
+    $("multiDone").onclick = () => { multi = false; picked.clear(); renderEd(); };
+    $("pickAll").onclick = () => {
+      const ids = albumPhotos(cur).map(p => p.id);
+      picked = picked.size === ids.length ? new Set() : new Set(ids);
+      renderEd();
+    };
+    $("multiBar").addEventListener("click", async e => {
+      const act = (e.target.closest("[data-bulk]") || {}).dataset?.bulk;
+      if (!act) return;
+      const list = albumPhotos(cur).filter(p => picked.has(p.id));
+      if (!list.length) { alert("请先点选图片"); return; }
+      try {
+        if (act === "hide" || act === "show") {
+          const b = writeBatch(gdb);
+          list.forEach(p => b.update(doc(gdb, "photos", p.id), { hidden: act === "hide", updatedAt: serverTimestamp() }));
+          await b.commit();
+        }
+        if (act === "move") {
+          const to = $("moveTo").value;
+          if (!to) { alert("请先选要移动到哪本相册"); return; }
+          const target = albumPhotos(to);
+          let next = target.length ? Math.max(...target.map(p => p.order ?? 0)) + 1 : 0;   // 放到那本相册的最后面
+          const b = writeBatch(gdb);
+          list.forEach(p => b.update(doc(gdb, "photos", p.id), { album: to, order: next++, updatedAt: serverTimestamp() }));
+          const a = albums.find(x => x.id === cur);
+          if (a && list.some(p => p.id === a.cover)) b.update(doc(gdb, "albums", a.id), { cover: null });
+          await b.commit();
+        }
+        if (act === "del") {
+          if (!confirm(`删除选中的 ${list.length} 张图片？删除后无法复原。`)) return;
+          busy("删除中…");
+          for (const p of list) await removePhoto(p);
+        }
+        picked.clear(); multi = false; renderEd();
+      } catch (err) { alert("失败：" + err.message); }
+      finally { busy(""); }
+    });
 
-            let uploadedCount = 0;
-            let totalFiles = selectedFiles.length;
-
-            for (const file of selectedFiles) {
-                try {
-                    const fileName = `${Date.now()}_${file.name}`;
-                    const storageRef = ref(storage, `${category}/${fileName}`);
-                    const uploadTask = uploadBytesResumable(storageRef, file);
-
-                    await new Promise((resolve, reject) => {
-                        uploadTask.on('state_changed', 
-                            (snapshot) => {
-                                const currentFileProgress = snapshot.bytesTransferred / snapshot.totalBytes;
-                                const overallProgress = ((uploadedCount + currentFileProgress) / totalFiles) * 100;
-                                progressFill.style.width = overallProgress + '%';
-                            }, 
-                            (error) => reject(error), 
-                            () => resolve()
-                        );
-                    });
-                    uploadedCount++;
-                } catch (error) {
-                    statusMsg.textContent = `传输失败: ${error.message}`;
-                    statusMsg.className = "status-msg error";
-                    uploadBtn.disabled = false;
-                    return;
-                }
-            }
-
-            progressFill.style.width = '100%';
-            statusMsg.textContent = `成功传输 ${uploadedCount} 个文件到 [${categoryName}]`;
-            statusMsg.className = "status-msg success";
-            
-            setTimeout(() => {
-                dropZone.innerHTML = `<input type="file" id="fileInput" accept="image/*" multiple><p>点击选择，或将文件拖拽至此</p><p style="font-size:0.75rem; margin-top:0.5rem; opacity:0.5;">支持多选，不限大小</p>`;
-                document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(e.target.files));
-                selectedFiles = [];
-                uploadBtn.disabled = false; // 这里改为 false，因为登录了可以继续传
-                progressBar.style.display = 'none';
-                statusMsg.textContent = "";
-            }, 3000);
-        });
-    </script>
+    // ---------- 📦 整理旧图片（旧的 5 个目录 → 5 本相册；只要按一次） ----------
+    $("migrateBtn").onclick = async () => {
+      if (!confirm("把旧的 5 个目录整理成 5 本相册？\n\n• 图片不会被移动或删除，只是建立相册清单\n• 旧图片还是原来的大小；想让前台更快，之后可以用 🔄 重新上传原图")) return;
+      busy("整理中…");
+      try {
+        let names = { "1": "目录 01", "2": "目录 02", "3": "目录 03", "4": "目录 04", "5": "目录 05" };
+        try { const s = await getDoc(doc(gdb, "settings", "gallery_categories")); if (s.exists()) names = { ...names, ...s.data() }; } catch (e) {}
+        let order = albums.length ? Math.max(...albums.map(a => a.order ?? 0)) + 1 : 0, total = 0;
+        for (const key of Object.keys(names).sort()) {
+          busy(`整理中… ${names[key]}`);
+          const res = await listAll(ref(gst, key));
+          const items = res.items.sort((a, b) => b.name.localeCompare(a.name));   // 跟以前一样：最新的在前面
+          const al = await addDoc(collection(gdb, "albums"), { name: String(names[key]).slice(0, 40), vis: "staff", order: order++, cover: null, legacyKey: key, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+          for (let i = 0; i < items.length; i++) {
+            const url = await getDownloadURL(items[i]);
+            await setDoc(doc(gdb, "photos", doc(collection(gdb, "photos")).id), {
+              album: al.id, order: i, caption: "", hidden: false, url, thumb: url, path: items[i].fullPath, thumbPath: null,
+              legacy: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            });
+            total++;
+          }
+        }
+        await setDoc(doc(gdb, "settings", "galleryV2"), { migratedAt: serverTimestamp(), photos: total });
+        migrated = true; $("migrateBox").hidden = true;
+        alert(`✅ 整理好了：${total} 张图片。`);
+      } catch (e) { alert("整理失败：" + e.message); }
+      finally { busy(""); }
+    };
+  </script>
 </body>
 </html>
