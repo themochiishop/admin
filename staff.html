@@ -213,7 +213,7 @@
     import { PERM_TREE, PRESETS, allPerms, can, countPerms, TOTAL_PERMS, normEmail, OWNER_EMAIL, isOwnerUser } from "./js/admin-guard.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
-      collection, getDocs, getDoc, doc, setDoc, deleteDoc, serverTimestamp
+      collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const $ = id => document.getElementById(id);
@@ -510,7 +510,9 @@
       if (isNew) data.createdAt = serverTimestamp();
       $("saveBtn").disabled = true;
       try {
-        await setDoc(doc(db, "staff", email), data, { merge: !isNew });
+        // 新增用 setDoc；修改用 updateDoc（权限整组换掉，取消勾选的才会真的删掉）
+        if (isNew) await setDoc(doc(db, "staff", email), data);
+        else await updateDoc(doc(db, "staff", email), data);
         const old = staff.find(s => s.id === email) || {};
         let sync = null;
         try { sync = await syncAdmin({ ...old, ...data, id: email }); }
