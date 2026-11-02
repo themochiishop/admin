@@ -687,7 +687,7 @@ function pdfOptions(name) {
   return {
     margin: 0, filename: name,
     image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2.5, useCORS: true, scrollX: 0, scrollY: 0, backgroundColor: "#ffffff", windowWidth: 1000 },
+    html2canvas: { scale: 2.5, useCORS: true, scrollX: 0, scrollY: 0, x: 0, y: 0, backgroundColor: "#ffffff", windowWidth: 750 },
     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     pagebreak: { mode: "avoid-all" },
   };
@@ -707,9 +707,17 @@ async function exportPdf(mode) {
     const name = fileName(t);
     window.scrollTo(0, 0);
     prepareExport(sh);
+    // 复制一份到页面最左上角再生成：PDF 不会因为屏幕上纸张的位置而偏移
+    const stage = document.createElement("div");
+    stage.style.cssText = "position:absolute;left:0;top:0;width:750px;z-index:-1;background:#fff;";
+    const copy = sh.cloneNode(true);
+    copy.removeAttribute("id");
+    $$("[id]", copy).forEach(x => x.removeAttribute("id"));
+    stage.appendChild(copy);
+    document.body.appendChild(stage);
     let blob;
-    try { blob = await html2pdf().set(pdfOptions(name)).from(sh).outputPdf("blob"); }
-    finally { restoreExport(sh); }
+    try { blob = await html2pdf().set(pdfOptions(name)).from(copy).outputPdf("blob"); }
+    finally { stage.remove(); restoreExport(sh); }
     const file = new File([blob], name, { type: "application/pdf" });
     if (mode === "share" && navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title: name }); }
