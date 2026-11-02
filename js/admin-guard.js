@@ -155,9 +155,26 @@ export async function logout() { await signOut(auth); }
 // ---------- 子页面检查：放在每个子页面的 <head> ----------
 //   <script type="module">import { guard } from "/js/admin-guard.js"; guard("wheel");</script>
 // 没登录 → 回控制台登录，登录后自动回来；没有权限 → 回控制台并显示提示
+// 只有店主能用的按钮：加 class="owner-only" 就会对其他人隐藏；
+// 按钮的程式开头加 if (!window.ownerOnly || !window.ownerOnly()) return; 再挡一次
+function ownerOnlySetup() {
+  if (document.getElementById("ownerOnlyCss")) return;
+  const st = document.createElement("style");
+  st.id = "ownerOnlyCss";
+  st.textContent = "html:not(.is-owner) .owner-only { display: none !important; }";
+  document.head.appendChild(st);
+  window.__isOwner = false;
+  window.ownerOnly = () => {
+    if (window.__isOwner === true) return true;
+    alert("🔒 只有店主可以删除。");
+    return false;
+  };
+}
+
 export function guard(key) {
   const root = document.documentElement;
   root.style.visibility = "hidden";
+  ownerOnlySetup();
   let first = true;
   return new Promise(resolve => {
     onAuthStateChanged(auth, async user => {
@@ -170,6 +187,8 @@ export function guard(key) {
       const a = await getAccess(user);
       if (!can(a, key)) { back("denied"); return; }
       first = false;
+      window.__isOwner = !!a.owner;
+      root.classList.toggle("is-owner", !!a.owner);
       root.style.visibility = "";
       resolve(a);
     });
