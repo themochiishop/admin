@@ -523,23 +523,28 @@
       if (IS_TEST && !/^🧪/.test(document.title)) document.title = '🧪 测试 · ' + document.title;
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyTestModeUI); else applyTestModeUI();
-    // ===== 🔐 登录：只有这两个 Google 账号能写入（与 Firebase 规则一致）=====
-    const ALLOWED_ADMIN_EMAILS = ['xiaomah09@gmail.com', 'mail@themochiishop.com', 'ivychongsingyee@gmail.com'];
+    // ===== 🔐 登录：店主 + 「👥 管理员」页面勾了「抽奖控制台」的人（与 Firebase 规则一致）=====
+    // 名单存在 draw_staff/{email，点换成逗号}：{ console, claims }，由控制台的管理员页面同步
+    const DRAW_OWNER_EMAIL = 'mail@themochiishop.com';
+    const drawStaffKey = e => String(e || '').toLowerCase().replace(/\./g, ',');
     let __adminListenersStarted = false;
 
-    function isAllowedAdmin(user) {
-      return !!(user && !user.isAnonymous &&
-        (user.providerData || []).some(p => p && p.providerId === 'google.com') &&
-        ALLOWED_ADMIN_EMAILS.includes(String(user.email || '').toLowerCase()));
+    async function isAllowedAdmin(user) {
+      if (!(user && !user.isAnonymous && (user.providerData || []).some(p => p && p.providerId === 'google.com'))) return false;
+      if (String(user.email || '').toLowerCase() === DRAW_OWNER_EMAIL) return true;
+      try {
+        const v = (await firebase.database().ref('draw_staff/' + drawStaffKey(user.email)).once('value')).val();
+        return !!(v && v.console === true);
+      } catch (e) { return false; }
     }
 
-    firebase.auth().onAuthStateChanged((user) => {
+    firebase.auth().onAuthStateChanged(async (user) => {
       const gate = document.getElementById('loginGate');
       const msg = document.getElementById('loginGateMsg');
       const loginBtn = document.getElementById('loginGateBtn');
       const switchBtn = document.getElementById('loginGateSwitchBtn');
       const badge = document.getElementById('adminUserBadge');
-      if (isAllowedAdmin(user)) {
+      if (await isAllowedAdmin(user)) {
         gate.classList.add('hidden');
         badge.innerText = '👤 ' + user.email + ' · 退出';
         badge.classList.remove('hidden');

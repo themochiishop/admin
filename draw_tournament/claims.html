@@ -76,13 +76,20 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com', 'ivychongsingyee@gmail.com'];
+    // 店主 + 「👥 管理员」页面勾了「领奖追踪」的人（名单在 draw_staff，由管理员页面同步）
+    const DRAW_OWNER_EMAIL = 'mail@themochiishop.com';
+    const drawStaffKey = e => String(e || '').toLowerCase().replace(/\./g, ',');
     const BATCHES = 'draw_private/claimBatches';
     let batches = {}, curId = null, started = false;
 
     const $ = id => document.getElementById(id);
     const esc = x => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const isAllowed = u => !!(u && !u.isAnonymous && (u.providerData || []).some(p => p && p.providerId === 'google.com') && ALLOWED.includes(String(u.email || '').toLowerCase()));
+    async function isAllowed(u) {
+      if (!(u && !u.isAnonymous && (u.providerData || []).some(p => p && p.providerId === 'google.com'))) return false;
+      if (String(u.email || '').toLowerCase() === DRAW_OWNER_EMAIL) return true;
+      try { const v = (await db.ref('draw_staff/' + drawStaffKey(u.email)).once('value')).val(); return !!(v && v.claims === true); }
+      catch (e) { return false; }
+    }
     const platformOf = o => { const c = String(o || '').trim().charAt(0); return c === '5' ? 'T' : c === '2' ? 'S' : ''; };
 
     // 🎫 会员俱乐部「🏆 中奖奖品」的进度（下面的 module 脚本读取后放进 window.clubPrizes：订单号 → { status, id }）
@@ -111,8 +118,8 @@
         alert('❌ 登录失败：' + (e.code || e.message));
       });
     }
-    firebase.auth().onAuthStateChanged(u => {
-      const ok = isAllowed(u);
+    firebase.auth().onAuthStateChanged(async u => {
+      const ok = await isAllowed(u);
       $('gate').classList.toggle('hidden', ok);
       $('gateLogin').classList.toggle('hidden', !!u);
       $('gateSwitch').classList.toggle('hidden', !(u && !ok));
