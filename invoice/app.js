@@ -499,8 +499,19 @@ const PARTY = {
   "inv.bill": { title: "客户资料 · Bill to", list: "customer", listLabel: "客户" },
   "inv.ship": { title: "收货资料 · Ship to", list: "customer", listLabel: "客户", same: true, attn: true },
 };
-const PF = ["name", "regNo", "a1", "a2", "postcode", "city", "state", "attn", "phone", "bank"];
-const UPPER = ["name", "a1", "a2", "city"];
+const PF = ["name", "regNo", "a1", "a2", "postcode", "city", "state", "attn", "phone", "bank", "acct", "acctName"];
+const BANK_FIELDS = ["bank", "acct", "acctName"];
+const UPPER = ["name", "a1", "a2", "city", "acctName"];
+// 马来西亚银行 + 电子钱包（不在名单里的选「其他」自己输入）
+const BANKS = {
+  "银行": ["Maybank", "CIMB Bank", "Public Bank", "RHB Bank", "Hong Leong Bank", "AmBank", "UOB Malaysia",
+    "OCBC Bank", "HSBC Bank", "Standard Chartered", "Bank Islam", "Bank Rakyat", "BSN", "Affin Bank",
+    "Alliance Bank", "Bank Muamalat", "Agrobank", "MBSB Bank", "Al Rajhi Bank", "Citibank"],
+  "数字银行": ["GXBank", "AEON Bank", "Boost Bank", "KAF Digital Bank", "Ryt Bank"],
+  "电子钱包 / DuitNow": ["Touch 'n Go eWallet", "ShopeePay", "GrabPay", "Boost", "BigPay", "DuitNow (手机号 / IC)"],
+};
+const BANK_LIST = Object.values(BANKS).flat();
+const OTHER = "__other";
 let pm = null;
 
 function setStateOptions(cur) {
@@ -508,9 +519,32 @@ function setStateOptions(cur) {
   $("#pm_state").innerHTML = `<option value="">—</option>` + list.map(s => `<option>${esc(s)}</option>`).join("");
   $("#pm_state").value = cur || "";
 }
+function setBank(name) {
+  $("#pm_bankSel").innerHTML = `<option value="">— 选择 —</option>` +
+    Object.entries(BANKS).map(([g, list]) => `<optgroup label="${esc(g)}">${list.map(b => `<option>${esc(b)}</option>`).join("")}</optgroup>`).join("") +
+    `<option value="${OTHER}">其他（自己输入）</option>`;
+  const known = !name || BANK_LIST.includes(name);
+  $("#pm_bankSel").value = known ? (name || "") : OTHER;
+  $("#pm_bankOther").value = known ? "" : name;
+  $("#pm_bankOther").classList.toggle("hidden", known);
+}
+function readBank() {
+  return $("#pm_bankSel").value === OTHER ? $("#pm_bankOther").value.trim() : $("#pm_bankSel").value;
+}
+$("#pm_bankSel").addEventListener("change", () => {
+  const other = $("#pm_bankSel").value === OTHER;
+  $("#pm_bankOther").classList.toggle("hidden", !other);
+  if (other) $("#pm_bankOther").focus();
+});
 function fillPartyForm(p) {
-  PF.forEach(f => { if (f !== "state") $("#pm_" + f).value = p[f] || ""; });
+  PF.forEach(f => { if (f !== "state" && f !== "bank") $("#pm_" + f).value = p[f] || ""; });
   setStateOptions(p.state || "");
+  setBank(p.bank || "");
+}
+// PO「PAYMENT TO VENDOR」的 To: 那一行，例如 To: TAN SIOW JIE (RHB Bank) 1014 0000 1699 77
+function vendorToLine(p) {
+  const who = p.acctName || p.name || "";
+  return `To: ${who}${p.bank ? ` (${p.bank})` : ""}${p.acct ? ` ${p.acct}` : ""}`.trimEnd();
 }
 function renderPick() {
   const cfg = PARTY[pm.k];
@@ -563,19 +597,21 @@ $("#pmSave").addEventListener("click", async () => {
     const p = {};
     PF.forEach(f => {
       if (f === "attn" && !cfg.attn) return;
-      if (f === "bank" && !cfg.bank) return;
+      if (BANK_FIELDS.includes(f) && !cfg.bank) return;
       if (f === "regNo" && cfg.noReg) return;
-      let v = $("#pm_" + f).value.trim();
+      let v = (f === "bank" ? readBank() : $("#pm_" + f).value).trim();
       if (UPPER.includes(f)) v = v.toUpperCase();
       if (v) p[f] = v;
     });
+    if (cfg.bank && p.name && p.name === COMPANY.name.toUpperCase()) {
+      if (!confirm(`供应商名字是「${p.name}」，和自己的店名一样。\n确定没有填错吗？`)) return;
+    }
     state[t][key] = p;
-    // 供应商有填银行：自动更新 PO 的付款资料 "To:" 那一行
+    // 供应商：用供应商的名字和收款户口，自动更新 PO 付款资料的 "To:" 那一行
     if (cfg.bank && p.name) {
       const lines = state.po.payNote.split("\n");
-      const toLine = `To: ${p.name}${p.bank ? ` (${p.bank})` : ""}`;
       const i = lines.findIndex(l => /^to:/i.test(l.trim()));
-      if (i >= 0) lines[i] = toLine; else lines.push(toLine);
+      if (i >= 0) lines[i] = vendorToLine(p); else lines.push(vendorToLine(p));
       setField("po", "payNote", lines.join("\n"));
       $$("textarea", sheetOf("po")).forEach(autosize);
     }
@@ -583,7 +619,10 @@ $("#pmSave").addEventListener("click", async () => {
       try {
         const old = contacts.find(c => c.kind === cfg.list && c.name === p.name);
         const data = { kind: cfg.list, ...Object.fromEntries(PF.map(f => [f, p[f] || ""])), updatedAt: fb.serverTimestamp() };
-        if (old) { await fb.setDoc(fb.doc(fb.db, "invoiceContacts", old.id), data, { merge: true }); Object.assign(old, p); }
+        if (old) {
+          await fb.setDoc(fb.doc(fb.db, "invoiceContacts", old.id), data, { merge: true });
+          PF.forEach(f => { old[f] = p[f] || ""; });
+        }
         else { const ref = await fb.addDoc(fb.collection(fb.db, "invoiceContacts"), data); contacts.push({ id: ref.id, kind: cfg.list, ...p }); }
       } catch (e) { toast("名单没存到：" + e.message); }
     }

@@ -140,7 +140,7 @@ main { padding: 14px 8px 40px; }
 .sign-r { justify-self: end; width: 200px; }
 .st { font-weight: bold; }
 .sp { height: 64px; }
-.stamp { display: flex; align-items: center; justify-content: center; }
+.stamp { display: flex; align-items: center; justify-content: flex-start; padding-left: 4px; }
 .stamp img { max-width: 140px; max-height: 62px; object-fit: contain; }
 .sl { border-bottom: 1px solid #111; width: 200px; }
 .sm { margin-top: 3px; }
@@ -189,6 +189,10 @@ body.exporting .party:hover { background: none; }
   border-radius: 8px; font-size: 15px; background: #fff; color: var(--ink);
 }
 .fm input:focus, .fm select:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(31,78,121,.15); }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bank-box { border: 1px solid var(--line); background: #f8fafc; border-radius: 10px; padding: 10px 10px 2px; margin-bottom: 10px; }
+.bank-title { font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+.fm #pm_bankOther { margin-top: 6px; }
 .g3 { display: grid; grid-template-columns: 1fr 1.3fr 1.3fr; gap: 8px; }
 .fm .row-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); cursor: pointer; }
 .fm .row-check input { width: auto; margin: 0; }

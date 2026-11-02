@@ -61,7 +61,17 @@
       </div>
       <label id="pmAttnRow">联系人 Attn（选填）<input id="pm_attn" autocomplete="off"></label>
       <label>电话 / WhatsApp<input id="pm_phone" inputmode="tel" autocomplete="off"></label>
-      <label id="pmBankRow">银行和户口（选填，会自动写进付款资料）<input id="pm_bank" placeholder="RHB Bank 1014 0000 1699 77" autocomplete="off"></label>
+      <div id="pmBankRow" class="bank-box">
+        <div class="bank-title">💳 供应商收款户口（选填，会自动写进「PAYMENT TO VENDOR」）</div>
+        <div class="g2">
+          <label>银行 / 电子钱包
+            <select id="pm_bankSel"></select>
+            <input id="pm_bankOther" class="hidden" placeholder="输入银行名称" autocomplete="off">
+          </label>
+          <label>户口号码<input id="pm_acct" inputmode="numeric" placeholder="1014 0000 1699 77" autocomplete="off"></label>
+        </div>
+        <label>户口名字（选填，不填就用供应商名字）<input id="pm_acctName" autocomplete="off"></label>
+      </div>
       <label class="row-check" id="pmKeepRow"><input type="checkbox" id="pmKeep" checked> 保存到名单（下次可以直接选）</label>
     </div>
     <div class="modal-foot">
