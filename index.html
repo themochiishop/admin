@@ -527,7 +527,7 @@
   <script type="module">
     import { auth, db } from "./member-system/js/firebase-config.js";
     import { readyWinners } from "./member-system/js/admin-common.js";
-    import { getAccess, can, recordLogin, googleLogin, logout, permLabel, OWNER_EMAIL } from "./js/admin-guard.js";
+    import { getAccess, can, recordLogin, googleLogin, logout, permLabel, OWNER_EMAIL, firstMemberPage } from "./js/admin-guard.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       doc, getDoc, collection, query, where, onSnapshot
@@ -606,6 +606,13 @@
         any = any || has;
       });
       $("emptyAll").hidden = any;
+      // 🎫 Member Club：按钮去他能用的第一页；「🔔 兑换审核」提醒有兑换或中奖权限才显示
+      const first = firstMemberPage(a);
+      const mBtn = document.querySelector(".card-member .card-btn");
+      if (mBtn && first) mBtn.href = "member-system/" + (first === "index.html" ? "" : first);
+      const ml = $("memberAlertLink");
+      ml.hidden = !(can(a, "member.redeem") || can(a, "member.prizes"));
+      if (!can(a, "member.redeem") && can(a, "member.prizes")) ml.href = "member-system/prizes.html";
     }
 
     function renderUser(user, a) {
@@ -669,6 +676,7 @@
         }, e => console.warn("feed alert", e));
       }
       if (!can(a, "member")) return;
+      const canR = can(a, "member.redeem"), canP = can(a, "member.prizes");
 
       const link = $("memberAlertLink"), count = $("memberAlertCount");
       // 积分兑换：待审核 + 实体奖品待发货（含配送异常）；中奖奖品：会员已领取（待审核）+ 待发货
@@ -686,7 +694,7 @@
         if (c.pShip) parts.push(`中奖奖品待发货 ${c.pShip}`);
         link.title = n ? parts.join(" · ") : "兑换审核（目前没有待处理的要求）";
       }
-      onSnapshot(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])), snap => {
+      if (canR) onSnapshot(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])), snap => {
         const list = snap.docs.map(d => d.data());
         c.rPending = list.filter(r => r.status === "pending").length;
         c.rShip = list.filter(r => r.kind === "gift" && r.status !== "pending").length;
@@ -697,6 +705,7 @@
         window.clubShippedOrders = new Set(snap.docs.map(d => String(d.data().orderNo || "").replace(/\s/g, "").toUpperCase()).filter(Boolean));
         window.dispatchEvent(new Event("club-prizes"));
       }, e => console.warn("prizeWins shipped", e));
+      if (!canP) return;
       onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])), snap => {
         const list = snap.docs.map(d => d.data());
         c.pClaimed = list.filter(p => p.status === "claimed").length;
