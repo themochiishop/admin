@@ -154,8 +154,11 @@
           <label>奖品名称
             <input id="rname" required maxlength="60" placeholder="例如：RM5 优惠券 / Mochii 手链一条">
           </label>
-          <label>说明（会员看得到）
-            <textarea id="rdesc" rows="2" maxlength="200" placeholder="例如：Shopee 店铺优惠券，满 RM30 可用，有效期 30 天"></textarea>
+                   <label>短说明（英文，显示在商城卡片上，最多 2 行）
+            <input id="rshort" maxlength="60" placeholder="e.g. Shopee only · Min. spend RM80">
+          </label>
+          <label>详细说明（英文，会员点开商品后才看到，可以分行）
+            <textarea id="rdesc" rows="5" maxlength="600" placeholder="e.g.&#10;• Enter the code at Shopee checkout&#10;• 1 use per account&#10;• Valid until 31/12/2026"></textarea>
           </label>
           </details>
           <details class="rw-sec" open><summary>🖼️ 图片</summary>
@@ -821,6 +824,7 @@ $("rimageRemove").addEventListener("click", () => {
       $("delBtn").classList.toggle("hidden", !r);   // 只有编辑时才有删除
       $("rname").value = r ? r.name : "";
       $("rdesc").value = r ? (r.description || "") : "";
+            $("rshort").value = r ? (r.shortDesc || "") : "";
       $("rcost").value = r ? r.cost : "";
       $("rtype").value = r ? r.type : "coupon";
       $("rstock").value = r && typeof r.stock === "number" ? r.stock : "";
@@ -913,6 +917,7 @@ showPreview(currentImage);
       const data = {
         name: $("rname").value.trim(),
         description: $("rdesc").value.trim(),
+                shortDesc: $("rshort").value.trim(),
         cost: parseInt($("rcost").value, 10),
         type: $("rtype").value,
         stock: stockText === "" ? null : parseInt(stockText, 10),
