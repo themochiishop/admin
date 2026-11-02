@@ -418,8 +418,8 @@ function showPreview(url) {
 $("rimage").addEventListener("change", async () => {
   const file = $("rimage").files[0];
   if (!file) return;
-  let url = await compressImage(file, 480);
-  if (url.length > 300000) url = await compressImage(file, 320); // 太大再缩一次
+   let url = await compressImage(file, 720);
+  if (url.length > 300000) url = await compressImage(file, 480); // 太大再缩一次
   currentImage = url;
   showPreview(url);
 });
