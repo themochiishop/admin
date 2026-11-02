@@ -32,6 +32,20 @@
     .prize-alert:hover { background: var(--rose-bg2); }
     .prize-alert b { font-size: .95rem; }
     .prize-alert .go { margin-left: auto; font-weight: 700; white-space: nowrap; }
+    /* 📦 寄送方式 */
+    .dlv-box { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 8px; background: var(--soft2); }
+    .dlv-box .mode-row { margin-top: 0; }
+    .dlv-sep { margin-top: 8px; display: grid; gap: 6px; }
+    .dlv-opt { display: flex !important; gap: 8px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 0 !important; background: var(--card); cursor: pointer; font-size: .86rem; }
+    .dlv-opt input { width: auto; margin: 3px 0 0; }
+    .dlv-opt.off { opacity: .5; cursor: not-allowed; }
+    .dlv-opt .a { color: var(--muted); font-size: .8rem; line-height: 1.5; }
+    .dlv-opt:has(input:checked) { border-color: #db2777; }
+    .dlv-new { border: 1px dashed var(--line2); border-radius: 10px; padding: 10px; }
+    .dlv-new .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
+    @media (max-width: 640px) { .dlv-new .grid3 { grid-template-columns: 1fr 1fr; } }
+    .wait-addr { background: var(--amber-bg); border: 1px solid #fcd34d; color: var(--amber-tx); border-radius: 10px; padding: 8px 12px; font-size: .86rem; margin-top: 8px; }
+    .new-order { background: var(--green-bg); border: 1px solid #86efac; color: var(--green-tx); border-radius: 10px; padding: 8px 12px; font-size: .86rem; margin-top: 8px; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -81,11 +95,12 @@
     import { db } from "./js/firebase-config.js";
     import {
       collection, query, where, getDocs, getDoc, doc, limit, setDoc, updateDoc,
-      writeBatch, serverTimestamp, increment
+      writeBatch, serverTimestamp, increment, orderBy
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
-      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode, logAdmin, readyWinners
+      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode, logAdmin, readyWinners,
+      normalizePhone, isValidPhone
     } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
@@ -159,6 +174,16 @@
         const s = await getDoc(doc(db, "members", uid));
         members[uid] = s.exists() ? s.data() : { name: "(资料不存在)" };
       }));
+      // 🛒 随单寄送的待发货：看会员有没有新订单（批准之后下的）
+      const waitOrder = all.filter(r => TABS.toShip(r) && deliveryOf(r) === "withOrder");
+      await Promise.all([...new Set(waitOrder.map(r => r.uid))].map(async uid => {
+        try {
+          const s = await getDocs(query(collection(db, "orders"), where("uid", "==", uid)));
+          let best = null;
+          s.docs.forEach(d => { const at = toDate(d.data().orderTime); if (at && (!best || at > best.at)) best = { no: d.id, at }; });
+          if (best) latestOrder[uid] = best;
+        } catch (e) { console.warn("orders", e); }
+      }));
       await Promise.all([...new Set(all.filter(TABS.pending).map(r => r.uid))].map(async uid => {
         const s = await getDocs(query(collection(db, "pointsLedger"), where("uid", "==", uid)));
         ledgers[uid] = s.docs.map(d => d.data());
@@ -170,6 +195,72 @@
     // ---------- 共用显示 ----------
     const kindTag = r => isGift(r) ? '<span class="tag tag-blue kind">🎁 实体</span>' : '<span class="tag kind">🎫 优惠券</span>';
     const addrText = a => a ? `${a.name}\n${a.phone}\n${a.line1}${a.line2 ? ", " + a.line2 : ""}\n${a.postcode} ${a.city}, ${a.state}\n${a.country || "Malaysia"}` : "";
+    // ---------- 📦 寄送方式：随单寄送（预设）/ 单独寄出 ----------
+    const MY_STATES = ["Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan", "Pahang", "Perak", "Perlis", "Pulau Pinang",
+      "Sabah", "Sarawak", "Selangor", "Terengganu", "W.P. Kuala Lumpur", "W.P. Labuan", "W.P. Putrajaya"];
+    const deliveryOf = r => r.delivery === "withOrder" || r.delivery === "separate" ? r.delivery : (r.address ? "separate" : "withOrder");
+    const dlvTag = r => deliveryOf(r) === "separate" ? '<span class="tag tag-blue">🚚 单独寄出</span>' : '<span class="tag tag-pink">📦 随单寄送</span>';
+    const oneLine = a => `${esc(a.name)} · ${esc(fmtPhone(a.phone))}<br>${esc(a.line1)}${a.line2 ? ", " + esc(a.line2) : ""}, ${esc(a.postcode)} ${esc(a.city)}, ${esc(a.state)}`;
+    const latestOrder = {};   // uid → 最新一张订单 { no, at }
+    // edit = true：待发货里「更改寄送方式」用（多保存 / 取消按钮）
+    function dlvBox(r, edit = false) {
+      const id = esc(r.id), book = (members[r.uid] || {}).addresses || [];
+      const dv = edit ? (deliveryOf(r) === "separate" ? "withOrder" : "separate") : deliveryOf(r);
+      const first = r.address && !r.addrPending ? "cur" : book.length ? "book:0" : "ask";
+      const opt = (v, title, body, off) => `<label class="dlv-opt${off ? " off" : ""}"><input type="radio" name="am_${id}" value="${v}" ${v === first && !off ? "checked" : ""} ${off ? "disabled" : ""}>
+        <div><b>${title}</b>${body ? `<div class="a">${body}</div>` : ""}</div></label>`;
+      return `
+        <div class="dlv-box" data-dlvbox>
+          <div class="mode-row"><span class="meta">寄送方式：</span>
+            <label><input type="radio" name="dlv_${id}" value="withOrder" ${dv === "withOrder" ? "checked" : ""}> 📦 随单寄送</label>
+            <label><input type="radio" name="dlv_${id}" value="separate" ${dv === "separate" ? "checked" : ""}> 🚚 单独寄出</label>
+          </div>
+          <div class="dlv-sep ${dv === "separate" ? "" : "hidden"}">
+            ${r.address ? opt("cur", "使用这一笔现在的地址", oneLine(r.address)) : ""}
+            ${opt("book:0", "① 使用会员的默认地址", book[0] ? oneLine(book[0]) : "会员还没有存地址", !book[0])}
+            ${book.slice(1).map((a, i) => opt("book:" + (i + 1), "会员存的其他地址", oneLine(a))).join("")}
+            ${opt("new", "② 使用新地址（你来填，只用在这一笔）", "")}
+            <div class="dlv-new hidden">
+              <div class="grid2"><label>收件人 <input data-a="name" maxlength="60" value="${esc((members[r.uid] || {}).name || "")}"></label>
+                <label>电话 <input data-a="phone" value="${esc((members[r.uid] || {}).phone || "")}" placeholder="012-345 6789"></label></div>
+              <label>地址 <input data-a="line1" maxlength="120"></label>
+              <label>地址第 2 行（选填） <input data-a="line2" maxlength="120"></label>
+              <div class="grid3"><label>邮编 <input data-a="postcode" maxlength="5" inputmode="numeric"></label>
+                <label>城市 <input data-a="city" maxlength="60"></label>
+                <label>州属 <select data-a="state"><option value="">请选择</option>${MY_STATES.map(x => `<option>${esc(x)}</option>`).join("")}</select></label></div>
+            </div>
+            ${opt("ask", "③ 请会员填写", "会员的铃铛和首页会提醒他填；填好之前不能发货")}
+          </div>
+          ${edit ? `<div class="actions"><button class="btn btn-primary" data-act="saveDlv">💾 保存寄送方式</button>
+            <button class="btn btn-ghost" data-act="cancelDlv">取消</button></div>` : ""}
+        </div>`;
+    }
+    // 读取寄送方式 → 要写进兑换的栏位，或 { error }
+    function readDlv(item, r) {
+      const id = CSS.escape(r.id);
+      const dv = (item.querySelector(`input[name="dlv_${id}"]:checked`) || {}).value || "withOrder";
+      if (dv === "withOrder") return { delivery: "withOrder", addrPending: false };
+      const m = (item.querySelector(`input[name="am_${id}"]:checked`) || {}).value;
+      if (!m) return { error: "请选择收货地址的方式" };
+      if (m === "ask") return { delivery: "separate", addrPending: true, addrRequestedAt: serverTimestamp() };
+      if (m === "cur") return { delivery: "separate", addrPending: false };
+      if (m.startsWith("book:")) {
+        const a = ((members[r.uid] || {}).addresses || [])[+m.slice(5)];
+        return a ? { delivery: "separate", addrPending: false, address: a } : { error: "找不到这个地址" };
+      }
+      const v = k => ((item.querySelector(`.dlv-new [data-a="${k}"]`) || {}).value || "").trim();
+      const a = { name: v("name").slice(0, 60), phone: normalizePhone(v("phone")), line1: v("line1").slice(0, 120), line2: v("line2").slice(0, 120),
+        postcode: v("postcode"), city: v("city").slice(0, 60), state: v("state"), country: "Malaysia" };
+      if (!a.name) return { error: "请填写收件人" };
+      if (!isValidPhone(a.phone)) return { error: "电话号码格式不对" };
+      if (!a.line1) return { error: "请填写地址" };
+      if (!/^\d{5}$/.test(a.postcode)) return { error: "邮编要 5 位数字" };
+      if (!a.city) return { error: "请填写城市" };
+      if (!a.state) return { error: "请选择州属" };
+      return { delivery: "separate", addrPending: false, address: a };
+    }
+    const dlvLabel = f => f.delivery === "withOrder" ? "随单寄送" : f.addrPending ? "单独寄出（请会员填地址）" : "单独寄出";
+
     function addrBox(r) {
       const a = r.address;
       if (!a) return "";
@@ -186,6 +277,10 @@
     }
     function shipInfo(r) {
       const s = r.shipping || {};
+      if (s.withOrder) return `
+        <div class="addr-box">📦 <b>已随订单一起寄出</b>${s.orderNo ? ` · 订单 <code>${esc(s.orderNo)}</code>` : ""}
+          <div class="meta">发货 ${fmtDate(toDate(r.shippedAt), true)}${s.by ? " · " + esc(s.by) : ""}</div>
+          ${s.note ? `<div class="meta">留言：${esc(s.note)}</div>` : ""}</div>`;
       return `
         <div class="addr-box">
           🚚 <b>${esc(s.carrierName || "")}</b> · <code style="word-break:break-all">${esc(s.trackingNo || "")}</code>
@@ -205,6 +300,42 @@
           </div>
           <code class="rno">${redeemCode(r.id)}</code>
         </div>`;
+    }
+
+    // 待发货：依寄送方式显示
+    function toShipBody(r) {
+      const change = `<button class="btn btn-ghost" data-act="changeDlv">🔁 改为${deliveryOf(r) === "separate" ? "随单寄送" : "单独寄出"}</button>`;
+      if (deliveryOf(r) === "withOrder") {
+        const lo = latestOrder[r.uid];
+        const fresh = lo && r.decidedAt && lo.at > r.decidedAt;
+        return `
+          ${fresh ? `<div class="new-order">🛒 有新订单 <code>${esc(lo.no)}</code>（${fmtDate(lo.at, true)}），可以一起寄</div>`
+                  : `<div class="meta" style="margin-top:6px">📦 等会员下一张订单，一起打包</div>`}
+          <div class="ship-form">
+            <b>📦 随单寄出</b>
+            <div class="grid2" style="margin-top:8px">
+              <label>一起寄的订单编号（选填） <input data-f="orderNo" value="${esc(fresh ? lo.no : "")}" autocomplete="off"></label>
+              <label>给会员的留言（选填） <input data-f="note" maxlength="200" placeholder="例如：已放在你的包裹里 🎁"></label>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ok" data-act="shipWithOrder">📦 标记已随单寄出</button>
+              ${change}
+              <button class="btn btn-bad" data-act="cancel">取消并退回积分</button>
+            </div>
+          </div>`;
+      }
+      if (r.addrPending) return `
+          <div class="wait-addr">⏳ 等会员填写收货地址（${r.addrRequestedAt ? fmtDate(toDate(r.addrRequestedAt), true) + " 已通知" : "已通知"}）· 填好前不能发货</div>
+          <div class="actions">
+            <button class="btn btn-ghost" data-act="pickAddr">📍 改由我来选 / 填地址</button>
+            ${change}
+            <button class="btn btn-bad" data-act="cancel">取消并退回积分</button>
+          </div>`;
+      return `
+          ${r.addressUpdatedAt && !r.addrPending && r.addrRequestedAt ? `<div class="new-order">✅ 地址已填，可以发货</div>` : ""}
+          ${addrBox(r)}
+          <div class="actions" style="margin-top:6px">${change}<button class="btn btn-ghost" data-act="pickAddr">📍 更换地址</button></div>
+          ${shipForm(r)}`;
     }
 
     // ---------- 发货表单 ----------
@@ -268,7 +399,7 @@
             <div class="meta">会员可用积分：<b>${bal.spendable}</b>
               ${bal.spendable >= r.cost ? '<span class="tag tag-ok">足够</span>' : '<span class="tag tag-bad">不足</span>'}
               ${bal.reserved ? ` · 其他审核中 ${bal.reserved} 分` : ""}${bal.pending ? ` · 待确认 ${bal.pending} 分` : ""}</div>
-            ${addrBox(r)}
+            ${isGift(r) ? dlvBox(r) : ""}
             <div class="mode-row">
               <span class="meta">这一笔是：</span>
               <label><input type="radio" name="mode_${esc(r.id)}" value="real" checked> ✅ 真实兑换</label>
@@ -283,9 +414,13 @@
           body = `
             ${r.status === "problem" ? `<div class="problem">⚠️ 配送异常${r.problemNote ? "：" + esc(r.problemNote) : ""}（${fmtDate(toDate(r.problemAt), true)}）</div>` : ""}
             ${r.note ? `<div class="meta">审核备注：${esc(r.note)}</div>` : ""}
-            ${addrBox(r)}
-            ${shipForm(r)}`;
+            ${toShipBody(r)}`;
         } else if (tab === "shipped") {
+          if (r.shipping && r.shipping.withOrder) {
+            body = `${shipInfo(r)}
+            <div class="actions"><button class="btn btn-ok" data-act="complete">✔ 手动标记完成</button></div>`;
+            return `<div class="item" data-id="${esc(r.id)}">${head(r, dlvTag(r))}${body}</div>`;
+          }
           const autoAt = toDate(r.shippedAt) ? new Date(toDate(r.shippedAt).getTime() + 14 * 86400000) : null;
           body = `
             ${shipInfo(r)}${addrBox(r)}
@@ -313,12 +448,12 @@
         }
         const testBtn = tab === "pending" || tab === "closed" ? ""
           : `<div class="actions" style="margin-top:6px"><button class="btn btn-ghost" data-act="toggleTest">${isTest(r) ? "改为 ✅ 真实兑换" : "改为 🧪 测试"}</button></div>`;
-        return `<div class="item" data-id="${esc(r.id)}">${head(r)}${body}${testBtn}</div>`;
+        return `<div class="item" data-id="${esc(r.id)}">${head(r, isGift(r) && tab !== "pending" ? dlvTag(r) : "")}${body}${testBtn}</div>`;
       }).join("") : `<p class="empty">${EMPTY[tab]}</p>`;
     }
 
     // ---------- 批准 / 拒绝 ----------
-    async function approve(r, note, test) {
+    async function approve(r, note, test, dv) {
       const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
       const reward = rewardSnap.exists() ? rewardSnap.data() : null;
 
@@ -354,6 +489,7 @@
       if (test) update.test = true;
       if (note) update.note = note;
       if (couponCode) update.couponCode = couponCode;
+      if (dv) Object.assign(update, dv);   // 📦 实体奖品的寄送方式（和地址）
       batch.update(doc(db, "redemptions", r.id), update);
       batch.set(doc(collection(db, "pointsLedger")), {
         uid: r.uid, delta: -r.cost, reason: "兑换：" + r.rewardName, orderNo: null,
@@ -430,6 +566,16 @@
     $("panel").addEventListener("change", async e => {
       const item = e.target.closest(".item");
       if (!item) return;
+      // 📦 寄送方式 / 地址选项
+      const box = e.target.closest("[data-dlvbox]");
+      if (box && e.target.name && e.target.name.startsWith("dlv_")) {
+        box.querySelector(".dlv-sep").classList.toggle("hidden", e.target.value !== "separate");
+        return;
+      }
+      if (box && e.target.name && e.target.name.startsWith("am_")) {
+        box.querySelector(".dlv-new").classList.toggle("hidden", e.target.value !== "new");
+        return;
+      }
       const f = e.target.dataset.f;
       if (f === "carrier") {
         item.querySelector(".other-name").classList.toggle("hidden", e.target.value !== "other");
@@ -458,7 +604,8 @@
       set("carrier", s.carrier); set("carrierName", s.carrier === "other" ? s.carrierName : "");
       set("trackingNo", s.trackingNo); set("trackingUrl", s.trackingUrl); set("weightKg", s.weightKg ?? "");
       set("l", s.dims.l ?? ""); set("w", s.dims.w ?? ""); set("h", s.dims.h ?? ""); set("note", s.note);
-      item.querySelector(".other-name").classList.toggle("hidden", s.carrier !== "other");
+      const on = item.querySelector(".other-name");
+      if (on) on.classList.toggle("hidden", s.carrier !== "other");
     }
 
     $("panel").addEventListener("click", async e => {
@@ -482,6 +629,15 @@
         catch { prompt("请手动复制：", addrText(r.address)); }
         return;
       }
+      if (act === "changeDlv" || act === "pickAddr") {
+        if (item.querySelector("[data-dlvbox]")) return;
+        const box = document.createElement("div");
+        box.innerHTML = dlvBox(act === "pickAddr" ? { ...r, delivery: "withOrder" } : r, true);
+        // 「更换地址」：寄送方式固定为单独寄出
+        (item.querySelector(".ship-form") || item.lastElementChild).before(box.firstElementChild);
+        return;
+      }
+      if (act === "cancelDlv") { item.querySelector("[data-dlvbox]").remove(); return; }
       if (act === "reopen") {
         // 已发货 → 回到待发货修改（状态维持已发货，只是在这里重新填）
         tab = "toShip";
@@ -498,7 +654,27 @@
         let ok = true;
         if (act === "approve") {
           const mode = item.querySelector(`input[name="mode_${CSS.escape(r.id)}"]:checked`);
-          ok = await approve(r, item.querySelector(".note-input").value.trim(), !!mode && mode.value === "test");
+          const dv = isGift(r) ? readDlv(item, r) : null;
+          if (dv && dv.error) { alert(dv.error); ok = false; }
+          else ok = await approve(r, item.querySelector(".note-input").value.trim(), !!mode && mode.value === "test", dv);
+          if (ok && dv) logAdmin("redeem", `寄送方式：${(members[r.uid] || {}).name || "会员"} 的「${r.rewardName}」→ ${dlvLabel(dv)}`, "redeem.html#toShip");
+        }
+        if (act === "saveDlv") {
+          const dv = readDlv(item, r);
+          if (dv.error) { alert(dv.error); ok = false; }
+          else {
+            await updateDoc(doc(db, "redemptions", r.id), dv);
+            logAdmin("redeem", `更改寄送方式：${(members[r.uid] || {}).name || "会员"} 的「${r.rewardName}」→ ${dlvLabel(dv)}`, "redeem.html#toShip");
+          }
+        }
+        if (act === "shipWithOrder") {
+          const v = f => ((item.querySelector(`[data-f="${f}"]`) || {}).value || "").trim();
+          if (!confirm("标记这个奖品已随订单一起寄出？")) ok = false;
+          else await updateDoc(doc(db, "redemptions", r.id), {
+            status: "shipped", shippedAt: serverTimestamp(),
+            shipping: { withOrder: true, orderNo: v("orderNo").replace(/\s/g, "").toUpperCase().slice(0, 40), note: v("note").slice(0, 200), by: adminEmail },
+            problemNote: null,
+          });
         }
         if (act === "toggleTest") {
           // 批准后改为测试 / 真实：库存跟着调整
@@ -540,7 +716,7 @@
           if (!confirm("手动标记这笔兑换已完成？")) ok = false;
           else await updateDoc(doc(db, "redemptions", r.id), { status: "completed", completedAt: serverTimestamp(), adminCompleted: true });
         }
-        const LOG = { approve: "批准兑换", reject: "拒绝兑换", cancel: "取消兑换并退回积分", ship: "兑换已发货",
+        const LOG = { approve: "批准兑换", reject: "拒绝兑换", cancel: "取消兑换并退回积分", ship: "兑换已发货", shipWithOrder: "兑换已随单寄出",
           problem: "标记配送异常", complete: "标记兑换完成", toggleTest: isTest(r) ? "改为真实兑换" : "改为测试兑换" };
         if (ok && LOG[act]) logAdmin("redeem", `${LOG[act]}：${(members[r.uid] || {}).name || "会员"} 的「${r.rewardName}」${redeemCode(r.id)}`, "redeem.html");
         if (ok) await load();
