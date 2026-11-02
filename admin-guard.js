@@ -1,0 +1,196 @@
+// ===== Mochii 后台：管理员与权限（控制台、管理员页面、各子页面共用） =====
+// 名单存在 member-system 的 Firestore「staff」集合，文件编号 = email（小写）
+// 店主 mail@themochiishop.com 永远拥有全部权限，不需要在名单里
+import { auth, db } from "/member-system/js/firebase-config.js";
+import {
+  onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import {
+  doc, getDoc, setDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+export const OWNER_EMAIL = "mail@themochiishop.com";
+
+// ---------- 权限清单（控制台卡片 + 下层功能） ----------
+// 以后要加新卡片或下层功能，在这里加一行就好；管理员页面会自动出现
+export const PERM_TREE = [
+  { group: "🎥 直播", items: [
+    { id: "hub", icon: "📱", label: "Mochii Hub" },
+    { id: "wheel", icon: "🎡", label: "幸运大转盘" },
+    { id: "draw", icon: "🎁", label: "每月抽奖", subs: [
+      { id: "console", label: "抽奖控制台" },
+      { id: "test", label: "测试大屏" },
+      { id: "claims", label: "领奖追踪" },
+    ] },
+  ] },
+  { group: "🧾 订单", items: [
+    { id: "entry", icon: "📝", label: "订单录入" },
+    { id: "invoice", icon: "📄", label: "PO / Invoice" },
+    { id: "search", icon: "🔍", label: "订单查询" },
+    { id: "cod", icon: "📦", label: "COD 手动 AWB 打印" },
+  ] },
+  { group: "🎫 会员与内容", items: [
+    // 之后会员系统里面细分时，在这里加 subs（总览、兑换审核…），已经勾了的人会自动当作全部都有
+    { id: "member", icon: "🎫", label: "Member Club", note: "会员系统所有页面（之后再细分）" },
+    { id: "feed", icon: "📰", label: "Mochii Feed" },
+    { id: "gallery", icon: "🖼️", label: "图库管理", subs: [
+      { id: "view", label: "查看前台" },
+      { id: "upload", label: "上传" },
+    ] },
+  ] },
+];
+
+// 权限模板：新增人员时一键套用，之后可以再微调
+export const PRESETS = [
+  { id: "streamer", label: "🎥 主播", perms: { hub: true, wheel: true, draw: { console: true, test: true, claims: true } } },
+  { id: "cs", label: "💬 客服", perms: { entry: true, search: true, cod: true, member: true } },
+  { id: "all", label: "✅ 全部", perms: "all" },
+  { id: "none", label: "⬜ 清空", perms: {} },
+];
+
+export const PERM_ITEMS = PERM_TREE.flatMap(g => g.items);
+
+// 名称：「每月抽奖 › 抽奖控制台」
+export function permLabel(key) {
+  if (key === "staff") return "👥 管理员管理";   // 只有店主
+  const [a, b] = String(key || "").split(".");
+  const it = PERM_ITEMS.find(x => x.id === a);
+  if (!it) return key;
+  const s = b && (it.subs || []).find(x => x.id === b);
+  return it.label + (s ? " › " + s.label : "");
+}
+
+// 全部权限（「全部」模板用）
+export function allPerms() {
+  const p = {};
+  PERM_ITEMS.forEach(it => {
+    p[it.id] = it.subs ? Object.fromEntries(it.subs.map(s => [s.id, true])) : true;
+  });
+  return p;
+}
+
+// 有没有这项权限。key：「draw」= 下层任何一项；「draw.console」= 这一项
+// perms[x] === true 代表这一项（含全部下层）都有
+export function can(access, key) {
+  if (!access || !access.ok) return false;
+  if (access.owner) return true;
+  const [a, b] = String(key).split(".");
+  const v = (access.perms || {})[a];
+  if (v === true) return true;
+  if (!v || typeof v !== "object") return false;
+  return b ? v[b] === true : Object.values(v).some(x => x === true);
+}
+
+// 勾了几项（管理员列表显示用）
+export function countPerms(perms) {
+  let n = 0;
+  PERM_ITEMS.forEach(it => {
+    const v = (perms || {})[it.id];
+    if (!it.subs) { if (v) n++; return; }
+    if (v === true) n += it.subs.length;
+    else if (v && typeof v === "object") n += it.subs.filter(s => v[s.id] === true).length;
+  });
+  return n;
+}
+export const TOTAL_PERMS = PERM_ITEMS.reduce((n, it) => n + (it.subs ? it.subs.length : 1), 0);
+
+export const normEmail = s => String(s || "").trim().toLowerCase();
+export const isOwnerUser = u => !!u && normEmail(u.email) === OWNER_EMAIL && u.emailVerified === true;
+
+// ---------- 读取这个账号的权限 ----------
+// 回传 { ok, owner, email, name, title, perms } 或 { ok:false, reason: none / disabled / error }
+export async function getAccess(user) {
+  if (!user) return { ok: false, reason: "login" };
+  const email = normEmail(user.email);
+  if (isOwnerUser(user)) return { ok: true, owner: true, email, name: user.displayName || "店主", title: "店主" };
+  try {
+    const s = await getDoc(doc(db, "staff", email));
+    if (!s.exists()) return { ok: false, reason: "none", email };
+    const d = s.data();
+    if (d.active === false) return { ok: false, reason: "disabled", email, name: d.name };
+    return { ok: true, owner: false, email, name: d.name || user.displayName || email, title: d.title || "", perms: d.perms || {}, uid: d.uid || "" };
+  } catch (e) {
+    return { ok: false, reason: "error", email, error: e.message };
+  }
+}
+
+// 登录控制台时记下 UID 和登录时间（店主同步会员系统管理员名单要用 UID）
+// 有 Member Club / Feed 权限、还不是会员系统管理员的，自动加进去（Firestore 规则会再检查一次）
+export async function recordLogin(user, access) {
+  if (!access || !access.ok || access.owner) return;
+  try {
+    await setDoc(doc(db, "staff", access.email), {
+      uid: user.uid, lastLoginAt: serverTimestamp(),
+      authName: (user.displayName || "").slice(0, 60), photoURL: user.photoURL || "",
+    }, { merge: true });
+  } catch (e) { console.warn("recordLogin", e.message); }
+  if (can(access, "member") || can(access, "feed")) {
+    try {
+      const ref = doc(db, "admins", user.uid);
+      let has = false;
+      try { has = (await getDoc(ref)).exists(); } catch (e) {}
+      if (!has) await setDoc(ref, { email: access.email, name: access.name || "", fromStaff: true, createdAt: serverTimestamp() });
+    } catch (e) { console.warn("admins 自动加入失败（店主打开管理员页面时会再同步）", e.message); }
+  }
+}
+
+// ---------- Google 登录 ----------
+export async function googleLogin() {
+  const p = new GoogleAuthProvider();
+  p.setCustomParameters({ prompt: "select_account" });
+  try {
+    await signInWithPopup(auth, p);
+  } catch (e) {
+    // 手机主画面（App 模式）开不了弹出视窗时，改用整页跳转登录
+    if (["auth/popup-blocked", "auth/operation-not-supported-in-this-environment", "auth/web-storage-unsupported"].includes(e.code)) {
+      await signInWithRedirect(auth, p);
+      return;
+    }
+    if (e.code === "auth/popup-closed-by-user" || e.code === "auth/cancelled-popup-request") return;
+    throw e;
+  }
+}
+export async function logout() { await signOut(auth); }
+
+// ---------- 子页面检查：放在每个子页面的 <head> ----------
+//   <script type="module">import { guard } from "/js/admin-guard.js"; guard("wheel");</script>
+// 没登录 → 回控制台登录，登录后自动回来；没有权限 → 回控制台并显示提示
+// 只有店主能用的按钮：加 class="owner-only" 就会对其他人隐藏；
+// 按钮的程式开头加 if (!window.ownerOnly || !window.ownerOnly()) return; 再挡一次
+function ownerOnlySetup() {
+  if (document.getElementById("ownerOnlyCss")) return;
+  const st = document.createElement("style");
+  st.id = "ownerOnlyCss";
+  st.textContent = "html:not(.is-owner) .owner-only { display: none !important; }";
+  document.head.appendChild(st);
+  window.__isOwner = false;
+  window.ownerOnly = () => {
+    if (window.__isOwner === true) return true;
+    alert("🔒 只有店主可以删除。");
+    return false;
+  };
+}
+
+export function guard(key) {
+  const root = document.documentElement;
+  root.style.visibility = "hidden";
+  ownerOnlySetup();
+  let first = true;
+  return new Promise(resolve => {
+    onAuthStateChanged(auth, async user => {
+      const back = why => {
+        const here = location.pathname + location.search + location.hash;
+        location.replace("/?" + why + "=" + encodeURIComponent(key) + "&next=" + encodeURIComponent(here));
+      };
+      if (!user) { back("login"); return; }
+      if (!first) return;   // 已经通过的页面，不重复检查
+      const a = await getAccess(user);
+      if (!can(a, key)) { back("denied"); return; }
+      first = false;
+      window.__isOwner = !!a.owner;
+      root.classList.toggle("is-owner", !!a.owner);
+      root.style.visibility = "";
+      resolve(a);
+    });
+  });
+}
