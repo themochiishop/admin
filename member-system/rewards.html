@@ -22,6 +22,9 @@
     .end-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .end-row input[type=datetime-local] { width: auto; margin: 0; }
     .end-row label { margin: 0; }
+    .delist-box { border: 1px solid #fca5a5; background: var(--red-bg); border-radius: 10px; padding: 10px 12px; margin-top: 8px; display: grid; gap: 6px; font-size: .88rem; }
+    .delist-box label { margin: 0; }
+    .delist-box input[type=datetime-local] { width: auto; margin: 0; }
     .open-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
     .open-box .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; font-size: .88rem; }
     .open-box .row:last-child { margin-bottom: 0; }
@@ -261,7 +264,10 @@ $("rimageRemove").addEventListener("click", () => {
       const expired = rewards.filter(r => r.active && toDate(r.endAt) && toDate(r.endAt) <= now);
       if (expired.length) {
         const batch = writeBatch(db);
-        expired.forEach(r => { batch.update(doc(db, "rewards", r.id), { active: false, updatedAt: serverTimestamp() }); r.active = false; });
+        expired.forEach(r => {
+          batch.update(doc(db, "rewards", r.id), { active: false, hidden: false, delistedAt: r.endAt, updatedAt: serverTimestamp() });
+          r.active = false; r.hidden = false; r.delistedAt = r.endAt;
+        });
         await batch.commit();
       }
 
@@ -377,6 +383,38 @@ $("rimageRemove").addEventListener("click", () => {
     }
     const isLocked = r => r.comingSoon && !(toDate(r.openAt) && toDate(r.openAt) <= new Date());
 
+    // ---------- ⛔ 下架 / 🙈 隐藏 ----------
+    // 已下架：前台显示灰色「已下架」30 天后自动隐藏；隐藏：前台完全看不到。两种都留在后台，可以重新上架
+    const OFF_DAYS = 30;
+    // 表单的「上架」勾选：勾了 = 重新上架；取消勾选 = 隐藏（已经是「已下架」的维持原样）
+    function shelfFields(id, on) {
+      const r = rewards.find(x => x.id === id);
+      if (on) return { hidden: false, delistedAt: null };
+      if (r && !r.active && r.delistedAt && !r.hidden) return {};
+      return { hidden: true };
+    }
+    const isHidden = r => !r.active && (r.hidden === true || !r.delistedAt);   // 旧资料没有 delistedAt 的当作隐藏
+    function shelfTag(r) {
+      if (r.active) return '<span class="tag tag-ok">上架中</span>';
+      if (isHidden(r)) return '<span class="tag">🙈 隐藏</span>';
+      const until = new Date((toDate(r.delistedAt) || new Date()).getTime() + OFF_DAYS * 86400000);
+      return until > new Date()
+        ? `<span class="tag tag-bad">⛔ 已下架 · 前台显示到 ${fmtDate(until)}</span>`
+        : '<span class="tag">⛔ 已下架 · 前台已隐藏</span>';
+    }
+    function delistBox() {
+      const d = new Date(Date.now() + 7 * 86400000); d.setHours(23, 59, 0, 0);
+      return `<div class="delist-box">
+        <b>⛔ 下架</b>
+        <label class="inline"><input type="radio" name="dlmode" value="now" checked> 立即下架（前台马上显示灰色「已下架」）</label>
+        <label class="inline"><input type="radio" name="dlmode" value="time"> 设定下架时间（倒数：剩几天，最后一天剩几小时）</label>
+        <input type="datetime-local" class="dl-time hidden" value="${toLocalInput(d)}">
+        <div class="actions" style="margin-top:6px">
+          <button class="btn btn-bad" data-act="delistGo">确认下架</button>
+          <button class="btn btn-ghost" data-act="delistCancel">取消</button>
+        </div></div>`;
+    }
+
     function endInfo(r) {
       const end = toDate(r.endAt);
       if (!end) return "";
@@ -426,7 +464,7 @@ $("rimageRemove").addEventListener("click", () => {
   ${r.image ? `<img src="${esc(r.image)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px">` : ""}
   <div style="flex:1">
                 <div class="item-title">${isCoupon ? "🎫" : "🎁"} ${esc(r.name)} · ${r.cost} 分
-                  ${r.active ? '<span class="tag tag-ok">上架中</span>' : '<span class="tag">已下架</span>'}
+                  ${shelfTag(r)}
                 </div>
                 ${r.description ? `<div class="meta">${esc(r.description)}</div>` : ""}
                 <div class="meta">
@@ -440,7 +478,9 @@ $("rimageRemove").addEventListener("click", () => {
             </div>
             <div class="actions">
               <button class="btn btn-ghost" data-act="edit">编辑</button>
-              <button class="btn btn-ghost" data-act="toggle">${r.active ? "下架" : "上架"}</button>
+              ${r.active
+                ? `<button class="btn btn-ghost" data-act="delist">⛔ 下架</button><button class="btn btn-ghost" data-act="hide">🙈 隐藏</button>`
+                : `<button class="btn btn-ok" data-act="relist">✅ 重新上架</button>${!isHidden(r) ? `<button class="btn btn-ghost" data-act="hide">🙈 隐藏</button>` : ""}`}
               <button class="btn btn-ghost" data-act="openNow">${isLocked(r) ? "✅ 立即开放" : "🔒 设为未开放"}</button>
               ${isCoupon && !r.couponCode ? `<button class="btn btn-ghost" data-act="codes">＋ 补充券码</button>` : ""}            </div>
             ${isCoupon ? `
@@ -543,6 +583,7 @@ showPreview(currentImage);
         category: $("rcat").value,
         endAt: $("rendOn").checked && $("rend").value ? Timestamp.fromDate(new Date($("rend").value)) : null,
         active: $("ractive").checked,
+        ...shelfFields($("rid").value, $("ractive").checked),
         ...readOpen(),
         image: currentImage,
         updatedAt: serverTimestamp()
@@ -593,6 +634,9 @@ showPreview(currentImage);
       }
     });
 
+    $("list").addEventListener("change", e => {
+      if (e.target.name === "dlmode") e.target.closest(".delist-box").querySelector(".dl-time").classList.toggle("hidden", e.target.value !== "time");
+    });
     $("list").addEventListener("click", async e => {
       const act = e.target.dataset.act;
       if (!act) return;
@@ -618,6 +662,43 @@ showPreview(currentImage);
             ? { comingSoon: true, openAt: null, openMode: "date", updatedAt: serverTimestamp() }
             : { comingSoon: false, openAt: null, updatedAt: serverTimestamp() });
           logAdmin("content", `${locking ? "设为未开放" : "开放了"}商城奖品「${r.name}」`, "rewards.html");
+          await load();
+        } catch (err) { alert("失败：" + err.message); e.target.disabled = false; }
+        return;
+      }
+      if (act === "delist") {
+        if (!item.querySelector(".delist-box")) item.querySelector(".actions").insertAdjacentHTML("afterend", delistBox());
+        return;
+      }
+      if (act === "delistCancel") { item.querySelector(".delist-box").remove(); return; }
+      if (["delistGo", "hide", "relist"].includes(act)) {
+        let patch, log;
+        if (act === "delistGo") {
+          const box = item.querySelector(".delist-box");
+          const mode = box.querySelector("input[name=dlmode]:checked").value;
+          if (mode === "now") {
+            if (!confirm(`立即下架「${r.name}」？\n前台会显示灰色「已下架」，${OFF_DAYS} 天后自动隐藏。`)) return;
+            patch = { active: false, hidden: false, delistedAt: serverTimestamp(), endAt: null };
+            log = `下架了商城奖品「${r.name}」`;
+          } else {
+            const v = box.querySelector(".dl-time").value;
+            const at = v ? new Date(v) : null;
+            if (!at || at <= new Date()) { alert("下架时间要在现在之后"); return; }
+            patch = { endAt: Timestamp.fromDate(at) };
+            log = `设定「${r.name}」在 ${fmtDate(at, true)} 下架`;
+          }
+        } else if (act === "hide") {
+          if (!confirm(`隐藏「${r.name}」？前台会完全看不到（后台还在，可以重新上架）。`)) return;
+          patch = { active: false, hidden: true };
+          log = `隐藏了商城奖品「${r.name}」`;
+        } else {
+          patch = { active: true, hidden: false, delistedAt: null, endAt: null };
+          log = `重新上架商城奖品「${r.name}」`;
+        }
+        e.target.disabled = true;
+        try {
+          await updateDoc(doc(db, "rewards", r.id), { ...patch, updatedAt: serverTimestamp() });
+          logAdmin("content", log, "rewards.html");
           await load();
         } catch (err) { alert("失败：" + err.message); e.target.disabled = false; }
         return;
