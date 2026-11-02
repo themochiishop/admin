@@ -580,6 +580,7 @@ $("#pmPick").addEventListener("change", () => {
   $("#pmDel").classList.toggle("hidden", !c);
 });
 $("#pmDel").addEventListener("click", async () => {
+  if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以从名单删除
   const c = contacts.find(x => x.id === $("#pmPick").value);
   if (!c || !confirm(`从名单删除「${c.name}」？（已经开过的单不会受影响）`)) return;
   try {
@@ -652,7 +653,7 @@ function renderRecords() {
       <span class="tg ${r.type}">${r.type === "po" ? "PO" : "INV"}</span>
       <div class="mid"><b>${esc(r.no)}</b> · ${esc(r.party || "—")}
         <div class="sub">${esc(r.date || "")} · RM ${fmt(r.total)}${r.data && r.data.paid ? " · PAID" : ""}</div></div>
-      <div class="act"><button type="button" class="btn" data-ract="open">打开</button><button type="button" class="btn danger" data-ract="del">删除</button></div>
+      <div class="act"><button type="button" class="btn" data-ract="open">打开</button><button type="button" class="btn danger owner-only" data-ract="del">删除</button></div>
     </div>`).join("") : '<p class="empty">没有记录</p>';
 }
 $("#recSearch").addEventListener("input", renderRecords);
@@ -675,6 +676,7 @@ $("#recList").addEventListener("click", async e => {
     build(r.type); switchTab(r.type); persist(); closeModals();
     toast(`已打开 ${r.no}`);
   } else {
+    if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以永久删除记录
     if (!confirm(`永久删除记录 ${r.no}？\n（已经下载或传出去的 PDF 不受影响）`)) return;
     try {
       await fb.deleteDoc(fb.doc(fb.db, "invoiceDocs", r.id));
