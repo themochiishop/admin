@@ -372,7 +372,7 @@
           <div class="actions">
             <button class="btn btn-ghost" data-bedit="${esc(b.id)}">编辑</button>
             <button class="btn btn-ghost" data-btoggle="${esc(b.id)}" data-active="${b.active === false ? 0 : 1}">${b.active === false ? "显示" : "隐藏"}</button>
-            <button class="btn btn-bad" data-bdel="${esc(b.id)}">删除</button>
+            <button class="btn btn-bad owner-only" data-bdel="${esc(b.id)}">删除</button>
           </div>
         </div>`).join("") : `<p class="empty">还没有横幅</p>`;
       $("bannerList")._list = list;
@@ -430,6 +430,7 @@
       try {
         if (b.dataset.btoggle) await updateDoc(doc(db, "homeBanners", b.dataset.btoggle), { active: b.dataset.active !== "1" });
         if (b.dataset.bdel) {
+          if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除
           if (!confirm("删除这个横幅？")) return;
           await deleteDoc(doc(db, "homeBanners", b.dataset.bdel));
           logAdmin("content", "删除了一个首页横幅", "home.html");
@@ -471,7 +472,7 @@
             <div class="actions">
               <button class="btn btn-ghost" data-nedit="${esc(n.id)}">编辑</button>
               <button class="btn btn-ghost" data-ntoggle="${esc(n.id)}" data-active="${n.active === false ? 0 : 1}">${n.active === false ? "显示" : "隐藏"}</button>
-              <button class="btn btn-bad" data-ndel="${esc(n.id)}">删除</button>
+              <button class="btn btn-bad owner-only" data-ndel="${esc(n.id)}">删除</button>
             </div>
           </div>`;
       }).join("") : `<p class="empty">还没有首页消息</p>`;
@@ -551,6 +552,7 @@
       try {
         if (b.dataset.ntoggle) await updateDoc(doc(db, "homeNews", b.dataset.ntoggle), { active: b.dataset.active !== "1" });
         if (b.dataset.ndel) {
+          if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除
           if (!confirm("删除这则首页消息？")) return;
           await deleteDoc(doc(db, "homeNews", b.dataset.ndel));
           logAdmin("content", "删除了一则首页消息", "home.html");

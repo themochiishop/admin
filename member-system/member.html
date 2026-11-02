@@ -52,8 +52,8 @@
               <div><div class="l">兑换审核中</div><div class="big" id="bReserved" style="color:var(--muted)">-</div></div>
             </div>
 
-            <h3 style="margin-top:8px" id="adjustHead">手动调整积分</h3>
-            <form id="adjustForm">
+            <h3 style="margin-top:8px" id="adjustHead" class="owner-only">手动调整积分</h3>
+            <form id="adjustForm" class="owner-only">
               <label id="perkPickBox" class="hidden">快速选择自订福利（选填）
                 <select id="perkPick"><option value="">— 不选 —</option></select>
               </label>
@@ -86,7 +86,7 @@
           </div>
 
           <!-- 🏷️ 内部会员（员工 / 测试用） -->
-          <div class="panel" id="internalPanel">
+          <div class="panel owner-only" id="internalPanel">
             <h3>🏷️ 内部会员</h3>
             <p class="meta" style="margin:-6px 0 10px">给员工用的会员：不用绑定账号就能领额外福利、生日礼不需要订单，会员资料显示「内部会员」标签。开通时送 <b id="internalPtsLbl"></b> 分（只送一次）。兑换跟一般会员一样，你在「兑换审核」批准时再选这一笔是测试还是真实。</p>
             <label class="inline"><input type="checkbox" id="iOn"> 这是内部会员</label>
@@ -95,7 +95,7 @@
           </div>
 
           <!-- ♛ Black Elite（邀请制） -->
-          <div class="panel" id="blackPanel">
+          <div class="panel owner-only" id="blackPanel">
             <h3>♛ Black Elite</h3>
             <p class="meta" style="margin:-6px 0 10px">最高等级，只能由你邀请开通，不看消费金额。积分 ×2、生日礼 888 分。打开后会员在<b>下一次同步（每小时）</b>升级并收到铃铛通知；关掉后按消费回到对应等级（最多降一级，同样在下一次同步生效）。</p>
             <label class="inline"><input type="checkbox" id="bOn"> 邀请成为 Black Elite</label>
@@ -302,7 +302,7 @@
           </div>
           <div class="actions" style="margin:0;flex-direction:column;align-items:stretch">
             <button class="btn btn-ghost" data-orders="${esc(b.id)}">看订单</button>
-            <button class="btn btn-bad" data-unbind="${esc(b.id)}">解除</button>
+            <button class="btn btn-bad owner-only" data-unbind="${esc(b.id)}">解除</button>
           </div>
         </div>`;
       }).join("") : `<p class="muted" style="font-size:.88rem">尚未绑定任何账号</p>`;
@@ -401,6 +401,7 @@
     const INTERNAL_BONUS = 888;   // 开通内部会员时送的积分（只送一次）
     let currentMember = null;
     $("iSave").addEventListener("click", async () => {
+      if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以设内部会员
       const on = $("iOn").checked;
       const before = (currentMember && currentMember.internal) || {};
       const giveBonus = on && !before.bonusGiven;
@@ -431,6 +432,7 @@
 
     // ---------- ♛ Black Elite ----------
     $("bSave").addEventListener("click", async () => {
+      if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以邀请 Black Elite
       const on = $("bOn").checked;
       const name = (currentMember && currentMember.name) || "";
       if (!confirm(on ? `邀请「${name}」成为 ♛ Black Elite？\n下一次同步（1 小时内）生效，会员会收到铃铛通知。`
@@ -449,6 +451,7 @@
     // ---------- 手动调整积分 ----------
     $("adjustForm").addEventListener("submit", async e => {
       e.preventDefault();
+      if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以调整积分
       const delta = parseInt($("adjDelta").value, 10);
       const reason = $("adjReason").value.trim();
       if (!delta || !reason) { setMsg($("adjMsg"), "请填写积分（不能是 0）和原因", "err"); return; }
@@ -542,6 +545,7 @@
       if (ob) { showOrdersOf(ob.dataset.orders); return; }
       const id = e.target.dataset.unbind;
       if (!id) return;
+      if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以解除绑定
       const b = currentBindings.find(x => x.id === id);
       if (!b) return;
       const note = prompt(`解除绑定「${b.username}」？\n\n这个账号订单的积分会在下次计算积分时扣回（每小时自动，或在表格按同步）。\n会员的铃铛会收到通知。\n\n原因（选填，只有后台看得到）：`, "");

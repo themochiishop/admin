@@ -179,7 +179,7 @@
           <div class="actions">
             <button class="btn btn-ghost" data-edit="${esc(p.id)}">编辑</button>
             <button class="btn btn-ghost" data-toggle="${esc(p.id)}">${p.active === false ? "开放" : "隐藏"}</button>
-            <button class="btn btn-bad" data-del="${esc(p.id)}">删除</button>
+            <button class="btn btn-bad owner-only" data-del="${esc(p.id)}">删除</button>
           </div>
         </div>`).join("") : `<p class="empty">还没有自订福利</p>`;
     }
@@ -295,6 +295,7 @@
         let next = null;
         if (b.dataset.toggle) next = list.map(x => x.id === b.dataset.toggle ? { ...x, active: x.active === false } : x);
         if (b.dataset.del) {
+          if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除
           if (!confirm("删除这个福利？（已发放的积分不受影响）")) return;
           next = list.filter(x => x.id !== b.dataset.del);
         }

@@ -267,7 +267,7 @@
             <div class="actions" style="margin:0">
               <button type="submit" class="btn btn-primary" id="saveBtn">💾 保存</button>
               <button type="button" class="btn btn-ghost" id="cancelBtn">取消</button>
-              <button type="button" class="btn btn-bad hidden" id="delBtn" style="margin-left:auto">🗑 删除</button>
+              <button type="button" class="btn btn-bad hidden owner-only" id="delBtn" style="margin-left:auto">🗑 删除</button>
             </div>
           </div>
         </form>
@@ -519,7 +519,7 @@ $("rimageRemove").addEventListener("click", () => {
           <span class="btns">
             <button type="button" class="btn btn-ghost" data-cup="${i}" ${i === 0 ? "disabled" : ""}>↑</button>
             <button type="button" class="btn btn-ghost" data-cdown="${i}" ${i === cats.length - 1 ? "disabled" : ""}>↓</button>
-            <button type="button" class="btn btn-bad" data-cdel="${i}">✕</button>
+            <button type="button" class="btn btn-bad owner-only" data-cdel="${i}">✕</button>
           </span>
         </div>`).join("");
     }
@@ -534,6 +534,7 @@ $("rimageRemove").addEventListener("click", () => {
       if (b.dataset.cup) swap(+b.dataset.cup, +b.dataset.cup - 1);
       if (b.dataset.cdown) swap(+b.dataset.cdown, +b.dataset.cdown + 1);
       if (b.dataset.cdel) {
+        if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除分类
         const c = cats[+b.dataset.cdel];
         const n = rewards.filter(r => catOf(r, cats) === c.id).length;
         if (!confirm(`删除分类「${c.zh}」？` + (n ? `\n这个分类有 ${n} 个奖品，删除后会归到「其他」（保存后生效）。` : ""))) return;
@@ -873,6 +874,7 @@ showPreview(currentImage);
     // ---------- 🗑 删除奖品 ----------
     // 还有处理中的兑换就不能删；会员以前的兑换记录会保留（名称、积分照旧，图片变回图标）
     $("delBtn").addEventListener("click", async () => {
+      if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除奖品
       const id = $("rid").value;
       const r = rewards.find(x => x.id === id);
       if (!r) return;

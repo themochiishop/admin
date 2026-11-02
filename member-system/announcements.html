@@ -153,12 +153,13 @@
             </div>
             ${a.body ? `<div class="ann-body">${esc(a.body)}</div>` : ""}
             <div class="actions">
-              <button class="btn btn-ghost" data-del="${esc(a.id)}">🗑 删除（会员铃铛也会消失）</button>
+              <button class="btn btn-ghost owner-only" data-del="${esc(a.id)}">🗑 删除（会员铃铛也会消失）</button>
             </div>
           </div>`;
       }).join("") : `<p class="empty">还没有公告</p>`;
 
       $("list").querySelectorAll("[data-del]").forEach(btn => btn.addEventListener("click", async () => {
+        if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除
         if (!confirm("删除这则公告？会员的铃铛里也会消失。")) return;
         btn.disabled = true;
         try { await deleteDoc(doc(db, "announcements", btn.dataset.del)); logAdmin("content", "删除了一则会员公告", "announcements.html"); await load(); }

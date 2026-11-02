@@ -239,7 +239,7 @@
               ${r.draft ? `<button class="btn btn-ok" data-pub="${esc(r.id)}">✅ 发布</button>` : ""}
               <button class="btn btn-ghost" data-edit="${esc(r.id)}">✏️ 编辑</button>
               <button class="btn btn-ghost" data-toggle="${esc(r.id)}">${r.active === false ? "👁 显示" : "🙈 隐藏"}</button>
-              <button class="btn btn-ghost" data-del="${esc(r.id)}">🗑 删除</button>
+              <button class="btn btn-ghost owner-only" data-del="${esc(r.id)}">🗑 删除</button>
             </div>
           </div>`;
         }).join("");
@@ -281,6 +281,7 @@
         } else if (b.dataset.toggle) {
           await updateDoc(doc(db, "storeFaq", id), { active: r.active === false });
         } else if (b.dataset.del) {
+          if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除
           if (!confirm(`删除这一题？\n\n${r.q}`)) return;
           await deleteDoc(doc(db, "storeFaq", id));
           logAdmin("content", `删除商店帮助问题：${(r.q || "").slice(0, 40)}`, "storehelp.html");
