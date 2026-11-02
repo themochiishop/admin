@@ -22,6 +22,12 @@
     .end-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .end-row input[type=datetime-local] { width: auto; margin: 0; }
     .end-row label { margin: 0; }
+    .vc-box { border-top: 1px dashed var(--line2); margin-top: 10px; padding-top: 10px; }
+    .vc-box label { font-size: .84rem; }
+    .vc-in { display: flex; gap: 6px; margin-top: 4px; }
+    .vc-in input { margin: 0; font-family: ui-monospace, Menlo, monospace; }
+    .vc-in .btn { padding: 6px 10px; }
+    .vc-line { font-size: .8rem; margin-top: 4px; }
     .delist-box { border: 1px solid #fca5a5; background: var(--red-bg); border-radius: 10px; padding: 10px 12px; margin-top: 8px; display: grid; gap: 6px; font-size: .88rem; }
     .delist-box label { margin: 0; }
     .delist-box input[type=datetime-local] { width: auto; margin: 0; }
@@ -97,6 +103,27 @@
               <small class="muted" id="rchint"></small>
             </label>
             <p class="meta">完整优惠码：<b id="rcfull">-</b>（所有兑换者共用这个码）</p>
+            <div class="vc-box" id="vcBox">
+              <b>🔒 平台优惠券资料</b> <span class="muted" style="font-size:.78rem">只有后台看得到，方便对照平台上是哪一张券</span>
+              <div class="vc-row">
+                <label>平台上的名称（Shopee「优惠券名称」/ TikTok「活动名称」）
+                  <div class="vc-in"><input id="vcName" maxlength="50" autocomplete="off" placeholder="CLUB#SP48213">
+                    <button type="button" class="btn btn-ghost" data-copy-from="vcName">📋</button></div>
+                </label>
+              </div>
+              <div class="actions" style="margin:4px 0 8px">
+                <button type="button" class="btn btn-ghost" id="vcGen">🎲 生成编号和优惠码</button>
+                <button type="button" class="btn btn-ghost" data-copy-from="rcfullTxt">📋 复制优惠码</button>
+                <span class="muted" style="font-size:.78rem" id="vcGenHint"></span>
+              </div>
+              <div class="grid2">
+                <label>有效期：开始 <input type="datetime-local" id="vcStart"></label>
+                <label>有效期：结束 <input type="datetime-local" id="vcEnd"></label>
+                <label>平台上的可用数量（选填） <input type="number" id="vcLimit" min="0" step="1" placeholder="例如 50"></label>
+                <label>优惠内容（选填） <input id="vcNote" maxlength="80" placeholder="例如 折 RM5，最低消费 RM30"></label>
+              </div>
+              <input type="hidden" id="rcfullTxt">
+            </div>
           </div>
           <label class="inline"><input type="checkbox" id="ractive" checked> 上架（会员看得到）</label>
           <div class="open-box">
@@ -185,7 +212,39 @@
       $("rcsuffix").value = $("rcsuffix").value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, f.maxLen);
       $("rchint").textContent = `请输入英文字 A-Z、数字 0-9，${f.minLen}–${f.maxLen} 个字（不包括前缀）`;
       $("rcfull").textContent = $("rcsuffix").value ? f.prefix + $("rcsuffix").value : "-";
+      $("rcfullTxt").value = $("rcsuffix").value ? f.prefix + $("rcsuffix").value : "";
+      $("vcGenHint").textContent = f.id === "shopee" ? "Shopee：CLUB#SP + 5 位数字，优惠码 THEM + 5 位"
+        : f.id === "tiktok" ? "TikTok：CLUB#TT + 5 位数字，优惠码 THEM + 8 位" : "";
+      $("vcGen").classList.toggle("hidden", f.id === "custom");
     }
+
+    // ---------- 🎲 生成平台编号和优惠码（不会和现有的重复） ----------
+    const SAFE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";   // 不用 0 O 1 I L，避免看错
+    const rand = (n, chars) => Array.from(crypto.getRandomValues(new Uint32Array(n)), x => chars[x % chars.length]).join("");
+    function usedNames() { return new Set(rewards.map(r => (r.voucher || {}).name).filter(Boolean).map(x => x.toUpperCase())); }
+    function usedCodes() { return new Set([...rewards.map(r => r.couponCode).filter(Boolean), ...Object.keys(coupons)].map(x => x.toUpperCase())); }
+    $("vcGen").addEventListener("click", () => {
+      const f = fmtOf($("rcformat").value);
+      if (f.id === "custom") return;
+      if (($("vcName").value || $("rcsuffix").value) && !confirm("重新生成？会换掉现在的编号和优惠码。\n（平台上已经建好的券，请照平台上的资料填，不要重新生成）")) return;
+      const tag = f.id === "shopee" ? "SP" : "TT", len = f.id === "shopee" ? 5 : 8;
+      const names = usedNames(), codes = usedCodes();
+      let name, code, tries = 0;
+      do { name = `CLUB#${tag}${rand(5, "0123456789")}`; } while (names.has(name) && ++tries < 50);
+      do { code = rand(len, SAFE); } while (codes.has(f.prefix + code) && ++tries < 100);
+      $("vcName").value = name;
+      $("rcsuffix").value = code;
+      updateCouponUI();
+    });
+    // 📋 复制
+    $("rewardForm").addEventListener("click", async e => {
+      const b = e.target.closest("[data-copy-from]");
+      if (!b) return;
+      const v = $(b.dataset.copyFrom).value;
+      if (!v) return;
+      try { await navigator.clipboard.writeText(v); const o = b.textContent; b.textContent = "✓"; setTimeout(() => b.textContent = o, 1200); }
+      catch { prompt("请手动复制：", v); }
+    });
     $("rtype").addEventListener("change", updateCouponUI);
     $("rcformat").addEventListener("change", updateCouponUI);
     $("rcsuffix").addEventListener("input", updateCouponUI);
@@ -233,11 +292,15 @@ $("rimageRemove").addEventListener("click", () => {
 
     // 🔒 共用优惠码存在 rewardSecrets（只有管理员能读），不放在会员读得到的奖品资料里
     async function load() {
-      const [rs, cs, ss] = await Promise.all([
+      const [rs, cs, ss, rd] = await Promise.all([
         getDocs(collection(db, "rewards")),
         getDocs(collection(db, "coupons")),
-        getDocs(collection(db, "rewardSecrets"))
+        getDocs(collection(db, "rewardSecrets")),
+        getDocs(query(collection(db, "redemptions"), where("kind", "==", "coupon"))).catch(() => ({ docs: [] })),
       ]);
+      // 每个优惠券奖品已经兑换了几张（批准过的，不算测试、拒绝、取消）
+      usedCount = {};
+      rd.docs.forEach(d => { const x = d.data(); if (!x.test && ["approved", "completed"].includes(x.status)) usedCount[x.rewardId] = (usedCount[x.rewardId] || 0) + 1; });
       const secrets = {};
       ss.docs.forEach(d => secrets[d.id] = d.data());
 
@@ -256,7 +319,8 @@ $("rimageRemove").addEventListener("click", () => {
         console.info("已把 " + legacy.length + " 个奖品的优惠码移到 rewardSecrets");
       }
 
-      rewards = rs.docs.map(d => ({ id: d.id, ...d.data(), couponCode: (secrets[d.id] || {}).couponCode || null }))
+      rewards = rs.docs.map(d => ({ id: d.id, ...d.data(), couponCode: (secrets[d.id] || {}).couponCode || null,
+          voucher: (secrets[d.id] || {}).voucher || null }))
         .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || a.cost - b.cost);
 
       // 下架时间已过、还显示上架中的 → 自动改成已下架
@@ -415,6 +479,47 @@ $("rimageRemove").addEventListener("click", () => {
         </div></div>`;
     }
 
+    // ---------- 🔒 平台优惠券资料（存在 rewardSecrets.voucher，只有管理员能读）----------
+    // 用 platform 记是哪个平台；以后要一个奖品放两个平台，可以改成多组
+    function readVoucher(data) {
+      if (data.type !== "coupon") return null;
+      const lim = $("vcLimit").value.trim();
+      const v = {
+        platform: data.couponFormat || "custom",
+        name: $("vcName").value.trim().toUpperCase().slice(0, 50),
+        startAt: $("vcStart").value ? Timestamp.fromDate(new Date($("vcStart").value)) : null,
+        endAt: $("vcEnd").value ? Timestamp.fromDate(new Date($("vcEnd").value)) : null,
+        limit: lim === "" ? null : parseInt(lim, 10),
+        note: $("vcNote").value.trim().slice(0, 80),
+      };
+      return v.name || v.startAt || v.endAt || v.limit != null || v.note ? v : null;
+    }
+    const PLAT = { shopee: "Shopee", tiktok: "TikTok", custom: "其他" };
+    // 已兑换（批准过、不算测试和取消的）几张：load() 时算好
+    let usedCount = {};
+    // 回传 { html, level }：level 2 = 红（过期 / 用完），1 = 黄（快到期 / 快用完），0 = 正常
+    function voucherState(r) {
+      const v = r.voucher;
+      if (r.type !== "coupon" || !v) return { html: "", level: 0 };
+      const now = new Date(), end = toDate(v.endAt), used = usedCount[r.id] || 0;
+      const parts = [`<b>${esc(PLAT[v.platform] || v.platform || "")}</b>${v.name ? ` · <code>${esc(v.name)}</code>` : ""}`];
+      let level = 0;
+      if (end) {
+        const days = (end - now) / 86400000;
+        if (days <= 0) { parts.push(`<span class="tag tag-bad">⛔ 平台优惠券已过期 ${fmtDate(end)}</span>`); level = 2; }
+        else if (days <= 7) { parts.push(`<span class="tag tag-warn">⚠️ ${Math.ceil(days)} 天后到期 ${fmtDate(end)}</span>`); level = 1; }
+        else parts.push(`到期 ${fmtDate(end)}`);
+      }
+      if (typeof v.limit === "number") {
+        const left = v.limit - used;
+        if (left <= 0) { parts.push(`<span class="tag tag-bad">⛔ 已兑换 ${used} / ${v.limit}（平台上的数量用完了）</span>`); level = 2; }
+        else if (left <= 5) { parts.push(`<span class="tag tag-warn">⚠️ 已兑换 ${used} / ${v.limit}，剩 ${left} 张</span>`); level = Math.max(level, 1); }
+        else parts.push(`已兑换 ${used} / ${v.limit}`);
+      } else if (used) parts.push(`已兑换 ${used} 张`);
+      if (v.note) parts.push(esc(v.note));
+      return { html: `<div class="vc-line">🔒 ${parts.join(" · ")}</div>`, level };
+    }
+
     function endInfo(r) {
       const end = toDate(r.endAt);
       if (!end) return "";
@@ -474,6 +579,7 @@ $("rimageRemove").addEventListener("click", () => {
                   ${isCoupon && !r.couponCode ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
                     ${cs.unused === 0 ? '<span class="tag tag-bad">需补充</span>' : cs.unused < 5 ? '<span class="tag tag-warn">快用完</span>' : ""}` : ""}
                 </div>
+                ${voucherState(r).html}
               </div>
             </div>
             <div class="actions">
@@ -523,6 +629,12 @@ $("rimageRemove").addEventListener("click", () => {
             const cf = fmtOf(r && r.couponFormat);
       $("rcformat").value = cf.id;
       $("rcsuffix").value = r && r.couponCode ? r.couponCode.slice(cf.prefix.length) : "";
+      const vc = (r && r.voucher) || {};
+      $("vcName").value = vc.name || "";
+      $("vcStart").value = toDate(vc.startAt) ? toLocalInput(toDate(vc.startAt)) : "";
+      $("vcEnd").value = toDate(vc.endAt) ? toLocalInput(toDate(vc.endAt)) : "";
+      $("vcLimit").value = typeof vc.limit === "number" ? vc.limit : "";
+      $("vcNote").value = vc.note || "";
       updateCouponUI();
       currentImage = r ? (r.image || null) : null;
 $("rimage").value = "";
@@ -613,6 +725,11 @@ showPreview(currentImage);
         }
         data.couponFormat = f.id;
       }
+      if (data.type === "coupon" && $("vcStart").value && $("vcEnd").value && new Date($("vcEnd").value) <= new Date($("vcStart").value)) {
+        $("formMsg").textContent = "优惠券的结束时间要在开始时间之后";
+        $("formMsg").className = "msg err";
+        return;
+      }
       // 优惠码另存（会员读不到）
       const code = data.type === "coupon" && $("rcsuffix").value.trim()
         ? fmtOf($("rcformat").value).prefix + $("rcsuffix").value.trim().toUpperCase() : null;
@@ -622,7 +739,7 @@ showPreview(currentImage);
         let rid = id;
         if (id) await updateDoc(doc(db, "rewards", id), { ...data, couponCode: deleteField() });
         else rid = (await addDoc(collection(db, "rewards"), { ...data, createdAt: serverTimestamp() })).id;
-        await setDoc(doc(db, "rewardSecrets", rid), { couponCode: code, updatedAt: serverTimestamp() });
+        await setDoc(doc(db, "rewardSecrets", rid), { couponCode: code, voucher: readVoucher(data), updatedAt: serverTimestamp() });
         $("formPanel").classList.add("hidden");
         logAdmin("content", `${id ? "修改" : "新增"}商城奖品「${data.name}」`, "rewards.html");
         await load();

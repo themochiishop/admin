@@ -391,9 +391,24 @@
       const pool = {};
       cS.docs.forEach(d => { const c = d.data(); if (!c.used) pool[c.rewardId] = (pool[c.rewardId] || 0) + 1; });
       const warn = [];
+      const used = {};
+      redemptions.forEach(x => { if (x.kind === "coupon" && !x.test && ["approved", "completed"].includes(x.status)) used[x.rewardId] = (used[x.rewardId] || 0) + 1; });
       rwS.docs.forEach(d => {
         const r = { id: d.id, ...d.data() };
         if (!r.active) return;
+        // 🔒 平台优惠券：7 天内到期 / 已过期 / 平台数量快用完
+        const v = (secrets[r.id] || {}).voucher;
+        if (r.type === "coupon" && v) {
+          const end = toDate(v.endAt);
+          if (end) {
+            const days = (end - Date.now()) / 86400000;
+            if (days <= 7) warn.push({ name: r.name, left: Math.max(0, Math.ceil(days)), text: days <= 0 ? "平台券已过期" : `平台券 ${Math.ceil(days)} 天后到期`, bad: days <= 0 });
+          }
+          if (typeof v.limit === "number" && v.limit - (used[r.id] || 0) <= 5) {
+            const left = v.limit - (used[r.id] || 0);
+            warn.push({ name: r.name, left: Math.max(0, left), text: left <= 0 ? "平台券数量用完" : `平台券剩 ${left} 张`, bad: left <= 0 });
+          }
+        }
         if (r.type === "coupon" && !(secrets[r.id] || {}).couponCode) {
           const left = pool[r.id] || 0;
           if (left < 5) warn.push({ name: r.name, left, unit: "组券码", bad: left === 0 });
@@ -407,7 +422,7 @@
         ? `<span class="big" style="color:#dc2626">${warn.length}</span><span class="sub">个快用完</span>`
         : `<span class="big" style="color:#16a34a">✓</span><span class="sub">${activeN} 个上架奖品，都够用</span>`;
       $("stockList").innerHTML = warn.map(w => `
-          <li><span class="nm">${esc(w.name)}</span><span class="tag ${w.bad ? "tag-bad" : "tag-warn"}">剩 ${w.left} ${w.unit}</span></li>`).join("");
+          <li><span class="nm">${esc(w.name)}</span><span class="tag ${w.bad ? "tag-bad" : "tag-warn"}">${w.text ? esc(w.text) : `剩 ${w.left} ${w.unit}`}</span></li>`).join("");
 
       // 最近动态：会员、Feed、管理员三类（Feed 和管理员记录另外读取，慢一点出现）
       const ev = [];

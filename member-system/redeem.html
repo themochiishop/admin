@@ -162,7 +162,11 @@
     async function load() {
       loadPrizeAlert();
       $("panel").innerHTML = `<p class="empty">载入中…</p>`;
-      const snap = await getDocs(collection(db, "redemptions"));
+      const [snap, secS] = await Promise.all([
+        getDocs(collection(db, "redemptions")),
+        getDocs(collection(db, "rewardSecrets")).catch(() => ({ docs: [] })),
+      ]);
+      secS.docs.forEach(d => { vouchers[d.id] = d.data().voucher || null; });
       all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .map(r => ({ ...r, createdAt: toDate(r.createdAt), decidedAt: toDate(r.decidedAt) }));
 
@@ -290,6 +294,15 @@
           ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}">`).join("")}</div>` : ""}
         </div>`;
     }
+    // 🔒 优惠券奖品对应平台上哪一张券（编号、到期日）
+    const vouchers = {};
+    function voucherLine(r) {
+      const v = !isGift(r) && vouchers[r.rewardId];
+      if (!v) return "";
+      const end = toDate(v.endAt), P = { shopee: "Shopee", tiktok: "TikTok" }[v.platform] || "其他";
+      const expired = end && end <= new Date();
+      return `<div class="meta">🔒 ${P}${v.name ? ` · <code>${esc(v.name)}</code>` : ""}${end ? ` · ${expired ? '<span class="tag tag-bad">平台券已过期</span>' : "到期 " + fmtDate(end)}` : ""}${v.note ? " · " + esc(v.note) : ""}</div>`;
+    }
     function head(r, extra = "") {
       const m = members[r.uid] || {};
       return `
@@ -299,7 +312,7 @@
             <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a>${isInternal(r.uid) ? ' <span class="tag tag-pink">🏷️ 内部会员</span>' : ""} · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
           </div>
           <code class="rno">${redeemCode(r.id)}</code>
-        </div>`;
+        </div>${voucherLine(r)}`;
     }
 
     // 待发货：依寄送方式显示
