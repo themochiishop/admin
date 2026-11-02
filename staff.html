@@ -118,6 +118,10 @@
     .switch-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--ink); cursor: pointer; margin-bottom: 4px; }
     .info { font-size: .8rem; color: var(--muted); line-height: 1.8; }
     .info code { font-size: .76rem; background: var(--soft); padding: 1px 5px; border-radius: 5px; color: var(--ink); }
+    .draw-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .78rem; color: var(--muted);
+      background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+    .draw-bar .btn { padding: 4px 10px; font-size: .76rem; }
+    .draw-bar b { color: var(--ink); }
     .note-box { font-size: .78rem; color: var(--muted); background: var(--soft2); border: 1px dashed var(--line2); border-radius: 10px; padding: 8px 10px; margin-top: 8px; line-height: 1.6; }
 
     @media (max-width: 899px) {
@@ -147,6 +151,7 @@
         </div>
         <input id="search" type="search" placeholder="🔍 搜索名字、email、职称" autocomplete="off">
         <div class="rw-chips" id="chips"></div>
+        <div class="draw-bar" id="drawBar">🎁 抽奖系统：检查中…</div>
       </div>
       <div id="list" class="rw-list"><p class="empty">载入中…</p></div>
     </aside>
@@ -186,7 +191,8 @@
               <div id="tree"></div>
               <div class="note-box">
                 勾上层会全选下层；下层只勾一部分时，上层显示「半勾」。<br>
-                「Member Club」或「Mochii Feed」勾了，会自动加进会员系统的管理员名单；两个都取消，会自动移除。
+                「Member Club」或「Mochii Feed」勾了，会自动加进会员系统的管理员名单；两个都取消，会自动移除。<br>
+                「每月抽奖」的「抽奖控制台」和「领奖追踪」会同步到抽奖系统（左边要显示「抽奖系统：已连接」）。
               </div>
             </details>
 
@@ -211,7 +217,9 @@
     import { auth, db } from "./member-system/js/firebase-config.js";
     import { logAdmin } from "./member-system/js/admin-common.js";
     import { PERM_TREE, PRESETS, allPerms, can, countPerms, TOTAL_PERMS, normEmail, OWNER_EMAIL, isOwnerUser } from "./js/admin-guard.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { onAuthStateChanged, getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref as dref, get as dget, set as dset } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
       collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
@@ -253,6 +261,8 @@
         .sort((a, b) => (a.active === false) - (b.active === false) || String(a.name || a.id).localeCompare(String(b.name || b.id)));
       render();
       syncAllAdmins();
+      staffLoaded = true;
+      paintDraw();
     }
 
     // ---------- 会员系统管理员名单（admins/{uid}）同步 ----------
@@ -272,6 +282,90 @@
         try { await syncAdmin(s); } catch (e) { console.warn("同步会员系统管理员失败", s.id, e.message); }
       }
     }
+
+    // ---------- 🎁 抽奖系统（draw-tournament）名单同步 ----------
+    // 抽奖系统是另一个 Firebase 项目，要用店主账号另外登录一次（这台电脑会记住）
+    // 名单存在 draw_staff/{email，点换成逗号}：{ console, claims, name, email }
+    const drawApp = initializeApp({
+      apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
+      authDomain: "draw-tournament.firebaseapp.com",
+      databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "draw-tournament",
+    }, "draw");
+    const dAuth = getAuth(drawApp), ddb = getDatabase(drawApp);
+    const drawKey = e => normEmail(e).replace(/\./g, ",");
+    let drawUser = null;
+    const drawOk = () => !!drawUser && normEmail(drawUser.email) === OWNER_EMAIL;
+    function drawEntry(s) {
+      if (!s || s.active === false) return null;
+      const acc = { ok: true, perms: s.perms };
+      const v = { console: can(acc, "draw.console"), claims: can(acc, "draw.claims") };
+      return v.console || v.claims ? { ...v, name: s.name || "", email: s.id || s.email } : null;
+    }
+    // 一个人：写入或移除。回传 "ok" / "skip"（没连接）/ "fail"
+    async function syncDraw(s, removeOnly = false) {
+      if (!drawOk()) return "skip";
+      try { await dset(dref(ddb, "draw_staff/" + drawKey(s.id || s.email)), removeOnly ? null : drawEntry(s)); return "ok"; }
+      catch (e) { console.warn("抽奖系统同步失败", e.message); return "fail"; }
+    }
+    // 全部：名单上的写进去，不在名单上的移除
+    async function syncAllDraw() {
+      const cur = (await dget(dref(ddb, "draw_staff"))).val() || {};
+      const want = {};
+      staff.forEach(s => { const v = drawEntry(s); if (v) want[drawKey(s.id)] = v; });
+      const keys = new Set([...Object.keys(cur), ...Object.keys(want)]);
+      for (const k of keys) await dset(dref(ddb, "draw_staff/" + k), want[k] || null);
+      return Object.keys(want).length;
+    }
+    // 检查抽奖系统那边的名单跟这里一不一样
+    async function drawDiff() {
+      const cur = (await dget(dref(ddb, "draw_staff"))).val() || {};
+      const want = {};
+      staff.forEach(s => { const v = drawEntry(s); if (v) want[drawKey(s.id)] = v; });
+      let n = 0;
+      new Set([...Object.keys(cur), ...Object.keys(want)]).forEach(k => {
+        const a = cur[k] || null, b = want[k] || null;
+        if (!a !== !b || (a && b && (a.console !== b.console || a.claims !== b.claims))) n++;
+      });
+      return n;
+    }
+    async function paintDraw() {
+      const bar = $("drawBar");
+      if (!drawUser) {
+        bar.innerHTML = '🎁 抽奖系统：<b>未连接</b>（抽奖权限不会同步）<button type="button" class="btn btn-primary" id="drawLogin">连接抽奖系统</button>';
+        $("drawLogin").onclick = drawLogin;
+        return;
+      }
+      if (!drawOk()) {
+        bar.innerHTML = `🎁 抽奖系统：登录的是 <b>${esc(drawUser.email || "")}</b>，请改用店主账号<button type="button" class="btn btn-ghost" id="drawSwitch">换账号</button>`;
+        $("drawSwitch").onclick = async () => { await signOut(dAuth); drawLogin(); };
+        return;
+      }
+      bar.innerHTML = "🎁 抽奖系统：已连接 ✅ · 检查名单中…";
+      try {
+        const n = await drawDiff();
+        bar.innerHTML = n
+          ? `🎁 抽奖系统：已连接 · <b style="color:var(--warn)">⚠️ ${n} 人还没同步</b><button type="button" class="btn btn-primary" id="drawSyncAll">立即同步</button>`
+          : '🎁 抽奖系统：已连接 ✅ · 名单已同步<button type="button" class="btn btn-ghost" id="drawSyncAll" style="margin-left:auto">重新同步</button>';
+        $("drawSyncAll").onclick = async e => {
+          e.target.disabled = true;
+          try { const c = await syncAllDraw(); logAdmin("settings", `同步了抽奖系统名单（${c} 人）`, "../staff.html"); }
+          catch (err) { alert("同步失败：" + err.message + "\n请确认抽奖系统的 Firebase 规则已经更新。"); }
+          paintDraw();
+        };
+      } catch (e) {
+        bar.innerHTML = `🎁 抽奖系统：已连接，但读不到名单（${esc(e.message)}）。请确认抽奖系统的 Firebase 规则已经更新。`;
+      }
+    }
+    async function drawLogin() {
+      const p = new GoogleAuthProvider();
+      p.setCustomParameters({ prompt: "select_account", login_hint: OWNER_EMAIL });
+      try { await signInWithPopup(dAuth, p); }
+      catch (e) { if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") alert("连接失败：" + (e.code || e.message)); }
+    }
+    let staffLoaded = false;
+    onAuthStateChanged(dAuth, u => { drawUser = u && !u.isAnonymous ? u : null; if (staffLoaded) paintDraw(); });
+    const drawMsg = r => r === "ok" ? "（抽奖系统已同步）" : r === "skip" ? "（⚠️ 抽奖系统没连接，抽奖权限还没同步）" : r === "fail" ? "（⚠️ 抽奖系统同步失败）" : "";
 
     // ---------- 👈 列表 ----------
     const stOf = s => s.active === false ? "off" : "on";
@@ -484,6 +578,8 @@
         await setDoc(doc(db, "staff", s.id), { active: on, updatedAt: serverTimestamp(), updatedBy: OWNER_EMAIL }, { merge: true });
         s.active = on;
         await syncAdmin(s).catch(e => console.warn(e));
+        const dr = await syncDraw(s);
+        if (dr !== "ok" && drawEntry({ ...s, active: true })) alert("已" + (on ? "重新启用" : "停用") + drawMsg(dr));
         logAdmin("settings", `${on ? "重新启用" : "停用"}了管理员「${s.name || s.id}」`, "../staff.html");
         dirty = false;
         await load();
@@ -517,12 +613,17 @@
         let sync = null;
         try { sync = await syncAdmin({ ...old, ...data, id: email }); }
         catch (err) { console.warn(err); sync = "fail"; }
+        // 有勾过或现在有勾抽奖权限的，才需要同步抽奖系统
+        const touchesDraw = !!(drawEntry({ ...old, ...data, id: email }) || drawEntry({ ...old, id: email }));
+        const dr = touchesDraw ? await syncDraw({ ...old, ...data, id: email }) : null;
         logAdmin("settings", `${isNew ? "新增" : "修改"}了管理员「${data.name || email}」的权限`, "../staff.html");
         dirty = false;
         await load();
         openForm(staff.find(s => s.id === email), true);
         msg("已保存 ✅" + (sync === "added" ? "（已加进会员系统管理员名单）" : sync === "removed" ? "（已从会员系统管理员名单移除）"
-          : sync === "fail" ? "（会员系统管理员名单同步失败，请检查 Firestore 规则）" : ""), sync === "fail" ? "err" : "ok");
+          : sync === "fail" ? "（会员系统管理员名单同步失败，请检查 Firestore 规则）" : "") + drawMsg(dr),
+          sync === "fail" || (dr && dr !== "ok") ? "err" : "ok");
+        paintDraw();
       } catch (err) {
         msg("保存失败：" + err.message, "err");
       } finally { $("saveBtn").disabled = false; }
@@ -536,6 +637,7 @@
       try {
         if (s.uid) { try { await deleteDoc(doc(db, "admins", s.uid)); } catch (e) { console.warn(e); } }
         await deleteDoc(doc(db, "staff", s.id));
+        if (drawEntry(s)) { const dr = await syncDraw(s, true); if (dr !== "ok") alert("已删除" + drawMsg(dr)); }
         logAdmin("settings", `删除了管理员「${s.name || s.id}」`, "../staff.html");
         dirty = false;
         await load();

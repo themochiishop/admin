@@ -488,11 +488,15 @@
           messagingSenderId: "803720903757",
           appId: "1:803720903757:web:8b561daabc0d69af9e7004"
         });
-        // 抽奖系统自己的名单（第二阶段会改成跟着管理员页面自动同步）
-        const ALLOWED = ['xiaomah09@gmail.com', 'mail@themochiishop.com', 'ivychongsingyee@gmail.com'];
+        // 抽奖系统的名单：店主 + draw_staff（由「👥 管理员」页面同步）
+        const key = e => String(e || '').toLowerCase().replace(/\./g, ',');
         let started = false;
-        firebase.auth().onAuthStateChanged(u => {
-          const ok = u && !u.isAnonymous && ALLOWED.includes(String(u.email || '').toLowerCase());
+        firebase.auth().onAuthStateChanged(async u => {
+          let ok = !!(u && !u.isAnonymous);
+          if (ok && String(u.email || '').toLowerCase() !== 'mail@themochiishop.com') {
+            try { const v = (await firebase.database().ref('draw_staff/' + key(u.email)).once('value')).val(); ok = !!(v && (v.claims || v.console)); }
+            catch (e) { ok = false; }
+          }
           const link = document.getElementById('drawClaimLink'), count = document.getElementById('drawClaimCount');
           if (!ok) { count.hidden = true; link.classList.remove('has-todo'); return; }
           if (started) return;
