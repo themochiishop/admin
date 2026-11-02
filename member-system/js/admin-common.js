@@ -1,6 +1,6 @@
 // member-system 后台共用功能
 import { auth, db } from "./firebase-config.js";
-import { getAccess, can } from "/js/admin-guard.js";
+import { getAccess, can, MEMBER_PAGE_PERM, firstMemberPage, setupOwnerOnly } from "/js/admin-guard.js";
 import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -308,7 +308,7 @@ export function renderAdminNav(active) {
         <div class="side-group">
           ${g.label ? `<div class="side-label">${g.label}</div>` : ""}
           ${g.items.map(([k, href, ic, t, badge]) => `
-            <a href="${href}" class="side-link ${k === active ? "active" : ""}">
+            <a href="${href}" data-nk="${k}" class="side-link ${k === active ? "active" : ""}">
               <span class="ic">${ic}</span><span class="tx">${t}</span>
               ${badge ? `<span id="${badge}" class="nav-badge" hidden></span>` : ""}
             </a>`).join("")}
@@ -451,50 +451,79 @@ export function requireAdmin(onReady) {
       return;
     }
 
-    // 👥 控制台的管理员权限：Feed 页面要「Mochii Feed」，其他页面要「Member Club」
-    const need = /\/feed\.html$/.test(location.pathname) ? "feed" : "member";
+    // 👥 控制台的管理员权限：每一页要的权限见 admin-guard.js 的 MEMBER_PAGE_PERM
+    const page = location.pathname.split("/").pop() || "index.html";
+    const need = MEMBER_PAGE_PERM[page] || "member";
     const access = await getAccess(user);
     if (!can(access, need)) {
+      const first = access.ok ? firstMemberPage(access) : null;
+      if (first && (page === "index.html" || page === "")) { location.replace(first); return; }   // 没有总览：直接去他能用的第一页
       app.classList.add("hidden");
       gate.classList.remove("hidden");
       gate.innerHTML = `
         <div class="gate-card">
           <h2>🔒 没有这项权限</h2>
           <p>已登录：${esc(user.email || "")}</p>
-          <p>${access.reason === "disabled" ? "这个账号已被停用。" : `这个账号没有「${need === "feed" ? "Mochii Feed" : "Member Club"}」的权限，需要的话请联系店主。`}</p>
+          <p>${access.reason === "disabled" ? "这个账号已被停用。" : "这个账号没有这一页的权限，需要的话请联系店主。"}</p>
           <div class="actions" style="justify-content:center">
-            <a class="btn btn-primary" href="/">回控制台</a>
+            ${first ? `<a class="btn btn-primary" href="${first}">去我能用的页面</a>` : ""}
+            <a class="btn ${first ? "btn-ghost" : "btn-primary"}" href="/">回控制台</a>
             <button id="gateLogout" class="btn btn-ghost">换一个账号</button>
           </div>
         </div>`;
       document.getElementById("gateLogout").addEventListener("click", () => signOut(auth));
       return;
     }
+    window.msAccess = access;
+    setupOwnerOnly(access.owner);
+    filterNav(access);
 
     gate.classList.add("hidden");
     app.classList.remove("hidden");
     onReady(user);
-    initClubSwitch(user);
-    refreshRedeemBadge();
-    refreshPrizeBadge();
-    refreshFeedBadge();
+    initClubSwitch(user, access);
+    if (can(access, "member.redeem")) refreshRedeemBadge();
+    if (can(access, "member.prizes")) refreshPrizeBadge();
+    if (can(access, "feed")) refreshFeedBadge();
   });
 }
 
 // ---------- 前台俱乐部开关（开放 / 维修中） ----------
-function initClubSwitch(user) {
+// 侧边栏：只显示这个人有权限的页面（没有任何项目的分组整组隐藏）
+const NAV_PERM = {
+  overview: "member.overview", redeem: "member.redeem", prizes: "member.prizes", feedReview: "feed",
+  members: "member.members", rewards: "member.shop", perks: "member.shop",
+  home: "member.content", feed: "feed", announce: "member.content", storehelp: "member.content",
+  notify: "member.settings",
+};
+function filterNav(access) {
+  document.querySelectorAll(".side-scroll a[data-nk]").forEach(a => {
+    const k = a.dataset.nk;
+    a.style.display = can(access, NAV_PERM[k] || "member") ? "" : "none";
+  });
+  document.querySelectorAll(".side-scroll .side-group").forEach(g => {
+    g.style.display = [...g.querySelectorAll("a[data-nk]")].some(a => a.style.display !== "none") ? "" : "none";
+  });
+  const brand = document.querySelector(".side-brand");
+  if (brand && !can(access, "member.overview")) brand.setAttribute("href", firstMemberPage(access) || "../");
+}
+
+// 前台俱乐部开关：只有店主能切换（其他管理员只看得到状态）
+function initClubSwitch(user, access) {
   const btn = document.getElementById("clubSwitch");
   if (!btn) return;
+  const isOwner = !!(access && access.owner);
   const ref = doc(db, "settings", "club");
   let open = false;
   onSnapshot(ref, s => {
     open = s.exists() && s.data().open === true;
     btn.textContent = open ? "🟢 俱乐部开放中" : "🔴 俱乐部维修中";
     btn.className = "club-switch " + (open ? "club-open" : "club-closed");
-    btn.title = open ? "点击关闭前台会员俱乐部" : "点击开放前台会员俱乐部";
+    btn.title = !isOwner ? "只有店主可以切换" : open ? "点击关闭前台会员俱乐部" : "点击开放前台会员俱乐部";
   });
   btn.addEventListener("click", async e => {
     e.preventDefault();
+    if (!isOwner) { alert("🔒 只有店主可以切换俱乐部开放 / 维修中。"); return; }
     const msg = open
       ? "关闭会员俱乐部？\n关闭后会员无法登录，首页会显示「正在装修俱乐部」。"
       : "开放会员俱乐部？\n开放后所有人都可以注册和登录。";
