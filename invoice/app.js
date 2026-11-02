@@ -404,7 +404,8 @@ async function initFirebase() {
   }
   fb.onAuthStateChanged(fb.auth, async u => {
     user = u; isAdmin = false;
-    if (u) { try { isAdmin = (await fb.getDoc(fb.doc(fb.db, "admins", u.uid))).exists(); } catch (e) {} }
+    // 👥 看控制台「👥 管理员」里的「PO / Invoice」权限（不再需要是会员系统管理员）
+    if (u) { try { const g = await import("/js/admin-guard.js"); isAdmin = g.can(await g.getAccess(u), "invoice"); } catch (e) {} }
     renderAuth();
     if (isAdmin) loadLists();
   });
