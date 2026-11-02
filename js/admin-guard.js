@@ -42,8 +42,8 @@ export const PERM_TREE = [
     ] },
     { id: "feed", icon: "📰", label: "Mochii Feed" },
     { id: "gallery", icon: "🖼️", label: "图库管理", subs: [
-      { id: "view", label: "查看前台" },
-      { id: "upload", label: "上传" },
+      { id: "view", label: "查看前台（直播看图）" },
+      { id: "upload", label: "管理（上传、更换、删除）" },
     ] },
   ] },
 ];
