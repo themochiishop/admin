@@ -2,7 +2,12 @@
 <html lang="zh-CN">
 <head>
   <!-- 🔐 权限检查：没登录或没有「draw.claims」权限会跳回控制台 -->
-  <script type="module">import { guard } from "/js/admin-guard.js"; guard("draw.claims");</script>
+  <script type="module">import { guard } from "/js/admin-guard.js"; guard("draw.claims").then(a => {
+    // 🗑 删除整场清单：只有店主看得到
+    window.__isShopOwner = !!a.owner;
+    const b = document.getElementById("deleteBatchBtn");
+    if (b && a.owner) b.classList.remove("hidden");
+  });</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎁 领奖追踪 - Mochiishop</title>
@@ -55,7 +60,7 @@
     <div id="list"></div>
     <div id="footerTools" class="hidden mt-8 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
       <span>勾选和备注会自动保存（离开输入框即保存），只有后台账号看得到。</span>
-      <button onclick="deleteBatch()" class="px-2.5 py-1 border border-rose-500/40 text-rose-300 hover:bg-rose-600 hover:text-white rounded">🗑 删除这一场的清单</button>
+      <button id="deleteBatchBtn" onclick="deleteBatch()" class="hidden px-2.5 py-1 border border-rose-500/40 text-rose-300 hover:bg-rose-600 hover:text-white rounded">🗑 删除这一场的清单</button>
     </div>
   </main>
 
@@ -219,7 +224,7 @@
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
     function deleteBatch() {
-      if (!curId) return;
+      if (!curId || !window.__isShopOwner) return;   // 只有店主可以删
       const s = stats(curId);
       if (!confirm(`🗑 删除【${batchName(curId)}】的领奖清单？\n\n共 ${s.total} 位得主（已寄出 ${s.shipped} 位）。删除后无法恢复，建议先下载 CSV。`)) return;
       const id = curId; curId = null;
