@@ -108,6 +108,8 @@
 
     let all = [];
     const members = {};   // uid → 会员资料
+    const rewardCodes = {};   // 奖品 ID → 共用优惠码（多组轮替）
+    const rewardInfo = {};    // 奖品 ID → { perMember, roundSince }
     const ledgers = {};   // uid → 积分流水
     let tab = "pending";
     // 从总览点进来时网址会带分页，例如 #toShip
@@ -166,7 +168,17 @@
         getDocs(collection(db, "redemptions")),
         getDocs(collection(db, "rewardSecrets")).catch(() => ({ docs: [] })),
       ]);
-      secS.docs.forEach(d => { vouchers[d.id] = d.data().voucher || null; });
+      secS.docs.forEach(d => {
+        const x = d.data();
+        vouchers[d.id] = x.voucher || null;
+        rewardCodes[d.id] = Array.isArray(x.couponCodes) && x.couponCodes.length ? x.couponCodes : (x.couponCode ? [x.couponCode] : []);
+      });
+      try {
+        (await getDocs(collection(db, "rewards"))).docs.forEach(d => {
+          const x = d.data();
+          rewardInfo[d.id] = { perMember: typeof x.perMember === "number" ? x.perMember : null, roundSince: toDate(x.roundSince) };
+        });
+      } catch (e) { console.warn("rewards", e); }
       all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .map(r => ({ ...r, createdAt: toDate(r.createdAt), decidedAt: toDate(r.decidedAt) }));
 
@@ -412,6 +424,7 @@
             <div class="meta">会员可用积分：<b>${bal.spendable}</b>
               ${bal.spendable >= r.cost ? '<span class="tag tag-ok">足够</span>' : '<span class="tag tag-bad">不足</span>'}
               ${bal.reserved ? ` · 其他审核中 ${bal.reserved} 分` : ""}${bal.pending ? ` · 待确认 ${bal.pending} 分` : ""}</div>
+            ${limitWarn(r)}
             ${isGift(r) ? dlvBox(r) : ""}
             <div class="mode-row">
               <span class="meta">这一笔是：</span>
@@ -465,6 +478,22 @@
       }).join("") : `<p class="empty">${EMPTY[tab]}</p>`;
     }
 
+    // ---------- 🔁 每位会员限兑次数 ----------
+    // 这一期（换新码之后）这位会员已经兑换几次：不算这一笔、拒绝和取消的
+    function roundCount(r) {
+      const since = (rewardInfo[r.rewardId] || {}).roundSince;
+      return all.filter(x => x.id !== r.id && x.uid === r.uid && x.rewardId === r.rewardId
+        && !["rejected", "cancelled"].includes(x.status) && (!since || !x.createdAt || x.createdAt >= since)).length;
+    }
+    function limitWarn(r) {
+      const max = (rewardInfo[r.rewardId] || {}).perMember;
+      if (typeof max !== "number") return "";
+      const n = roundCount(r);
+      return n >= max
+        ? `<div class="meta"><span class="tag tag-bad">⚠️ 这位会员本期已兑换 ${n} 次（上限 ${max} 次），建议拒绝</span></div>`
+        : `<div class="meta">本期第 ${n + 1} 次兑换（上限 ${max} 次）</div>`;
+    }
+
     // ---------- 批准 / 拒绝 ----------
     async function approve(r, note, test, dv) {
       const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
@@ -480,9 +509,18 @@
       let couponCode = null, fromPool = false;
       if (reward && reward.type === "coupon") {
         const secret = await getDoc(doc(db, "rewardSecrets", r.rewardId));
-        const shared = (secret.exists() && secret.data().couponCode) || reward.couponCode || null;
-        if (shared) {
-          couponCode = shared;
+        const sx = secret.exists() ? secret.data() : {};
+        const codes = Array.isArray(sx.couponCodes) && sx.couponCodes.length ? sx.couponCodes
+          : [sx.couponCode || reward.couponCode].filter(Boolean);
+        if (codes.length) {
+          // 🔁 多组共用码：给这位会员还没拿过的下一组
+          const got = new Set(all.filter(x => x.id !== r.id && x.uid === r.uid && x.rewardId === r.rewardId && x.couponCode
+            && !["rejected", "cancelled"].includes(x.status)).map(x => x.couponCode));
+          couponCode = codes.find(c => !got.has(c));
+          if (!couponCode) {
+            alert(`这位会员已经拿过这个奖品全部 ${codes.length} 组优惠码（${codes.join("、")}），再给同一组在平台上会用不了。\n\n请按「拒绝」退回积分，或到「商城奖品」加一组新的优惠码。`);
+            return false;
+          }
         } else if (test) {
           couponCode = "TEST-" + r.id.slice(0, 6).toUpperCase();   // 测试：不用掉券码库
         } else {
