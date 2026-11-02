@@ -630,14 +630,17 @@
   <script type="module">
     const list = document.getElementById("todoList");
     // 👥 按控制台的管理员权限：只显示这个人有权限的项目和入口
-    const { can } = await import("/js/admin-guard.js");
+    const { can, firstMemberPage } = await import("/js/admin-guard.js");
     const acc = await window.hubAccess;
     document.querySelectorAll("[data-perm]").forEach(el => { el.hidden = !can(acc, el.dataset.perm); });
+    const msLink = document.querySelector('a[data-perm="member"]');
+    const msFirst = firstMemberPage(acc);
+    if (msLink && msFirst) msLink.href = "https://admin.themochiishop.com/member-system/" + msFirst;
     const ROWS = [
-      { k: "rPending", ic: "🎁", t: "兑换待审核",     href: "/member-system/redeem.html#pending", src: "ms", perm: "member" },
-      { k: "rShip",    ic: "📦", t: "兑换待发货",     href: "/member-system/redeem.html#toShip",  src: "ms", perm: "member" },
-      { k: "pClaimed", ic: "🏆", t: "中奖待审核",     href: "/member-system/prizes.html#claimed", src: "ms", perm: "member" },
-      { k: "pShip",    ic: "🚚", t: "中奖待发货",     href: "/member-system/prizes.html#approved", src: "ms", perm: "member" },
+      { k: "rPending", ic: "🎁", t: "兑换待审核",     href: "/member-system/redeem.html#pending", src: "ms", perm: "member.redeem" },
+      { k: "rShip",    ic: "📦", t: "兑换待发货",     href: "/member-system/redeem.html#toShip",  src: "ms", perm: "member.redeem" },
+      { k: "pClaimed", ic: "🏆", t: "中奖待审核",     href: "/member-system/prizes.html#claimed", src: "ms", perm: "member.prizes" },
+      { k: "pShip",    ic: "🚚", t: "中奖待发货",     href: "/member-system/prizes.html#approved", src: "ms", perm: "member.prizes" },
       { k: "feed",     ic: "⏳", t: "Feed 投稿待审核", href: "/member-system/feed.html#pending",   src: "ms", perm: "feed" },
       { k: "reports",  ic: "🚩", t: "Feed 检举待处理", href: "/member-system/feed.html#reports",   src: "ms", perm: "feed" },
       { k: "claims",   ic: "🎀", t: "领奖追踪未寄出", href: "/draw_tournament/claims.html",       src: "draw", perm: "draw.claims" },
