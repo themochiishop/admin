@@ -35,7 +35,7 @@
   </div>
 
   <header class="sticky top-0 z-30 bg-slate-800/95 backdrop-blur border-b border-slate-700">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
       <a href="../" class="text-slate-400 hover:text-white text-sm" title="回到控制台首页">←</a>
       <h1 class="text-base sm:text-lg font-bold text-sky-300">🎁 领奖追踪</h1>
       <select id="batchSel" onchange="selectBatch(this.value)" class="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100 max-w-[220px]"></select>
@@ -47,10 +47,10 @@
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 py-4">
+  <main class="max-w-6xl mx-auto px-4 py-4">
     <div id="summary" class="flex flex-wrap gap-2 mb-4"></div>
     <div id="clubHint" class="hidden mb-4 rounded-lg border border-pink-800 bg-pink-950/40 px-3 py-2 text-xs text-pink-200"></div>
-    <div id="list" class="space-y-2"></div>
+    <div id="list"></div>
     <div id="footerTools" class="hidden mt-8 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
       <span>勾选和备注会自动保存（离开输入框即保存），只有后台账号看得到。</span>
       <button onclick="deleteBatch()" class="px-2.5 py-1 border border-rose-500/40 text-rose-300 hover:bg-rose-600 hover:text-white rounded">🗑 删除这一场的清单</button>
@@ -85,6 +85,15 @@
     const clubDone = x => { const c = clubOf(x); return !!c && (c.status === 'shipped' || c.status === 'completed'); };
     const isDone = x => !!x.shipped || clubDone(x);   // 自己勾「已寄出」，或俱乐部那边已发货 = 已寄出
     window.onClubPrizes = () => { fillSelect(); render(); };
+
+    // 分组：C = 安慰奖（右边）　T = 冠亚季（左上）　F = 入围和其他（左下）
+    const grpOf = x => {
+      const r = String(x.rank || '');
+      if (/安慰/.test(r)) return 'C';
+      if (/入围/.test(r)) return 'F';
+      if (/冠|亚|季|🥇|🥈|🥉|第\s*[1-3一二三]\s*名/.test(r)) return 'T';
+      return 'F';
+    };
 
     function login() {
       const p = new firebase.auth.GoogleAuthProvider();
@@ -138,6 +147,28 @@
     }
     function selectBatch(id) { curId = id; render(); }
 
+    // 单个得主的一张卡
+    function card(x) {
+      const p = platformOf(x.orderNo), c = clubOf(x), cd = clubDone(x);
+      const clubTag = c ? `<a href="../member-system/prizes.html" target="_blank" class="text-[10px] px-1.5 py-0.5 rounded ${cd ? 'club-done' : c.status === 'cancelled' ? 'club-off' : 'club'}" title="在会员系统「🏆 中奖奖品」处理">🎫 俱乐部：${esc(CLUB_ST[c.status] || c.status)}</a>` : '';
+      return `<div class="rounded-lg border ${x.removed ? 'border-rose-800 bg-rose-950/30' : 'border-slate-700 bg-slate-800/70'} p-3 ${isDone(x) ? 'item-done' : ''}">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span class="text-amber-300 font-bold text-sm whitespace-nowrap">${esc(x.rank || '')}</span>
+          <span class="font-bold text-slate-100">${esc(x.name || '')}</span>
+          <span class="font-mono text-xs text-slate-300 break-all">${esc(x.orderNo || '-')}</span>
+          ${p ? `<span class="text-[10px] px-1.5 py-0.5 rounded tag-${p}">${p === 'T' ? 'TikTok' : 'Shopee'}</span>` : ''}
+          ${x.removed ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-700 text-white">名次已撤销</span>' : ''}
+          ${clubTag}
+        </div>
+        <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.contacted ? 'checked' : ''} onchange="setItem(this.dataset.k, 'contacted', this.checked)"> 已联系</label>
+          ${cd && !x.shipped ? '<span class="text-sm text-emerald-300">✅ 已寄出（俱乐部）</span>' : `<label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.shipped ? 'checked' : ''} onchange="setItem(this.dataset.k, 'shipped', this.checked)"> 已寄出</label>`}
+          <input type="text" data-k="${esc(x.key)}" value="${esc(x.note || '')}" placeholder="备注：已私讯 / 运单号…" onchange="setItem(this.dataset.k, 'note', this.value.trim())"
+            class="flex-1 min-w-[160px] bg-slate-900 border border-slate-600 rounded px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-400">
+        </div>
+      </div>`;
+    }
+
     function render() {
       const list = $('list');
       const a = document.activeElement;
@@ -158,26 +189,16 @@
       let items = itemsOf(curId);
       if ($('onlyTodo').checked) items = items.filter(x => !isDone(x) && !x.removed);
       if (!items.length) { list.innerHTML = '<p class="text-center text-slate-500 py-12 text-sm">🎉 没有未寄出的得主</p>'; return; }
-      list.innerHTML = items.map(x => {
-        const p = platformOf(x.orderNo), c = clubOf(x), cd = clubDone(x);
-        const clubTag = c ? `<a href="../member-system/prizes.html" target="_blank" class="text-[10px] px-1.5 py-0.5 rounded ${cd ? 'club-done' : c.status === 'cancelled' ? 'club-off' : 'club'}" title="在会员系统「🏆 中奖奖品」处理">🎫 俱乐部：${esc(CLUB_ST[c.status] || c.status)}</a>` : '';
-        return `<div class="rounded-lg border ${x.removed ? 'border-rose-800 bg-rose-950/30' : 'border-slate-700 bg-slate-800/70'} p-3 ${isDone(x) ? 'item-done' : ''}">
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span class="text-amber-300 font-bold text-sm whitespace-nowrap">${esc(x.rank || '')}</span>
-            <span class="font-bold text-slate-100">${esc(x.name || '')}</span>
-            <span class="font-mono text-xs text-slate-300 break-all">${esc(x.orderNo || '-')}</span>
-            ${p ? `<span class="text-[10px] px-1.5 py-0.5 rounded tag-${p}">${p === 'T' ? 'TikTok' : 'Shopee'}</span>` : ''}
-            ${x.removed ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-700 text-white">名次已撤销</span>' : ''}
-            ${clubTag}
-          </div>
-          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.contacted ? 'checked' : ''} onchange="setItem(this.dataset.k, 'contacted', this.checked)"> 已联系</label>
-            ${cd && !x.shipped ? '<span class="text-sm text-emerald-300">✅ 已寄出（俱乐部）</span>' : `<label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.shipped ? 'checked' : ''} onchange="setItem(this.dataset.k, 'shipped', this.checked)"> 已寄出</label>`}
-            <input type="text" data-k="${esc(x.key)}" value="${esc(x.note || '')}" placeholder="备注：已私讯 / 运单号…" onchange="setItem(this.dataset.k, 'note', this.value.trim())"
-              class="flex-1 min-w-[180px] bg-slate-900 border border-slate-600 rounded px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-400">
-          </div>
-        </div>`;
-      }).join('');
+
+      // 左边：冠亚季 → 空一行 → 入围　右边：安慰奖
+      const T = [], F = [], C = [];
+      items.forEach(x => { const g = grpOf(x); (g === 'C' ? C : g === 'T' ? T : F).push(x); });
+      const col = arr => arr.map(card).join('');
+      const left = col(T) + (T.length && F.length ? '<div class="h-5" aria-hidden="true"></div>' : '') + col(F);
+      const parts = [];
+      if (left) parts.push(`<div class="space-y-2 min-w-0">${left}</div>`);
+      if (C.length) parts.push(`<div class="space-y-2 min-w-0">${col(C)}</div>`);
+      list.innerHTML = `<div class="grid gap-x-5 gap-y-5 items-start ${parts.length === 2 ? 'md:grid-cols-2' : ''}">${parts.join('')}</div>`;
     }
     function setItem(key, field, value) {
       if (!curId) return;
@@ -189,7 +210,7 @@
       const q = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
       const rows = [['名次', '名字', '订单号', '平台', '已联系', '已寄出', '会员俱乐部', '备注']].concat(itemsOf(curId).map(x =>
         [x.rank + (x.removed ? '（已撤销）' : ''), x.name, x.orderNo, { T: 'TikTok', S: 'Shopee' }[platformOf(x.orderNo)] || '', x.contacted ? '✔' : '', isDone(x) ? '✔' : '', clubOf(x) ? CLUB_ST[clubOf(x).status] || clubOf(x).status : '', x.note || '']));
-      const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const blob = new Blob(['\uFEFF' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = `Mochiishop_Claims_${curId}.csv`;
       document.body.appendChild(a); a.click();
