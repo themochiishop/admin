@@ -121,6 +121,7 @@
           <div class="actions">
             <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
             <button type="button" class="btn btn-ghost" id="cancelBtn">取消</button>
+            <button type="button" class="btn btn-bad hidden" id="delBtn" style="margin-left:auto">🗑 删除这个奖品</button>
           </div>
           <p class="muted" style="font-size:.8rem;margin-top:8px">
             ⚠️ 修改名称或积分后，会员已提交但还没审核的申请仍按旧资料处理；新申请会用新资料。
@@ -157,7 +158,8 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, writeBatch, serverTimestamp, deleteField, Timestamp
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, writeBatch, serverTimestamp, deleteField, Timestamp,
+      query, where
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { requireAdmin, renderAdminNav, logAdmin, esc, COUPON_FORMATS, DEFAULT_SHOP_CATS, catOf, toDate, fmtDate } from "./js/admin-common.js";
     const $ = id => document.getElementById(id);
@@ -457,6 +459,7 @@ $("rimageRemove").addEventListener("click", () => {
       $("formPanel").classList.remove("hidden");
       $("formTitle").textContent = r ? "编辑奖品" : "新增奖品";
       $("rid").value = r ? r.id : "";
+      $("delBtn").classList.toggle("hidden", !r);   // 只有编辑时才有删除
       $("rname").value = r ? r.name : "";
       $("rdesc").value = r ? (r.description || "") : "";
       $("rcost").value = r ? r.cost : "";
@@ -490,6 +493,42 @@ showPreview(currentImage);
 
     $("newBtn").addEventListener("click", () => openForm(null));
     $("cancelBtn").addEventListener("click", () => $("formPanel").classList.add("hidden"));
+
+    // ---------- 🗑 删除奖品 ----------
+    // 还有处理中的兑换就不能删；会员以前的兑换记录会保留（名称、积分照旧，图片变回图标）
+    $("delBtn").addEventListener("click", async () => {
+      const id = $("rid").value;
+      const r = rewards.find(x => x.id === id);
+      if (!r) return;
+      const btn = $("delBtn");
+      btn.disabled = true;
+      try {
+        const rs = await getDocs(query(collection(db, "redemptions"), where("rewardId", "==", id)));
+        const busy = rs.docs.filter(d => ["pending", "approved", "problem", "shipped"].includes(d.data().status)).length;
+        if (busy) {
+          alert(`还有 ${busy} 笔兑换在处理中（待审核 / 待发货 / 运送中），不能删除。\n请先到「兑换审核」处理完，或先把这个奖品下架。`);
+          return;
+        }
+        const typed = prompt(`确定要永久删除「${r.name}」吗？\n\n• 没用过的券码会一起删除\n• 会员以前的兑换记录会保留\n• 删除后无法复原（只是暂时不卖的话，用「下架」就好）\n\n请输入奖品名称确认：`, "");
+        if (typed === null) return;
+        if (typed.trim() !== r.name.trim()) { alert("名称不对，没有删除。"); return; }
+        const unused = Object.entries(coupons).filter(([, c]) => c.rewardId === id && !c.used).map(([code]) => code);
+        for (let i = 0; i < unused.length; i += 400) {
+          const b = writeBatch(db);
+          unused.slice(i, i + 400).forEach(code => b.delete(doc(db, "coupons", code)));
+          await b.commit();
+        }
+        const b = writeBatch(db);
+        b.delete(doc(db, "rewardSecrets", id));
+        b.delete(doc(db, "rewards", id));
+        await b.commit();
+        logAdmin("content", `删除了商城奖品「${r.name}」${unused.length ? `（含 ${unused.length} 组没用过的券码）` : ""}`, "rewards.html");
+        $("formPanel").classList.add("hidden");
+        await load();
+      } catch (err) {
+        alert("删除失败：" + err.message);
+      } finally { btn.disabled = false; }
+    });
 
     $("rewardForm").addEventListener("submit", async e => {
       e.preventDefault();
