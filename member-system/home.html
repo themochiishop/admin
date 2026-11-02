@@ -25,6 +25,16 @@
     .radio-row label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
     .radio-row input { width: auto; margin: 0; }
     .item-head .thumb { margin-right: 4px; }
+    /* ✨ 最新上架：排序 */
+    .nr-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+    .nr-row .thumb { width: 44px; height: 44px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .nr-row .tx { flex: 1; min-width: 0; }
+    .nr-row .nm { font-weight: 600; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nr-row .btn { padding: 5px 10px; }
+    .nr-row .no { width: 22px; text-align: right; font-size: .8rem; color: var(--muted); font-weight: 700; }
+    .nr-row.out { opacity: .5; }
+    .nr-cut { font-size: .76rem; color: var(--muted); text-align: center; padding: 6px 0; border-bottom: 1px dashed var(--line2); }
+    .nr-list.auto .nr-row .btn { display: none; }
   </style>
 </head>
 <body>
@@ -69,6 +79,23 @@
         </details>
         <div class="actions"><button class="btn btn-primary" id="saveSec">保存</button></div>
         <p id="secMsg" class="msg"></p>
+      </div>
+
+      <!-- ✨ 首页「最新上架」的排序 -->
+      <div class="panel">
+        <h3>✨ 首页「最新上架」的排序</h3>
+        <p class="meta" style="margin:-6px 0 10px">只影响会员首页的「最新上架的兑换商品」，商城的顺序照「商城奖品」页。只列出上架中的奖品。</p>
+        <div class="radio-row">
+          <label><input type="radio" name="nrMode" value="auto" checked> ⏱ 自动：按创建时间，最新的在前</label>
+          <label><input type="radio" name="nrMode" value="custom"> ✋ 自订顺序（用 ↑↓ 调整）</label>
+        </div>
+        <p class="meta" id="nrHint" style="margin:-4px 0 8px"></p>
+        <div id="nrList" class="nr-list"></div>
+        <div class="actions">
+          <button class="btn btn-primary" id="nrSave">保存排序</button>
+          <button class="btn btn-ghost hidden" id="nrReset">↺ 还原成按创建时间</button>
+        </div>
+        <p id="nrMsg" class="msg"></p>
       </div>
 
       <!-- ② 横幅 -->
@@ -256,6 +283,76 @@
       } catch (err) { setMsg($("secMsg"), "保存失败：" + err.message, "err"); }
       finally { $("saveSec").disabled = false; }
     });
+
+    // ================= ✨ 首页「最新上架」的排序 =================
+    // settings/home.newRewards = { mode: "auto" | "custom", order: [奖品ID…] }
+    // 自订模式：order 里没有的奖品（之后才新增的）自动排在最上面，按创建时间新到旧
+    let nrMode = "auto", nrOrder = [];
+    const nrEnded = r => { const e = toDate(r.endAt); return !!e && e <= new Date(); };
+    const nrPool = () => rewards.filter(r => r.active === true && !nrEnded(r));
+    const byNew = (a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0);
+    function nrSorted() {
+      const pool = nrPool();
+      if (nrMode !== "custom") return pool.slice().sort(byNew);
+      const pos = Object.fromEntries(nrOrder.map((id, i) => [id, i]));
+      const fresh = pool.filter(r => !(r.id in pos)).sort(byNew);
+      const kept = pool.filter(r => r.id in pos).sort((a, b) => pos[a.id] - pos[b.id]);
+      return [...fresh, ...kept];
+    }
+    const nrCount = () => ((sections.find(s => s.key === "rewards") || {}).count) || 4;
+    function renderNR() {
+      const list = nrSorted(), n = nrCount();
+      if (nrMode === "custom") nrOrder = list.map(r => r.id);
+      $("nrList").classList.toggle("auto", nrMode !== "custom");
+      $("nrReset").classList.toggle("hidden", nrMode !== "custom");
+      $("nrHint").textContent = nrMode === "custom"
+        ? `首页显示最上面 ${n} 个（数量在上面「区块」设定）。之后新增的奖品会自动排到最上面。`
+        : `目前按创建时间排序，首页显示最新的 ${n} 个。`;
+      $("nrList").innerHTML = list.length ? list.map((r, i) => `
+        ${i === n ? `<div class="nr-cut">⬇ 以下不会显示在首页</div>` : ""}
+        <div class="nr-row${i >= n ? " out" : ""}">
+          <span class="no">${i + 1}</span>
+          ${r.image ? `<img class="thumb" src="${esc(r.image)}" alt="">` : `<span class="thumb">${r.type === "coupon" ? "🎫" : "🎁"}</span>`}
+          <div class="tx"><div class="nm">${esc(r.name)}</div>
+            <div class="meta">${Number(r.cost).toLocaleString()} 分 · 创建于 ${fmtDate(toDate(r.createdAt))}</div></div>
+          <button class="btn btn-ghost" data-nrup="${i}" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="btn btn-ghost" data-nrdown="${i}" ${i === list.length - 1 ? "disabled" : ""}>↓</button>
+        </div>`).join("") : `<p class="empty">目前没有上架中的奖品</p>`;
+    }
+    document.querySelectorAll("input[name=nrMode]").forEach(el => el.addEventListener("change", () => {
+      nrMode = el.value;
+      if (nrMode === "custom" && !nrOrder.length) nrOrder = nrPool().sort(byNew).map(r => r.id);   // 第一次切换：从目前的自动顺序开始调整
+      renderNR();
+    }));
+    $("nrList").addEventListener("click", e => {
+      const up = e.target.dataset.nrup, down = e.target.dataset.nrdown;
+      if (up === undefined && down === undefined) return;
+      const i = up !== undefined ? +up : +down, j = up !== undefined ? i - 1 : i + 1;
+      if (j < 0 || j >= nrOrder.length) return;
+      [nrOrder[i], nrOrder[j]] = [nrOrder[j], nrOrder[i]];
+      renderNR();
+    });
+    $("nrReset").addEventListener("click", () => {
+      if (!confirm("清掉自订顺序，改回按创建时间排序？（要按「保存排序」才生效）")) return;
+      nrMode = "auto"; nrOrder = [];
+      document.querySelector("input[name=nrMode][value=auto]").checked = true;
+      renderNR();
+    });
+    $("nrSave").addEventListener("click", async () => {
+      $("nrSave").disabled = true;
+      try {
+        await setDoc(doc(db, "settings", "home"), {
+          newRewards: { mode: nrMode, order: nrMode === "custom" ? nrOrder : [] },
+          updatedAt: serverTimestamp(), updatedBy: adminEmail
+        }, { merge: true });
+        setMsg($("nrMsg"), "已保存 ✅", "ok");
+        logAdmin("settings", nrMode === "custom" ? "自订了首页「最新上架」的顺序" : "首页「最新上架」改回按创建时间排序", "home.html");
+      } catch (err) { setMsg($("nrMsg"), "保存失败：" + err.message, "err"); }
+      finally { $("nrSave").disabled = false; }
+    });
+    // 区块里改了「显示几个」：分隔线跟着移动
+    $("secList").addEventListener("input", e => { if (e.target.dataset.count !== undefined) { const i = +e.target.dataset.count;
+      sections[i].count = Math.max(1, Math.min(12, parseInt(e.target.value, 10) || 1)); renderNR(); } });
 
     // ================= ② 横幅 =================
     let bnImage = null;
@@ -487,6 +584,11 @@
         rewards = rSnap.docs.map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (b.active === true) - (a.active === true) || (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
         renderSections();
+        const nr = (sSnap.exists() && sSnap.data().newRewards) || {};
+        nrMode = nr.mode === "custom" ? "custom" : "auto";
+        nrOrder = Array.isArray(nr.order) ? nr.order.slice() : [];
+        document.querySelector(`input[name=nrMode][value=${nrMode}]`).checked = true;
+        renderNR();
         await Promise.all([loadBanners(), loadNews()]);
       } catch (e) {
         setMsg($("secMsg"), "载入失败：" + e.message, "err");
