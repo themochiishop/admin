@@ -30,8 +30,16 @@ export const PERM_TREE = [
     { id: "cod", icon: "📦", label: "COD 手动 AWB 打印" },
   ] },
   { group: "🎫 会员与内容", items: [
-    // 之后会员系统里面细分时，在这里加 subs（总览、兑换审核…），已经勾了的人会自动当作全部都有
-    { id: "member", icon: "🎫", label: "Member Club", note: "会员系统所有页面（之后再细分）" },
+    // 会员系统按页面细分；以前整个勾了（member: true）的人，等于下面全部都有
+    { id: "member", icon: "🎫", label: "Member Club", subs: [
+      { id: "overview", label: "📊 总览" },
+      { id: "redeem", label: "🔔 兑换审核" },
+      { id: "prizes", label: "🏆 中奖奖品" },
+      { id: "members", label: "👥 会员" },
+      { id: "shop", label: "🛍️ 商城" },
+      { id: "content", label: "📝 内容" },
+      { id: "settings", label: "⚙️ 设定" },
+    ] },
     { id: "feed", icon: "📰", label: "Mochii Feed" },
     { id: "gallery", icon: "🖼️", label: "图库管理", subs: [
       { id: "view", label: "查看前台" },
@@ -43,12 +51,29 @@ export const PERM_TREE = [
 // 权限模板：新增人员时一键套用，之后可以再微调
 export const PRESETS = [
   { id: "streamer", label: "🎥 主播", perms: { hub: true, wheel: true, draw: { console: true, test: true, claims: true } } },
-  { id: "cs", label: "💬 客服", perms: { entry: true, search: true, cod: true, member: true } },
+  { id: "cs", label: "💬 客服", perms: { entry: true, search: true, cod: true, member: { redeem: true, prizes: true, members: true } } },
   { id: "all", label: "✅ 全部", perms: "all" },
   { id: "none", label: "⬜ 清空", perms: {} },
 ];
 
 export const PERM_ITEMS = PERM_TREE.flatMap(g => g.items);
+
+// 会员系统：每一页要哪个权限（Feed 页面看「Mochii Feed」）
+export const MEMBER_PAGE_PERM = {
+  "index.html": "member.overview", "": "member.overview",
+  "redeem.html": "member.redeem",
+  "prizes.html": "member.prizes",
+  "members.html": "member.members", "member.html": "member.members",
+  "rewards.html": "member.shop", "perks.html": "member.shop",
+  "home.html": "member.content", "announcements.html": "member.content", "storehelp.html": "member.content",
+  "notify.html": "member.settings",
+  "feed.html": "feed",
+};
+// 这个人进会员系统时，第一个能打开的页面（都没有就回传 null）
+const MEMBER_FIRST = ["index.html", "redeem.html", "prizes.html", "members.html", "rewards.html", "home.html", "notify.html", "feed.html"];
+export function firstMemberPage(access) {
+  return MEMBER_FIRST.find(p => can(access, MEMBER_PAGE_PERM[p])) || null;
+}
 
 // 名称：「每月抽奖 › 抽奖控制台」
 export function permLabel(key) {
@@ -157,6 +182,12 @@ export async function logout() { await signOut(auth); }
 // 没登录 → 回控制台登录，登录后自动回来；没有权限 → 回控制台并显示提示
 // 只有店主能用的按钮：加 class="owner-only" 就会对其他人隐藏；
 // 按钮的程式开头加 if (!window.ownerOnly || !window.ownerOnly()) return; 再挡一次
+// 会员系统的页面不走 guard()，在确认权限后呼叫 setupOwnerOnly(是不是店主)
+export function setupOwnerOnly(isOwner) {
+  ownerOnlySetup();
+  window.__isOwner = !!isOwner;
+  document.documentElement.classList.toggle("is-owner", !!isOwner);
+}
 function ownerOnlySetup() {
   if (document.getElementById("ownerOnlyCss")) return;
   const st = document.createElement("style");
