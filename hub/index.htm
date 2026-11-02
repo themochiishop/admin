@@ -716,17 +716,22 @@
         const V = "https://www.gstatic.com/firebasejs/10.14.1/";
         const { initializeApp } = await import(V + "firebase-app.js");
         const { getAuth, onAuthStateChanged } = await import(V + "firebase-auth.js");
-        const { getDatabase, ref, onValue } = await import(V + "firebase-database.js");
+        const { getDatabase, ref, onValue, get } = await import(V + "firebase-database.js");
         const app = initializeApp({
           apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
           authDomain: "draw-tournament.firebaseapp.com",
           databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
           projectId: "draw-tournament",
         });
-        const ALLOWED = ["xiaomah09@gmail.com", "mail@themochiishop.com", "ivychongsingyee@gmail.com"];
+        // 抽奖系统的名单：店主 + draw_staff（由「👥 管理员」页面同步）
+        const key = e => String(e || "").toLowerCase().replace(/\./g, ",");
         let started = false;
-        onAuthStateChanged(getAuth(app), u => {
-          const ok = !!(u && !u.isAnonymous && ALLOWED.includes(String(u.email || "").toLowerCase()));
+        onAuthStateChanged(getAuth(app), async u => {
+          let ok = !!(u && !u.isAnonymous);
+          if (ok && String(u.email || "").toLowerCase() !== "mail@themochiishop.com") {
+            try { const v = (await get(ref(getDatabase(app), "draw_staff/" + key(u.email)))).val(); ok = !!(v && (v.claims || v.console)); }
+            catch (e) { ok = false; }
+          }
           login.draw = ok;
           if (!ok || started) { render(); return; }
           started = true;
