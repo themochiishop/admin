@@ -173,3 +173,32 @@ code { background: var(--soft); padding: 2px 6px; border-radius: 6px; font-size:
 .nav-badge { display: inline-block; flex-shrink: 0; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; font-weight: 800; line-height: 18px; text-align: center; }
 .nav-badge[hidden] { display: none; }
 select { margin-top: 4px; }
+
+/* ===== 🌐 三语留言框（js/note-i18n.js） ===== */
+.nt { flex: 1 1 260px; min-width: 0; }
+.nt-row { display: flex; gap: 6px; align-items: center; }
+.nt-row input { flex: 1; min-width: 0; margin: 0; }
+.nt-pick { width: auto; flex: 0 0 auto; max-width: 110px; margin: 0; padding: 8px 6px; font-size: .82rem; }
+.nt-tg, .nt-mgr {
+  flex-shrink: 0; height: 38px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--line2);
+  background: var(--soft); color: var(--text2); cursor: pointer; font-size: .8rem; font-weight: 700; white-space: nowrap;
+}
+.nt-tg span { margin-left: 3px; font-size: .7rem; }
+.nt-tg.on { background: var(--green-bg2); color: var(--green-tx); border-color: transparent; }
+.nt-tg.need { background: var(--amber-bg2); color: var(--amber-tx); border-color: transparent; }
+.nt-more { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.nt-more label { display: flex; align-items: center; gap: 6px; margin: 0; }
+.nt-more label span { font-size: .7rem; font-weight: 800; color: var(--muted); width: 22px; flex-shrink: 0; }
+.nt-more input { margin: 0; padding: 7px 9px; font-size: .88rem; }
+.nt-lang { display: inline-block; font-size: .68rem; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--green-bg2); color: var(--green-tx); cursor: help; }
+.ntm-scrim { position: fixed; inset: 0; z-index: 90; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.ntm-scrim.hidden { display: none; }
+.ntm-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; width: 100%; max-width: 640px; max-height: 86vh; overflow-y: auto; }
+.ntm-card h3 { font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
+.ntm-row { display: flex; gap: 6px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.ntm-in { flex: 1; display: grid; gap: 4px; }
+.ntm-in input { margin: 0; padding: 7px 9px; font-size: .88rem; }
+.ntm-in input[data-nt="zh"] { font-weight: 600; }
+.ntm-btn { display: flex; flex-direction: column; gap: 4px; }
+.ntm-btn .btn { padding: 5px 9px; }
+@media (max-width: 600px) { .nt-more { grid-template-columns: 1fr; } .nt-row { flex-wrap: wrap; } .nt-row input { flex-basis: 100%; } }
