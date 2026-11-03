@@ -34,6 +34,11 @@
     .xc-row .px + input { border-radius: 0 8px 8px 0; }
     .xc-row .n { font-size: .78rem; color: var(--muted); min-width: 22px; }
     .xc-row .btn { padding: 6px 10px; }
+    .xc-row { flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+    .xc-row .xn { flex: 1 1 170px; min-width: 0; text-transform: uppercase; font-family: ui-monospace, Menlo, monospace; border-radius: 8px !important; }
+    .xc-row .xcw { display: flex; flex: 1 1 170px; min-width: 0; }
+    .xc-row .xcw input { flex: 1; min-width: 0; }
+    .xc-row .xbtns { display: flex; gap: 4px; }
     .delist-box { border: 1px solid #fca5a5; background: var(--red-bg); border-radius: 10px; padding: 10px 12px; margin-top: 8px; display: grid; gap: 6px; font-size: .88rem; }
     .delist-box label { margin: 0; }
     .delist-box input[type=datetime-local] { width: auto; margin: 0; }
@@ -206,7 +211,8 @@
             <p class="meta">完整优惠码：<b id="rcfull">-</b>（所有兑换者共用这个码）</p>
             <div id="xcBox">
               <b style="font-size:.86rem">🔁 更多优惠码（轮替）</b>
-              <span class="muted" style="font-size:.78rem">同一位会员第 2 次兑换拿第 2 组、第 3 次拿第 3 组……有几组码，每位会员每期就能换几次</span>
+              <span class="muted" style="font-size:.78rem">同一位会员第 2 次兑换拿第 2 组、第 3 次拿第 3 组……有几组码，每位会员每期就能换几次。<br>
+                做法：按「＋ 加一组」自动生成平台名称（主券名称 + #2）和优惠码 → 到平台按「复制」主券，只改名称和代码</span>
               <div id="xcList"></div>
               <button type="button" class="btn btn-ghost" id="xcAdd" style="margin-top:6px">＋ 加一组优惠码</button>
             </div>
@@ -323,28 +329,94 @@
         : f.id === "tiktok" ? "TikTok：CLUB#TT + 5 位数字，优惠码 THEM + 8 位" : "";
       $("vcGen").classList.toggle("hidden", f.id === "custom");
       document.querySelectorAll("#xcList .px").forEach(x => { x.textContent = f.prefix; x.style.display = f.prefix ? "" : "none"; });
-      document.querySelectorAll("#xcList input").forEach(x => { x.maxLength = f.maxLen; });
+      document.querySelectorAll("#xcList .xc").forEach(x => { x.maxLength = f.maxLen; });
+      document.querySelectorAll("#xcList [data-xgen]").forEach(x => x.classList.toggle("hidden", f.id === "custom"));
       updateLimitUI();
     }
 
     // ---------- 🔁 多组共用码（轮替）----------
-    function addExtraRow(suffix = "") {
+    function addExtraRow(suffix = "", name = "") {
       const f = fmtOf($("rcformat").value);
       const row = document.createElement("div");
       row.className = "xc-row";
-      row.innerHTML = `<span class="n"></span><span class="px"${f.prefix ? "" : ' style="display:none"'}>${esc(f.prefix)}</span>
-        <input autocomplete="off" maxlength="${f.maxLen}" value="${esc(suffix)}"><button type="button" class="btn btn-ghost" data-xdel>✕</button>`;
+      row.innerHTML = `<span class="n"></span>
+        <input class="xn" autocomplete="off" maxlength="50" placeholder="平台上的名称" value="${esc(name)}">
+        <span class="xcw"><span class="px"${f.prefix ? "" : ' style="display:none"'}>${esc(f.prefix)}</span>
+          <input class="xc" autocomplete="off" maxlength="${f.maxLen}" placeholder="优惠码" value="${esc(suffix)}"></span>
+        <span class="xbtns">
+          <button type="button" class="btn btn-ghost" data-xgen title="重新生成名称和优惠码">🎲</button>
+          <button type="button" class="btn btn-ghost" data-xcopy="xn" title="复制平台名称">📋 名称</button>
+          <button type="button" class="btn btn-ghost" data-xcopy="xc" title="复制完整优惠码">📋 码</button>
+          <button type="button" class="btn btn-ghost" data-xdel title="删除这一组">✕</button>
+        </span>`;
       $("xcList").appendChild(row);
       numberExtra();
+      return row;
+    }
+    // 子券名称：主券名称 + #2、#3（主券名称后面已经有 #数字 的先拿掉）
+    const baseName = () => $("vcName").value.trim().toUpperCase().replace(/#\d+$/, "");
+    // 生成这一组的名称和优惠码（优惠码不会和其他奖品、这张表单里的码重复）
+    function genExtra(row) {
+      const f = fmtOf($("rcformat").value);
+      const len = f.id === "shopee" ? 5 : 8;
+      const no = [...$("xcList").children].indexOf(row) + 2;
+      const taken = new Set([...usedCodes(), ...formCodes()]);
+      let code, tries = 0;
+      do { code = rand(len, SAFE); } while (taken.has(f.prefix + code) && ++tries < 100);
+      row.querySelector(".xn").value = `${baseName()}#${no}`;
+      row.querySelector(".xc").value = code;
+      updateLimitUI();
+      $("rewardForm").dispatchEvent(new Event("change"));
     }
     function numberExtra() { document.querySelectorAll("#xcList .n").forEach((x, i) => { x.textContent = "#" + (i + 2); }); updateLimitUI(); }
-    $("xcAdd").addEventListener("click", () => { addExtraRow(); $("xcList").lastElementChild.querySelector("input").focus(); });
-    $("xcList").addEventListener("click", e => { if (e.target.closest("[data-xdel]")) { e.target.closest(".xc-row").remove(); numberExtra(); $("rewardForm").dispatchEvent(new Event("change")); } });
-    $("xcList").addEventListener("input", e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+    $("xcAdd").addEventListener("click", () => {
+      const f = fmtOf($("rcformat").value);
+      if (f.id === "custom") { addExtraRow().querySelector(".xn").focus(); return; }   // 其他格式：自己填
+      if (!$("vcName").value.trim() || !$("rcsuffix").value.trim()) {
+        alert("请先填好主券（第 1 组）的平台名称和优惠码，或按「🎲 生成编号和优惠码」。");
+        return;
+      }
+      genExtra(addExtraRow());
+    });
+    $("xcList").addEventListener("click", async e => {
+      const row = e.target.closest(".xc-row");
+      if (!row) return;
+      if (e.target.closest("[data-xdel]")) {
+        if ((row.querySelector(".xc").value || row.querySelector(".xn").value) && !confirm("删除这一组优惠码？\n（删除旧码 = 新的一期，所有会员的兑换次数会重新算）")) return;
+        row.remove(); numberExtra(); $("rewardForm").dispatchEvent(new Event("change")); return;
+      }
+      if (e.target.closest("[data-xgen]")) {
+        if (fmtOf($("rcformat").value).id === "custom") return;
+        if (!$("vcName").value.trim()) { alert("请先填主券的平台名称"); return; }
+        if (row.querySelector(".xc").value && !confirm("重新生成这一组？\n（平台上已经建好的券，请照平台上的资料填，不要重新生成）")) return;
+        genExtra(row); return;
+      }
+      const b = e.target.closest("[data-xcopy]");
+      if (b) {
+        const v = b.dataset.xcopy === "xc"
+          ? (row.querySelector(".xc").value ? fmtOf($("rcformat").value).prefix + row.querySelector(".xc").value : "")
+          : row.querySelector(".xn").value;
+        if (!v) return;
+        try { await navigator.clipboard.writeText(v); const o = b.textContent; b.textContent = "✓"; setTimeout(() => b.textContent = o, 1200); }
+        catch { prompt("请手动复制：", v); }
+      }
+    });
+    $("xcList").addEventListener("input", e => {
+      if (e.target.classList.contains("xc")) e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (e.target.classList.contains("xn")) e.target.value = e.target.value.toUpperCase();
+    });
+    // 每一组：{ code: 完整码, name: 平台名称 }（第 1 组 = 主券）
+    function formPairs() {
+      const f = fmtOf($("rcformat").value);
+      const rows = [{ c: $("rcsuffix").value, n: $("vcName").value },
+        ...[...document.querySelectorAll("#xcList .xc-row")].map(x => ({ c: x.querySelector(".xc").value, n: x.querySelector(".xn").value }))];
+      return rows.map(x => ({ code: x.c.trim().toUpperCase(), name: x.n.trim().toUpperCase().slice(0, 50) }))
+        .filter(x => x.code).map(x => ({ code: f.prefix + x.code, name: x.name }));
+    }
     // 表单里所有的共用码（完整码，第 1 组在最前面）
     function formCodes() {
       const f = fmtOf($("rcformat").value);
-      return [$("rcsuffix").value, ...[...document.querySelectorAll("#xcList input")].map(x => x.value)]
+      return [$("rcsuffix").value, ...[...document.querySelectorAll("#xcList .xc")].map(x => x.value)]
         .map(x => x.trim().toUpperCase()).filter(Boolean).map(x => f.prefix + x);
     }
     // 共用码优惠券：限兑次数 = 码的组数（自动）；其他奖品自己填
@@ -358,7 +430,7 @@
     // ---------- 🎲 生成平台编号和优惠码（不会和现有的重复） ----------
     const SAFE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";   // 不用 0 O 1 I L，避免看错
     const rand = (n, chars) => Array.from(crypto.getRandomValues(new Uint32Array(n)), x => chars[x % chars.length]).join("");
-    function usedNames() { return new Set(rewards.map(r => (r.voucher || {}).name).filter(Boolean).map(x => x.toUpperCase())); }
+    function usedNames() { return new Set(rewards.flatMap(r => [(r.voucher || {}).name, ...(r.couponNames || [])]).filter(Boolean).map(x => x.toUpperCase())); }
     function usedCodes() { return new Set([...rewards.flatMap(r => r.couponCodes || []), ...Object.keys(coupons)].map(x => x.toUpperCase())); }
     $("vcGen").addEventListener("click", () => {
       const f = fmtOf($("rcformat").value);
@@ -459,6 +531,7 @@ $("rimageRemove").addEventListener("click", () => {
 
       rewards = rs.docs.map(d => ({ id: d.id, ...d.data(), couponCode: (secrets[d.id] || {}).couponCode || null,
           couponCodes: (secrets[d.id] || {}).couponCodes || ((secrets[d.id] || {}).couponCode ? [secrets[d.id].couponCode] : []),
+          couponNames: (secrets[d.id] || {}).couponNames || [],
           voucher: (secrets[d.id] || {}).voucher || null }))
         .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || a.cost - b.cost);
 
@@ -727,7 +800,7 @@ $("rimageRemove").addEventListener("click", () => {
     function filtered() {
       const q = fText.trim().toLowerCase();
       return rewards.filter(r => (fCat === "all" || catOf(r, cats) === fCat) && (fSt === "all" || stOf(r) === fSt)
-        && (!q || [r.name, ...(r.couponCodes || []), (r.voucher || {}).name].some(x => String(x || "").toLowerCase().includes(q))));
+        && (!q || [r.name, ...(r.couponCodes || []), ...(r.couponNames || []), (r.voucher || {}).name].some(x => String(x || "").toLowerCase().includes(q))));
     }
     function renderChips() {
       const cnt = (k, v) => rewards.filter(r => (k === "cat" ? catOf(r, cats) === v : stOf(r) === v)).length;
@@ -771,7 +844,7 @@ $("rimageRemove").addEventListener("click", () => {
         <div class="item" data-id="${esc(r.id)}">
           <div class="meta">${shelfTag(r)} · ${catLabel(catOf(r, cats))} · 库存：${typeof r.stock === "number" ? r.stock : "不限"}
             ${endInfo(r)}${openInfo(r)}
-            ${isCoupon && r.couponCode ? ` · 优惠码：<b>${(r.couponCodes || [r.couponCode]).map(esc).join("、")}</b>（共用${(r.couponCodes || []).length > 1 ? "，轮替" : ""}）` : ""}
+            ${isCoupon && r.couponCode ? ` · 优惠码：<b>${(r.couponCodes || [r.couponCode]).map((c, i) => esc(c) + ((r.couponNames || [])[i] ? `<span class="muted" style="font-weight:400">（${esc(r.couponNames[i])}）</span>` : "")).join("、")}</b>（共用${(r.couponCodes || []).length > 1 ? "，轮替" : ""}）` : ""}
             ${typeof r.perMember === "number" ? ` · 每位会员每期限兑 <b>${r.perMember}</b> 次` : ""}
             ${isCoupon && !r.couponCode ? ` · 券码：<b>${cs.unused}</b> 组可用 / 共 ${cs.total} 组
               ${cs.unused === 0 ? '<span class="tag tag-bad">需补充</span>' : cs.unused < 5 ? '<span class="tag tag-warn">快用完</span>' : ""}` : ""}
@@ -847,7 +920,8 @@ $("rimageRemove").addEventListener("click", () => {
       const cut = c => c.startsWith(cf.prefix) ? c.slice(cf.prefix.length) : c;
       $("rcsuffix").value = allCodes[0] ? cut(allCodes[0]) : "";
       $("xcList").innerHTML = "";
-      allCodes.slice(1).forEach(c => addExtraRow(cut(c)));
+      const allNames = r ? (r.couponNames || []) : [];
+      allCodes.slice(1).forEach((c, i) => addExtraRow(cut(c), allNames[i + 1] || ""));
       $("rlimit").value = r && typeof r.perMember === "number" ? r.perMember : "";
       const vc = (r && r.voucher) || {};
       $("vcName").value = vc.name || "";
@@ -947,7 +1021,7 @@ showPreview(currentImage);
             if (data.type === "coupon") {
         const f = fmtOf($("rcformat").value);
         const suffix = $("rcsuffix").value.trim().toUpperCase();
-        const bad = [suffix, ...[...document.querySelectorAll("#xcList input")].map(x => x.value.trim().toUpperCase())]
+        const bad = [suffix, ...[...document.querySelectorAll("#xcList .xc")].map(x => x.value.trim().toUpperCase())]
           .filter(Boolean).find(x => !new RegExp(`^[A-Z0-9]{${f.minLen},${f.maxLen}}$`).test(x));
         if (bad !== undefined) {
           $("formMsg").textContent = `优惠码只能用 A-Z、0-9，${f.minLen}–${f.maxLen} 个字（不包括前缀）`;
@@ -987,7 +1061,9 @@ showPreview(currentImage);
         let rid = id;
         if (id) await updateDoc(doc(db, "rewards", id), { ...data, couponCode: deleteField() });
         else rid = (await addDoc(collection(db, "rewards"), { ...data, createdAt: serverTimestamp() })).id;
-        await setDoc(doc(db, "rewardSecrets", rid), { couponCode: code, couponCodes: codes, voucher: readVoucher(data), updatedAt: serverTimestamp() });
+        // 每一组的平台名称（和 couponCodes 一一对应；第 1 组 = 主券名称）
+        const names = data.type === "coupon" ? formPairs().map(x => x.name) : [];
+        await setDoc(doc(db, "rewardSecrets", rid), { couponCode: code, couponCodes: codes, couponNames: names, voucher: readVoucher(data), updatedAt: serverTimestamp() });
         logAdmin("content", `${id ? "修改" : "新增"}商城奖品「${data.name}」`, "rewards.html");
         dirty = false;
         await load();
