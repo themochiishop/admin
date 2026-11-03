@@ -128,6 +128,13 @@ export function parseWinnerRows(text) {
   return rows;
 }
 export const normOrderNo = s => String(s || "").replace(/\s/g, "").toUpperCase();
+// 「已处理，不用再提醒」的得奖订单：存在 adminSettings/prizeReady（只有管理员能读写）
+export async function dismissedWinners() {
+  try {
+    const s = await getDoc(doc(db, "adminSettings", "prizeReady"));
+    return (s.exists() && s.data().dismissed) || {};
+  } catch (e) { console.warn("prizeReady", e); return {}; }
+}
 export async function readyWinners() {
   const get = async path => { const r = await fetch(`${DRAW_DB}/${path}.json`); return r.ok ? r.json() : null; };
   const idx = await get("homepage/drawIndex");
@@ -135,6 +142,8 @@ export async function readyWinners() {
     .filter(x => x && x.id && typeof x.month === "string" && x.month.trim()).slice(0, READY_PERIODS);
   const winSnap = await getDocs(collection(db, "prizeWins"));
   const done = new Set(winSnap.docs.map(d => normOrderNo(d.data().orderNo)).filter(Boolean));
+  // ✓ 管理员按过「已处理，不用再提醒」的（例如之前在「领奖追踪」已经寄出）
+  Object.keys(await dismissedWinners()).forEach(no => done.add(normOrderNo(no)));
   const out = [];
   for (const p of periods) {
     const d = (await get("homepage/drawData/" + p.id)) || {};
