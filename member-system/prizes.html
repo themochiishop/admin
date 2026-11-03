@@ -73,6 +73,10 @@
     .ready-box ul { list-style: none; margin-top: 8px; }
     .ready-box li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid #fed7aa; font-size: .88rem; }
     .ready-box li:first-child { border-top: none; }
+    .ready-done { margin-top: 8px; font-size: .84rem; }
+    .ready-done summary { cursor: pointer; color: var(--muted); }
+    .ready-box.only-done { background: var(--soft2); border-color: var(--line); }
+    .ready-box .btn { padding: 6px 10px; font-size: .8rem; }
     .ready-box li .btn { margin-left: auto; padding: 5px 12px; font-size: .8rem; }
     .rno { font-size: .72rem; color: var(--muted); flex-shrink: 0; align-self: flex-start; }
     .tag-blue { background: var(--blue-bg2); color: var(--blue-tx); }
@@ -201,13 +205,13 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, serverTimestamp
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, serverTimestamp, deleteField, deleteDoc
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag, normalizePhone, isValidPhone,
-      normalizeUsername, readyWinners, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, logAdmin, compressImage
+      normalizeUsername, readyWinners, dismissedWinners, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, logAdmin, compressImage
     } from "./js/admin-common.js";
 
     // 每月抽奖的资料库（和 www.themochiishop.com/monthly-draw/ 同一个，只读）
@@ -462,17 +466,65 @@
     }
     // ---------- ⏳ 已绑定、等你发奖的得奖者 ----------
     let ready = [];
+    let dismissed = {};
     async function loadReady() {
-      try { ready = await readyWinners(); } catch (e) { console.warn("ready", e); ready = []; }
-      $("readyBox").innerHTML = ready.length ? `
+      try { [ready, dismissed] = await Promise.all([readyWinners(), dismissedWinners()]); }
+      catch (e) { console.warn("ready", e); ready = []; }
+      const dl = Object.entries(dismissed).sort((a, b) => (toDate(b[1].at) || 0) - (toDate(a[1].at) || 0));
+      $("readyBox").innerHTML = (ready.length ? `
         <b class="h">⏳ ${ready.length} 位得奖者已注册并绑定中奖订单，等你设定配送方式</b>
         <ul>${ready.map((r, i) => `<li>
           <span>🏆 <b>${esc(r.prize || "—")}</b> · ${esc(r.month)}</span>
           <span>👤 ${esc((members[r.uid] || {}).name || r.winner)} <code>${esc(r.order)}</code></span>
-          <button type="button" class="btn btn-primary" data-ready="${i}">选这位</button></li>`).join("")}</ul>` : "";
-      $("readyBox").classList.toggle("hidden", !ready.length);
+          <span style="margin-left:auto;display:flex;gap:6px">
+            <button type="button" class="btn btn-ghost" data-dismiss="${i}" title="例如之前已经在「领奖追踪」寄出">✓ 已处理，不用再提醒</button>
+            <button type="button" class="btn btn-primary" data-ready="${i}">选这位</button>
+          </span></li>`).join("")}</ul>` : "")
+        + (dl.length ? `<details class="ready-done"><summary>已标记「不用再提醒」的 ${dl.length} 笔</summary>
+            <ul>${dl.map(([no, x]) => `<li><span>🏆 ${esc(x.prize || "—")} · ${esc(x.month || "")}</span>
+              <span>👤 ${esc(x.winner || "")} <code>${esc(no)}</code></span>
+              <span class="muted" style="font-size:.78rem">${toDate(x.at) ? fmtDate(toDate(x.at), true) : ""}${x.by ? " · " + esc(x.by) : ""}</span>
+              <button type="button" class="btn btn-ghost" data-undismiss="${esc(no)}" style="margin-left:auto">↩️ 恢复提醒</button></li>`).join("")}</ul></details>` : "");
+      $("readyBox").classList.toggle("hidden", !ready.length && !dl.length);
+      $("readyBox").classList.toggle("only-done", !ready.length);
     }
     $("readyBox").addEventListener("click", async e => {
+      // ✓ 已处理：以后不再提醒（存在 adminSettings/prizeReady）
+      const d = e.target.closest("[data-dismiss]");
+      if (d) {
+        const r = ready[+d.dataset.dismiss];
+        if (!confirm(`「${r.prize || "这个奖品"}」（${r.month} · ${r.order}）已经处理过了，不用再提醒？\n\n• 会员的「中奖记录」会补上一笔「✅ 已完成 · 之前已寄出」，不会响铃铛\n• 之后可以在下面「恢复提醒」`)) return;
+        d.disabled = true;
+        try {
+          // 在会员的中奖记录补一笔「已完成」（legacy：前台铃铛不通知）
+          const name = splitPrize({ n: r.prize || "" }).name || r.prize || "每月抽奖奖品";
+          const w = await addDoc(collection(db, "prizeWins"), {
+            uid: r.uid, prizeName: name.slice(0, 100), prizeImage: "", drawId: r.drawId || "", drawMonth: (r.month || "").slice(0, 40),
+            winnerName: r.winner || "", orderNo: r.order, delivery: "withOrder", note: "之前已寄出",
+            status: "completed", completedAt: serverTimestamp(), adminCompleted: true, legacy: true,
+            createdAt: serverTimestamp(), createdBy: adminEmail,
+          });
+          await setDoc(doc(db, "adminSettings", "prizeReady"), { dismissed: { [r.order]: {
+            prize: r.prize || "", month: r.month || "", winner: (members[r.uid] || {}).name || r.winner || "",
+            uid: r.uid || "", winId: w.id, by: adminEmail, at: serverTimestamp() } } }, { merge: true });
+          logAdmin("prize", `标记已处理（不用再提醒）：${r.prize || ""} · ${r.month} · ${r.order}`, "prizes.html");
+          await Promise.all([loadReady(), loadWins()]);
+          refreshPrizeBadge();
+        } catch (err) { alert("失败：" + err.message); d.disabled = false; }
+        return;
+      }
+      const u = e.target.closest("[data-undismiss]");
+      if (u) {
+        u.disabled = true;
+        try {
+          const x = dismissed[u.dataset.undismiss] || {};
+          if (x.winId) await deleteDoc(doc(db, "prizeWins", x.winId)).catch(() => {});   // 删掉补上的「已完成」记录
+          await updateDoc(doc(db, "adminSettings", "prizeReady"), { ["dismissed." + u.dataset.undismiss]: deleteField() });
+          logAdmin("prize", `恢复提醒：${u.dataset.undismiss}`, "prizes.html");
+          await Promise.all([loadReady(), loadWins()]);
+        } catch (err) { alert("失败：" + err.message); u.disabled = false; }
+        return;
+      }
       const b = e.target.closest("[data-ready]");
       if (!b) return;
       const r = ready[+b.dataset.ready];
