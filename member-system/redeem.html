@@ -102,6 +102,7 @@
       fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, refreshRedeemBadge, redeemCode, logAdmin, readyWinners,
       normalizePhone, isValidPhone
     } from "./js/admin-common.js";
+    import { noteBoxHTML, readNoteBox, setNoteBox, noteFields, noteFromDoc, noteBadge, loadNoteSets, bindNoteBoxes } from "./js/note-i18n.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("redeem");
@@ -296,13 +297,13 @@
       if (s.withOrder) return `
         <div class="addr-box">📦 <b>已随订单一起寄出</b>${s.orderNo ? ` · 订单 <code>${esc(s.orderNo)}</code>` : ""}
           <div class="meta">发货 ${fmtDate(toDate(r.shippedAt), true)}${s.by ? " · " + esc(s.by) : ""}</div>
-          ${s.note ? `<div class="meta">留言：${esc(s.note)}</div>` : ""}</div>`;
+          ${s.note ? `<div class="meta">留言：${noteBadge(s.note, s.noteI18n)}</div>` : ""}</div>`;
       return `
         <div class="addr-box">
           🚚 <b>${esc(s.carrierName || "")}</b> · <code style="word-break:break-all">${esc(s.trackingNo || "")}</code>
           ${s.trackingUrl ? `<div class="meta" style="word-break:break-all"><a href="${esc(s.trackingUrl)}" target="_blank">🔗 ${esc(s.trackingUrl)}</a></div>` : ""}
           <div class="meta">发货 ${fmtDate(toDate(r.shippedAt), true)}${s.weightKg ? ` · ${esc(s.weightKg)} kg` : ""}${s.dims && s.dims.l ? ` · ${esc(s.dims.l)}×${esc(s.dims.w)}×${esc(s.dims.h)} cm` : ""}${s.by ? " · " + esc(s.by) : ""}</div>
-          ${s.note ? `<div class="meta">留言：${esc(s.note)}</div>` : ""}
+          ${s.note ? `<div class="meta">留言：${noteBadge(s.note, s.noteI18n)}</div>` : ""}
           ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}">`).join("")}</div>` : ""}
         </div>`;
     }
@@ -340,8 +341,9 @@
             <b>📦 随单寄出</b>
             <div class="grid2" style="margin-top:8px">
               <label>一起寄的订单编号（选填） <input data-f="orderNo" value="${esc(fresh ? lo.no : "")}" autocomplete="off"></label>
-              <label>给会员的留言（选填） <input data-f="note" maxlength="200" placeholder="例如：已放在你的包裹里 🎁"></label>
             </div>
+            <label style="margin-bottom:4px">给会员的留言（选填）</label>
+            ${noteBoxHTML({ group: "ship", cls: "nt-ship", placeholder: "例如：已放在你的包裹里 🎁" })}
             <div class="actions">
               <button class="btn btn-ok" data-act="shipWithOrder">📦 标记已随单寄出</button>
               ${change}
@@ -390,7 +392,8 @@
           </div>
           <label>包裹照片（最多 3 张，选填） <input type="file" accept="image/*" multiple data-f="photos"></label>
           <div class="photos">${photos.map((p, i) => `<span class="ph-wrap"><img src="${esc(p)}"><button type="button" data-delphoto="${i}">✕</button></span>`).join("")}</div>
-          <label>给会员的留言（选填） <input data-f="note" maxlength="200" value="${esc(s.note || "")}" placeholder="例如：已加送一个小礼物 🎁"></label>
+          <label style="margin-bottom:4px">给会员的留言（选填）</label>
+          ${noteBoxHTML({ group: "ship", cls: "nt-ship", value: noteFromDoc(s.note, s.noteI18n), placeholder: "例如：已加送一个小礼物 🎁" })}
           <div class="actions">
             <button class="btn btn-ok" data-act="ship">📦 标记已发货</button>
             <button class="btn btn-bad" data-act="cancel">取消并退回积分</button>
@@ -432,14 +435,14 @@
               <label><input type="radio" name="mode_${esc(r.id)}" value="test"> 🧪 测试（不扣库存、不用券码库、不算进数据）</label>
             </div>
             <div class="actions">
-              <input class="note-input" placeholder="备注（选填，会员看得到）">
+              ${noteBoxHTML({ group: "review", cls: "nt-review", placeholder: "备注（选填，会员看得到）" })}
               <button class="btn btn-ok" data-act="approve">✔ 批准</button>
               <button class="btn btn-bad" data-act="reject">✕ 拒绝</button>
             </div>`;
         } else if (tab === "toShip") {
           body = `
             ${r.status === "problem" ? `<div class="problem">⚠️ 配送异常${r.problemNote ? "：" + esc(r.problemNote) : ""}（${fmtDate(toDate(r.problemAt), true)}）</div>` : ""}
-            ${r.note ? `<div class="meta">审核备注：${esc(r.note)}</div>` : ""}
+            ${r.note ? `<div class="meta">审核备注：${noteBadge(r.note, r.noteI18n)}</div>` : ""}
             ${toShipBody(r)}`;
         } else if (tab === "shipped") {
           if (r.shipping && r.shipping.withOrder) {
@@ -464,12 +467,12 @@
             ${isGift(r) ? `<div class="addr-box">✅ ${r.autoCompleted ? "自动完成" : r.adminCompleted ? "管理员标记完成" : "会员确认收货"} · ${fmtDate(toDate(r.completedAt), true)}
               ${rc.comment ? `<div>「${esc(rc.comment)}」</div>` : ""}
               ${rc.photo ? `<div class="photos"><img src="${esc(rc.photo)}" style="width:120px;height:120px"></div>` : ""}</div>` : ""}
-            ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}`;
+            ${r.note ? `<div class="meta">备注：${noteBadge(r.note, r.noteI18n)}</div>` : ""}`;
         } else {
           body = `
             <div class="meta">${r.status === "rejected" ? "已拒绝" : r.adminCancelled ? "管理员取消（积分已退回）" : "会员自己取消"}
               ${r.cancelledAt ? " · " + fmtDate(toDate(r.cancelledAt), true) : ""}</div>
-            ${r.note ? `<div class="meta">备注：${esc(r.note)}</div>` : ""}
+            ${r.note ? `<div class="meta">备注：${noteBadge(r.note, r.noteI18n)}</div>` : ""}
             ${r.cancelNote ? `<div class="meta">取消原因：${esc(r.cancelNote)}</div>` : ""}`;
         }
         const testBtn = tab === "pending" || tab === "closed" ? ""
@@ -538,7 +541,8 @@
       const batch = writeBatch(db);
       const update = { status: "approved", decidedAt: serverTimestamp() };
       if (test) update.test = true;
-      if (note) update.note = note;
+      const nf = noteFields(note);
+      if (nf.note) Object.assign(update, nf);
       if (couponCode) update.couponCode = couponCode;
       if (dv) Object.assign(update, dv);   // 📦 实体奖品的寄送方式（和地址）
       batch.update(doc(db, "redemptions", r.id), update);
@@ -561,7 +565,8 @@
     async function reject(r, note) {
       if (!confirm(`拒绝「${r.rewardName}」的兑换申请？积分不会被扣除。`)) return false;
       const update = { status: "rejected", decidedAt: serverTimestamp() };
-      if (note) update.note = note;
+      const nf = noteFields(note);
+      if (nf.note) Object.assign(update, nf);
       await updateDoc(doc(db, "redemptions", r.id), update);
       return true;
     }
@@ -598,7 +603,7 @@
         trackingUrl: v("trackingUrl").trim(),
         weightKg: num(v("weightKg")),
         dims: { l: num(v("l")), w: num(v("w")), h: num(v("h")) },
-        note: v("note").trim(),
+        ...noteFields(readNoteBox(item.querySelector(".nt-ship"))),
       };
     }
 
@@ -654,7 +659,8 @@
       const set = (f, v) => { const el = item.querySelector(`[data-f="${f}"]`); if (el && v != null) el.value = v; };
       set("carrier", s.carrier); set("carrierName", s.carrier === "other" ? s.carrierName : "");
       set("trackingNo", s.trackingNo); set("trackingUrl", s.trackingUrl); set("weightKg", s.weightKg ?? "");
-      set("l", s.dims.l ?? ""); set("w", s.dims.w ?? ""); set("h", s.dims.h ?? ""); set("note", s.note);
+      set("l", s.dims.l ?? ""); set("w", s.dims.w ?? ""); set("h", s.dims.h ?? "");
+      setNoteBox(item.querySelector(".nt-ship"), noteFromDoc(s.note, s.noteI18n));
       const on = item.querySelector(".other-name");
       if (on) on.classList.toggle("hidden", s.carrier !== "other");
     }
@@ -707,7 +713,7 @@
           const mode = item.querySelector(`input[name="mode_${CSS.escape(r.id)}"]:checked`);
           const dv = isGift(r) ? readDlv(item, r) : null;
           if (dv && dv.error) { alert(dv.error); ok = false; }
-          else ok = await approve(r, item.querySelector(".note-input").value.trim(), !!mode && mode.value === "test", dv);
+          else ok = await approve(r, readNoteBox(item.querySelector(".nt-review")), !!mode && mode.value === "test", dv);
           if (ok && dv) logAdmin("redeem", `寄送方式：${(members[r.uid] || {}).name || "会员"} 的「${r.rewardName}」→ ${dlvLabel(dv)}`, "redeem.html#toShip");
         }
         if (act === "saveDlv") {
@@ -723,7 +729,7 @@
           if (!confirm("标记这个奖品已随订单一起寄出？")) ok = false;
           else await updateDoc(doc(db, "redemptions", r.id), {
             status: "shipped", shippedAt: serverTimestamp(),
-            shipping: { withOrder: true, orderNo: v("orderNo").replace(/\s/g, "").toUpperCase().slice(0, 40), note: v("note").slice(0, 200), by: adminEmail },
+            shipping: { withOrder: true, orderNo: v("orderNo").replace(/\s/g, "").toUpperCase().slice(0, 40), ...noteFields(readNoteBox(item.querySelector(".nt-ship"))), by: adminEmail },
             problemNote: null,
           });
         }
@@ -741,7 +747,7 @@
             await batch.commit();
           }
         }
-        if (act === "reject") ok = await reject(r, item.querySelector(".note-input").value.trim());
+        if (act === "reject") ok = await reject(r, readNoteBox(item.querySelector(".nt-review")));
         if (act === "cancel") ok = await cancelApproved(r);
         if (act === "ship") {
           const s = readShip(item);
@@ -798,6 +804,8 @@
       } catch (e) {}
       $("tplSpx").value = trackTpl.spx || "";
       $("tplJnt").value = trackTpl.jnt || "";
+      bindNoteBoxes();
+      await loadNoteSets();
       load().catch(e => { $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`; });
     });
   </script>
