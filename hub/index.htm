@@ -741,7 +741,7 @@
           onValue(ref(getDatabase(app), "draw_private/claimBatches"), snap => {
             let left = 0;
             Object.values(snap.val() || {}).forEach(b => {
-              left += Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.shipped).length;
+              left += Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.voided && !x.shipped).length;
             });
             n.claims = left; render();
           }, () => { n.claims = 0; render(); });
