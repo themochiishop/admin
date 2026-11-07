@@ -157,7 +157,7 @@
         <option value="180">3 小时后自动下线</option>
         <option value="240">4 小时后自动下线</option>
         <option value="360">6 小时后自动下线</option>
-        <option value="0">不自动下线</option>
+        <option value="smart">🧠 智能下线（3 小时后问我要不要延长）</option>
       </select>
 
       <button class="big" id="goBtn">开始直播</button>
@@ -236,6 +236,14 @@
     </div>
   </div>
 </div>
+<!-- 🧠 智能下线：快到时间时问「还在直播吗？」；没人按就照时间自动下线 -->
+<div class="cfm" id="ext" hidden role="dialog" aria-modal="true" aria-labelledby="extT">
+  <div class="cfm-card">
+    <h3 id="extT">还在直播吗？</h3>
+    <div id="extBody" style="font-size:.9rem;margin:6px 0 12px;line-height:1.5"></div>
+    <div class="cfm-btns" id="extBtns" style="flex-wrap:wrap"></div>
+  </div>
+</div>
 <div class="cfm" id="cfm" hidden role="dialog" aria-modal="true" aria-labelledby="cfmT">
   <div class="cfm-card">
     <h3 id="cfmT">确认开始直播?</h3>
@@ -282,8 +290,18 @@
   const sel = new Set(String(store.get('hubSel', 'shopee')).split(',').filter(k => PLATS[k]));
   if (!sel.size) sel.add('shopee');
   const chosen = () => Object.keys(PLATS).filter(k => sel.has(k));
-  $('#dur').value = store.get('hubDur', '180');
-  if (!$('#dur').value) $('#dur').value = '180';
+  $('#dur').value = store.get('hubDur', 'smart') === '0' ? 'smart' : store.get('hubDur', 'smart');   // 旧的「不自动下线」改成智能下线
+  if (!$('#dur').value) $('#dur').value = 'smart';
+
+  // 🧠 智能下线：先给 3 小时；结束前 15 分钟问要不要延长（每次 +1 / +2 小时）；
+  //    没人回应就照时间自动下线。最长 12 小时，而且最晚到凌晨 4 点（开播后至少 6 小时的那个 4 点）
+  const SMART_FIRST = 180, ASK_BEFORE = 15 * 60000, SNOOZE = 5 * 60000, MAX_HOURS = 12;
+  function capOf(start) {
+    const s = new Date(start || Date.now()), four = new Date(s);
+    four.setHours(4, 0, 0, 0);
+    while (four - s < 6 * 3600000) four.setDate(four.getDate() + 1);   // 凌晨才开播的，不会马上被 4 点截掉
+    return Math.min(s.getTime() + MAX_HOURS * 3600000, four.getTime());
+  }
 
   let cfg = {}, remoteOk = true;
   let tpls = DEFAULT_TPL.map(x => ({ ...x }));
@@ -522,11 +540,44 @@
     $('#st').classList.toggle('on', l.length > 0);
     $('#stT').textContent = l.length ? '正在直播 · ' + l.map(k => PLATS[k].name).join(' + ') : '未直播';
     $('#stS').textContent = l.length
-      ? (until ? fmtTime(until) + ' 自动下线(还剩 ' + left(until - Date.now()) + ')' : '不会自动下线')
+      ? (until ? fmtTime(until) + ' 自动下线(还剩 ' + left(until - Date.now()) + ')'
+          + (cfg.liveSmart ? ' · 🧠 快到时会问你要不要延长,最晚 ' + fmtTime(capOf(cfg.liveStartedAt)) : '') : '不会自动下线')
       : '网站显示"Currently offline"';
+    smartCheck(l, until);
     $('#goBtn').textContent = l.length ? '更新直播' : '开始直播';
     $('#endBtn').hidden = !l.length;
   }
+  // 🧠 快到时间 → 问要不要延长；时间已过但资料还是「直播中」→ 帮忙改成已下线
+  let snoozeUntil = 0, cleaning = false;
+  function smartCheck(l, until) {
+    const now = Date.now();
+    if (cfg.liveStatus === 'on' && until && now >= until && !cleaning) {
+      cleaning = true;
+      update(ref(db, 'homepage/config'), { livePlatforms: '', liveStatus: 'off', liveUntil: null, liveUrls: null, liveSmart: null, liveStartedAt: null })
+        .then(() => say('⏰ 已到时间,自动结束直播 ' + fmtTime(now))).catch(() => {}).finally(() => { cleaning = false; });
+      $('#ext').hidden = true;
+      return;
+    }
+    if (!l.length || !cfg.liveSmart || !until || until - now > ASK_BEFORE || now < snoozeUntil || !$('#ext').hidden) return;
+    openExt(until);
+  }
+  function openExt(until) {
+    const cap = capOf(cfg.liveStartedAt), now = Date.now();
+    const opts = [1, 2].map(h => Math.min(Math.max(until, now) + h * 3600000, cap)).filter(x => x > until + 60000);
+    $('#extBody').textContent = fmtTime(until) + ' 会自动下线(还剩 ' + left(until - now) + ')。'
+      + (opts.length ? '要延长吗?不按的话,时间到会自动下线。' : '已经到最长时间(' + fmtTime(cap) + '),不能再延长。');
+    const btn = (txt, cls, fn) => { const b = document.createElement('button'); b.className = cls; b.textContent = txt; b.style.marginTop = '0'; b.onclick = fn; return b; };
+    $('#extBtns').replaceChildren(
+      ...[...new Set(opts)].map((x, i) => btn('延长到 ' + fmtTime(x), 'big', async () => {
+        $('#ext').hidden = true; await write({ liveUntil: x }, '已延长到 ' + fmtTime(x) + ' ✓');
+      })),
+      btn('结束直播', 'sec', () => { $('#ext').hidden = true; $('#endBtn').onclick(); }),
+      btn('稍后再问', 'sec', () => { $('#ext').hidden = true; snoozeUntil = Date.now() + SNOOZE; })
+    );
+    $('#ext').hidden = false;
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+  }
+
   async function write(upd, okText) {
     const btns = [$('#goBtn'), $('#endBtn')];
     btns.forEach(b => b.disabled = true); say('保存中…');
@@ -569,24 +620,28 @@
       if (!/^https:\/\//i.test(u)) { say(PLATS[k].name + ' 的链接要以 https:// 开头', false); return; }
       liveUrls[k] = u;
     }
-    const mins = Number($('#dur').value) || 0;
+    const smart = $('#dur').value === 'smart';
+    const mins = smart ? SMART_FIRST : (Number($('#dur').value) || 0);
     const already = liveList().length > 0;
+    const startedAt = already && cfg.liveStartedAt ? Number(cfg.liveStartedAt) : Date.now();
     const rows = [
       ['平台', list.map(k => PLATS[k].name).join(' + ')],
       ['直播链接', list.map(k => PLATS[k].name + (liveUrls[k] ? ' ✓' : ' 未粘贴')).join('、')],
-      ['自动下线', mins ? fmtTime(Date.now() + mins * 60000) + '(' + (mins / 60) + ' 小时后)' : '不自动下线']
+      ['自动下线', fmtTime(Date.now() + mins * 60000) + '(' + (mins / 60) + ' 小时后)' + (smart ? ',快到时会问你要不要延长' : '')]
     ];
     const ok = await ask(already ? '确认更新直播?' : '确认开始直播?', rows, already ? '确认更新' : '确认开播');
     if (!ok) return;
-    store.set('hubDur', String(mins));
+    store.set('hubDur', smart ? 'smart' : String(mins));
+    snoozeUntil = 0;
        write({
       livePlatforms: list.join(','), liveStatus: 'on',
-      liveUntil: mins ? Date.now() + mins * 60000 : null,
+      liveUntil: Math.min(Date.now() + mins * 60000, smart ? capOf(startedAt) : Infinity),
+      liveSmart: smart || null, liveStartedAt: startedAt,
       liveUrls: Object.keys(liveUrls).length ? liveUrls : null
     }, '已开播 ✓').then(function (done) { if (done) $('#noticeBox').open = true; });
   };
   $('#endBtn').onclick = async () => {
-    const ok = await write({ livePlatforms: '', liveStatus: 'off', liveUntil: null, liveUrls: null }, '已结束直播 ✓');
+    const ok = await write({ livePlatforms: '', liveStatus: 'off', liveUntil: null, liveUrls: null, liveSmart: null, liveStartedAt: null }, '已结束直播 ✓');
     if (ok) { Object.keys(urls).forEach(k => urls[k] = ''); urlsAt = 0; persistState(); renderUrls(); refreshNotice(); }
   };
 
