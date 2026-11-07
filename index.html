@@ -508,7 +508,7 @@
             const club = window.clubShippedOrders || new Set();
             let left = 0, months = 0;
             Object.values(last).forEach(b => {
-              const n = Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.shipped && !club.has(norm(x.orderNo))).length;
+              const n = Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.voided && !x.shipped && !club.has(norm(x.orderNo))).length;
               if (n) { left += n; months++; }
             });
             count.hidden = !left;
