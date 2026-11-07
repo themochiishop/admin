@@ -66,16 +66,53 @@ export function catOf(r, cats = DEFAULT_SHOP_CATS) {
 }
 
 // 📦 实体奖品：运输公司
-export const CARRIERS = [
-  { id: "spx",   name: "SPX Express", label: "SPX Express" },
-  { id: "jnt",   name: "J&T Express", label: "J&T Express" },
-  { id: "other", name: "",            label: "其他（自己填写）" },
+// 名单可在「兑换审核」页面底部「🚚 运输公司」修改（存在 settings/shipping.carriers）；还没设定过就用这份预设
+// tpl = 查询链接模板（{no} = 单号），留空 = 不自动生成；on = 是否出现在下拉选单
+export const DEFAULT_CARRIERS = [
+  { id: "spx",       name: "SPX Express",       tpl: "https://spx.com.my/track?{no}",          on: true },
+  { id: "jnt",       name: "J&T Express",       tpl: "https://www.jtexpress.my/tracking/{no}", on: true },
+  { id: "poslaju",   name: "Pos Laju",          tpl: "", on: true },
+  { id: "gdex",      name: "GDEX",              tpl: "", on: true },
+  { id: "dhl",       name: "DHL eCommerce",     tpl: "", on: true },
+  { id: "ninjavan",  name: "Ninja Van",         tpl: "", on: true },
+  { id: "citylink",  name: "City-Link Express", tpl: "", on: true },
+  { id: "flash",     name: "Flash Express",     tpl: "", on: true },
+  { id: "skynet",    name: "Skynet",            tpl: "", on: false },
+  { id: "lineclear", name: "Line Clear",        tpl: "", on: false },
 ];
-// 查询链接模板：输入单号后自动生成链接（{no} = 单号），可在「兑换审核」页面底部修改
+const OTHER_CARRIER = { id: "other", name: "", label: "其他（自己填写）", tpl: "", on: true };
+// 下拉选单用的名单（「其他」永远在最后）；loadCarriers() 载入设定后会更新这份名单
+export const CARRIERS = [];
+function setCarriers(list) {
+  CARRIERS.length = 0;
+  list.filter(c => c && c.id && c.id !== "other" && c.name)
+    .forEach(c => CARRIERS.push({ id: c.id, name: c.name, label: c.name, tpl: c.tpl || "", on: c.on !== false }));
+  CARRIERS.push({ ...OTHER_CARRIER });
+}
+setCarriers(DEFAULT_CARRIERS);
+// 旧版只存了 SPX / J&T 的查询链接（settings/shipping.trackTpl）
 export const DEFAULT_TRACK_TPL = {
   spx: "https://spx.com.my/track?{no}",
   jnt: "https://www.jtexpress.my/tracking/{no}",
 };
+// 读取运输公司设定 → 更新 CARRIERS，回传 { id: 查询链接模板 }
+export async function loadCarriers() {
+  let d = {};
+  try { const s = await getDoc(doc(db, "settings", "shipping")); if (s.exists()) d = s.data() || {}; }
+  catch (e) { console.warn("shipping", e); }
+  const legacy = d.trackTpl || {};
+  const list = Array.isArray(d.carriers) && d.carriers.length ? d.carriers
+    : DEFAULT_CARRIERS.map(c => legacy[c.id] ? { ...c, tpl: legacy[c.id] } : c);
+  setCarriers(list);
+  const tpl = {};
+  CARRIERS.forEach(c => { if (c.tpl) tpl[c.id] = c.tpl; });
+  return tpl;
+}
+// 下拉选项：只列「显示」的公司；旧记录用的公司就算被隐藏，也照样列出来
+export function carrierOptions(sel) {
+  return CARRIERS.filter(c => c.on || c.id === sel)
+    .map(c => `<option value="${esc(c.id)}" ${c.id === sel ? "selected" : ""}>${esc(c.label)}</option>`).join("");
+}
 
 // 兑换编号：#加上兑换 ID 前 6 码（和会员前台一样）
 export function redeemCode(id) {
