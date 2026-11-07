@@ -18,6 +18,9 @@
     .minus { color: #dc2626; font-weight: 800; }
     .inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
     .inline-form label { margin: 0; flex: 1; min-width: 120px; }
+    .addr-row { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--soft); font-size: .88rem; line-height: 1.5; }
+    .addr-row:last-child { border-bottom: none; }
+    .addr-row .btn { flex-shrink: 0; padding: 4px 10px; font-size: .8rem; }
     @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -84,6 +87,12 @@
               <div class="actions"><button type="submit" class="btn btn-ghost" id="pBtn">保存资料</button></div>
               <p id="pMsg" class="msg"></p>
             </form>
+          </div>
+
+          <!-- 📍 收货地址（只读；会员在前台「个人资料 › 收货地址」自己管理） -->
+          <div class="panel">
+            <h3>📍 收货地址 <span class="muted" id="addrCount" style="font-weight:400;font-size:.85rem"></span></h3>
+            <div id="addrList"><p class="meta">载入中…</p></div>
           </div>
 
           <!-- 🏷️ 内部会员（员工 / 测试用） -->
@@ -190,6 +199,27 @@
     const now = () => new Date();
     let adminEmail = "";
 
+    // 📍 收货地址（第一个 = 默认）
+    const addrText = a => `${a.name}\n${a.phone}\n${a.line1}${a.line2 ? ", " + a.line2 : ""}\n${a.postcode} ${a.city}, ${a.state}\n${a.country || "Malaysia"}`;
+    let addrBook = [];
+    function renderAddresses(list) {
+      addrBook = Array.isArray(list) ? list.filter(a => a && a.line1) : [];
+      $("addrCount").textContent = addrBook.length ? `（${addrBook.length}）` : "";
+      $("addrList").innerHTML = addrBook.length ? addrBook.map((a, i) => `
+        <div class="addr-row">
+          <div>${i === 0 ? '<span class="tag tag-ok">默认</span> ' : ""}<b>${esc(a.name)}</b> · ${esc(fmtPhone(a.phone))}<br>
+            ${esc(a.line1)}${a.line2 ? ", " + esc(a.line2) : ""}<br>${esc(a.postcode)} ${esc(a.city)}, ${esc(a.state)}</div>
+          <button type="button" class="btn btn-ghost" data-copyaddr="${i}">📋 复制</button>
+        </div>`).join("") : `<p class="meta">会员还没有存收货地址</p>`;
+    }
+    $("addrList").addEventListener("click", async e => {
+      const b = e.target.closest("[data-copyaddr]");
+      if (!b) return;
+      const txt = addrText(addrBook[+b.dataset.copyaddr]);
+      try { await navigator.clipboard.writeText(txt); b.textContent = "已复制 ✓"; setTimeout(() => b.textContent = "📋 复制", 1500); }
+      catch { prompt("请手动复制：", txt); }
+    });
+
     function setMsg(el, text, type) {
       el.textContent = text;
       el.className = "msg" + (type ? " " + type : "");
@@ -238,6 +268,7 @@
       }
       $("pBirthday").value = m.birthday || "";
       $("pMeta").textContent = "UID：" + uid;
+      renderAddresses(m.addresses);
 
       // 积分
       const ledger = lS.docs.map(d => d.data())

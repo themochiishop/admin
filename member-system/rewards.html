@@ -455,6 +455,19 @@
       catch { prompt("请手动复制：", v); }
     });
     $("rtype").addEventListener("change", updateCouponUI);
+    // 🎫 商城分类决定类型：选「优惠券」分类 = 优惠券（才显示优惠码框），其他分类 = 实体奖品
+    //    （「优惠券」分类被删掉的话，类型照旧自己选）
+    const hasCouponCat = () => cats.some(c => c.id === "coupon");
+    function syncTypeLock() {
+      const lock = hasCouponCat();
+      $("rtype").disabled = lock;
+      $("rtype").title = lock ? "由商城分类自动决定" : "";
+    }
+    $("rcat").addEventListener("change", () => {
+      if (hasCouponCat()) $("rtype").value = $("rcat").value === "coupon" ? "coupon" : "gift";
+      syncTypeLock();
+      updateCouponUI();
+    });
     $("rcformat").addEventListener("change", updateCouponUI);
     $("rcsuffix").addEventListener("input", updateCouponUI);
     $("xcList").addEventListener("input", updateLimitUI);
@@ -897,11 +910,13 @@ $("rimageRemove").addEventListener("click", () => {
       $("rname").value = r ? r.name : "";
       $("rdesc").value = r ? (r.description || "") : "";
       $("rcost").value = r ? r.cost : "";
-      $("rtype").value = r ? r.type : "coupon";
+      $("rtype").value = r ? r.type : "gift";
       $("rstock").value = r && typeof r.stock === "number" ? r.stock : "";
       $("rsort").value = r ? (r.sortOrder ?? 10) : ((rewards.length + 1) * 10);
-      $("rcat").innerHTML = cats.map(c => `<option value="${esc(c.id)}">${esc((c.icon || "") + " " + c.zh)}</option>`).join("");
-      $("rcat").value = r ? catOf(r, cats) : catOf({ type: "coupon" }, cats);
+      $("rcat").innerHTML = (r ? "" : `<option value="">请选择分类</option>`)
+        + cats.map(c => `<option value="${esc(c.id)}">${esc((c.icon || "") + " " + c.zh)}</option>`).join("");
+      $("rcat").value = r ? catOf(r, cats) : "";
+      syncTypeLock();
       const end = r ? toDate(r.endAt) : null;
       $("rendOn").checked = !!end;
       $("rend").classList.toggle("hidden", !end);
@@ -1010,6 +1025,11 @@ showPreview(currentImage);
       }
       if (data.endAt && data.endAt.toDate() <= new Date()) {
         $("formMsg").textContent = "下架时间要在现在之后";
+        $("formMsg").className = "msg err";
+        return;
+      }
+      if (!data.category) {
+        $("formMsg").textContent = "请选择商城分类";
         $("formMsg").className = "msg err";
         return;
       }

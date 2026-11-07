@@ -207,9 +207,9 @@
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag, normalizePhone, isValidPhone,
-      normalizeUsername, readyWinners, dismissedWinners, CARRIERS, DEFAULT_TRACK_TPL, redeemCode, refreshPrizeBadge, logAdmin, compressImage
+      normalizeUsername, readyWinners, dismissedWinners, CARRIERS, DEFAULT_TRACK_TPL, loadCarriers, carrierOptions, redeemCode, refreshPrizeBadge, logAdmin, compressImage
     } from "./js/admin-common.js";
-    import { noteBoxHTML, readNoteBox, setNoteBox, noteFields, noteBadge, normNote, setSet, setManager,
+    import { noteBoxHTML, readNoteBox, setNoteBox, noteFields, noteBadge, normNote, noteFromDoc, setSet, setManager,
       bindNoteBoxes, rowHTML, readRow, bindRowList } from "./js/note-i18n.js";
 
     // 每月抽奖的资料库（和 www.themochiishop.com/monthly-draw/ 同一个，只读）
@@ -237,6 +237,12 @@
     const deadlineOf = w => toDate(w.expiresAt) || (toDate(w.createdAt) ? plusDays(toDate(w.createdAt), PRIZE_CLAIM_DAYS) : null);
     const ST = { unclaimed: "待领取", claimed: "待审核", approved: "待发货", shipped: "已发货", completed: "已完成", cancelled: "已取消" };
     const ST_TAG = { unclaimed: "tag-pink", claimed: "tag-warn", approved: "tag-blue", shipped: "tag-blue", completed: "tag-ok", cancelled: "" };
+    // ❌ 取消原因（预设三语，可以再改）；cancelReason 存代号，cancelNote / cancelNoteI18n 是会员看到的文字
+    const CANCEL_REASONS = {
+      expired: { label: "⏰ 兑换已逾期", note: { zh: "兑换已逾期，奖品已作废", en: "The claim period has passed, so this prize has been voided.", ms: "Tempoh tuntutan telah tamat, jadi hadiah ini telah dibatalkan." } },
+      lost:    { label: "📵 联系不上",   note: { zh: "多次联系不上你，奖品已作废", en: "We couldn't reach you after several tries, so this prize has been voided.", ms: "Kami tidak dapat menghubungi anda selepas beberapa kali cubaan, jadi hadiah ini telah dibatalkan." } },
+      other:   { label: "✏️ 其他原因",   note: { zh: "", en: "", ms: "" } },
+    };
     const MAX_IMG = 180000;   // 奖品图太大就不存（Firestore 单笔上限 1MB）
 
     let adminEmail = "";
@@ -257,7 +263,7 @@
     // ---------- 共用 ----------
     const isImg = s => typeof s === "string" && /^(data:image\/|https:\/\/)/.test(s);
     const thumbHTML = img => img ? `<img class="pthumb" src="${esc(img)}" alt="">` : `<span class="pthumb">🎁</span>`;
-    const carrierOpts = sel => CARRIERS.map(c => `<option value="${c.id}" ${c.id === sel ? "selected" : ""}>${c.label}</option>`).join("");
+    const carrierOpts = sel => carrierOptions(sel);
     const memberLine = uid => {
       const m = members[uid] || {};
       const bs = bindings.filter(b => b.uid === uid);
@@ -798,6 +804,46 @@
         </div>`;
     }
 
+    // ---------- ✏️ 行内小框：修改留言 / 改配送方式（连留言一起）/ 取消原因 ----------
+    function noteEditHTML(w, mode) {
+      const cur = noteFromDoc(w.note, w.noteI18n);
+      let val = cur, head = "✏️ 修改给会员的留言", tip = "", btn = "💾 保存留言";
+      if (mode === "dlv") {
+        const to = w.delivery === "separate" ? "withOrder" : "separate";
+        // 留言是空的、或还是原本配送方式的默认留言 → 换成新配送方式的默认留言
+        const isDefault = !cur.zh || cur.zh === notes.withOrder.zh || cur.zh === notes.separate.zh;
+        if (isDefault) val = notes[to];
+        head = `🔁 改为「${DLV[to]}」`;
+        tip = isDefault ? "留言已换成这个配送方式的默认留言，可以再修改" : "⚠️ 这是你之前自己写的留言，请确认内容还对得上新的配送方式";
+        if (to === "separate" && w.status !== "unclaimed" && !w.address) tip += "；会员已经领取过了，改完请帮会员填写收货地址";
+        btn = "💾 确认更改";
+      }
+      return `<div class="addr-edit inline-box" data-mode="${mode}">
+          <b>${head}</b>${tip ? `<div class="meta" style="margin:4px 0 6px">${esc(tip)}</div>` : ""}
+          <div style="margin-top:6px">${noteBoxHTML({ group: "prize", value: val, placeholder: "留言内容（会员看得到，可以留空）" })}</div>
+          <div class="actions" style="margin-top:6px">
+            <button class="btn btn-primary" data-act="${mode === "dlv" ? "saveDlv" : "saveNote"}">${btn}</button>
+            <button class="btn btn-ghost" data-act="closeBox">取消</button>
+          </div></div>`;
+    }
+    function cancelBoxHTML(w) {
+      return `<div class="addr-edit inline-box" data-mode="cancel">
+          <b>❌ 取消「${esc(w.prizeName)}」</b>
+          <div class="meta" style="margin:4px 0 6px">选一个原因；下面的文字会员看得到（可以修改，选「其他原因」要自己填写）</div>
+          <div class="dlv">${Object.entries(CANCEL_REASONS).map(([k, r]) =>
+            `<label><input type="radio" name="cr_${esc(w.id)}" value="${k}"><div><b>${r.label}</b></div></label>`).join("")}</div>
+          <div style="margin-top:8px">${noteBoxHTML({ placeholder: "取消原因（会员看得到）" })}</div>
+          <div class="actions" style="margin-top:6px">
+            <button class="btn btn-bad" data-act="confirmCancel">确认取消</button>
+            <button class="btn btn-ghost" data-act="closeBox">返回</button>
+          </div></div>`;
+    }
+    function openBox(item, anchor, html) {
+      const old = item.querySelector(".inline-box");
+      if (old) old.remove();
+      (anchor.closest(".actions") || anchor).insertAdjacentHTML("afterend", html);
+    }
+
     function renderList() {
       document.querySelectorAll("#tabs button").forEach(b => {
         const n = wins.filter(w => w.status === b.dataset.tab).length;
@@ -817,7 +863,8 @@
         const m = members[w.uid] || {};
         let body = "";
         const cancelBtn = `<button class="btn btn-bad" data-act="cancel">取消这个中奖</button>`;
-        const switchBtn = `<button class="btn btn-ghost" data-act="switchDlv">🔁 改为${DLV[w.delivery === "separate" ? "withOrder" : "separate"]}</button>`;
+        const switchBtn = `<button class="btn btn-ghost" data-act="switchDlv">🔁 改为${DLV[w.delivery === "separate" ? "withOrder" : "separate"]}</button>`
+          + `<button class="btn btn-ghost" data-act="editNote">✏️ 修改留言</button>`;
         if (w.status === "unclaimed") {
           const end = deadlineOf(w);
           const left = end ? Math.ceil((end - Date.now()) / 86400000) : null;
@@ -835,12 +882,14 @@
             <div class="meta">会员还没按「确认收到」${toDate(w.shippedAt) ? `，${fmtDate(plusDays(toDate(w.shippedAt), PRIZE_AUTO_COMPLETE_DAYS))} 会自动完成` : ""}</div>
             <div class="actions">
               <button class="btn btn-ghost" data-act="editShip">✏️ 修改运单号</button>
+              <button class="btn btn-ghost" data-act="editNote">✏️ 修改留言</button>
               <button class="btn btn-ok" data-act="complete">✔ 手动标记完成</button>
             </div>`;
         } else if (w.status === "completed") {
           body = `${shipInfo(w)}<div class="meta">✅ ${w.adminCompleted ? "管理员标记完成" : w.autoCompleted ? "发货 " + PRIZE_AUTO_COMPLETE_DAYS + " 天后自动完成" : "会员确认收到"} · ${fmtDate(toDate(w.completedAt), true)}</div>`;
         } else {
-          body = `<div class="meta">${w.autoExpired ? "⏰ 超过领取期限，系统自动作废" : "已取消"} ${fmtDate(toDate(w.cancelledAt), true)}${w.cancelNote && !w.autoExpired ? " · 原因：" + esc(w.cancelNote) : ""}</div>
+          const rs = CANCEL_REASONS[w.cancelReason];
+          body = `<div class="meta">${w.autoExpired ? "⏰ 超过领取期限，系统自动作废" : rs && w.cancelReason !== "other" ? rs.label : "已取消"} ${fmtDate(toDate(w.cancelledAt), true)}${w.cancelNote && !w.autoExpired ? " · 原因：" + noteBadge(w.cancelNote, w.cancelNoteI18n) : ""}</div>
             <div class="actions"><button class="btn btn-ghost" data-act="reopen">↩️ 恢复为待领取（再给 ${PRIZE_CLAIM_DAYS} 天）</button></div>`;
         }
         return `
@@ -863,6 +912,13 @@
       }).join("") : `<p class="empty">${q ? "找不到符合的记录" : "没有记录"}</p>`;
     }
     bindShipEvents($("panel"));
+    $("panel").addEventListener("change", e => {
+      const r = e.target.closest('.inline-box[data-mode="cancel"] input[type="radio"]');
+      if (!r) return;
+      const bx = r.closest(".inline-box");
+      setNoteBox(bx, CANCEL_REASONS[r.value].note);
+      bx.querySelector('[data-nt="zh"]').focus();
+    });
 
     $("panel").addEventListener("click", async e => {
       const copy = e.target.closest("[data-copy]");
@@ -886,6 +942,10 @@
         return;
       }
       if (act === "cancelAddr") { item.querySelector(".addr-edit").remove(); return; }
+      if (act === "closeBox") { item.querySelector(".inline-box").remove(); return; }
+      if (act === "editNote") { openBox(item, e.target, noteEditHTML(w, "note")); return; }
+      if (act === "switchDlv") { openBox(item, e.target, noteEditHTML(w, "dlv")); return; }
+      if (act === "cancel") { openBox(item, e.target, cancelBoxHTML(w)); return; }
       const box = item.querySelector(".ship-form");
       const ship = box ? readShip(box) : null;
       let upd = null;
@@ -903,7 +963,7 @@
       if (act === "reopen") {
         const next = plusDays(new Date(), PRIZE_CLAIM_DAYS);
         if (!confirm(`恢复为「待领取」，领取期限到 ${fmtDate(next)}？会员那边会再次看到领取按钮。`)) return;
-        upd = { status: "unclaimed", expiresAt: next, autoExpired: false, cancelNote: "", reopenedAt: serverTimestamp(), reopenedBy: adminEmail };
+        upd = { status: "unclaimed", expiresAt: next, autoExpired: false, cancelNote: "", cancelNoteI18n: null, cancelReason: null, reopenedAt: serverTimestamp(), reopenedBy: adminEmail };
       }
       if (act === "saveShip") {
         const err = shipError(ship, false);
@@ -911,11 +971,9 @@
         const photos = shipPhotos[w.id] || [];
         upd = { shipping: ship.trackingNo || photos.length ? { ...ship, photos, by: adminEmail } : null };
       }
-      if (act === "switchDlv") {
-        const to = w.delivery === "separate" ? "withOrder" : "separate";
-        const needAddr = to === "separate" && w.status !== "unclaimed" && !w.address;
-        if (!confirm(`把配送方式改为「${DLV[to]}」？${needAddr ? "\n\n会员已经领取过了，改完请帮会员填写收货地址。" : ""}`)) return;
-        upd = { delivery: to };
+      if (act === "saveNote" || act === "saveDlv") {
+        upd = noteFields(readNoteBox(item.querySelector(".inline-box")));
+        if (act === "saveDlv") upd.delivery = w.delivery === "separate" ? "withOrder" : "separate";
       }
       if (act === "approve") upd = { status: "approved", approvedAt: serverTimestamp() };
       if (act === "ship") {
@@ -928,17 +986,21 @@
         if (!confirm("手动标记这个奖品已完成？")) return;
         upd = { status: "completed", completedAt: serverTimestamp(), adminCompleted: true };
       }
-      if (act === "cancel") {
-        const why = prompt(`取消「${w.prizeName}」？会员那边会显示已取消。\n\n原因（会员看得到，选填）：`, "");
-        if (why === null) return;
-        upd = { status: "cancelled", cancelledAt: serverTimestamp(), cancelNote: why.trim().slice(0, 200), cancelledBy: adminEmail };
+      if (act === "confirmCancel") {
+        const bx = item.querySelector(".inline-box");
+        const reason = (bx.querySelector('input[type="radio"]:checked') || {}).value;
+        if (!reason) { alert("请选择取消原因"); return; }
+        const n = noteFields(readNoteBox(bx));
+        if (reason === "other" && !n.note) { alert("请填写取消原因"); return; }
+        upd = { status: "cancelled", cancelledAt: serverTimestamp(), cancelReason: reason,
+          cancelNote: n.note || "", cancelNoteI18n: n.noteI18n, cancelledBy: adminEmail };
       }
       if (!upd) return;
       item.querySelectorAll("button").forEach(b => b.disabled = true);
       try {
         await updateDoc(doc(db, "prizeWins", w.id), upd);
         const LOG = { saveAddr: "修改中奖奖品收货地址", extend: "延长领取期限", reopen: "恢复为待领取", saveShip: "更新运单号",
-          switchDlv: "更改配送方式", approve: "批准中奖奖品", ship: "中奖奖品已发货", complete: "标记中奖奖品完成", cancel: "取消中奖奖品" };
+          saveDlv: "更改配送方式", saveNote: "修改中奖留言", approve: "批准中奖奖品", ship: "中奖奖品已发货", complete: "标记中奖奖品完成", confirmCancel: "取消中奖奖品" };
         if (LOG[act]) logAdmin("prize", `${LOG[act]}：${(members[w.uid] || {}).name || "会员"} 的「${w.prizeName}」${redeemCode(w.id)}`, "prizes.html");
         delete shipPhotos[w.id];
         await loadWins();
@@ -957,10 +1019,8 @@
 
     requireAdmin(async user => {
       adminEmail = user.email || "";
-      try {
-        const s = await getDoc(doc(db, "settings", "shipping"));
-        if (s.exists() && s.data().trackTpl) trackTpl = { ...trackTpl, ...s.data().trackTpl };
-      } catch (e) {}
+      trackTpl = await loadCarriers();
+      $("addShip").querySelector('[data-f="carrier"]').innerHTML = carrierOpts("spx");
       try {
         $("fDeadline").value = ymd(plusDays(new Date(), PRIZE_CLAIM_DAYS));
         await Promise.all([loadMembers(), loadPeriods(), loadNotes()]);
