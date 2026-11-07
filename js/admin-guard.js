@@ -66,7 +66,8 @@ export const MEMBER_PAGE_PERM = {
   "members.html": "member.members", "member.html": "member.members",
   "rewards.html": "member.shop", "perks.html": "member.shop",
   "home.html": "member.content", "announcements.html": "member.content", "storehelp.html": "member.content",
-  "notify.html": "member.settings",
+  "notify.html": "member.settings", "tiers.html": "member.settings",
+  "coupon-check.html": "member.shop",
   "feed.html": "feed",
 };
 // 这个人进会员系统时，第一个能打开的页面（都没有就回传 null）
