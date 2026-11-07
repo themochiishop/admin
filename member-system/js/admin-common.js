@@ -232,6 +232,7 @@ export const PERK_DEFAULTS = [
   { key: "birthday",  points: 10, label: "📝 完善资料：生日",      cond: "填写生日" },
   { key: "whatsapp",  points: 10, label: "📝 完善资料：WhatsApp 通知", cond: "填写手机号码并勾选接收 WhatsApp 通知" },
   { key: "platform2", points: 20, label: "📝 完善资料：第二个平台", cond: "Shopee 和 TikTok 都绑定" },
+  { key: "avatar",    points: 20, label: "🖼️ 完善资料：上传头像", cond: "在 Mochii Feed 上传自己的照片当头像（系统头像、名字第一个字不算）" },
 ];
 
 // 📣 关注我们（和会员前台 common.js 的 FOLLOWS 一致；Firestore 规则 followOk 也要一致）
@@ -323,10 +324,12 @@ export const NAV_GROUPS = [
   ] },
   { label: "会员", items: [
     ["members", "members.html", "👥", "会员列表"],
+    ["tiers", "tiers.html", "💎", "会员等级"],
   ] },
   { label: "商城", items: [
     ["rewards", "rewards.html", "🛍️", "商城奖品"],
     ["perks", "perks.html", "🎁", "额外福利"],
+    ["couponCheck", "coupon-check.html", "🔍", "优惠码核对"],
   ] },
   { label: "内容", items: [
     ["home", "home.html", "🏠", "首页设定"],
@@ -540,7 +543,7 @@ const NAV_PERM = {
   overview: "member.overview", redeem: "member.redeem", prizes: "member.prizes", feedReview: "feed",
   members: "member.members", rewards: "member.shop", perks: "member.shop",
   home: "member.content", feed: "feed", announce: "member.content", storehelp: "member.content",
-  notify: "member.settings",
+  notify: "member.settings", tiers: "member.settings", couponCheck: "member.shop",
 };
 function filterNav(access) {
   document.querySelectorAll(".side-scroll a[data-nk]").forEach(a => {
