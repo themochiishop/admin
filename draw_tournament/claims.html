@@ -98,6 +98,10 @@
     const clubOf = x => (window.clubPrizes || {})[normNo(x.orderNo)] || null;
     const clubDone = x => { const c = clubOf(x); return !!c && (c.status === 'shipped' || c.status === 'completed'); };
     const isDone = x => !!x.shipped || clubDone(x);   // 自己勾「已寄出」，或俱乐部那边已发货 = 已寄出
+    // 🚫 作废（失联、逾期等）：不算进得主人数和未寄出，控制台提醒也不再算；记录保留，可以恢复
+    const VOID_REASONS = { expired: '⏰ 兑换已逾期', lost: '📵 联系不上', other: '✏️ 其他原因' };
+    const isVoid = x => !!x.voided;
+    const voidText = x => x.voidReason === 'other' ? (x.voidNote || '其他原因') : (VOID_REASONS[x.voidReason] || '已作废').replace(/^\S+\s/, '');
     window.onClubPrizes = () => { fillSelect(); render(); };
 
     // 分组：C = 安慰奖（右边）　T = 冠亚季（左上）　F = 入围和其他（左下）
@@ -137,8 +141,8 @@
       return Object.entries(b.items || {}).map(([key, v]) => ({ key, ...v })).sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999));
     }
     function stats(id) {
-      const it = itemsOf(id).filter(x => !x.removed);
-      return { total: it.length, contacted: it.filter(x => x.contacted || clubOf(x)).length, shipped: it.filter(isDone).length };
+      const all = itemsOf(id).filter(x => !x.removed), it = all.filter(x => !isVoid(x));
+      return { total: it.length, contacted: it.filter(x => x.contacted || clubOf(x)).length, shipped: it.filter(isDone).length, voided: all.length - it.length };
     }
     function batchName(id) {
       const b = batches[id] || {};
@@ -165,6 +169,17 @@
     function card(x) {
       const p = platformOf(x.orderNo), c = clubOf(x), cd = clubDone(x);
       const clubTag = c ? `<a href="../member-system/prizes.html" target="_blank" class="text-[10px] px-1.5 py-0.5 rounded ${cd ? 'club-done' : c.status === 'cancelled' ? 'club-off' : 'club'}" title="在会员系统「🏆 中奖奖品」处理">🎫 俱乐部：${esc(CLUB_ST[c.status] || c.status)}</a>` : '';
+      if (isVoid(x)) return `<div class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 item-done">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span class="text-amber-300 font-bold text-sm whitespace-nowrap">${esc(x.rank || '')}</span>
+          <span class="font-bold text-slate-300 line-through">${esc(x.name || '')}</span>
+          <span class="font-mono text-xs text-slate-400 break-all">${esc(x.orderNo || '-')}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-200">🚫 已作废：${esc(voidText(x))}</span>
+          ${clubTag}
+          <button data-k="${esc(x.key)}" onclick="unvoidItem(this.dataset.k)" class="ml-auto px-2 py-1 bg-slate-700 hover:bg-slate-600 text-xs rounded">↩️ 恢复</button>
+        </div>
+        ${x.note ? `<div class="mt-1 text-xs text-slate-400">备注：${esc(x.note)}</div>` : ''}
+      </div>`;
       return `<div class="rounded-lg border ${x.removed ? 'border-rose-800 bg-rose-950/30' : 'border-slate-700 bg-slate-800/70'} p-3 ${isDone(x) ? 'item-done' : ''}">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span class="text-amber-300 font-bold text-sm whitespace-nowrap">${esc(x.rank || '')}</span>
@@ -179,7 +194,11 @@
           ${cd && !x.shipped ? '<span class="text-sm text-emerald-300">✅ 已寄出（俱乐部）</span>' : `<label class="flex items-center gap-1.5 text-sm cursor-pointer select-none"><input type="checkbox" class="chk" data-k="${esc(x.key)}" ${x.shipped ? 'checked' : ''} onchange="setItem(this.dataset.k, 'shipped', this.checked)"> 已寄出</label>`}
           <input type="text" data-k="${esc(x.key)}" value="${esc(x.note || '')}" placeholder="备注：已私讯 / 运单号…" onchange="setItem(this.dataset.k, 'note', this.value.trim())"
             class="flex-1 min-w-[160px] bg-slate-900 border border-slate-600 rounded px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-sky-400">
+          ${isDone(x) ? '' : `<select data-k="${esc(x.key)}" onchange="voidItem(this.dataset.k, this.value); this.value = ''" title="得主失联、超过领奖期限等，作废后不再算未寄出"
+            class="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-300">
+            <option value="">🚫 作废…</option>${Object.entries(VOID_REASONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>`}
         </div>
+        ${c && c.status === 'cancelled' ? '<div class="mt-1 text-xs text-slate-400">💡 俱乐部那边已取消这个奖品，确定不寄的话可以按「🚫 作废」</div>' : ''}
       </div>`;
     }
 
@@ -198,10 +217,11 @@
         <span class="px-3 py-1.5 rounded bg-slate-800 border border-slate-700 text-xs">共 <b>${s.total}</b> 位得主</span>
         <span class="px-3 py-1.5 rounded bg-sky-950 border border-sky-700 text-xs text-sky-200">已联系 <b>${s.contacted}/${s.total}</b></span>
         <span class="px-3 py-1.5 rounded bg-emerald-950 border border-emerald-700 text-xs text-emerald-200">已寄出 <b>${s.shipped}/${s.total}</b></span>
+        ${s.voided ? `<span class="px-3 py-1.5 rounded bg-slate-800 border border-slate-700 text-xs text-slate-300">🚫 已作废 <b>${s.voided}</b></span>` : ''}
         ${s.total - s.shipped ? `<span class="px-3 py-1.5 rounded bg-rose-950 border border-rose-700 text-xs text-rose-200">还有 <b>${s.total - s.shipped}</b> 位未寄出</span>` : '<span class="px-3 py-1.5 rounded bg-emerald-600 text-xs font-bold">✅ 全部寄出</span>'}`;
       $('footerTools').classList.remove('hidden');
       let items = itemsOf(curId);
-      if ($('onlyTodo').checked) items = items.filter(x => !isDone(x) && !x.removed);
+      if ($('onlyTodo').checked) items = items.filter(x => !isDone(x) && !x.removed && !isVoid(x));
       if (!items.length) { list.innerHTML = '<p class="text-center text-slate-500 py-12 text-sm">🎉 没有未寄出的得主</p>'; return; }
 
       // 左边：冠亚季 → 空一行 → 入围　右边：安慰奖
@@ -219,11 +239,31 @@
       db.ref(`${BATCHES}/${curId}/items/${key}`).update({ [field]: value, ts: firebase.database.ServerValue.TIMESTAMP })
         .catch(e => alert('❌ 保存失败：' + (e.code || e.message)));
     }
+    function voidItem(key, reason) {
+      if (!curId || !reason) return;
+      const x = itemsOf(curId).find(i => i.key === key);
+      if (!x) return;
+      let note = '';
+      if (reason === 'other') {
+        note = prompt(`作废 ${x.name || ''}（${x.orderNo || ''}）的原因：`, '');
+        if (note === null) return;
+        note = note.trim().slice(0, 100);
+        if (!note) { alert('请填写原因'); return; }
+      } else if (!confirm(`作废 ${x.name || ''}（${x.orderNo || ''}）？\n原因：${VOID_REASONS[reason]}\n\n作废后不再算未寄出，之后可以按「↩️ 恢复」。`)) return;
+      db.ref(`${BATCHES}/${curId}/items/${key}`).update({ voided: true, voidReason: reason, voidNote: note,
+        voidedAt: firebase.database.ServerValue.TIMESTAMP, voidedBy: (firebase.auth().currentUser || {}).email || '',
+        ts: firebase.database.ServerValue.TIMESTAMP }).catch(e => alert('❌ 保存失败：' + (e.code || e.message)));
+    }
+    function unvoidItem(key) {
+      if (!curId || !confirm('恢复这位得主？会重新算进未寄出。')) return;
+      db.ref(`${BATCHES}/${curId}/items/${key}`).update({ voided: null, voidReason: null, voidNote: null, voidedAt: null, voidedBy: null,
+        ts: firebase.database.ServerValue.TIMESTAMP }).catch(e => alert('❌ 保存失败：' + (e.code || e.message)));
+    }
     function downloadCSV() {
       if (!curId) return;
       const q = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-      const rows = [['名次', '名字', '订单号', '平台', '已联系', '已寄出', '会员俱乐部', '备注']].concat(itemsOf(curId).map(x =>
-        [x.rank + (x.removed ? '（已撤销）' : ''), x.name, x.orderNo, { T: 'TikTok', S: 'Shopee' }[platformOf(x.orderNo)] || '', x.contacted ? '✔' : '', isDone(x) ? '✔' : '', clubOf(x) ? CLUB_ST[clubOf(x).status] || clubOf(x).status : '', x.note || '']));
+      const rows = [['名次', '名字', '订单号', '平台', '已联系', '已寄出', '会员俱乐部', '作废原因', '备注']].concat(itemsOf(curId).map(x =>
+        [x.rank + (x.removed ? '（已撤销）' : ''), x.name, x.orderNo, { T: 'TikTok', S: 'Shopee' }[platformOf(x.orderNo)] || '', x.contacted ? '✔' : '', isDone(x) ? '✔' : '', clubOf(x) ? CLUB_ST[clubOf(x).status] || clubOf(x).status : '', isVoid(x) ? voidText(x) : '', x.note || '']));
       const blob = new Blob(['\uFEFF' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = `Mochiishop_Claims_${curId}.csv`;
