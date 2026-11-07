@@ -81,6 +81,37 @@
     .tag-blue { background: var(--blue-bg2); color: var(--blue-tx); }
     .item-row { display: flex; gap: 12px; align-items: flex-start; }
     .item-row .pthumb { width: 52px; height: 52px; }
+    /* ===== 后台会员系统模板1：左边列表、右边详情（手机：先列表，点了全屏看详情）===== */
+    .add-panel > summary { cursor: pointer; font-weight: 700; font-size: 1.05rem; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 8px; }
+    .add-panel > summary::-webkit-details-marker { display: none; }
+    .add-panel > summary::after { content: "展开 ▾"; margin-left: auto; font-size: .8rem; color: var(--muted); font-weight: 600; }
+    .add-panel[open] > summary::after { content: "收起 ▴"; }
+    .add-panel[open] > summary { margin-bottom: 12px; }
+    .pz-split { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 16px; align-items: start; }
+    .pz-list { background: var(--card); border: 1px solid var(--line); border-radius: 12px; max-height: calc(100vh - 140px); overflow-y: auto; position: sticky; top: 16px; }
+    .pz-row { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--soft); background: transparent; cursor: pointer; color: var(--ink); font-size: .86rem; }
+    .pz-row:hover { background: var(--soft2); }
+    .pz-row.on { background: var(--pink-bg); box-shadow: inset 3px 0 0 #db2777; }
+    .pz-row .pthumb { width: 38px; height: 38px; }
+    .pz-row .t { flex: 1; min-width: 0; }
+    .pz-row .t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pz-row .t small { display: block; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pz-row .r { text-align: right; flex-shrink: 0; font-size: .72rem; color: var(--muted); }
+    .pz-detail .item { margin: 0; }
+    .pz-back { display: none; }
+    .bundle-box { background: var(--blue-bg); border: 1px solid var(--blue-bg2); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: .86rem; }
+    .bundle-box ul { list-style: none; margin: 6px 0 0; }
+    .bundle-box li { padding: 3px 0; }
+    .merge-box { background: var(--amber-bg); border: 1px solid var(--amber-bg2); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: .86rem; color: var(--ink); }
+    .merge-box label { margin: 8px 0 0; }
+    @media (max-width: 899px) {
+      .pz-split { grid-template-columns: 1fr; }
+      .pz-list { position: static; max-height: none; }
+      .pz-split .pz-detail { display: none; }
+      .pz-split.show-detail .pz-list, .pz-split.show-detail ~ .list-tools { display: none; }
+      .pz-split.show-detail .pz-detail { display: block; }
+      .pz-back { display: inline-flex; margin-bottom: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -98,11 +129,12 @@
         <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
       </div>
 
-      <!-- ➕ 添加中奖 -->
-      <div class="panel">
-        <h3>➕ 添加中奖</h3>
-        <!-- ⏳ 得奖者已注册并绑定中奖订单，还没发奖 -->
-        <div id="readyBox" class="ready-box hidden"></div>
+      <!-- ⏳ 得奖者已注册并绑定中奖订单，还没发奖（放在最上面，一眼看到） -->
+      <div id="readyBox" class="ready-box hidden"></div>
+
+      <!-- ➕ 添加中奖（平常收起来，按了才展开，页面不会太长） -->
+      <details class="panel add-panel" id="addPanel">
+        <summary>➕ 添加中奖</summary>
 
         <div class="step-h"><span class="n">1</span> 选择抽奖期数</div>
         <div class="periods" id="periods"><span class="muted">载入中…</span></div>
@@ -134,6 +166,7 @@
               <div class="mres hidden" id="mRes"></div>
             </div>
             <div id="chosen"></div>
+            <div id="mergeBox"></div>
           </label>
 
           <div style="margin-bottom:12px">
@@ -182,7 +215,7 @@
           </div>
           <p class="msg" id="addMsg"></p>
         </form>
-      </div>
+      </details>
 
       <!-- 📋 中奖记录 -->
       <div class="tabs" id="tabs">
@@ -194,14 +227,20 @@
         <button data-tab="cancelled">已取消</button>
       </div>
       <input id="search" placeholder="🔍 搜索编号、会员名称、奖品或期数" style="margin-bottom:12px">
-      <div id="panel"><p class="empty">载入中…</p></div>
+      <div class="pz-split" id="split">
+        <div class="pz-list" id="rows"><p class="empty">载入中…</p></div>
+        <div class="pz-detail">
+          <button type="button" class="btn btn-ghost pz-back" id="backBtn">← 返回列表</button>
+          <div id="panel"><p class="empty">👈 选择左边的中奖记录</p></div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, serverTimestamp, deleteField, deleteDoc
+      collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, serverTimestamp, deleteField, deleteDoc, writeBatch
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
@@ -211,6 +250,7 @@
     } from "./js/admin-common.js";
     import { noteBoxHTML, readNoteBox, setNoteBox, noteFields, noteBadge, normNote, noteFromDoc, setSet, setManager,
       bindNoteBoxes, rowHTML, readRow, bindRowList } from "./js/note-i18n.js";
+    import { previewSend, confirmSimple } from "./js/send-tools.js";
 
     // 每月抽奖的资料库（和 www.themochiishop.com/monthly-draw/ 同一个，只读）
     const drawApp = initializeApp({
@@ -539,6 +579,7 @@
       $("fMonth").value = r.month;
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
       chooseMember(r.uid);
+      $("addPanel").open = true;
       $("addForm").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
@@ -552,6 +593,7 @@
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
       if (r.uid) chooseMember(r.uid);
       else { chooseMember(""); $("fMember").value = r.winner; searchMembers(); $("fMember").focus(); }
+      $("addPanel").open = true;
       $("addForm").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
@@ -574,6 +616,25 @@
       $("fMember").classList.toggle("hidden", !!uid);
       $("chosen").innerHTML = uid ? `<div class="chosen">👤 <div>${memberLine(uid)}</div>
         <button type="button" class="btn btn-ghost x" id="unpick">换一位</button></div>` : "";
+      renderMergeBox();
+    }
+    // 🔗 合并：这位会员还有没寄出的中奖奖品 → 可以合并一起寄（共用配送方式、运单号，一次处理）
+    const OPEN_ST = ["unclaimed", "claimed", "approved"];
+    const openWinsOf = uid => wins.filter(w => w.uid === uid && OPEN_ST.includes(w.status));
+    function renderMergeBox() {
+      const list = pick.uid ? openWinsOf(pick.uid) : [];
+      if (!list.length) { $("mergeBox").innerHTML = ""; return; }
+      const dl = list[0].delivery;
+      $("mergeBox").innerHTML = `<div class="merge-box">⚠️ 这位会员还有 <b>${list.length}</b> 个奖品还没寄出：
+        <ul style="margin:4px 0 0 18px">${list.map(w => `<li>${esc(w.prizeName)} · ${ST[w.status]} · ${DLV[w.delivery] || ""}${w.drawMonth ? " · " + esc(w.drawMonth) : ""}</li>`).join("")}</ul>
+        <label class="inline"><input type="checkbox" id="fMerge" checked> 🔗 合并一起寄出（配送方式跟着改成「${DLV[dl]}」，之后发货、运单号一次处理）</label></div>`;
+      const sync = () => {
+        if (!$("fMerge").checked) return;
+        const r = document.querySelector(`input[name="dlv"][value="${dl}"]`);
+        if (r && !r.checked) { r.checked = true; $("dlv").dispatchEvent(new Event("change", { bubbles: true })); }
+      };
+      $("fMerge").addEventListener("change", sync);
+      sync();
     }
     $("fMember").addEventListener("input", searchMembers);
     $("fMember").addEventListener("focus", searchMembers);
@@ -685,6 +746,11 @@
       const expiresAt = endOfDay($("fDeadline").value);
       if (!expiresAt || expiresAt < new Date()) { addMsg("请选择今天以后的领取期限", "err"); $("fDeadline").focus(); return; }
       if (dup && !confirm(`这位会员这一期已经有「${dup.prizeName}」了（${redeemCode(dup.id)}），还要再添加一次吗？`)) return;
+      if (!await previewSend({ title: "添加中奖奖品并通知会员", to: (members[pick.uid] || {}).name || "会员", okText: "💾 确认保存并通知",
+        rows: [["奖品", prizeName], ["期数", $("fMonth").value.trim()], ["配送方式", DLV[dlv]], ["领取期限", fmtDate(expiresAt)],
+          ["运单号", ship.trackingNo ? `${ship.carrierName} ${ship.trackingNo}` : ""],
+          ["合并寄出", $("fMerge") && $("fMerge").checked ? openWinsOf(pick.uid).map(w => w.prizeName).join("、") : ""]],
+        note: readNoteBox($("fNoteBox")) })) return;
 
       const data = {
         uid: pick.uid,
@@ -701,11 +767,20 @@
         createdAt: serverTimestamp(),
         createdBy: adminEmail,
       };
+      // 🔗 合并：跟这位会员还没寄出的奖品同一组（bundleId = 那一组的编号，没有的话用第一笔的 ID）
+      const mergeWith = $("fMerge") && $("fMerge").checked ? openWinsOf(pick.uid) : [];
+      if (mergeWith.length) data.bundleId = mergeWith.find(w => w.bundleId)?.bundleId || mergeWith[0].id;
       const addPhotos = shipPhotos.__add || [];
       if (ship.trackingNo || addPhotos.length) data.shipping = { ...ship, photos: addPhotos, by: adminEmail };
       $("addBtn").disabled = true;
       try {
         const r = await addDoc(collection(db, "prizeWins"), data);
+        if (mergeWith.length) {
+          const b = writeBatch(db);
+          mergeWith.forEach(w => b.update(doc(db, "prizeWins", w.id), { bundleId: data.bundleId, delivery: dlv }));
+          await b.commit();
+        }
+        selId = r.id;
         addMsg(`✅ 已添加 ${redeemCode(r.id)}：${prizeName} → ${(members[pick.uid] || {}).name || ""}`, "ok");
         logAdmin("prize", `添加中奖奖品：${(members[pick.uid] || {}).name || "会员"} 的「${prizeName}」${redeemCode(r.id)}`, "prizes.html#unclaimed");
         resetForm();
@@ -804,6 +879,17 @@
         </div>`;
     }
 
+    // ---------- 🔗 合并寄送的一组 ----------
+    const groupOf = w => w.bundleId ? wins.filter(x => x.bundleId === w.bundleId && x.status !== "cancelled") : [w];
+    function bundleHTML(w) {
+      if (!w.bundleId) return "";
+      const g = groupOf(w);
+      if (g.length < 2) return "";
+      return `<div class="bundle-box">🔗 <b>合并寄出 · 共 ${g.length} 件</b>（发货、运单号、改配送方式、审核会一起处理）
+        <ul>${g.map(x => `<li>${x.id === w.id ? "👉 " : "• "}${esc(x.prizeName)} · ${ST[x.status] || x.status}${x.drawMonth ? " · " + esc(x.drawMonth) : ""} <code>${redeemCode(x.id)}</code></li>`).join("")}</ul>
+        <div class="actions" style="margin-top:6px"><button class="btn btn-ghost" data-act="unbundle">✂️ 这件拆开，单独处理</button></div></div>`;
+    }
+
     // ---------- ✏️ 行内小框：修改留言 / 改配送方式（连留言一起）/ 取消原因 ----------
     function noteEditHTML(w, mode) {
       const cur = noteFromDoc(w.note, w.noteI18n);
@@ -859,7 +945,21 @@
       list.sort((a, b) => ["claimed", "approved"].includes(tab) ? at(a) - at(b) : at(b) - at(a));
       list = list.slice(0, 150);
 
-      $("panel").innerHTML = list.length ? list.map(w => {
+      // 左边：精简列表；右边：选中那一笔的完整资料和操作
+      if (!list.some(w => w.id === selId)) selId = list[0] ? list[0].id : "";
+      $("rows").innerHTML = list.length ? list.map(w => {
+        const m = members[w.uid] || {};
+        const end = w.status === "unclaimed" ? deadlineOf(w) : null;
+        const soon = end && (end - Date.now()) / 86400000 <= 7;
+        return `<button type="button" class="pz-row${w.id === selId ? " on" : ""}" data-sel="${esc(w.id)}">
+          ${thumbHTML(w.prizeImage)}
+          <span class="t"><b>${esc(w.prizeName)}</b><small>${esc(m.name || "(资料不存在)")}${w.drawMonth ? " · " + esc(w.drawMonth) : ""}</small></span>
+          <span class="r"><span class="tag ${ST_TAG[w.status] || ""}">${ST[w.status] || w.status}</span><br>
+            ${w.bundleId ? "🔗 " : ""}${soon ? "⚠️ " : ""}${w.delivery === "separate" ? "🚚" : "📦"} ${redeemCode(w.id)}</span>
+        </button>`;
+      }).join("") : `<p class="empty">${q ? "找不到符合的记录" : "没有记录"}</p>`;
+      const sel = list.filter(w => w.id === selId);
+      $("panel").innerHTML = sel.length ? sel.map(w => {
         const m = members[w.uid] || {};
         let body = "";
         const cancelBtn = `<button class="btn btn-bad" data-act="cancel">取消这个中奖</button>`;
@@ -907,10 +1007,21 @@
               </div>
               <code class="rno">${redeemCode(w.id)}</code>
             </div>
+            ${bundleHTML(w)}
             ${body}
           </div>`;
-      }).join("") : `<p class="empty">${q ? "找不到符合的记录" : "没有记录"}</p>`;
+      }).join("") : `<p class="empty">👈 选择左边的中奖记录</p>`;
     }
+    let selId = "";
+    $("rows").addEventListener("click", e => {
+      const b = e.target.closest("[data-sel]");
+      if (!b) return;
+      selId = b.dataset.sel;
+      renderList();
+      $("split").classList.add("show-detail");
+      if (window.matchMedia("(max-width: 899px)").matches) window.scrollTo({ top: $("split").offsetTop - 70, behavior: "smooth" });
+    });
+    $("backBtn").addEventListener("click", () => $("split").classList.remove("show-detail"));
     bindShipEvents($("panel"));
     $("panel").addEventListener("change", e => {
       const r = e.target.closest('.inline-box[data-mode="cancel"] input[type="radio"]');
@@ -976,6 +1087,10 @@
         if (act === "saveDlv") upd.delivery = w.delivery === "separate" ? "withOrder" : "separate";
       }
       if (act === "approve") upd = { status: "approved", approvedAt: serverTimestamp() };
+      if (act === "unbundle") {
+        if (!await confirmSimple(`把「${w.prizeName}」从合并的一组拆开，单独处理？`)) return;
+        upd = { bundleId: null };
+      }
       if (act === "ship") {
         const err = shipError(ship, true);
         if (err) { alert(err); return; }
@@ -983,7 +1098,7 @@
         if (w.status === "claimed") upd.approvedAt = serverTimestamp();
       }
       if (act === "complete") {
-        if (!confirm("手动标记这个奖品已完成？")) return;
+        if (!await confirmSimple("手动标记这个奖品已完成？")) return;
         upd = { status: "completed", completedAt: serverTimestamp(), adminCompleted: true };
       }
       if (act === "confirmCancel") {
@@ -996,11 +1111,41 @@
           cancelNote: n.note || "", cancelNoteI18n: n.noteI18n, cancelledBy: adminEmail };
       }
       if (!upd) return;
+      // 📤 会员看得到的操作：先预览再送出
+      const who = (members[w.uid] || {}).name || "会员";
+      const shipRows = s => s ? [["运输公司", s.carrierName], ["运单号", s.trackingNo], ["查询链接", s.trackingUrl]] : [];
+      const PV = {
+        saveShip: () => upd.shipping ? { title: "更新运单号", rows: [["奖品", w.prizeName], ...shipRows(upd.shipping)] } : null,
+        ship: () => ({ title: "标记已发货", okText: "🚚 确认已发货", rows: [["奖品", w.prizeName], ...shipRows(upd.shipping)] }),
+        saveNote: () => ({ title: "修改给会员的留言", rows: [["奖品", w.prizeName]], note: noteFromDoc(upd.note, upd.noteI18n) }),
+        saveDlv: () => ({ title: "更改配送方式", rows: [["奖品", w.prizeName], ["配送方式", `${DLV[w.delivery]} → ${DLV[upd.delivery]}`]], note: noteFromDoc(upd.note, upd.noteI18n) }),
+        confirmCancel: () => ({ title: "取消中奖奖品", danger: true, okText: "确认取消", rows: [["奖品", w.prizeName], ["原因", (CANCEL_REASONS[upd.cancelReason] || {}).label]],
+          note: noteFromDoc(upd.cancelNote, upd.cancelNoteI18n), noteLabel: "会员看到的取消原因" }),
+      };
+      const pv = PV[act] && PV[act]();
+      if (pv && !await previewSend({ to: who, ...pv })) return;
+      if (act === "approve" && !await confirmSimple(`审核通过「${w.prizeName}」？会员那边会显示「待发货」。`)) return;
+      // 🔗 合并的一组：这些操作一起套用到同组还没完成的奖品（各自的状态要符合）
+      const GROUP_OK = { ship: ["claimed", "approved"], saveShip: ["unclaimed", "claimed", "approved", "shipped"],
+        saveDlv: ["unclaimed", "claimed", "approved"], approve: ["claimed"], complete: ["shipped"] };
+      const others = GROUP_OK[act] ? groupOf(w).filter(x => x.id !== w.id && GROUP_OK[act].includes(x.status)) : [];
+      if (others.length && !confirm(`同一组还有 ${others.length} 件（${others.map(x => x.prizeName).join("、")}）也一起处理？\n\n按「取消」= 只处理这一件`)) others.length = 0;
       item.querySelectorAll("button").forEach(b => b.disabled = true);
       try {
+        if (others.length) {
+          const b = writeBatch(db);
+          b.update(doc(db, "prizeWins", w.id), upd);
+          others.forEach(x => {
+            const u = { ...upd };
+            if (act === "ship") { if (x.status === "claimed") u.approvedAt = serverTimestamp(); else delete u.approvedAt; }
+            if (act === "saveDlv") { delete u.note; delete u.noteI18n; }   // 留言各自保留
+            b.update(doc(db, "prizeWins", x.id), u);
+          });
+          await b.commit();
+        } else
         await updateDoc(doc(db, "prizeWins", w.id), upd);
         const LOG = { saveAddr: "修改中奖奖品收货地址", extend: "延长领取期限", reopen: "恢复为待领取", saveShip: "更新运单号",
-          saveDlv: "更改配送方式", saveNote: "修改中奖留言", approve: "批准中奖奖品", ship: "中奖奖品已发货", complete: "标记中奖奖品完成", confirmCancel: "取消中奖奖品" };
+          saveDlv: "更改配送方式", saveNote: "修改中奖留言", unbundle: "拆开合并寄出", approve: "批准中奖奖品", ship: "中奖奖品已发货", complete: "标记中奖奖品完成", confirmCancel: "取消中奖奖品" };
         if (LOG[act]) logAdmin("prize", `${LOG[act]}：${(members[w.uid] || {}).name || "会员"} 的「${w.prizeName}」${redeemCode(w.id)}`, "prizes.html");
         delete shipPhotos[w.id];
         await loadWins();

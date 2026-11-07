@@ -36,6 +36,32 @@
         </div>
       </div>
 
+      <!-- 🎁 直接发放：选会员 → 送积分或商城优惠券（只有店主） -->
+      <div class="panel owner-only" id="givePanel">
+        <h3>🎁 直接发放福利</h3>
+        <p class="meta" style="margin:-6px 0 12px">例如直播游戏的参与者：选好会员（可以一次贴上一串平台用户名），送积分或商城里的优惠券。发出前会先预览。</p>
+        <label style="margin-bottom:4px">发给谁</label>
+        <div id="gPicker" style="margin-bottom:12px"></div>
+        <div class="grid2">
+          <label>发放内容
+            <select id="gType">
+              <option value="points">💎 积分</option>
+              <option value="coupon">🎫 商城优惠券</option>
+            </select>
+          </label>
+          <label id="gPtsBox">每人积分 <input type="number" id="gPts" min="1" step="1" placeholder="例如 30"></label>
+          <label id="gCouponBox" class="hidden">选择优惠券 <select id="gCoupon"></select></label>
+          <label>原因（会员看得到） <input id="gReason" maxlength="40" placeholder="例如：直播互动奖励"></label>
+        </div>
+        <div id="gCouponHint" class="meta hidden" style="margin:-6px 0 10px">用的是这张券的优惠码（多组券码时，每人拿自己还没拿过的下一组），会扣库存，也算进「每位会员限兑次数」；不扣积分。</div>
+        <label style="margin-bottom:4px">给会员的留言（选填）</label>
+        <div id="gNoteBox"></div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="gSend">🎁 预览并发放</button>
+        </div>
+        <p id="gMsg" class="msg"></p>
+      </div>
+
       <!-- 系统福利：会员完成条件后自动领取 -->
       <div class="panel">
         <h3>自动发放的福利</h3>
@@ -116,8 +142,10 @@
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
-    import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, where, limit, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { requireAdmin, renderAdminNav, logAdmin, esc, PERK_DEFAULTS, FOLLOW_DEFAULTS } from "./js/admin-common.js";
+    import { previewSend, memberPicker } from "./js/send-tools.js";
+    import { noteBoxHTML, readNoteBox, noteFields, bindNoteBoxes } from "./js/note-i18n.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("perks");
@@ -177,6 +205,7 @@
             <div>${p.active === false ? '<span class="tag">隐藏</span>' : '<span class="tag tag-ok">开放</span>'}</div>
           </div>
           <div class="actions">
+            <button class="btn btn-ghost owner-only" data-give="${esc(p.id)}">🎁 发放</button>
             <button class="btn btn-ghost" data-edit="${esc(p.id)}">编辑</button>
             <button class="btn btn-ghost" data-toggle="${esc(p.id)}">${p.active === false ? "开放" : "隐藏"}</button>
             <button class="btn btn-bad owner-only" data-del="${esc(p.id)}">删除</button>
@@ -185,8 +214,8 @@
     }
 
     async function save(patch) {
-      cfg = { ...cfg, ...patch, updatedAt: serverTimestamp(), updatedBy: adminEmail };
-      await setDoc(ref, cfg);
+      // 只写这次改的部分（merge），不会盖掉「会员等级」页面存在同一份设定里的 tiers
+      await setDoc(ref, { ...patch, updatedAt: serverTimestamp(), updatedBy: adminEmail }, { merge: true });
       logAdmin("settings", "修改了额外福利设定", "perks.html");
       const snap = await getDoc(ref);
       cfg = snap.exists() ? snap.data() : {};
@@ -217,6 +246,121 @@
     $("newCustom").addEventListener("click", () => openForm(null));
     $("cCancel").addEventListener("click", () => $("customForm").classList.add("hidden"));
 
+    // ---------- 🎁 直接发放 ----------
+    let gPicker = null, couponRewards = [];
+    async function initGive() {
+      if (!window.ownerOnly || !window.ownerOnly()) return;   // 只有店主可以发分 / 送券
+      gPicker = memberPicker($("gPicker"), { onChange: u => { $("gSend").textContent = u.length ? `🎁 预览并发放给 ${u.length} 位` : "🎁 预览并发放"; } });
+      $("gNoteBox").innerHTML = noteBoxHTML({ placeholder: "例如：谢谢你参加今晚的直播游戏 💕" });
+      bindNoteBoxes();
+      try {
+        const rs = await getDocs(collection(db, "rewards"));
+        couponRewards = rs.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.type === "coupon")
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      } catch (e) { console.warn("rewards", e); }
+      $("gCoupon").innerHTML = couponRewards.length
+        ? couponRewards.map(r => `<option value="${esc(r.id)}">${esc(r.name)}${typeof r.stock === "number" ? `（库存 ${r.stock}）` : ""}${r.active ? "" : "（未上架）"}</option>`).join("")
+        : `<option value="">商城里还没有优惠券</option>`;
+      const paint = () => {
+        const c = $("gType").value === "coupon";
+        $("gPtsBox").classList.toggle("hidden", c);
+        $("gCouponBox").classList.toggle("hidden", !c);
+        $("gCouponHint").classList.toggle("hidden", !c);
+      };
+      $("gType").addEventListener("change", paint); paint();
+      $("customList").addEventListener("click", e => {
+        const b = e.target.closest("[data-give]");
+        if (!b) return;
+        const p = (cfg.custom || []).find(x => x.id === b.dataset.give);
+        if (!p) return;
+        $("gType").value = "points"; paint();
+        $("gPts").value = p.points || "";
+        $("gReason").value = p.title || "";
+        $("givePanel").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      $("gSend").addEventListener("click", give);
+    }
+
+    // 优惠券：每位会员分到一个券码（共用多组码 → 给他还没拿过的下一组；没有共用码 → 从券码库拿）
+    async function planCoupons(reward, uids) {
+      const sx = (await getDoc(doc(db, "rewardSecrets", reward.id))).data() || {};
+      const codes = Array.isArray(sx.couponCodes) && sx.couponCodes.length ? sx.couponCodes : [sx.couponCode].filter(Boolean);
+      const reds = (await getDocs(query(collection(db, "redemptions"), where("rewardId", "==", reward.id)))).docs.map(d => d.data())
+        .filter(r => !["rejected", "cancelled"].includes(r.status));
+      let stockLeft = typeof reward.stock === "number" ? reward.stock : Infinity;
+      let pool = [];
+      if (!codes.length) {
+        const ps = await getDocs(query(collection(db, "coupons"), where("rewardId", "==", reward.id), where("used", "==", false), limit(Math.min(uids.length, 300))));
+        pool = ps.docs.map(d => d.id);
+      }
+      const ok = [], skip = [];
+      uids.forEach(uid => {
+        const mine = reds.filter(r => r.uid === uid);
+        if (stockLeft <= 0) return skip.push([uid, "库存不足"]);
+        let code = null;
+        if (codes.length) {
+          const got = new Set(mine.map(r => r.couponCode).filter(Boolean));
+          code = codes.find(c => !got.has(c));
+          if (!code) return skip.push([uid, `已经拿过全部 ${codes.length} 组券码`]);
+        } else {
+          if (typeof reward.perMember === "number" && mine.length >= reward.perMember) return skip.push([uid, "已达限兑次数"]);
+          code = pool.shift();
+          if (!code) return skip.push([uid, "券码库用完了"]);
+        }
+        stockLeft--;
+        ok.push({ uid, code, fromPool: !codes.length });
+      });
+      return { ok, skip };
+    }
+
+    async function give() {
+      const msg = (t, ty) => setMsg($("gMsg"), t, ty);
+      const uids = gPicker.get();
+      const type = $("gType").value, reason = $("gReason").value.trim(), note = readNoteBox($("gNoteBox"));
+      const pts = parseInt($("gPts").value, 10);
+      if (!uids.length) return msg("请先选择会员", "err");
+      if (!reason) return msg("请填写原因（会员看得到）", "err");
+      if (type === "points" && !(pts > 0)) return msg("请填写正确的积分", "err");
+      const reward = couponRewards.find(r => r.id === $("gCoupon").value);
+      if (type === "coupon" && !reward) return msg("请选择优惠券", "err");
+      $("gSend").disabled = true;
+      try {
+        let plan = null;
+        if (type === "coupon") plan = await planCoupons(reward, uids);
+        const n = type === "coupon" ? plan.ok.length : uids.length;
+        const skipTxt = plan && plan.skip.length ? `${plan.skip.length} 位不会收到：` + plan.skip.map(([u, why]) => `${why}`).filter((v, i, a) => a.indexOf(v) === i).join("、") : "";
+        if (!n) { msg("没有可以发放的会员。" + skipTxt, "err"); return; }
+        if (!await previewSend({ title: type === "coupon" ? "送优惠券" : "送积分", to: `${n} 位：${gPicker.names()}`,
+          rows: [["内容", type === "coupon" ? `🎫 ${reward.name}（不扣积分）` : `💎 每人 +${pts} 分`], ["原因", reason],
+            ["库存", type === "coupon" && typeof reward.stock === "number" ? `${reward.stock} → ${reward.stock - n}` : ""]],
+          warn: skipTxt, note: note.zh ? note : null, okText: "🎁 确认发放" })) return;
+        const nf = noteFields(note);
+        const items = type === "coupon" ? plan.ok : uids.map(uid => ({ uid }));
+        for (let i = 0; i < items.length; i += 200) {
+          const batch = writeBatch(db);
+          items.slice(i, i + 200).forEach(x => {
+            if (type === "points") {
+              batch.set(doc(collection(db, "pointsLedger")), { uid: x.uid, delta: pts, reason: "奖励：" + reason, orderNo: null,
+                by: adminEmail, availableAt: serverTimestamp(), createdAt: serverTimestamp() });
+            } else {
+              const rid = doc(collection(db, "redemptions"));
+              batch.set(rid, { uid: x.uid, rewardId: reward.id, rewardName: reward.name, cost: 0, kind: "coupon", status: "approved",
+                gift: true, giftReason: reason, couponCode: x.code, ...(nf.note ? nf : {}), by: adminEmail,
+                createdAt: serverTimestamp(), decidedAt: serverTimestamp() });
+              if (x.fromPool) batch.update(doc(db, "coupons", x.code), { used: true, usedBy: x.uid, redemptionId: rid.id, usedAt: serverTimestamp() });
+            }
+          });
+          if (type === "coupon" && typeof reward.stock === "number" && i === 0) batch.update(doc(db, "rewards", reward.id), { stock: increment(-items.length) });
+          await batch.commit();
+        }
+        if (type === "coupon" && typeof reward.stock === "number") reward.stock -= items.length;
+        logAdmin(type === "coupon" ? "redeem" : "points", `直接发放：${items.length} 位会员 ${type === "coupon" ? "「" + reward.name + "」" : "+" + pts + " 分"}（${reason}）`, "perks.html");
+        msg(`✅ 已发给 ${items.length} 位会员` + (skipTxt ? `。${skipTxt}` : ""), "ok");
+        gPicker.clear();
+      } catch (err) { msg("发放失败：" + err.message, "err"); }
+      finally { $("gSend").disabled = false; }
+    }
+
     requireAdmin(async user => {
       adminEmail = user.email || "";
       try {
@@ -226,6 +370,7 @@
       renderSys();
       renderFollow();
       renderCustom();
+      initGive();
 
       $("saveFollow").addEventListener("click", async () => {
         const patch = {};

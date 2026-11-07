@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>会员等级 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    .tt { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .tt th, .tt td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    .tt th { color: var(--muted); font-weight: 600; font-size: .8rem; }
+    .tt input { margin: 0; width: 110px; }
+    .tt .now { font-size: .76rem; color: var(--muted); display: block; margin-top: 2px; }
+    .tt .sug { font-size: .76rem; color: var(--blue-tx); display: block; margin-top: 2px; }
+    .tt td.cnt { white-space: nowrap; }
+    .bar { height: 8px; border-radius: 999px; background: var(--soft); overflow: hidden; margin-top: 4px; width: 120px; }
+    .bar i { display: block; height: 100%; background: #db2777; }
+    .tip { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: .84rem; color: var(--text2); line-height: 1.65; }
+    .tip b { color: var(--ink); }
+    .warn { color: var(--red-tx); font-size: .82rem; margin-top: 6px; }
+    textarea.code { font-family: ui-monospace, Menlo, monospace; font-size: .8rem; }
+    @media (max-width: 700px) { .tt thead { display: none; } .tt tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; } .tt td { display: block; border: 0; padding: 4px 0; } }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>💎 会员等级</h2>
+          <p class="muted">修改升级门槛（近 365 天消费）、积分倍数、生日积分、保级规则。改完要同时更新 Google 表格的 Apps Script（见最下面），等级才会照新规则计算。</p>
+        </div>
+        <button class="btn btn-ghost" id="sugBtn">💡 依会员消费给我建议</button>
+      </div>
+
+      <div class="panel">
+        <h3>等级设定</h3>
+        <table class="tt">
+          <thead><tr><th>等级</th><th>升级门槛（RM）</th><th>积分倍数</th><th>生日积分</th><th>目前达到这个门槛的会员</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="grid2" style="margin-top:14px">
+          <label>等级有效期（月） <input type="number" id="validMonths" min="1" max="36" step="1"></label>
+          <label>保级要达到门槛的（%） <input type="number" id="keepPct" min="10" max="100" step="5"></label>
+        </div>
+        <div id="checkMsg" class="warn"></div>
+        <div class="actions">
+          <button class="btn btn-primary owner-only" id="saveBtn">💾 保存</button>
+          <button class="btn btn-ghost" id="resetBtn">↩️ 还原成目前的设定</button>
+        </div>
+        <p id="msg" class="msg"></p>
+      </div>
+
+      <div class="panel">
+        <h3>💡 建议</h3>
+        <div class="tip" id="sugBox">按右上角「💡 依会员消费给我建议」，系统会看全部会员近 365 天的消费分布，给你门槛建议（只会填进上面的表格，按保存才生效）。</div>
+      </div>
+
+      <div class="panel">
+        <h3>➕ 想加更高的等级？</h3>
+        <div class="tip" id="newTier"></div>
+      </div>
+
+      <div class="panel">
+        <h3>📋 给 Apps Script 的设定</h3>
+        <p class="meta" style="margin:-6px 0 8px">等级是由 Google 表格的 Apps Script（member-system-sync.gs）计算的。保存后，请把下面的数字对照改进脚本里的 <code>MS_TIERS</code>、<code>MS_TIER_VALID_MONTHS</code>、<code>MS_TIER_KEEP_RATIO</code>（脚本格式可能不一样，数字一致就好），再按「部署 → 管理部署 → 编辑 → 新版本」。会员网页会自动读新的设定，不用改。</p>
+        <textarea id="gas" class="code" rows="12" readonly></textarea>
+        <div class="actions"><button class="btn btn-ghost" id="copyGas">📋 复制</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { doc, getDoc, setDoc, getDocs, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, logAdmin, esc, TIER_LABELS } from "./js/admin-common.js";
+    import { previewSend } from "./js/send-tools.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("tiers");
+
+    // 预设值：和会员前台 common.js 的 TIERS、Apps Script 的 MS_TIERS 一致
+    const DEFAULT = [
+      { id: "mochii",  minSpend: 0,    multiplier: 1,   birthday: 88 },
+      { id: "silver",  minSpend: 300,  multiplier: 1.2, birthday: 128 },
+      { id: "gold",    minSpend: 800,  multiplier: 1.5, birthday: 188 },
+      { id: "diamond", minSpend: 2000, multiplier: 2,   birthday: 288 },
+      { id: "black",   minSpend: null, multiplier: 2,   birthday: 888, invite: true },
+    ];
+    const DEF_RULES = { validMonths: 12, keepRatio: 0.5 };
+    let saved = null, rules = null, spends = [], adminEmail = "";
+
+    const msg = (t, ty) => { $("msg").textContent = t; $("msg").className = "msg" + (ty ? " " + ty : ""); };
+    const merged = cfg => DEFAULT.map(d => ({ ...d, ...(cfg && cfg[d.id] ? cfg[d.id] : {}), id: d.id, invite: d.invite, minSpend: d.invite ? null : ((cfg && cfg[d.id] && typeof cfg[d.id].minSpend === "number") ? cfg[d.id].minSpend : d.minSpend) }));
+    const reach = min => spends.filter(x => x >= min).length;
+
+    function renderRows(list, sug) {
+      const total = spends.length || 1;
+      $("rows").innerHTML = list.map(tr => {
+        const s = sug && sug[tr.id];
+        const n = tr.invite ? null : reach(tr.minSpend);
+        return `<tr data-id="${tr.id}">
+          <td><b>${esc(TIER_LABELS[tr.id] || tr.id)}</b>${tr.invite ? '<span class="now">邀请制（会员详情开通）</span>' : ""}</td>
+          <td>${tr.invite ? "—" : tr.id === "mochii" ? '0<span class="now">加入就是</span>'
+            : `<input type="number" data-f="minSpend" min="1" step="10" value="${tr.minSpend}">${s && s.minSpend != null ? `<span class="sug">建议 ${s.minSpend}</span>` : ""}`}</td>
+          <td><input type="number" data-f="multiplier" min="1" max="10" step="0.1" value="${tr.multiplier}">${s && s.multiplier ? `<span class="sug">建议 ${s.multiplier}</span>` : ""}</td>
+          <td><input type="number" data-f="birthday" min="0" step="1" value="${tr.birthday}">${s && s.birthday ? `<span class="sug">建议 ${s.birthday}</span>` : ""}</td>
+          <td class="cnt">${n === null ? "—" : `${n} 位（${Math.round(n / total * 100)}%）<div class="bar"><i style="width:${Math.round(n / total * 100)}%"></i></div>`}</td>
+        </tr>`;
+      }).join("");
+      check();
+    }
+    function readRows() {
+      return DEFAULT.map(d => {
+        const tr = $("rows").querySelector(`tr[data-id="${d.id}"]`);
+        const v = f => { const el = tr.querySelector(`[data-f="${f}"]`); return el ? Number(el.value) : null; };
+        return { id: d.id, invite: d.invite, minSpend: d.invite ? null : d.id === "mochii" ? 0 : v("minSpend"), multiplier: v("multiplier"), birthday: v("birthday") };
+      });
+    }
+    function readRules() { return { validMonths: Number($("validMonths").value), keepRatio: Number($("keepPct").value) / 100 }; }
+    // 检查：门槛要一级比一级高，倍数不能比下一级低
+    function check() {
+      const l = readRows(), errs = [];
+      const ladder = l.filter(x => !x.invite);
+      ladder.forEach((x, i) => {
+        if (!(x.multiplier >= 1)) errs.push(`${TIER_LABELS[x.id]} 的倍数至少 1`);
+        if (!(x.birthday >= 0)) errs.push(`${TIER_LABELS[x.id]} 的生日积分不能是负数`);
+        if (i > 0) {
+          const p = ladder[i - 1];
+          if (!(x.minSpend > p.minSpend)) errs.push(`${TIER_LABELS[x.id]} 的门槛要比 ${TIER_LABELS[p.id]} 高`);
+          if (x.multiplier < p.multiplier) errs.push(`${TIER_LABELS[x.id]} 的倍数不应该比 ${TIER_LABELS[p.id]} 低`);
+          if (x.birthday < p.birthday) errs.push(`${TIER_LABELS[x.id]} 的生日积分不应该比 ${TIER_LABELS[p.id]} 少`);
+        }
+      });
+      const r = readRules();
+      if (!(r.validMonths >= 1 && r.validMonths <= 36)) errs.push("有效期要 1–36 个月");
+      if (!(r.keepRatio > 0 && r.keepRatio <= 1)) errs.push("保级比例要 10–100%");
+      $("checkMsg").textContent = errs.length ? "⚠️ " + errs.join("；") : "";
+      renderNewTier(l);
+      renderGas(l, r);
+      return errs;
+    }
+    $("rows").addEventListener("input", () => {
+      const l = readRows();
+      $("rows").querySelectorAll("tr").forEach(tr => {
+        const x = l.find(y => y.id === tr.dataset.id), td = tr.querySelector(".cnt");
+        if (x && !x.invite && td) { const n = reach(x.minSpend), p = Math.round(n / (spends.length || 1) * 100); td.innerHTML = `${n} 位（${p}%）<div class="bar"><i style="width:${p}%"></i></div>`; }
+      });
+      check();
+    });
+    ["validMonths", "keepPct"].forEach(id => $(id).addEventListener("input", check));
+
+    // 💡 建议：看会员近 365 天消费分布（有消费的会员），银卡约前 35%、金卡约前 12%、钻石约前 3%
+    const round50 = x => Math.max(50, Math.round(x / 50) * 50);
+    function suggest() {
+      const cur = readRows();
+      const arr = spends.filter(x => x > 0).sort((a, b) => b - a);
+      const out = {};
+      let note = "";
+      if (arr.length >= 20) {
+        const at = p => arr[Math.min(arr.length - 1, Math.max(0, Math.ceil(arr.length * p) - 1))];
+        const s = round50(at(0.35)), g = Math.max(round50(at(0.12)), s + 100), d = Math.max(round50(at(0.03)), g + 200);
+        out.silver = { minSpend: s }; out.gold = { minSpend: g }; out.diamond = { minSpend: d };
+        note = `根据 <b>${arr.length}</b> 位有消费的会员：消费中位数 RM${Math.round(arr[Math.floor(arr.length / 2)])}，前 10% 约 RM${Math.round(at(0.1))}，最高 RM${Math.round(arr[0])}。<br>
+          建议门槛让大约 <b>35%</b> 有消费的会员到银卡、<b>12%</b> 到金卡、<b>3%</b> 到钻石——银卡大家「努力一下就到」，钻石保持稀有。`;
+      } else {
+        note = `目前只有 <b>${arr.length}</b> 位会员有消费记录，样本太少，先不建议改门槛（会员多一点再按一次）。`;
+      }
+      // 倍数、生日积分：每升一级，倍数 +0.2～0.5、生日积分约是门槛的 10–15%
+      const ladder = cur.filter(x => !x.invite);
+      ladder.forEach((x, i) => {
+        const min = (out[x.id] && out[x.id].minSpend) ?? x.minSpend;
+        out[x.id] = { ...(out[x.id] || {}),
+          multiplier: [1, 1.2, 1.5, 2][i] ?? x.multiplier,
+          birthday: i === 0 ? 88 : Math.max(ladder[i - 1].birthday + 20, Math.round(min * 0.13 / 10) * 10 + 8) };
+      });
+      $("sugBox").innerHTML = note + `<br>倍数建议 1 → 1.2 → 1.5 → 2（每级多一点，升级有感觉）；生日积分约是门槛的 13%，让高等级的生日礼物更有份量。<br>
+        <button class="btn btn-primary" id="applySug" style="margin-top:8px">⬆️ 套用建议到表格</button> <span class="muted">（套用后还可以自己改，按保存才生效）</span>`;
+      renderRows(cur, out);
+      $("applySug").onclick = () => {
+        renderRows(cur.map(x => ({ ...x, ...(x.invite ? { birthday: out[x.id]?.birthday ?? x.birthday } : out[x.id] || {}) })), null);
+        msg("已套用建议，确认后按「💾 保存」", "ok");
+      };
+    }
+    $("sugBtn").addEventListener("click", suggest);
+
+    function renderNewTier(l) {
+      const d = l.find(x => x.id === "diamond");
+      const nx = { min: round50(d.minSpend * 2), m: Math.round((d.multiplier + 0.5) * 10) / 10, b: Math.round(d.birthday * 1.7 / 10) * 10 + 8 };
+      const n = reach(nx.min);
+      $("newTier").innerHTML = `例如在 💎 钻石之上加一级：门槛建议 <b>RM${nx.min}</b>（钻石的 2 倍，目前有 ${n} 位会员达到）、积分倍数 <b>${nx.m}</b>、生日积分 <b>${nx.b}</b>。<br>
+        ♛ Black Elite 是邀请制，不靠消费，所以新的等级会排在钻石和 Black Elite 之间。<br>
+        ⚠️ 新增等级不只改这一页：Firestore 规则（Feed 权限的等级顺序）、Apps Script、会员网页的等级名称和图标都要一起加，所以这个先不开放直接新增。决定好名称后告诉 Claude，会一次帮你加好。`;
+    }
+    function renderGas(l, r) {
+      $("gas").value = `// 💎 会员等级（${new Date().toLocaleDateString()} 从后台「会员等级」复制）\n`
+        + `const MS_TIERS = [\n` + l.map(x => `  { id: "${x.id}", minSpend: ${x.minSpend === null ? "null" : x.minSpend}, multiplier: ${x.multiplier}, birthday: ${x.birthday}${x.invite ? ", invite: true" : ""} },`).join("\n")
+        + `\n];\nconst MS_TIER_VALID_MONTHS = ${r.validMonths};\nconst MS_TIER_KEEP_RATIO = ${r.keepRatio};\n`;
+    }
+    $("copyGas").addEventListener("click", async e => {
+      try { await navigator.clipboard.writeText($("gas").value); e.target.textContent = "已复制 ✓"; setTimeout(() => e.target.textContent = "📋 复制", 1500); }
+      catch { $("gas").select(); }
+    });
+
+    function fill() {
+      renderRows(merged(saved), null);
+      $("validMonths").value = rules.validMonths;
+      $("keepPct").value = Math.round(rules.keepRatio * 100);
+      check();
+    }
+    $("resetBtn").addEventListener("click", () => { fill(); msg(""); });
+
+    $("saveBtn").addEventListener("click", async () => {
+      if (!window.ownerOnly || !window.ownerOnly()) return;   // 只有店主可以改等级规则
+      const errs = check();
+      if (errs.length) return msg("请先修正上面的问题", "err");
+      const l = readRows(), r = readRules(), old = merged(saved);
+      const changes = [];
+      l.forEach(x => {
+        const o = old.find(y => y.id === x.id);
+        ["minSpend", "multiplier", "birthday"].forEach(f => { if (x[f] !== o[f] && x[f] !== null) changes.push([`${TIER_LABELS[x.id]} · ${{ minSpend: "门槛", multiplier: "倍数", birthday: "生日积分" }[f]}`, `${o[f]} → ${x[f]}`]); });
+      });
+      if (r.validMonths !== rules.validMonths) changes.push(["有效期", `${rules.validMonths} → ${r.validMonths} 个月`]);
+      if (r.keepRatio !== rules.keepRatio) changes.push(["保级比例", `${Math.round(rules.keepRatio * 100)}% → ${Math.round(r.keepRatio * 100)}%`]);
+      if (!changes.length) return msg("没有修改");
+      if (!await previewSend({ title: "保存会员等级设定", to: "所有会员（会员网页的等级说明会马上更新）", rows: changes, okText: "💾 确认保存",
+        warn: "保存后请把「给 Apps Script 的设定」更新进脚本，等级计算才会用新规则。已经升级的会员不会因为改门槛马上降级（照保级规则）。" })) return;
+      $("saveBtn").disabled = true;
+      try {
+        const tiers = {};
+        l.forEach(x => { tiers[x.id] = { multiplier: x.multiplier, birthday: x.birthday, ...(x.invite ? {} : { minSpend: x.minSpend }) }; });
+        // 存在 settings/perks（会员网页本来每次都会读这份），不用多花读取次数
+        await setDoc(doc(db, "settings", "perks"), { tiers, tierRules: r, tiersUpdatedAt: serverTimestamp(), tiersUpdatedBy: adminEmail }, { merge: true });
+        saved = tiers; rules = r;
+        logAdmin("settings", "修改了会员等级设定：" + changes.map(c => c[0] + " " + c[1]).join("、").slice(0, 250), "tiers.html");
+        msg("已保存 ✅ 记得更新 Apps Script", "ok");
+      } catch (e) { msg("保存失败：" + e.message, "err"); }
+      finally { $("saveBtn").disabled = false; }
+    });
+
+    requireAdmin(async user => {
+      adminEmail = user.email || "";
+      try {
+        const [ps, ms] = await Promise.all([getDoc(doc(db, "settings", "perks")), getDocs(collection(db, "members"))]);
+        const d = ps.exists() ? ps.data() : {};
+        saved = d.tiers || null;
+        rules = { ...DEF_RULES, ...(d.tierRules || {}) };
+        spends = ms.docs.map(x => Number(x.data().spend12m) || 0);
+        fill();
+      } catch (e) { msg("载入失败：" + e.message, "err"); }
+    });
+  </script>
+</body>
+</html>

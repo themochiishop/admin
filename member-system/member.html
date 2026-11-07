@@ -188,6 +188,7 @@
       platformTag, normalizeUsername, TIER_LABELS, TIER_ORDER,
       normalizePhone, isValidPhone, fmtPhone, waLink
     } from "./js/admin-common.js";
+    import { previewSend } from "./js/send-tools.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("members");
@@ -489,7 +490,9 @@
       const delta = parseInt($("adjDelta").value, 10);
       const reason = $("adjReason").value.trim();
       if (!delta || !reason) { setMsg($("adjMsg"), "请填写积分（不能是 0）和原因", "err"); return; }
-      if (!confirm(`给 ${$("mName").textContent} ${delta > 0 ? "加" : "扣"} ${Math.abs(delta)} 分？\n原因：${reason}\n\n积分记录无法删除，如有错误需要再调整一笔更正。`)) return;
+      if (!await previewSend({ title: `${delta > 0 ? "加" : "扣"} ${Math.abs(delta)} 分`, to: (currentMember && currentMember.name) || "会员",
+        danger: delta < 0, okText: delta > 0 ? "✅ 确认加分" : "确认扣分", warn: "积分记录无法删除，如有错误需要再调整一笔更正。",
+        rows: [["积分", (delta > 0 ? "+" : "") + delta + " 分"], ["原因（会员看得到）", reason]] })) return;
       $("adjBtn").disabled = true;
       try {
         await addDoc(collection(db, "pointsLedger"), {

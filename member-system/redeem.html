@@ -105,6 +105,8 @@
       normalizePhone, isValidPhone
     } from "./js/admin-common.js";
     import { noteBoxHTML, readNoteBox, setNoteBox, noteFields, noteFromDoc, noteBadge, loadNoteSets, bindNoteBoxes } from "./js/note-i18n.js";
+    import { previewSend, confirmSimple } from "./js/send-tools.js";
+    const whoOf = r => (members[r.uid] || {}).name || "会员";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("redeem");
@@ -323,7 +325,7 @@
       return `
         <div class="item-head">
           <div style="min-width:0;flex:1">
-            <div class="item-title">${kindTag(r)} ${isTest(r) ? '<span class="tag tag-warn">🧪 测试</span> ' : ""}${esc(r.rewardName)} · ${r.cost} 分 ${extra}</div>
+            <div class="item-title">${kindTag(r)} ${isTest(r) ? '<span class="tag tag-warn">🧪 测试</span> ' : ""}${r.gift ? `<span class="tag tag-pink" title="${esc(r.giftReason || "")}">🎁 福利赠送</span> ` : ""}${esc(r.rewardName)}${r.variantName ? ` <span class="tag tag-blue">🎨 ${esc(r.variantName)}</span>` : ""} · ${r.cost} 分 ${extra}</div>
             <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a>${isInternal(r.uid) ? ' <span class="tag tag-pink">🏷️ 内部会员</span>' : ""} · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
           </div>
           <code class="rno">${redeemCode(r.id)}</code>
@@ -509,6 +511,10 @@
           !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return false;
       if (!test && reward && typeof reward.stock === "number" && reward.stock <= 0 &&
           !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return false;
+      // 🎨 款式库存（有设定才扣）
+      const vr = r.variantId && reward && reward.variants ? reward.variants[r.variantId] : null;
+      if (!test && vr && typeof vr.stock === "number" && vr.stock <= 0 &&
+          !confirm(`款式「${vr.name}」的库存已经是 0，仍要批准吗？`)) return false;
 
       // 优惠券：共用优惠码（存在只有管理员能读的 rewardSecrets）；没有就从券码库取一组
       let couponCode = null, fromPool = false;
@@ -560,12 +566,16 @@
       if (!test && reward && typeof reward.stock === "number") {
         batch.update(doc(db, "rewards", r.rewardId), { stock: increment(-1) });
       }
+      if (!test && vr && typeof vr.stock === "number") {
+        batch.update(doc(db, "rewards", r.rewardId), { [`variants.${r.variantId}.stock`]: increment(-1) });
+      }
       await batch.commit();
       return true;
     }
 
     async function reject(r, note) {
-      if (!confirm(`拒绝「${r.rewardName}」的兑换申请？积分不会被扣除。`)) return false;
+      if (!await previewSend({ title: "拒绝兑换申请", to: whoOf(r), danger: true, okText: "✕ 确认拒绝",
+        rows: [["奖品", r.rewardName], ["积分", `${r.cost} 分（不会扣除）`]], note, noteLabel: "会员看到的备注" })) return false;
       const update = { status: "rejected", decidedAt: serverTimestamp() };
       const nf = noteFields(note);
       if (nf.note) Object.assign(update, nf);
@@ -577,6 +587,8 @@
     async function cancelApproved(r) {
       const why = prompt(`取消「${r.rewardName}」并退回 ${r.cost} 分给会员？\n\n原因（会员看得到，选填，例如：缺货）：`, "");
       if (why === null) return false;
+      if (!await previewSend({ title: "取消兑换并退回积分", to: whoOf(r), danger: true, okText: "确认取消并退回",
+        rows: [["奖品", r.rewardName], ["退回积分", `+${r.cost} 分`]], note: why.trim(), noteLabel: "会员看到的取消原因" })) return false;
       const rewardSnap = await getDoc(doc(db, "rewards", r.rewardId));
       const reward = rewardSnap.exists() ? rewardSnap.data() : null;
       const batch = writeBatch(db);
@@ -588,6 +600,8 @@
         redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
       });
       if (!r.test && reward && typeof reward.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
+      const vr = r.variantId && reward && reward.variants ? reward.variants[r.variantId] : null;
+      if (!r.test && vr && typeof vr.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { [`variants.${r.variantId}.stock`]: increment(1) });
       await batch.commit();
       return true;
     }
@@ -715,12 +729,21 @@
           const mode = item.querySelector(`input[name="mode_${CSS.escape(r.id)}"]:checked`);
           const dv = isGift(r) ? readDlv(item, r) : null;
           if (dv && dv.error) { alert(dv.error); ok = false; }
-          else ok = await approve(r, readNoteBox(item.querySelector(".nt-review")), !!mode && mode.value === "test", dv);
+          else {
+            const note = readNoteBox(item.querySelector(".nt-review")), test = !!mode && mode.value === "test";
+            const isCoupon = r.kind !== "gift" && !isGift(r);
+            ok = await previewSend({ title: "批准兑换", to: whoOf(r), okText: "✔ 确认批准",
+              rows: [["奖品", r.rewardName + (r.variantName ? `（款式：${r.variantName}）` : "")], ["扣除积分", `${r.cost} 分`], ["寄送方式", dv ? dlvLabel(dv) : ""],
+                ["优惠码", isCoupon ? "批准后自动分配，会员马上看得到" : ""], ["模式", test ? "🧪 测试（不算进数据）" : ""]],
+              note, noteLabel: "会员看到的备注" })
+              && await approve(r, note, test, dv);
+          }
           if (ok && dv) logAdmin("redeem", `寄送方式：${(members[r.uid] || {}).name || "会员"} 的「${r.rewardName}」→ ${dlvLabel(dv)}`, "redeem.html#toShip");
         }
         if (act === "saveDlv") {
           const dv = readDlv(item, r);
           if (dv.error) { alert(dv.error); ok = false; }
+          else if (!await confirmSimple(`把「${r.rewardName}」的寄送方式改为「${dlvLabel(dv)}」？会员那边会看到新的寄送方式。`)) ok = false;
           else {
             await updateDoc(doc(db, "redemptions", r.id), dv);
             logAdmin("redeem", `更改寄送方式：${(members[r.uid] || {}).name || "会员"} 的「${r.rewardName}」→ ${dlvLabel(dv)}`, "redeem.html#toShip");
@@ -728,7 +751,9 @@
         }
         if (act === "shipWithOrder") {
           const v = f => ((item.querySelector(`[data-f="${f}"]`) || {}).value || "").trim();
-          if (!confirm("标记这个奖品已随订单一起寄出？")) ok = false;
+          if (!await previewSend({ title: "标记已随订单寄出", to: whoOf(r), okText: "📦 确认已寄出",
+            rows: [["奖品", r.rewardName], ["订单号", v("orderNo").replace(/\s/g, "").toUpperCase()]],
+            note: readNoteBox(item.querySelector(".nt-ship")), noteLabel: "会员看到的发货留言" })) ok = false;
           else await updateDoc(doc(db, "redemptions", r.id), {
             status: "shipped", shippedAt: serverTimestamp(),
             shipping: { withOrder: true, orderNo: v("orderNo").replace(/\s/g, "").toUpperCase().slice(0, 40), ...noteFields(readNoteBox(item.querySelector(".nt-ship"))), by: adminEmail },
@@ -756,6 +781,10 @@
           if (!s.carrierName) { alert("请填写运输公司名称"); ok = false; }
           else if (!s.trackingNo) { alert("请填写追踪单号"); ok = false; }
           else if (s.trackingUrl && !/^https:\/\//i.test(s.trackingUrl)) { alert("查询链接要以 https:// 开头"); ok = false; }
+          else if (!await previewSend({ title: "标记已发货", to: whoOf(r), okText: "📦 确认已发货",
+            rows: [["奖品", r.rewardName], ["运输公司", s.carrierName], ["运单号", s.trackingNo], ["查询链接", s.trackingUrl],
+              ["发货图片", (shipPhotos[r.id] || []).length ? `${shipPhotos[r.id].length} 张` : ""]],
+            note: noteFromDoc(s.note, s.noteI18n), noteLabel: "会员看到的发货留言" })) ok = false;
           else {
             await updateDoc(doc(db, "redemptions", r.id), {
               status: "shipped",
@@ -769,10 +798,11 @@
         if (act === "problem") {
           const why = prompt("配送异常的原因（会员看得到，例如：地址不完整、包裹被退回）：", "");
           if (why === null) ok = false;
+          else if (!await previewSend({ title: "标记配送异常", to: whoOf(r), rows: [["奖品", r.rewardName]], note: why.trim(), noteLabel: "会员看到的原因" })) ok = false;
           else await updateDoc(doc(db, "redemptions", r.id), { status: "problem", problemAt: serverTimestamp(), problemNote: why.trim() });
         }
         if (act === "complete") {
-          if (!confirm("手动标记这笔兑换已完成？")) ok = false;
+          if (!await confirmSimple("手动标记这笔兑换已完成？")) ok = false;
           else await updateDoc(doc(db, "redemptions", r.id), { status: "completed", completedAt: serverTimestamp(), adminCompleted: true });
         }
         const LOG = { approve: "批准兑换", reject: "拒绝兑换", cancel: "取消兑换并退回积分", ship: "兑换已发货", shipWithOrder: "兑换已随单寄出",

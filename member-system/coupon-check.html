@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>优惠码核对 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    .ct { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    .ct th, .ct td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .ct th { color: var(--muted); font-weight: 600; font-size: .78rem; }
+    .ct tr.bad td { background: var(--red-bg); }
+    .ct tr.warn td { background: var(--amber-bg); }
+    .sum { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .sum span { padding: 6px 12px; border-radius: 999px; font-size: .82rem; font-weight: 700; background: var(--soft); color: var(--text2); }
+    .sum .b { background: var(--red-bg2); color: var(--red-tx); }
+    .sum .w { background: var(--amber-bg2); color: var(--amber-tx); }
+    .sum .g { background: var(--green-bg2); color: var(--green-tx); }
+    .tip { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: .84rem; color: var(--text2); line-height: 1.65; }
+    @media (max-width: 700px) { .ct thead { display: none; } .ct tr { display: block; border-bottom: 1px solid var(--line); padding: 6px 0; } .ct td { display: block; border: 0; padding: 2px 6px; } }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>🔍 优惠码核对</h2>
+          <p class="muted">平台的「每位买家限用 1 次」是按平台账号算的：会员换一个新账号、或把券码告诉朋友，平台挡不住。这里把平台的用券记录和会员的兑换记录对照，找出不该用券的人。</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>1. 贴上平台的用券记录</h3>
+        <div class="tip" style="margin-bottom:12px">
+          <b>Shopee：</b>卖家中心 → 营销中心 → 优惠券 → 那一张券 → 数据 / 订单，复制或下载买家列表。<br>
+          <b>TikTok：</b>卖家中心 → 推广 → 优惠券 → 数据，导出订单。<br>
+          直接整份贴进来就好（一行一笔，Excel / CSV 都可以）。系统会在每一行里找<b>券码</b>（THEM…）和<b>买家用户名</b>；如果那份记录里没有券码栏，就在下面选这份记录是哪个券码。
+        </div>
+        <div class="grid2">
+          <label>这份记录是哪个券码（每行都有券码的话不用选）
+            <select id="defCode"><option value="">（每行自己找）</option></select>
+          </label>
+          <label>平台
+            <select id="plat"><option value="">两个都对照</option><option value="shopee">Shopee</option><option value="tiktok">TikTok</option></select>
+          </label>
+        </div>
+        <label>用券记录 <textarea id="raw" rows="8" placeholder="例如：&#10;250101ABCD12  buyer_abc  THEMA1B2C  RM5.00&#10;250102EFGH34  mochii.fan  THEMA1B2C  RM5.00"></textarea></label>
+        <div class="actions"><button class="btn btn-primary" id="runBtn">🔍 开始核对</button></div>
+        <p id="msg" class="msg"></p>
+      </div>
+
+      <div class="panel hidden" id="resPanel">
+        <h3>2. 核对结果</h3>
+        <div class="sum" id="sum"></div>
+        <div style="overflow-x:auto"><table class="ct"><thead><tr><th>结果</th><th>买家用户名</th><th>券码 / 奖品</th><th>会员</th><th>说明</th></tr></thead><tbody id="res"></tbody></table></div>
+        <p class="meta" style="margin-top:10px">❗ 不是会员 / 没绑定的账号用了券：可能是会员把券码给了别人，或用新开的账号。⚠️ 会员用券次数比兑换次数多：同一位会员用不同账号重复用。<br>
+          处理方式由你决定（例如在会员详情扣回积分、私讯提醒）。以后高价值的券，可以改成「一人一码、每个码总共只能用 1 次」。</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { collection, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, esc, normalizeUsername, platformTag } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("couponCheck");
+    let codeInfo = {};   // 券码 → { rewardId, rewardName }
+    let bindings = [], members = {}, reds = [];
+
+    async function loadAll() {
+      const [rS, bS, mS, dS] = await Promise.all([
+        getDocs(query(collection(db, "rewards"), where("type", "==", "coupon"))),
+        getDocs(collection(db, "bindings")),
+        getDocs(collection(db, "members")),
+        getDocs(query(collection(db, "redemptions"), where("couponCode", "!=", null))),   // 只读有券码的兑换
+      ]);
+      const rewards = rS.docs.map(d => ({ id: d.id, ...d.data() }));
+      const secrets = await Promise.all(rewards.map(r => getDoc(doc(db, "rewardSecrets", r.id)).then(s => s.exists() ? s.data() : {}).catch(() => ({}))));
+      codeInfo = {};
+      rewards.forEach((r, i) => {
+        const sx = secrets[i];
+        [...(sx.couponCodes || []), sx.couponCode].filter(Boolean).forEach(c => { codeInfo[c.toUpperCase()] = { rewardId: r.id, rewardName: r.name, platform: r.couponFormat }; });
+      });
+      bindings = bS.docs.map(d => d.data());
+      mS.docs.forEach(d => { members[d.id] = d.data(); });
+      reds = dS.docs.map(d => d.data()).filter(r => r.couponCode && !["rejected", "cancelled"].includes(r.status) && !r.test);
+      // 兑换记录里出现过、但已经不在奖品里的旧券码也算
+      reds.forEach(r => { const c = r.couponCode.toUpperCase(); if (!codeInfo[c]) codeInfo[c] = { rewardId: r.rewardId, rewardName: r.rewardName + "（旧券码）" }; });
+      $("defCode").innerHTML = `<option value="">（每行自己找）</option>` + Object.entries(codeInfo)
+        .map(([c, x]) => `<option value="${esc(c)}">${esc(c)} · ${esc(x.rewardName)}</option>`).join("");
+    }
+
+    function parse(text, defCode, plat) {
+      const byUser = new Map(bindings.filter(b => !plat || b.platform === plat).map(b => [normalizeUsername(b.username), b]));
+      const rows = [];
+      String(text || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(line => {
+        const cells = line.split(/\t|,|;|\s{2,}|\s\|\s/).map(x => x.replace(/^"|"$/g, "").trim()).filter(Boolean);
+        const toks = cells.flatMap(c => c.split(/\s+/)).map(x => x.trim()).filter(Boolean);
+        const realCode = toks.map(x => x.toUpperCase()).find(x => codeInfo[x]);
+        if (!realCode && /user\s*name|buyer|voucher|order\s*id|用户名|买家|订单编号|优惠券/i.test(line)) return;   // 标题行
+        const code = (realCode || defCode || "").toUpperCase();
+        let user = toks.map(normalizeUsername).find(x => byUser.has(x)) || "";
+        let bound = !!user;
+        if (!user) {
+          // 没对上绑定账号：猜一个像用户名的格子（不是券码、不是数字 / 金额 / 日期 / 订单号）
+          user = normalizeUsername(cells.find(c => /^[a-z0-9._@-]{3,30}$/i.test(c) && !/^\d/.test(c) && !codeInfo[c.toUpperCase()]
+            && !/^(rm|myr|shopee|tiktok|completed|paid|done)$/i.test(c)) || "");
+        }
+        if (!code && !user) return;   // 标题行或空行
+        rows.push({ line, code, user, bound, b: bound ? byUser.get(user) : null });
+      });
+      return rows;
+    }
+
+    $("runBtn").addEventListener("click", () => {
+      const rows = parse($("raw").value, $("defCode").value, $("plat").value);
+      if (!rows.length) { $("msg").textContent = "没有读到资料，请确认有贴上内容"; $("msg").className = "msg err"; return; }
+      $("msg").textContent = "";
+      // 每位会员 × 每个券码：平台用了几次 vs 会员拿到几次
+      const used = {};
+      rows.forEach(r => { if (r.b && r.code) { const k = r.b.uid + "|" + r.code; used[k] = (used[k] || 0) + 1; } });
+      const got = k => { const [uid, code] = k.split("|"); return reds.filter(x => x.uid === uid && x.couponCode.toUpperCase() === code).length; };
+      const out = rows.map(r => {
+        const info = codeInfo[r.code] || null;
+        const m = r.b ? members[r.b.uid] : null;
+        let lv = "ok", why = "✅ 会员有兑换这个券码";
+        if (!r.code) { lv = "warn"; why = "这一行找不到券码（可以在上面选这份记录是哪个券码）"; }
+        else if (!info) { lv = "warn"; why = "不是会员俱乐部的券码（可能是店铺其他活动的券）"; }
+        else if (!r.b) { lv = "bad"; why = "❗ 这个账号没有绑定任何会员，却用了俱乐部的券码"; }
+        else {
+          const k = r.b.uid + "|" + r.code, g = got(k);
+          if (!g) { lv = "bad"; why = "❗ 这位会员没有兑换过这个券码"; }
+          else if (used[k] > g) { lv = "warn"; why = `⚠️ 平台用了 ${used[k]} 次，会员只兑换了 ${g} 次（可能用不同账号重复用）`; }
+        }
+        return { ...r, info, m, lv, why };
+      });
+      const order = { bad: 0, warn: 1, ok: 2 };
+      out.sort((a, b) => order[a.lv] - order[b.lv]);
+      const n = lv => out.filter(x => x.lv === lv).length;
+      $("sum").innerHTML = `<span>共 ${out.length} 笔</span><span class="b">❗ 有问题 ${n("bad")}</span><span class="w">⚠️ 要留意 ${n("warn")}</span><span class="g">✅ 正常 ${n("ok")}</span>`;
+      $("res").innerHTML = out.map(x => `<tr class="${x.lv === "ok" ? "" : x.lv}">
+        <td>${x.lv === "bad" ? "❗" : x.lv === "warn" ? "⚠️" : "✅"}</td>
+        <td>${x.b ? platformTag(x.b.platform) + " " : ""}<code>${esc(x.user || "（找不到）")}</code></td>
+        <td><code>${esc(x.code || "—")}</code>${x.info ? `<div class="meta">${esc(x.info.rewardName)}</div>` : ""}</td>
+        <td>${x.m ? `<a href="member.html?uid=${encodeURIComponent(x.b.uid)}" target="_blank">${esc(x.m.name || "(没有名字)")}</a>` : "—"}</td>
+        <td>${esc(x.why)}<div class="meta" title="原始资料">${esc(x.line.slice(0, 120))}</div></td></tr>`).join("");
+      $("resPanel").classList.remove("hidden");
+      $("resPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    requireAdmin(async () => {
+      try { await loadAll(); }
+      catch (e) { $("msg").textContent = "载入失败：" + e.message; $("msg").className = "msg err"; }
+    });
+  </script>
+</body>
+</html>

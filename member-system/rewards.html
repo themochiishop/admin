@@ -171,6 +171,13 @@
   <img id="rpreview" style="width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">
   <button type="button" class="btn btn-ghost" id="rimageRemove">移除图片</button>
 </div>
+          <!-- 🎨 款式（选填）：例如手链 A1–A5。会员在图片上左右滑动看每一款，兑换时选款式 -->
+          <div id="varSec" style="margin-top:6px">
+            <b style="font-size:.9rem;color:var(--ink)">🎨 款式（选填）</b>
+            <p class="meta" style="margin:2px 0 8px">有几款就加几个。会员看到：主图 → 款式 1 → 款式 2…（下面显示 1/5、2/5）；在某一款上按兑换就是那一款，在主图上按兑换会先问选哪一款。<br>款式库存留空 = 只看上面的总库存。</p>
+            <div id="varList"></div>
+            <button type="button" class="btn btn-ghost" id="varAdd">＋ 新增款式</button>
+          </div>
           </details>
           <details class="rw-sec" open><summary>💰 积分、类型、库存、分类</summary>
           <div class="grid2">
@@ -506,6 +513,65 @@ $("rimage").addEventListener("change", async () => {
   currentImage = url;
   showPreview(url);
 });
+
+// ---------- 🎨 款式 ----------
+// variants 存成 { 款式ID: { name, image, order, stock } }（用 ID 当钥匙，Firestore 规则才能检查会员选的款式）
+let variantRows = [];   // [{ id, name, image, stock }]
+const MAX_VARIANTS = 8;
+function renderVariants() {
+  $("varList").innerHTML = variantRows.map((v, i) => `
+    <div class="ntm-row var-row" data-vi="${i}">
+      <label style="margin:0;cursor:pointer;flex-shrink:0" title="上传款式图片">
+        ${v.image ? `<img src="${esc(v.image)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`
+          : `<span style="width:56px;height:56px;border-radius:8px;border:1px dashed var(--line2);display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--muted)">＋图片</span>`}
+        <input type="file" accept="image/*" data-vimg="${i}" style="display:none">
+      </label>
+      <div class="ntm-in" style="grid-template-columns:2fr 1fr">
+        <input data-vname="${i}" maxlength="30" value="${esc(v.name)}" placeholder="款式名称，例如 A1 粉晶">
+        <input data-vstock="${i}" type="number" min="0" step="1" value="${typeof v.stock === "number" ? v.stock : ""}" placeholder="库存（选填）">
+      </div>
+      <div class="ntm-btn">
+        <button type="button" class="btn btn-ghost" data-vup="${i}" title="上移">↑</button>
+        <button type="button" class="btn btn-ghost" data-vdel="${i}" title="删除">✕</button>
+      </div>
+    </div>`).join("");
+  $("varAdd").classList.toggle("hidden", variantRows.length >= MAX_VARIANTS);
+}
+function readVariantInputs() {
+  variantRows.forEach((v, i) => {
+    const n = document.querySelector(`[data-vname="${i}"]`), st = document.querySelector(`[data-vstock="${i}"]`);
+    if (n) v.name = n.value.trim().slice(0, 30);
+    if (st) v.stock = st.value === "" ? null : Math.max(0, parseInt(st.value, 10) || 0);
+  });
+}
+$("varAdd").addEventListener("click", () => {
+  readVariantInputs();
+  variantRows.push({ id: "v" + Date.now().toString(36), name: "", image: "", stock: null });
+  renderVariants(); dirty = true;
+});
+$("varList").addEventListener("click", e => {
+  const up = e.target.closest("[data-vup]"), del = e.target.closest("[data-vdel]");
+  if (!up && !del) return;
+  readVariantInputs();
+  if (del) { if (!confirm("删除这个款式？")) return; variantRows.splice(+del.dataset.vdel, 1); }
+  if (up) { const i = +up.dataset.vup; if (i > 0) [variantRows[i - 1], variantRows[i]] = [variantRows[i], variantRows[i - 1]]; }
+  renderVariants(); dirty = true;
+});
+$("varList").addEventListener("change", async e => {
+  const f = e.target.closest("[data-vimg]");
+  if (!f || !f.files[0]) return;
+  readVariantInputs();
+  let url = await compressImage(f.files[0], 480);
+  if (url.length > 120000) url = await compressImage(f.files[0], 320);   // 款式图小一点，整笔奖品资料才不会太大
+  variantRows[+f.dataset.vimg].image = url;
+  renderVariants(); dirty = true;
+});
+function variantsData() {
+  readVariantInputs();
+  const out = {};
+  variantRows.forEach((v, i) => { out[v.id] = { name: v.name, image: v.image || "", order: i, stock: typeof v.stock === "number" ? v.stock : null }; });
+  return out;
+}
 
 $("rimageRemove").addEventListener("click", () => {
   currentImage = null;
@@ -946,6 +1012,9 @@ $("rimageRemove").addEventListener("click", () => {
       $("vcNote").value = vc.note || "";
       updateCouponUI();
       currentImage = r ? (r.image || null) : null;
+      variantRows = Object.entries((r && r.variants) || {}).sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0))
+        .map(([id, v]) => ({ id, name: v.name || "", image: v.image || "", stock: typeof v.stock === "number" ? v.stock : null }));
+      renderVariants();
 $("rimage").value = "";
 showPreview(currentImage);
       $("formMsg").textContent = "";
@@ -1016,6 +1085,7 @@ showPreview(currentImage);
         ...shelfFields($("rid").value, $("ractive").checked),
         ...readOpen(),
         image: currentImage,
+        variants: variantsData(),
         updatedAt: serverTimestamp()
       };
       if (data.comingSoon && data.openAt && data.openAt.toDate() <= new Date()) {
@@ -1025,6 +1095,21 @@ showPreview(currentImage);
       }
       if (data.endAt && data.endAt.toDate() <= new Date()) {
         $("formMsg").textContent = "下架时间要在现在之后";
+        $("formMsg").className = "msg err";
+        return;
+      }
+      if (Object.values(data.variants).some(v => !v.name)) {
+        $("formMsg").textContent = "每个款式都要填名称（不要的款式请按 ✕ 删除）";
+        $("formMsg").className = "msg err";
+        return;
+      }
+      if (data.type === "coupon" && Object.keys(data.variants).length) {
+        $("formMsg").textContent = "优惠券不能设定款式";
+        $("formMsg").className = "msg err";
+        return;
+      }
+      if (JSON.stringify(data).length > 900000) {
+        $("formMsg").textContent = "图片太多太大，资料超过上限，请减少款式或换小一点的图片";
         $("formMsg").className = "msg err";
         return;
       }

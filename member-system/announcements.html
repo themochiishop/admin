@@ -36,6 +36,12 @@
       <div class="panel">
         <h3>发新公告</h3>
         <form id="annForm">
+          <div style="font-size:.85rem;color:var(--text2);margin-bottom:6px">发送对象</div>
+          <div class="actions" style="margin:0 0 10px">
+            <label class="inline" style="margin:0"><input type="radio" name="aTo" value="all" checked> 👥 全部会员</label>
+            <label class="inline" style="margin:0"><input type="radio" name="aTo" value="some"> 🎯 指定会员（可多选 / 只发给自己测试）</label>
+          </div>
+          <div id="aPickBox" class="hidden" style="margin-bottom:12px"><div id="aPicker"></div></div>
           <label>标题
             <input id="aTitle" required maxlength="60" placeholder="例如：今晚 8 点直播抽奖 🎡">
           </label>
@@ -87,7 +93,7 @@
       </div>
 
       <div class="page-head" style="margin-top:8px">
-        <div><h2 style="font-size:1.1rem">已发出的公告</h2></div>
+        <div><h2 style="font-size:1.1rem">已发出的公告</h2><p class="muted" style="font-size:.8rem">🎯 = 只发给指定会员</p></div>
       </div>
       <div id="list"><p class="empty">载入中…</p></div>
     </div>
@@ -99,6 +105,7 @@
       collection, getDocs, doc, addDoc, deleteDoc, query, orderBy, limit, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { requireAdmin, renderAdminNav, logAdmin, esc, toDate, fmtDate } from "./js/admin-common.js";
+    import { previewSend, memberPicker, loadMemberIndex } from "./js/send-tools.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("announce");
@@ -127,14 +134,31 @@
       preview();
     });
 
+    // 🎯 发送对象：全部会员（announcements）或指定会员（memberMessages，只有收件人读得到）
+    const picker = memberPicker($("aPicker"), { onChange: () => paintTo() });
+    const toSome = () => document.querySelector('input[name="aTo"]:checked').value === "some";
+    function paintTo() {
+      $("aPickBox").classList.toggle("hidden", !toSome());
+      const n = picker.get().length;
+      $("sendBtn").textContent = toSome() ? `🎯 发给 ${n} 位会员` : "📢 发给所有会员";
+    }
+    document.querySelectorAll('input[name="aTo"]').forEach(r => r.addEventListener("change", paintTo));
+
     function linkLabel(l) {
       const opt = [...$("aLinkType").options].find(o => o.value === l);
       return opt ? opt.textContent : l;
     }
 
     async function load() {
-      const snap = await getDocs(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(50)));
-      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const [snap, mSnap] = await Promise.all([
+        getDocs(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(50))),
+        getDocs(query(collection(db, "memberMessages"), orderBy("createdAt", "desc"), limit(50))).catch(() => ({ docs: [] })),
+      ]);
+      const rows = [...snap.docs.map(d => ({ id: d.id, col: "announcements", ...d.data() })),
+        ...mSnap.docs.map(d => ({ id: d.id, col: "memberMessages", ...d.data() }))]
+        .sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));
+      const idx = rows.some(a => a.col === "memberMessages") ? await loadMemberIndex().catch(() => null) : null;
+      const toNames = a => (a.uids || []).map(u => idx && idx.members[u] ? idx.members[u].name || "(没有名字)" : u.slice(0, 6)).join("、");
       const cutoff = new Date(Date.now() - SHOW_DAYS * 86400000);
       $("list").innerHTML = rows.length ? rows.map(a => {
         const at = toDate(a.createdAt);
@@ -144,7 +168,8 @@
           <div class="item">
             <div class="item-head">
               <div>
-                <div class="item-title">📢 ${esc(a.title)}</div>
+                <div class="item-title">${a.col === "memberMessages" ? "🎯" : "📢"} ${esc(a.title)}</div>
+                ${a.col === "memberMessages" ? `<div class="meta">发给 ${(a.uids || []).length} 位：${esc(toNames(a))}</div>` : ""}
                 <div class="meta">${fmtDate(at, true)} · ${esc(a.by || "")}
                   ${langs.length ? " · 另有 " + langs.join(" / ") + " 版" : ""}
                   ${a.link ? " · 链接：" + esc(linkLabel(a.link)) : ""}</div>
@@ -153,7 +178,7 @@
             </div>
             ${a.body ? `<div class="ann-body">${esc(a.body)}</div>` : ""}
             <div class="actions">
-              <button class="btn btn-ghost owner-only" data-del="${esc(a.id)}">🗑 删除（会员铃铛也会消失）</button>
+              <button class="btn btn-ghost owner-only" data-del="${esc(a.id)}" data-col="${a.col}">🗑 删除（会员铃铛也会消失）</button>
             </div>
           </div>`;
       }).join("") : `<p class="empty">还没有公告</p>`;
@@ -162,7 +187,7 @@
         if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以删除
         if (!confirm("删除这则公告？会员的铃铛里也会消失。")) return;
         btn.disabled = true;
-        try { await deleteDoc(doc(db, "announcements", btn.dataset.del)); logAdmin("content", "删除了一则会员公告", "announcements.html"); await load(); }
+        try { await deleteDoc(doc(db, btn.dataset.col || "announcements", btn.dataset.del)); logAdmin("content", "删除了一则会员公告", "announcements.html"); await load(); }
         catch (err) { alert("删除失败：" + err.message); btn.disabled = false; }
       }));
     }
@@ -185,19 +210,29 @@
           if (tt || bb) i18n[k] = { title: tt || title, body: bb || body };
         });
 
-        if (!confirm(`发给所有会员？\n\n📢 ${title}\n${body}\n\n发出后会员的铃铛马上会响。`)) return;
+        const some = toSome(), uids = picker.get();
+        if (some && !uids.length) { setMsg("请选择至少一位会员", "err"); return; }
+        if (some && uids.length > 300) { setMsg("一次最多发给 300 位会员", "err"); return; }
+        const big = t => `【${t.title || title}】${t.body || body ? "\n" + (t.body || body) : ""}`;
+        if (!await previewSend({ title: some ? "发公告给指定会员" : "发公告给所有会员",
+          to: some ? `${uids.length} 位：${picker.names()}` : "所有会员",
+          rows: [["链接", link ? linkLabel(link) : ""]],
+          note: { zh: big({}), en: i18n.en ? big(i18n.en) : "", ms: i18n.ms ? big(i18n.ms) : "" },
+          noteLabel: "会员铃铛里看到的公告", warn: "发出后会员的铃铛马上会响。", okText: "📢 确认发出" })) return;
         $("sendBtn").disabled = true;
         try {
-          await addDoc(collection(db, "announcements"), {
+          await addDoc(collection(db, some ? "memberMessages" : "announcements"), {
+            ...(some ? { uids } : {}),
             title, body, link, i18n,
             by: user.email || "",
             createdAt: serverTimestamp()
           });
           $("annForm").reset();
+          picker.clear(); paintTo();
           $("aLinkBox").classList.add("hidden");
           preview();
           setMsg("已发出 ✅", "ok");
-          logAdmin("content", `发出会员公告：${title}`, "announcements.html");
+          logAdmin("content", `${some ? `发出指定会员公告（${uids.length} 位）` : "发出会员公告"}：${title}`, "announcements.html");
           await load();
         } catch (err) {
           setMsg("发送失败：" + err.message, "err");
