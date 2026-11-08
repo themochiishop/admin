@@ -5,7 +5,7 @@ import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 import {
-  doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, addDoc
+  doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs, addDoc, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
 // ---------- 📋 管理员操作记录（总览「最近动态」的「管理员」） ----------
@@ -127,11 +127,26 @@ export async function refreshRedeemBadge() {
     const snap = await getDocs(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])));
     const n = snap.docs.filter(d => {
       const r = d.data();
+      if (r.newMember === true) return false;   // 🎉 迎新礼的兑换在「新会员奖励」处理
       return r.status === "pending" || (r.kind === "gift" && (r.status === "approved" || r.status === "problem"));
     }).length;
     el.textContent = n > 99 ? "99+" : n;
     el.hidden = !n;
   } catch (e) { console.warn("redeem badge", e); }
+  updateSideDot();
+}
+
+// 🎉 导航「新会员奖励」旁边的红色数字：待批准、候选订单待审核、逾期、待打包、待寄出
+export const NM_ACTIONABLE = ["pending_approval", "order_review", "expired_review", "ready_to_pack", "packed"];
+export async function refreshNmBadge() {
+  const el = document.getElementById("nmBadge");
+  if (!el) return;
+  try {
+    const snap = await getCountFromServer(query(collection(db, "newMemberRewards"), where("status", "in", NM_ACTIONABLE)));
+    const n = snap.data().count;
+    el.textContent = n > 99 ? "99+" : n;
+    el.hidden = !n;
+  } catch (e) { console.warn("newMember badge", e); }   // 还没更新规则时当作 0
   updateSideDot();
 }
 
@@ -324,6 +339,7 @@ export const NAV_GROUPS = [
   ] },
   { label: "会员", items: [
     ["members", "members.html", "👥", "会员列表"],
+    ["newMember", "newmember.html", "🎉", "新会员奖励", "nmBadge"],
     ["tiers", "tiers.html", "💎", "会员等级"],
   ] },
   { label: "商城", items: [
@@ -396,11 +412,11 @@ export function renderAdminNav(active) {
   head.querySelectorAll(".side-scroll a").forEach(a => a.addEventListener("click", () => toggle(false)));
 }
 
-// 手机顶部 ☰ 上的红色数字：三个待处理加起来
+// 手机顶部 ☰ 上的红色数字：所有待处理加起来
 function updateSideDot() {
   const dot = document.getElementById("sideDot");
   if (!dot) return;
-  const n = ["redeemBadge", "prizeBadge", "feedBadge"].reduce((s, id) => {
+  const n = ["redeemBadge", "prizeBadge", "feedBadge", "nmBadge"].reduce((s, id) => {
     const el = document.getElementById(id);
     return s + (el && !el.hidden ? (parseInt(el.textContent, 10) || 0) : 0);
   }, 0);
@@ -535,6 +551,7 @@ export function requireAdmin(onReady) {
     if (can(access, "member.redeem")) refreshRedeemBadge();
     if (can(access, "member.prizes")) refreshPrizeBadge();
     if (can(access, "feed")) refreshFeedBadge();
+    if (can(access, "member.newMember")) refreshNmBadge();
   });
 }
 
@@ -542,7 +559,7 @@ export function requireAdmin(onReady) {
 // 侧边栏：只显示这个人有权限的页面（没有任何项目的分组整组隐藏）
 const NAV_PERM = {
   overview: "member.overview", redeem: "member.redeem", prizes: "member.prizes", feedReview: "feed",
-  members: "member.members", rewards: "member.shop", perks: "member.shop",
+  members: "member.members", newMember: "member.newMember", rewards: "member.shop", perks: "member.shop",
   home: "member.content", feed: "feed", announce: "member.content", storehelp: "member.content",
   notify: "member.settings", tiers: "member.settings", couponCheck: "member.shop",
   shipping: ["member.redeem", "member.prizes"],

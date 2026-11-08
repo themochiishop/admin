@@ -65,6 +65,8 @@
 
       <!-- 🏆 中奖奖品有要处理的才显示 -->
       <a id="prizeAlert" class="prize-alert hidden" href="prizes.html"></a>
+      <!-- 🎉 迎新礼的兑换不在这里处理，有进行中的才显示 -->
+      <a id="nmAlert" class="prize-alert hidden" href="newmember.html#review"></a>
 
       <div class="tabs" id="tabs">
         <button data-tab="pending" class="active">待审核</button>
@@ -116,6 +118,8 @@
     const shipPhotos = {};   // 兑换 ID → 待上传的包裹照片
 
     const isGift = r => r.kind === "gift";
+    // 🎉 迎新礼（新会员奖励）的兑换由「新会员奖励」页面处理：这里不列出、不能操作（积分暂扣照样算进会员余额）
+    const shown = r => r.newMember !== true;
     // 🧪 测试兑换：批准时选的；测试的不扣库存、不用掉券码库、不算进数据
     const isTest = r => r.test === true;
     const isInternal = uid => !!(members[uid] && members[uid].internal && members[uid].internal.on);
@@ -174,6 +178,11 @@
       } catch (e) { console.warn("rewards", e); }
       all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .map(r => ({ ...r, createdAt: toDate(r.createdAt), decidedAt: toDate(r.decidedAt) }));
+
+      // 🎉 迎新礼：进行中（待批准 / 已批准还没寄出）的数量
+      const nmLive = all.filter(r => r.newMember === true && (r.status === "pending" || r.status === "approved")).length;
+      $("nmAlert").innerHTML = `<b>🎉 新会员奖励</b><span>${nmLive} 笔迎新礼进行中，在「新会员奖励」页面处理</span><span class="go">去处理 ➔</span>`;
+      $("nmAlert").classList.toggle("hidden", !nmLive);
 
       const recent = all.filter(r => !TABS.closed(r) && !TABS.done(r))
         .concat(all.filter(r => TABS.closed(r) || TABS.done(r))
@@ -396,14 +405,14 @@
     function render() {
       // 分页数字
       document.querySelectorAll("#tabs button").forEach(b => {
-        const n = all.filter(TABS[b.dataset.tab]).length;
+        const n = all.filter(shown).filter(TABS[b.dataset.tab]).length;
         const urgent = b.dataset.tab === "pending" || b.dataset.tab === "toShip";
         b.innerHTML = b.textContent.replace(/\s*\d+$/, "") + (urgent || n ? ` <span class="cnt ${urgent && n ? "" : "zero"}">${n}</span>` : "");
       });
 
       const q = $("search").value.trim().toLowerCase().replace(/^#/, "");
-      let list = all.filter(TABS[tab]);
-      if (q) list = all.filter(r => r.id.toLowerCase().startsWith(q)
+      let list = all.filter(shown).filter(TABS[tab]);
+      if (q) list = all.filter(shown).filter(r => r.id.toLowerCase().startsWith(q)
         || (r.rewardName || "").toLowerCase().includes(q)
         || ((members[r.uid] || {}).name || "").toLowerCase().includes(q));
       if (tab === "pending" || tab === "toShip") list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));

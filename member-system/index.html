@@ -241,10 +241,10 @@
   <script type="module">
     import { db } from "./js/firebase-config.js";
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners, openReportCount
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners, openReportCount, NM_ACTIONABLE
     } from "./js/admin-common.js";
     import {
-      collection, getDocs, getDoc, doc, query, where, onSnapshot, orderBy, limit
+      collection, getDocs, getDoc, doc, query, where, onSnapshot, orderBy, limit, getCountFromServer
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const $ = id => document.getElementById(id);
@@ -284,6 +284,7 @@
       feed:     { ic: "⏳", t: "Feed 投稿待审核", href: "feed.html#pending", n: null },
       reports:  { ic: "🚩", t: "Feed 检举待处理", href: "feed.html#reports", n: null },
       ready:    { ic: "🔗", t: "得奖者已绑定，待发奖", href: "prizes.html", n: null },
+      nm:       { ic: "🎉", t: "新会员奖励待处理", href: "newmember.html#review", n: null },
     };
     function renderTodo() {
       const rows = Object.values(todo);
@@ -326,12 +327,16 @@
       const wins = wS.docs.map(d => ({ id: d.id, ...d.data() }));
 
       // 待处理
-      todo.rPending.n = redemptions.filter(r => r.status === "pending").length;
-      todo.rShip.n = redemptions.filter(r => r.kind === "gift" && (r.status === "approved" || r.status === "problem")).length;
+      // 🎉 迎新礼的兑换在「新会员奖励」处理，不算在兑换审核
+      todo.rPending.n = redemptions.filter(r => r.newMember !== true && r.status === "pending").length;
+      todo.rShip.n = redemptions.filter(r => r.newMember !== true && r.kind === "gift" && (r.status === "approved" || r.status === "problem")).length;
       todo.pClaimed.n = wins.filter(w => w.status === "claimed").length;
       todo.pShip.n = wins.filter(w => w.status === "approved").length;
       todo.feed.n = fS.size;
       todo.reports.n = await openReportCount();
+      // 没有「新会员奖励」权限、或还没更新规则时当作 0
+      todo.nm.n = await getCountFromServer(query(collection(db, "newMemberRewards"), where("status", "in", NM_ACTIONABLE)))
+        .then(s => s.data().count).catch(() => 0);
       renderTodo();
 
       // 会员（统计不算内部会员）

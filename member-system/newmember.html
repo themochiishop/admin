@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>新会员奖励 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    /* ===== 上方分页 ===== */
+    .nm-wrap { max-width: 1400px; margin: 14px auto 0; padding: 0 16px; }
+    .nm-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .nm-head h2 { margin: 0; flex: 1; font-size: 1.2rem; color: var(--ink); }
+    .nm-head .camp { font-size: .78rem; }
+    .nm-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .nm-tabs button { border: 1px solid var(--line2); background: var(--card); color: var(--ink); border-radius: 10px; padding: 7px 14px; font-weight: 700; font-size: .88rem; cursor: pointer; }
+    .nm-tabs button.active { background: #db2777; border-color: #db2777; color: #fff; }
+    .nm-tabs .cnt { background: #dc2626; color: #fff; border-radius: 999px; padding: 0 7px; font-size: .72rem; margin-left: 4px; }
+    .nm-tabs button.active .cnt { background: #fff; color: #db2777; }
+
+    /* ===== 奖励总览 ===== */
+    .ov-filter { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+    .ov-filter label { margin: 0; font-size: .78rem; color: var(--muted); }
+    .ov-filter input, .ov-filter select { margin: 2px 0 0; padding: 6px 8px; font-size: .86rem; width: auto; }
+    .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+    .ov-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; cursor: pointer; text-align: left; color: var(--ink); font: inherit; }
+    .ov-card:hover { border-color: #f9a8d4; }
+    .ov-card .n { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+    .ov-card .l { font-size: .82rem; color: var(--muted); margin-top: 4px; }
+    .ov-card.hot { background: var(--rose-bg); border-color: #fda4af; }
+    .ov-note { font-size: .8rem; color: var(--muted); margin-top: 10px; }
+
+    /* ===== 左右两栏（后台会员系统模板1） ===== */
+    .rw-layout { display: grid; grid-template-columns: minmax(340px, 5fr) 7fr; gap: 14px; height: calc(100vh - 150px); min-height: 480px; }
+    .rw-left, .rw-right { min-height: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .rw-toolbar { padding: 12px 14px 8px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .rw-top { display: flex; align-items: center; gap: 8px; }
+    .rw-top h3 { flex: 1; font-size: 1.05rem; color: var(--ink); margin: 0; }
+    .rw-top .btn { padding: 6px 10px; font-size: .82rem; }
+    .rw-toolbar input, .rw-toolbar select { margin: 0; padding: 7px 10px; font-size: .86rem; }
+    .rw-dates { display: flex; gap: 6px; align-items: center; font-size: .78rem; color: var(--muted); flex-wrap: wrap; }
+    .rw-dates input { width: auto; padding: 4px 6px; }
+    .rw-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .rw-chips button { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: .76rem; font-weight: 600; cursor: pointer; }
+    .rw-chips button.on { background: #db2777; border-color: #db2777; color: #fff; }
+    .rw-chips button .n { opacity: .7; margin-left: 3px; }
+    .rw-list { flex: 1; overflow-y: auto; padding: 6px; }
+    .rw-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+    .rw-row:hover { background: var(--soft2); }
+    .rw-row.sel { background: var(--pink-bg); border-color: #f9a8d4; }
+    .rw-row .th { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: var(--soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem; }
+    .rw-row .tx { flex: 1; min-width: 0; }
+    .rw-row .nm { font-weight: 700; font-size: .88rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rw-row .sb { font-size: .74rem; color: var(--muted); display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+    .rw-row .sb .tag { font-size: .66rem; padding: 1px 6px; }
+    .rw-row .wa { font-size: .9rem; }
+    .rw-pager { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); font-size: .8rem; color: var(--muted); }
+    .rw-pager .btn { padding: 4px 10px; font-size: .78rem; }
+    .rw-right { position: relative; }
+    .rw-empty { margin: auto; text-align: center; color: var(--muted); font-size: .9rem; padding: 30px; }
+    .rw-editor { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+    .rw-ehead { display: flex; align-items: center; gap: 10px; padding: 12px 16px 6px; flex-wrap: wrap; }
+    .rw-ehead h3 { margin: 0; font-size: 1.05rem; color: var(--ink); flex: 1; }
+    .rw-back { display: none; padding: 5px 10px; font-size: .8rem; }
+    .rw-body { flex: 1; overflow-y: auto; padding: 10px 16px; }
+    .rw-sec { border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; margin-bottom: 10px; }
+    .rw-sec > summary { cursor: pointer; font-weight: 700; font-size: .9rem; color: var(--ink); padding: 10px 0; list-style: none; }
+    .rw-sec > summary::-webkit-details-marker { display: none; }
+    .rw-sec > summary::after { content: "▾"; float: right; color: var(--muted); }
+    .rw-sec:not([open]) > summary::after { content: "▸"; }
+    .rw-sec[open] { padding-bottom: 10px; }
+    .rw-foot { border-top: 1px solid var(--line); padding: 10px 16px; background: var(--card); }
+    .rw-foot .msg { margin: 0 0 6px; }
+    .rw-foot .msg:empty { display: none; }
+    .rw-foot .actions { margin-top: 0; }
+    .rw-foot .btn { padding: 7px 11px; font-size: .84rem; }
+    @media (max-width: 899px) {
+      .rw-layout { grid-template-columns: 1fr; height: calc(100vh - 54px - 150px); }
+      .rw-right { display: none; }
+      body.rw-editing .rw-left { display: none; }
+      body.rw-editing .rw-right { display: flex; }
+      .rw-back { display: inline-flex; }
+    }
+
+    /* ===== 详情 ===== */
+    .kv { display: grid; grid-template-columns: 120px 1fr; gap: 4px 10px; font-size: .86rem; }
+    .kv .k { color: var(--muted); }
+    .kv .v { color: var(--ink); word-break: break-all; }
+    .kv code { font-size: .78rem; }
+    .alert { border-radius: 10px; padding: 8px 12px; font-size: .86rem; margin-bottom: 10px; }
+    .alert-warn { background: var(--amber-bg); border: 1px solid #fcd34d; color: var(--amber-tx); }
+    .alert-bad { background: var(--red-bg); border: 1px solid #fca5a5; color: var(--red-tx); }
+    .alert-ok { background: var(--green-bg); border: 1px solid #86efac; color: var(--green-tx); }
+    .cand { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; font-size: .86rem; }
+    .cand .actions { margin-top: 6px; }
+    .cand .btn, .ord .btn { padding: 4px 9px; font-size: .78rem; }
+    .ord { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: .84rem; flex-wrap: wrap; }
+    .ord:last-child { border-bottom: 0; }
+    .ord .tx { flex: 1; min-width: 180px; }
+    .hist { font-size: .82rem; border-left: 2px solid var(--line2); padding: 2px 0 8px 10px; margin-left: 4px; }
+    .hist .t { color: var(--muted); font-size: .76rem; }
+    .hist .r { color: var(--text2); margin-top: 2px; white-space: pre-wrap; }
+    .hist.note { border-left-color: #db2777; }
+
+    /* ===== 活动设定 ===== */
+    .st-card { max-width: 980px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+    .st-card h3 { margin: 0 0 10px; font-size: 1rem; color: var(--ink); }
+    .st-switch { display: flex; gap: 18px; flex-wrap: wrap; }
+    .st-switch label { display: inline-flex; gap: 6px; align-items: center; margin: 0; font-size: .9rem; }
+    .st-switch input { width: auto; margin: 0; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 14px; }
+    @media (max-width: 760px) { .grid3 { grid-template-columns: 1fr; } }
+    .lang-h { font-weight: 700; font-size: .86rem; color: var(--ink); margin: 6px 0 4px; }
+    .st-foot { position: sticky; bottom: 0; max-width: 980px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .st-foot .msg { margin: 0; flex: 1; }
+    .ro-note { background: var(--amber-bg); border: 1px solid #fcd34d; color: var(--amber-tx); border-radius: 10px; padding: 8px 12px; font-size: .86rem; margin-bottom: 12px; max-width: 980px; }
+    .gift-img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="nm-wrap">
+      <div class="nm-head">
+        <h2>🎉 新会员奖励</h2>
+        <span id="campState" class="tag camp"></span>
+        <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+      </div>
+      <div class="nm-tabs" id="tabs">
+        <button data-tab="overview" class="active">📊 奖励总览</button>
+        <button data-tab="records">📋 兑换记录</button>
+        <button data-tab="review">⏳ 审核管理<span class="cnt" id="reviewCnt" hidden></span></button>
+        <button data-tab="settings">⚙️ 活动设定</button>
+      </div>
+
+      <!-- 📊 奖励总览 -->
+      <section id="pane-overview">
+        <div class="ov-filter">
+          <label>兑换日期从<br><input type="date" id="ovFrom"></label>
+          <label>到<br><input type="date" id="ovTo"></label>
+          <label>会员<br><input type="search" id="ovMember" placeholder="名称或 UID"></label>
+          <label>平台<br><select id="ovPlatform"><option value="">全部</option><option value="shopee">Shopee</option><option value="tiktok">TikTok</option></select></label>
+          <label>状态<br><select id="ovStatus"><option value="">全部</option></select></label>
+          <label style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="ovTest" style="width:auto;margin:0"> 包含测试</label>
+          <button id="ovClear" class="btn btn-ghost" style="padding:6px 10px">清除</button>
+        </div>
+        <div class="ov-grid" id="ovGrid"></div>
+        <p class="ov-note">点任何一格会打开「兑换记录」并套用同样的筛选。数字不含内部会员的测试兑换（勾「包含测试」才会算）。</p>
+      </section>
+
+      <!-- 📋 兑换记录 / ⏳ 审核管理（同一个左右两栏） -->
+      <section id="pane-list" class="hidden">
+        <div class="rw-layout">
+          <aside class="rw-left">
+            <div class="rw-toolbar">
+              <div class="rw-top"><h3 id="listTitle">兑换记录</h3></div>
+              <input id="q" type="search" placeholder="🔍 搜索会员名称、UID、记录 ID、订单编号" autocomplete="off">
+              <div class="rw-dates">兑换日期 <input type="date" id="fFrom"> – <input type="date" id="fTo">
+                <select id="fPlatform" style="width:auto"><option value="">全部平台</option><option value="shopee">Shopee</option><option value="tiktok">TikTok</option></select>
+                <label style="display:inline-flex;gap:4px;align-items:center;margin:0"><input type="checkbox" id="fTest" style="width:auto;margin:0"> 测试</label>
+              </div>
+              <div class="rw-chips" id="stChips"></div>
+            </div>
+            <div id="list" class="rw-list"><p class="empty">载入中…</p></div>
+            <div class="rw-pager"><button class="btn btn-ghost" id="pgPrev">← 上一页</button><span id="pgInfo"></span><button class="btn btn-ghost" id="pgNext">下一页 →</button></div>
+          </aside>
+          <section class="rw-right" id="rwRight">
+            <div id="rwEmpty" class="rw-empty"><div style="font-size:2rem">👈</div><p>选择左边的纪录查看详情和处理</p></div>
+            <div id="detail" class="rw-editor hidden"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ⚙️ 活动设定 -->
+      <section id="pane-settings" class="hidden">
+        <div id="roNote" class="ro-note hidden">🔒 只有店主可以修改活动设定，你只能查看。</div>
+        <form id="stForm">
+          <div class="st-card">
+            <h3>🎛️ 开关</h3>
+            <div class="st-switch">
+              <label><input type="checkbox" id="sActive"> 活动启用</label>
+              <label><input type="checkbox" id="sPopup"> 新会员欢迎弹窗</label>
+              <label><input type="checkbox" id="sManual"> 兑换需要人工批准</label>
+              <label><input type="checkbox" id="sRemind"> 到期提醒</label>
+            </div>
+            <p class="meta" id="startInfo"></p>
+            <p class="meta">暂停活动：会员不能再兑换、不再弹窗；已经兑换的纪录照样可以在这里处理。</p>
+          </div>
+          <div class="st-card">
+            <h3>💰 规则</h3>
+            <div class="grid3">
+              <label>兑换所需积分<input type="number" id="sCost" min="1" step="1" required></label>
+              <label>兑换后有效天数<input type="number" id="sDays" min="1" max="365" step="1" required></label>
+              <label>每个会员兑换次数上限<input type="number" id="sLimit" min="1" max="10" step="1" required></label>
+              <label>奖品库存（留空 = 不限）<input type="number" id="sStock" min="0" step="1"></label>
+              <label>到期前几天提醒<input type="number" id="sRemindDays" min="1" max="30" step="1" required></label>
+            </div>
+            <p class="meta" id="welcomeInfo"></p>
+            <p class="meta">修改规则只影响之后的兑换；已经兑换的纪录保留兑换当时的规则（详情里的「规则快照」）。</p>
+          </div>
+          <div class="st-card">
+            <h3>🎁 兑换商品</h3>
+            <div class="grid2">
+              <label>商品名称（预设）<input id="gName" maxlength="60" required></label>
+              <label>商品图片<input type="file" id="gFile" accept="image/*"></label>
+            </div>
+            <div class="actions" id="gImgBox" style="margin:-4px 0 10px"></div>
+            <div class="grid3" id="gI18n"></div>
+          </div>
+          <div class="st-card">
+            <h3>💬 三语活动文案（留空 = 用网站预设文字）</h3>
+            <div class="grid3" id="copyBox"></div>
+          </div>
+          <div class="st-foot">
+            <p class="msg" id="stMsg"></p>
+            <button type="submit" class="btn btn-primary" id="stSave">💾 保存设定</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <script type="module">
+    import { app, db } from "./js/firebase-config.js";
+    import {
+      collection, query, where, getDocs, getDoc, doc
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
+    import {
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, platformTag, compressImage, logAdmin, refreshNmBadge
+    } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("newMember");
+
+    // ---------- 后端呼叫 ----------
+    const nmAdmin = httpsCallable(getFunctions(app, "asia-southeast1"), "nmAdmin");
+    const newTxId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()).replace(/[^A-Za-z0-9]/g, "").slice(0, 40);
+    async function call(op, data) {
+      const res = await nmAdmin({ op, ...data });
+      return res.data || {};
+    }
+    const errText = e => (e && e.message ? e.message.replace(/^FirebaseError:\s*/, "") : String(e));
+
+    // ---------- 状态 ----------
+    const ST = {
+      pending_approval: { label: "待批准",         tag: "tag-warn", hot: true },
+      pending_order:    { label: "等待下一笔订单", tag: "tag-pink" },
+      order_review:     { label: "候选订单待审核", tag: "tag-warn", hot: true },
+      expired_review:   { label: "已逾期，待处理", tag: "tag-bad",  hot: true },
+      ready_to_pack:    { label: "待打包",         tag: "tag-warn", hot: true },
+      packed:           { label: "已打包，待寄出", tag: "tag-warn", hot: true },
+      shipped:          { label: "已寄出",         tag: "tag-ok" },
+      cancelled:        { label: "已取消",         tag: "" },
+      refunded:         { label: "已取消并退分",   tag: "" },
+    };
+    const ACTIONABLE = Object.keys(ST).filter(k => ST[k].hot);
+    const stTag = s => `<span class="tag ${(ST[s] || {}).tag || ""}">${esc((ST[s] || {}).label || s)}</span>`;
+    const ACTION_LABEL = {
+      redeem: "会员兑换", memberCancel: "会员自行取消", approve: "批准（扣分）", reject: "拒绝",
+      candidateFound: "系统找到候选订单", candidateRemoved: "候选订单失效，已移除", linkOrder: "手动关联订单",
+      rejectCandidate: "否决候选订单", confirmOrder: "确认订单", unlinkOrder: "换订单", packed: "确认打包",
+      unpack: "拆包（改回待打包）", shipped: "确认寄出", extend: "延期", cancel: "取消", cancelRefund: "取消并退分",
+      refund: "补退分", note: "备注", exception: "异常处理", expire: "超过期限，转为待处理", orderIssue: "关联订单被取消 / 退货",
+    };
+
+    let access = null, user = null;
+    let all = [];            // 全部纪录
+    let settings = {};
+    let tab = "overview";
+    let chip = "";           // 状态筛选
+    let page = 0;
+    const PAGE = 30;
+    let selId = null;
+    const cache = {};        // rid → { history, bindings, orders }
+
+    const msOf = v => { const d = toDate(v); return d ? d.getTime() : null; };
+    const fmt = (v, t = true) => fmtDate(toDate(v), t);
+    function daysLeft(r) {
+      const dl = msOf(r.deadline);
+      if (!dl) return "";
+      const diff = dl - Date.now();
+      if (diff < 0) return `<span style="color:var(--red-tx)">已逾期 ${Math.ceil(-diff / 86400000)} 天</span>`;
+      return `剩 ${Math.ceil(diff / 86400000)} 天`;
+    }
+    const platformsOf = r => [...new Set([...(r.boundAccounts || []).map(a => a.platform), r.linkedOrder && r.linkedOrder.platform].filter(Boolean))];
+
+    // ---------- 分页切换 ----------
+    $("tabs").addEventListener("click", e => {
+      const b = e.target.closest("button[data-tab]");
+      if (!b) return;
+      setTab(b.dataset.tab);
+    });
+    function setTab(t) {
+      tab = t;
+      document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === t));
+      $("pane-overview").classList.toggle("hidden", t !== "overview");
+      $("pane-list").classList.toggle("hidden", t !== "records" && t !== "review");
+      $("pane-settings").classList.toggle("hidden", t !== "settings");
+      if (t === "records" || t === "review") {
+        $("listTitle").textContent = t === "review" ? "审核管理" : "兑换记录";
+        if (t === "review" && chip && !ACTIONABLE.includes(chip)) chip = "";
+        page = 0;
+        renderList();
+      }
+      if (t === "settings") renderSettings();
+      history.replaceState(null, "", "#" + t);
+    }
+
+    // ---------- 载入 ----------
+    async function load() {
+      $("list").innerHTML = `<p class="empty">载入中…</p>`;
+      const [snap, sSnap] = await Promise.all([
+        getDocs(collection(db, "newMemberRewards")),
+        getDoc(doc(db, "settings", "newMember")),
+      ]);
+      all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (msOf(b.requestedAt) || 0) - (msOf(a.requestedAt) || 0));
+      settings = sSnap.exists() ? sSnap.data() : {};
+      paintCamp();
+      renderOverview();
+      if (tab === "records" || tab === "review") renderList();
+      if (tab === "settings") renderSettings();
+      const n = all.filter(r => ACTIONABLE.includes(r.status)).length;
+      $("reviewCnt").textContent = n;
+      $("reviewCnt").hidden = !n;
+      refreshNmBadge();
+    }
+    function paintCamp() {
+      const on = settings.active === true;
+      $("campState").className = "tag camp " + (on ? "tag-ok" : "tag-bad");
+      $("campState").textContent = on ? "🟢 活动进行中" : (settings.startAt ? "⏸ 活动暂停中" : "⚪ 活动未启用");
+    }
+    $("reloadBtn").addEventListener("click", () => load().catch(e => alert("载入失败：" + errText(e))));
+
+    // ---------- 筛选 ----------
+    function filterBy(list, f) {
+      const from = f.from ? new Date(f.from + "T00:00:00").getTime() : null;
+      const to = f.to ? new Date(f.to + "T23:59:59").getTime() : null;
+      const q = (f.q || "").trim().toLowerCase();
+      return list.filter(r => {
+        if (!f.test && r.test) return false;
+        const t = msOf(r.requestedAt) || 0;
+        if (from && t < from) return false;
+        if (to && t > to) return false;
+        if (f.platform && !platformsOf(r).includes(f.platform)) return false;
+        if (f.status && r.status !== f.status) return false;
+        if (q) {
+          const hay = [r.id, r.uid, r.memberName, r.linkedOrder && r.linkedOrder.orderNo,
+            ...(r.candidates || []).map(c => c.orderNo), ...(r.boundAccounts || []).map(a => a.username)]
+            .filter(Boolean).join(" ").toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    // ---------- 📊 总览 ----------
+    $("ovStatus").innerHTML += Object.entries(ST).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+    const ovF = () => ({ from: $("ovFrom").value, to: $("ovTo").value, q: $("ovMember").value, platform: $("ovPlatform").value, status: $("ovStatus").value, test: $("ovTest").checked });
+    ["ovFrom", "ovTo", "ovMember", "ovPlatform", "ovStatus", "ovTest"].forEach(id => $(id).addEventListener("input", renderOverview));
+    $("ovClear").addEventListener("click", () => {
+      ["ovFrom", "ovTo", "ovMember", "ovPlatform", "ovStatus"].forEach(id => { $(id).value = ""; });
+      $("ovTest").checked = false;
+      renderOverview();
+    });
+    function renderOverview() {
+      const list = filterBy(all, ovF());
+      const c = s => list.filter(r => r.status === s).length;
+      const cards = [
+        ["", "🎁 累计兑换", list.length],
+        ["pending_order", "⏳ 等待新订单", c("pending_order")],
+        ["@review", "🔍 等待管理员审核", c("pending_approval") + c("order_review") + c("expired_review"), true],
+        ["ready_to_pack", "📦 待打包", c("ready_to_pack"), true],
+        ["packed", "🎀 已打包，待寄出", c("packed"), true],
+        ["shipped", "🚚 已寄出", c("shipped")],
+        ["cancelled", "✖️ 已取消", c("cancelled")],
+        ["refunded", "↩️ 已退积分", c("refunded")],
+        ["expired_review", "⏰ 逾期", c("expired_review"), true],
+      ];
+      $("ovGrid").innerHTML = cards.map(([s, l, n, hot]) =>
+        `<button class="ov-card ${hot && n ? "hot" : ""}" data-s="${s}"><div class="n">${n}</div><div class="l">${l}</div></button>`).join("");
+    }
+    $("ovGrid").addEventListener("click", e => {
+      const b = e.target.closest(".ov-card");
+      if (!b) return;
+      const f = ovF();
+      $("fFrom").value = f.from; $("fTo").value = f.to; $("q").value = f.q; $("fPlatform").value = f.platform; $("fTest").checked = f.test;
+      const s = b.dataset.s;
+      if (s === "@review") { chip = ""; setTab("review"); return; }
+      chip = s || f.status || "";
+      setTab("records");
+    });
+
+    // ---------- 📋 列表 ----------
+    const listF = () => ({ from: $("fFrom").value, to: $("fTo").value, q: $("q").value, platform: $("fPlatform").value, test: $("fTest").checked });
+    ["q", "fFrom", "fTo", "fPlatform", "fTest"].forEach(id => $(id).addEventListener("input", () => { page = 0; renderList(); }));
+    $("stChips").addEventListener("click", e => {
+      const b = e.target.closest("button[data-s]");
+      if (!b) return;
+      chip = b.dataset.s; page = 0; renderList();
+    });
+    $("pgPrev").addEventListener("click", () => { if (page > 0) { page--; renderList(); } });
+    $("pgNext").addEventListener("click", () => { page++; renderList(); });
+
+    function renderList() {
+      let base = filterBy(all, listF());
+      if (tab === "review") base = base.filter(r => ACTIONABLE.includes(r.status));
+      const keys = tab === "review" ? ACTIONABLE : Object.keys(ST);
+      $("stChips").innerHTML = [["", "全部", base.length], ...keys.map(k => [k, ST[k].label, base.filter(r => r.status === k).length])]
+        .filter(([k, , n]) => !k || n || k === chip)
+        .map(([k, l, n]) => `<button data-s="${k}" class="${chip === k ? "on" : ""}">${esc(l)}<span class="n">${n}</span></button>`).join("");
+      let list = chip ? base.filter(r => r.status === chip) : base;
+      // 审核管理：最急的在上面（截止时间最早 / 等最久）
+      if (tab === "review") list = list.slice().sort((a, b) => (msOf(a.deadline) || msOf(a.requestedAt) || 0) - (msOf(b.deadline) || msOf(b.requestedAt) || 0));
+      const pages = Math.max(1, Math.ceil(list.length / PAGE));
+      if (page >= pages) page = pages - 1;
+      const shown = list.slice(page * PAGE, page * PAGE + PAGE);
+      $("pgInfo").textContent = list.length ? `${page * PAGE + 1}–${page * PAGE + shown.length} / ${list.length}` : "";
+      $("pgPrev").disabled = page === 0;
+      $("pgNext").disabled = page >= pages - 1;
+      $("list").innerHTML = shown.length ? shown.map(r => `
+        <div class="rw-row ${r.id === selId ? "sel" : ""}" data-id="${esc(r.id)}">
+          ${r.gift && r.gift.image ? `<img class="th" src="${esc(r.gift.image)}" alt="">` : `<span class="th">🎁</span>`}
+          <div class="tx">
+            <div class="nm">${esc(r.memberName || r.uid)}${r.test ? ' <span class="tag">🧪 测试</span>' : ""}</div>
+            <div class="sb">${stTag(r.status)} ${platformsOf(r).map(platformTag).join("")}
+              <span>${fmt(r.requestedAt, false)}</span>${r.deadline && ["pending_order", "order_review", "expired_review"].includes(r.status) ? `<span>· ${daysLeft(r)}</span>` : ""}</div>
+          </div>
+          ${r.orderIssue ? '<span class="wa" title="关联订单被取消 / 退货">⚠️</span>' : ""}
+          ${(r.candidates || []).length && r.status === "order_review" ? `<span class="wa" title="候选订单">🧾${r.candidates.length}</span>` : ""}
+        </div>`).join("") : `<p class="empty">${tab === "review" ? "目前没有要处理的纪录 🎉" : "没有纪录"}</p>`;
+    }
+    $("list").addEventListener("click", e => {
+      const row = e.target.closest(".rw-row");
+      if (!row) return;
+      openDetail(row.dataset.id);
+    });
+
+    // ---------- 详情 ----------
+    async function openDetail(id, force = false) {
+      selId = id;
+      document.querySelectorAll(".rw-row").forEach(x => x.classList.toggle("sel", x.dataset.id === id));
+      document.body.classList.add("rw-editing");
+      $("rwEmpty").classList.add("hidden");
+      $("detail").classList.remove("hidden");
+      const r = all.find(x => x.id === id);
+      if (!r) return;
+      paintDetail(r, cache[id]);
+      if (!cache[id] || force) {
+        try {
+          const [h, b, o] = await Promise.all([
+            getDocs(collection(db, "newMemberRewards", id, "history")),
+            getDocs(query(collection(db, "bindings"), where("uid", "==", r.uid))),
+            getDocs(query(collection(db, "orders"), where("uid", "==", r.uid))),
+          ]);
+          cache[id] = {
+            history: h.docs.map(d => d.data()).sort((a, c) => (msOf(c.at) || 0) - (msOf(a.at) || 0)),
+            bindings: b.docs.map(d => d.data()),
+            orders: o.docs.map(d => ({ no: d.id, ...d.data() })).sort((a, c) => (msOf(c.orderTime) || 0) - (msOf(a.orderTime) || 0)),
+          };
+        } catch (e) {
+          cache[id] = { error: errText(e), history: [], bindings: [], orders: [] };
+        }
+        if (selId === id) paintDetail(all.find(x => x.id === id), cache[id]);
+      }
+    }
+    function backToList() {
+      document.body.classList.remove("rw-editing");
+    }
+
+    function kv(rows) {
+      return `<div class="kv">${rows.filter(Boolean).map(([k, v]) => `<div class="k">${k}</div><div class="v">${v}</div>`).join("")}</div>`;
+    }
+
+    function paintDetail(r, c) {
+      const owner = !!(access && access.owner);
+      const st = r.status;
+      const live = ["pending_order", "order_review", "expired_review", "ready_to_pack", "packed", "pending_approval"].includes(st);
+      const rule = r.rule || {};
+      const charged = !!r.approvedAt;
+      const bindings = c ? c.bindings : null;
+      const used = new Set((r.candidates || []).map(x => x.orderNo).concat(r.linkedOrder ? [r.linkedOrder.orderNo] : []));
+      const reqMs = msOf(r.requestedAt) || 0;
+      const orders = c ? c.orders.filter(o => (msOf(o.orderTime) || 0) >= reqMs - 7 * 86400000).slice(0, 20) : null;
+      const notes = c ? c.history.filter(h => h.action === "note") : [];
+
+      let alerts = "";
+      if (r.orderIssue) alerts += `<div class="alert alert-bad">⚠️ 关联订单 <b>${esc(r.orderIssue.orderNo)}</b> 已被取消 / 退货（${fmt(r.orderIssue.at)}）。请「换订单」或取消。</div>`;
+      if (st === "expired_review") alerts += `<div class="alert alert-warn">⏰ 已超过下单期限。可以延期、手动关联订单、取消或取消并退分。系统不会自动没收积分。</div>`;
+      if (st === "ready_to_pack" || st === "packed") alerts += `<div class="alert alert-warn">📦 请确认订单 <b>${esc(r.linkedOrder ? r.linkedOrder.orderNo : "")}</b> 的包裹还没寄出，再把 ${esc(r.gift && r.gift.name)} 放进去。</div>`;
+      if (r.test) alerts += `<div class="alert alert-ok">🧪 内部会员测试兑换：不扣库存、不算进总览数字。</div>`;
+
+      const cand = (r.candidates || []).map(x => `
+        <div class="cand">
+          ${platformTag(x.platform)} <b>${esc(x.orderNo)}</b> · ${esc(x.username)}
+          <div class="meta">下单时间：${fmt(x.orderTime)}${x.amount != null ? ` · RM${esc(x.amount)}` : ""} · ${x.source === "manual" ? "手动加入" + (x.by ? "（" + esc(x.by) + "）" : "") : "系统自动找到"}${x.ignoreDeadline ? " · ⚠️ 已忽略期限" : ""}</div>
+          ${st === "order_review" ? `<div class="actions">
+            <button class="btn btn-ok" data-act="confirmOrder" data-order="${esc(x.orderNo)}">✅ 确认这张订单</button>
+            <button class="btn btn-ghost" data-act="rejectCandidate" data-order="${esc(x.orderNo)}">否决</button></div>` : ""}
+        </div>`).join("");
+
+      const canLink = ["pending_order", "order_review", "expired_review"].includes(st);
+      const ordList = orders == null ? `<p class="meta">载入中…</p>` : orders.length ? orders.map(o => {
+        const ot = msOf(o.orderTime) || 0;
+        const before = ot < reqMs;
+        const late = r.deadline && ot > msOf(r.deadline);
+        return `<div class="ord">
+          <div class="tx">${platformTag(o.platform)} <b>${esc(o.no)}</b> · ${esc(o.username)}
+            <div class="meta">下单 ${fmt(o.orderTime)} · RM${esc(o.amount ?? "-")}${o.status === "refunded" ? ' · <span style="color:var(--red-tx)">已取消/退货</span>' : ""}${before ? " · 兑换前" : ""}${late ? " · 截止后" : ""}</div></div>
+          ${canLink && !used.has(o.no) && !before && o.status !== "refunded" ? `<button class="btn btn-ghost" data-act="linkOrder" data-order="${esc(o.no)}" data-late="${late ? 1 : ""}">＋ 加为候选</button>` : used.has(o.no) ? '<span class="tag tag-pink">已在候选 / 已关联</span>' : ""}
+        </div>`;
+      }).join("") : `<p class="meta">这位会员目前没有订单</p>`;
+
+      const hist = c ? (c.history.length ? c.history.map(h => `
+        <div class="hist ${h.action === "note" ? "note" : ""}">
+          <b>${esc(ACTION_LABEL[h.action] || h.action)}</b>${h.from && h.to && h.from !== h.to ? ` · ${esc((ST[h.from] || {}).label || h.from)} → ${esc((ST[h.to] || {}).label || h.to)}` : ""}
+          <div class="t">${fmt(h.at)} · ${esc(h.by === r.uid ? "会员本人" : h.by || "system")}${h.txId ? ` · <code>${esc(String(h.txId).slice(0, 10))}</code>` : ""}</div>
+          ${h.reason ? `<div class="r">${esc(h.reason)}</div>` : ""}
+          ${h.detail && h.detail.orderNo ? `<div class="r">订单：${esc(h.detail.orderNo)}</div>` : ""}
+          ${h.detail && h.detail.newDeadline ? `<div class="r">截止：${fmt(h.detail.oldDeadline)} → ${fmt(h.detail.newDeadline)}</div>` : ""}
+        </div>`).join("") : `<p class="meta">没有纪录</p>`) : `<p class="meta">载入中…</p>`;
+
+      // 底部按钮（依状态）
+      const B = (act, label, cls = "btn-ghost") => `<button type="button" class="btn ${cls}" data-act="${act}">${label}</button>`;
+      let btns = "";
+      if (st === "pending_approval") btns += B("approve", "✅ 批准（扣 " + esc(r.cost) + " 分）", "btn-ok") + B("reject", "拒绝", "btn-bad");
+      if (st === "ready_to_pack") btns += B("packed", "🎀 确认打包", "btn-ok") + B("unlinkOrder", "换订单");
+      if (st === "packed") btns += B("shipped", "🚚 确认寄出", "btn-ok") + B("unpack", "拆包");
+      if (["pending_order", "order_review", "expired_review"].includes(st)) btns += B("extend7", "延期 7 天") + B("extend14", "延期 14 天") + B("extendDate", "自订截止日期");
+      if (live && st !== "pending_approval") btns += B("cancel", "取消（不退分）") + B("cancelRefund", "取消并退回 " + esc(r.cost) + " 分", "btn-bad");
+      if (st === "cancelled" && charged && !r.refund) btns += B("refund", "↩️ 补退 " + esc(r.cost) + " 分", "btn-bad");
+      btns += B("note", "📝 备注");
+      if (owner) btns += B("exception", "🛠 异常处理");
+
+      $("detail").innerHTML = `
+        <div class="rw-ehead">
+          <button type="button" class="btn btn-ghost rw-back" id="rwBack">← 返回列表</button>
+          <h3>${esc(r.memberName || r.uid)} 的 ${esc((r.gift && r.gift.name) || "迎新礼")}</h3>
+          ${stTag(st)}
+        </div>
+        <div class="rw-body">
+          ${alerts}
+          ${c && c.error ? `<div class="alert alert-bad">部分资料载入失败：${esc(c.error)}</div>` : ""}
+          <details class="rw-sec" open><summary>🎁 兑换资料</summary>
+            ${kv([
+              ["奖励记录 ID", `<code>${esc(r.id)}</code>`],
+              ["主会员 UID", `<code>${esc(r.uid)}</code> · <a href="member.html?uid=${encodeURIComponent(r.uid)}" target="_blank">会员资料 ➔</a>`],
+              ["会员名称", esc(r.memberName || "-")],
+              ["兑换商品", esc((r.gift && r.gift.name) || "-")],
+              ["扣除积分", charged ? `${esc(r.cost)} 分` + (r.refund ? `（已退回 ${fmt(r.refund.at)}）` : "") : `${esc(r.cost)} 分（批准后才扣，目前暂扣中）`],
+              ["兑换时间", fmt(r.requestedAt)],
+              ["批准时间", r.approvedAt ? fmt(r.approvedAt) : "-"],
+              ["原始截止", r.originalDeadline ? fmt(r.originalDeadline) : "-"],
+              ["当前截止", r.deadline ? `${fmt(r.deadline)} · ${daysLeft(r)}` : "-"],
+              ["当前状态", stTag(st)],
+              ["来源", r.source === "card" ? "📦 包裹卡片" : "-"],
+              ["规则快照", `${esc(rule.cost)} 分 · ${esc(rule.validDays)} 天 · ${rule.manualReview ? "人工批准" : "自动批准"} · 每人 ${esc(rule.perMemberLimit)} 次 · 设定版本 v${esc(rule.version)}`],
+            ])}
+          </details>
+          <details class="rw-sec" open><summary>🔗 已绑定平台账号</summary>
+            ${bindings == null ? `<p class="meta">载入中…</p>` : bindings.length
+              ? bindings.map(b => `<div class="meta" style="font-size:.86rem">${platformTag(b.platform)} ${esc(b.username)}</div>`).join("")
+              : `<p class="meta">目前没有绑定</p>`}
+            <p class="meta">兑换当时：${(r.boundAccounts || []).map(a => esc((a.platform === "tiktok" ? "TikTok" : "Shopee") + " " + a.username)).join("、") || "-"}</p>
+          </details>
+          <details class="rw-sec" open><summary>🧾 关联订单</summary>
+            ${r.linkedOrder ? kv([
+              ["关联平台", platformTag(r.linkedOrder.platform)],
+              ["订单编号", `<b>${esc(r.linkedOrder.orderNo)}</b> · ${esc(r.linkedOrder.username)}`],
+              ["实际下单时间", fmt(r.linkedOrder.orderTime)],
+              ["确认人员", `${esc(r.linkedOrder.by || "-")} · ${fmt(r.linkedOrder.at)}`],
+            ]) : `<p class="meta">还没有关联订单</p>`}
+            ${cand ? `<div style="margin-top:8px"><b style="font-size:.86rem">候选订单</b>${cand}</div>` : ""}
+          </details>
+          <details class="rw-sec" ${canLink ? "open" : ""}><summary>📦 会员的订单（兑换前 7 天起）</summary>
+            ${canLink ? `<p class="meta">按「加为候选」手动关联；截止后的订单要填原因。也可以直接输入订单编号：</p>
+              <div class="actions" style="margin:4px 0 8px"><input id="manualNo" placeholder="订单编号" style="margin:0;max-width:240px"><button type="button" class="btn btn-ghost" data-act="linkManual">＋ 加为候选</button></div>` : ""}
+            ${ordList}
+          </details>
+          <details class="rw-sec" open><summary>👤 审核与寄送</summary>
+            ${kv([
+              ["审核人员", r.reviewedBy ? `${esc(r.reviewedBy)} · ${fmt(r.reviewedAt)}` : "-"],
+              ["打包确认", r.packedBy ? `${esc(r.packedBy)} · ${fmt(r.packedAt)}` : "-"],
+              ["寄送确认", r.shippedBy ? `${esc(r.shippedBy)} · ${fmt(r.shippedAt)}` : "-"],
+              ["取消", r.cancelledAt ? `${esc(r.cancelledBy || "")} · ${fmt(r.cancelledAt)}${r.cancelReason ? " · " + esc(r.cancelReason) : ""}` : "-"],
+            ])}
+          </details>
+          <details class="rw-sec" ${notes.length ? "open" : ""}><summary>📝 管理员备注（${notes.length}）</summary>
+            ${notes.length ? notes.map(h => `<div class="hist note"><div class="t">${fmt(h.at)} · ${esc(h.by)}</div><div class="r">${esc(h.reason)}</div></div>`).join("") : `<p class="meta">还没有备注（会员看不到备注）</p>`}
+          </details>
+          <details class="rw-sec"><summary>🕘 操作历史</summary>${hist}</details>
+        </div>
+        <div class="rw-foot">
+          <p class="msg" id="actMsg"></p>
+          <div class="actions">${btns}</div>
+        </div>`;
+      $("rwBack").addEventListener("click", backToList);
+    }
+
+    // ---------- 操作 ----------
+    function ask(text, required = true) {
+      const v = prompt(text);
+      if (v == null) return null;
+      if (required && !v.trim()) { alert("请填写原因"); return null; }
+      return v.trim();
+    }
+    const LOG = {
+      approve: "批准", reject: "拒绝", confirmOrder: "确认订单", rejectCandidate: "否决候选订单", linkOrder: "关联订单",
+      unlinkOrder: "换订单", packed: "确认打包", unpack: "拆包", shipped: "确认寄出", extend: "延期",
+      cancel: "取消", refund: "补退分", note: "加备注", exception: "异常处理",
+    };
+
+    $("detail").addEventListener("click", async e => {
+      const b = e.target.closest("button[data-act]");
+      if (!b) return;
+      const r = all.find(x => x.id === selId);
+      if (!r) return;
+      const act = b.dataset.act;
+      const who = `${r.memberName || "会员"} 的「${(r.gift && r.gift.name) || "迎新礼"}」`;
+      let op = act, data = { rid: r.id };
+      if (act === "approve") {
+        if (!confirm(`批准 ${who}？\n会扣 ${r.cost} 分，并开始 ${(r.rule || {}).validDays || 20} 天下单倒数。`)) return;
+      } else if (act === "reject") {
+        const why = ask("拒绝原因（会员看不到，会记在操作历史）"); if (why == null) return; data.reason = why;
+      } else if (act === "confirmOrder") {
+        if (!confirm(`确认用订单 ${b.dataset.order} 寄出 ${who}？\n\n请先确认这张订单还没打包 / 寄出，礼品可以放进同一个包裹。`)) return;
+        data.orderNo = b.dataset.order;
+      } else if (act === "rejectCandidate") {
+        const why = ask(`否决订单 ${b.dataset.order} 的原因`); if (why == null) return;
+        data.orderNo = b.dataset.order; data.reason = why;
+      } else if (act === "linkOrder" || act === "linkManual") {
+        op = "linkOrder";
+        data.orderNo = act === "linkManual" ? ($("manualNo").value || "").trim().toUpperCase() : b.dataset.order;
+        if (!data.orderNo) { alert("请输入订单编号"); return; }
+        if (b.dataset.late) {
+          if (!confirm(`订单 ${data.orderNo} 是截止后才下的单。要忽略期限、仍然加为候选吗？`)) return;
+          const why = ask("忽略期限的原因（必填）"); if (why == null) return;
+          data.ignoreDeadline = true; data.reason = why;
+        }
+      } else if (act === "unlinkOrder") {
+        const why = ask("换订单的原因"); if (why == null) return; data.reason = why;
+      } else if (act === "packed") {
+        if (!confirm(`确认 ${who} 已经放进订单 ${r.linkedOrder ? r.linkedOrder.orderNo : ""} 的包裹？`)) return;
+      } else if (act === "unpack") {
+        const why = ask("拆包原因"); if (why == null) return; data.reason = why;
+      } else if (act === "shipped") {
+        if (!confirm(`确认 ${who} 已随订单 ${r.linkedOrder ? r.linkedOrder.orderNo : ""} 寄出？\n寄出后不能再改回。`)) return;
+      } else if (act === "extend7" || act === "extend14") {
+        op = "extend";
+        data.days = act === "extend7" ? 7 : 14;
+        const why = ask(`延期 ${data.days} 天的原因（必填）`); if (why == null) return; data.reason = why;
+      } else if (act === "extendDate") {
+        op = "extend";
+        const d = prompt("新的截止日期（例如 2026-12-31，当天 23:59 截止）");
+        if (!d) return;
+        const t = new Date(d.trim() + "T23:59:59+08:00").getTime();
+        if (!t || isNaN(t)) { alert("日期格式不对"); return; }
+        data.until = t;
+        const why = ask("延期原因（必填）"); if (why == null) return; data.reason = why;
+      } else if (act === "cancel" || act === "cancelRefund") {
+        op = "cancel";
+        data.refund = act === "cancelRefund";
+        const why = ask(data.refund ? `取消并退回 ${r.cost} 分的原因` : "取消（不退分）的原因"); if (why == null) return;
+        data.reason = why;
+        if (!confirm(data.refund ? `确定取消 ${who}，并退回 ${r.cost} 分？` : `确定取消 ${who}？积分不退回。`)) return;
+      } else if (act === "refund") {
+        const why = ask(`补退 ${r.cost} 分的原因`); if (why == null) return; data.reason = why;
+      } else if (act === "note") {
+        const t = ask("备注内容（只有后台看得到）"); if (t == null) return; data.text = t;
+      } else if (act === "exception") {
+        const opts = Object.entries(ST).map(([k, v]) => `${k}　${v.label}`).join("\n");
+        const to = prompt(`🛠 异常处理（只改状态，不动积分和库存）\n输入要改成的状态代码：\n\n${opts}`);
+        if (!to) return;
+        if (!ST[to.trim()]) { alert("状态代码不对"); return; }
+        data.to = to.trim();
+        const why = ask("原因（必填）"); if (why == null) return; data.reason = why;
+      } else return;
+
+      data.txId = newTxId();
+      const btns = $("detail").querySelectorAll(".rw-foot button, .rw-body button");
+      btns.forEach(x => { x.disabled = true; });
+      $("actMsg").className = "msg";
+      $("actMsg").textContent = "处理中…";
+      try {
+        try {
+          await call(op, data);
+        } catch (err) {
+          // 手动输入的单号是截止后才下的：问要不要忽略期限，再送一次（新的事务 ID）
+          const key = err && err.details && err.details.key;
+          if (op !== "linkOrder" || data.ignoreDeadline || key !== "nm/order-after-deadline") throw err;
+          if (!confirm(`订单 ${data.orderNo} 是截止后才下的单。要忽略期限、仍然加为候选吗？`)) throw err;
+          const why = ask("忽略期限的原因（必填）");
+          if (why == null) throw err;
+          Object.assign(data, { ignoreDeadline: true, reason: why, txId: newTxId() });
+          await call(op, data);
+        }
+        const label = op === "cancel" && data.refund ? "取消并退分" : LOG[op] || op;
+        logAdmin("redeem", `新会员奖励 · ${label}：${who}`, "newmember.html");
+        // 只更新这一笔（局部更新）
+        const fresh = await getDoc(doc(db, "newMemberRewards", r.id));
+        const i = all.findIndex(x => x.id === r.id);
+        if (fresh.exists() && i >= 0) all[i] = { id: fresh.id, ...fresh.data() };
+        delete cache[r.id];
+        renderList();
+        renderOverview();
+        const n = all.filter(x => ACTIONABLE.includes(x.status)).length;
+        $("reviewCnt").textContent = n; $("reviewCnt").hidden = !n;
+        refreshNmBadge();
+        await openDetail(r.id, true);
+        $("actMsg").className = "msg ok";
+        $("actMsg").textContent = `已完成 ✅ ${label}`;
+      } catch (err) {
+        btns.forEach(x => { x.disabled = false; });
+        $("actMsg").className = "msg err";
+        $("actMsg").textContent = "失败：" + errText(err);
+      }
+    });
+
+    // ---------- ⚙️ 活动设定 ----------
+    const LANGS = [["zh", "中文"], ["en", "English"], ["ms", "Bahasa Melayu"]];
+    const COPY_KEYS = [
+      ["popupTitle", "弹窗标题", { zh: "NEW MEMBER SPECIAL", en: "NEW MEMBER SPECIAL", ms: "NEW MEMBER SPECIAL" }],
+      ["popupBody", "弹窗内容", { zh: "绑定 Shopee / TikTok 账号，领取 30 分迎新礼。30 分可兑换 Home Diffuser，礼品随下一笔订单寄出。", en: "Link your Shopee / TikTok account to get 30 welcome points…", ms: "Pautkan akaun Shopee / TikTok anda untuk 30 mata…" }],
+      ["popupCta", "弹窗按钮", { zh: "立即绑定 · 领取 30 分", en: "Link now · Get 30 pts", ms: "Pautkan sekarang · Dapat 30 mata" }],
+      ["cardTitle", "首页卡片标题", { zh: "NEW MEMBER SPECIAL", en: "NEW MEMBER SPECIAL", ms: "NEW MEMBER SPECIAL" }],
+      ["cardBody", "首页卡片内容", { zh: "用 30 分兑换 Home Diffuser", en: "Redeem a Home Diffuser for 30 pts", ms: "Tebus Home Diffuser dengan 30 mata" }],
+      ["remindTitle", "到期提醒标题（铃铛）", { zh: "⏰ 迎新礼快到期了", en: "⏰ Your welcome gift is expiring soon", ms: "⏰ Hadiah alu-aluan hampir tamat" }],
+      ["remindBody", "到期提醒内容（{d} = 截止日期）", { zh: "请在 {d} 前下单…", en: "Order before {d}…", ms: "Buat pesanan sebelum {d}…" }],
+      ["expiredTitle", "逾期通知标题（铃铛）", { zh: "迎新礼已超过下单期限", en: "Welcome gift order period has passed", ms: "Tempoh pesanan hadiah alu-aluan telah tamat" }],
+      ["expiredBody", "逾期通知内容", { zh: "您的迎新礼已超过下单期限，正在等待管理员审核。", en: "…waiting for admin review.", ms: "…sedang menunggu semakan admin." }],
+    ];
+    let giftImage = "";
+    let welcomePts = null;
+
+    $("gI18n").innerHTML = LANGS.map(([l, n]) => `
+      <div><div class="lang-h">${n}</div>
+        <label>商品名称<input id="gN_${l}" maxlength="60" placeholder="留空 = 用预设名称"></label>
+        <label>商品说明<textarea id="gD_${l}" rows="2" maxlength="300"></textarea></label></div>`).join("");
+    $("copyBox").innerHTML = LANGS.map(([l, n]) => `
+      <div><div class="lang-h">${n}</div>
+        ${COPY_KEYS.map(([k, label, ph]) => `<label>${label}
+          ${/Body$/.test(k) ? `<textarea id="c_${l}_${k}" rows="2" maxlength="500" placeholder="${esc(ph[l] || "")}"></textarea>`
+                            : `<input id="c_${l}_${k}" maxlength="500" placeholder="${esc(ph[l] || "")}">`}</label>`).join("")}
+      </div>`).join("");
+
+    function paintGiftImg() {
+      $("gImgBox").innerHTML = giftImage
+        ? `<img class="gift-img" src="${esc(giftImage)}" alt=""><button type="button" class="btn btn-ghost" id="gImgDel">移除图片</button>`
+        : `<span class="meta">还没有图片</span>`;
+      const del = $("gImgDel");
+      if (del) del.addEventListener("click", () => { giftImage = ""; paintGiftImg(); });
+    }
+    $("gFile").addEventListener("change", async e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try { giftImage = await compressImage(f, 600); paintGiftImg(); }
+      catch (err) { alert("图片读取失败"); }
+      e.target.value = "";
+    });
+
+    async function renderSettings() {
+      const s = settings;
+      const owner = !!(access && access.owner);
+      $("roNote").classList.toggle("hidden", owner);
+      $("sActive").checked = s.active === true;
+      $("sPopup").checked = s.popupOn !== false;
+      $("sManual").checked = s.manualReview !== false;
+      $("sRemind").checked = s.remindOn !== false;
+      $("sCost").value = s.cost ?? 30;
+      $("sDays").value = s.validDays ?? 20;
+      $("sLimit").value = s.perMemberLimit ?? 1;
+      $("sStock").value = typeof s.stock === "number" ? s.stock : "";
+      $("sRemindDays").value = s.remindDays ?? 5;
+      const g = s.gift || {};
+      $("gName").value = g.name || "Home Diffuser";
+      giftImage = g.image || "";
+      paintGiftImg();
+      LANGS.forEach(([l]) => {
+        const v = (g.i18n || {})[l] || {};
+        $("gN_" + l).value = v.name || "";
+        $("gD_" + l).value = v.desc || "";
+        COPY_KEYS.forEach(([k]) => { $(`c_${l}_${k}`).value = ((s.copy || {})[l] || {})[k] || ""; });
+      });
+      $("startInfo").innerHTML = s.startAt
+        ? `活动开始时间：<b>${fmt(s.startAt)}</b>（这个时间之后注册的才算新会员，之后不会再改）· 设定版本 v${esc(s.version || 0)}${s.updatedBy ? ` · 最后修改：${esc(s.updatedBy)} ${fmt(s.updatedAt)}` : ""}`
+        : `活动还没启用过。第一次勾「活动启用」并保存时，会记下当下时间作为活动开始时间。`;
+      document.querySelectorAll("#stForm input, #stForm textarea, #stForm button").forEach(x => { x.disabled = !owner; });
+      // 提醒：额外福利的欢迎礼分数
+      if (welcomePts == null) {
+        try {
+          const p = await getDoc(doc(db, "settings", "perks"));
+          const w = p.exists() ? (p.data().welcome || {}) : {};
+          welcomePts = { points: typeof w.points === "number" ? w.points : 50, active: w.active !== false };
+        } catch (e) { welcomePts = { points: null }; }
+      }
+      paintWelcome();
+    }
+    function paintWelcome() {
+      if (!welcomePts) return;
+      const cost = Number($("sCost").value);
+      $("welcomeInfo").innerHTML = welcomePts.points == null ? "" :
+        `🎁 新会员欢迎礼（额外福利）目前是 <b>${welcomePts.points} 分</b>${welcomePts.active ? "" : "（已关闭）"}。` +
+        (welcomePts.points !== cost ? ` <span style="color:var(--amber-tx)">⚠️ 和兑换所需积分（${cost}）不一样，请到「额外福利」调整。</span>` : " ✅");
+    }
+
+    $("stForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!(access && access.owner)) return;
+      const int = id => parseInt($(id).value, 10);
+      const stockRaw = $("sStock").value.trim();
+      const i18n = {}, copy = {};
+      LANGS.forEach(([l]) => {
+        const n = $("gN_" + l).value.trim(), d = $("gD_" + l).value.trim();
+        if (n || d) i18n[l] = { name: n, desc: d };
+        COPY_KEYS.forEach(([k]) => {
+          const v = $(`c_${l}_${k}`).value.trim();
+          if (v) (copy[l] = copy[l] || {})[k] = v;
+        });
+      });
+      const next = {
+        active: $("sActive").checked, popupOn: $("sPopup").checked,
+        manualReview: $("sManual").checked, remindOn: $("sRemind").checked,
+        cost: int("sCost"), validDays: int("sDays"), perMemberLimit: int("sLimit"), remindDays: int("sRemindDays"),
+        stock: stockRaw === "" ? null : parseInt(stockRaw, 10),
+        gift: { name: $("gName").value.trim(), image: giftImage, i18n },
+        copy,
+      };
+      if (next.active && !settings.startAt && !confirm("第一次启用活动：\n从现在起注册的会员才算新会员（之前注册的都算旧会员，看不到弹窗、不能兑换迎新礼）。\n确定启用？")) return;
+      if (settings.active === true && !next.active && !confirm("暂停活动？\n会员不能再兑换、不再弹窗；已兑换的纪录照样可以处理。")) return;
+      $("stSave").disabled = true;
+      $("stMsg").className = "msg"; $("stMsg").textContent = "保存中…";
+      try {
+        await call("saveSettings", { settings: next });
+        logAdmin("settings", `新会员奖励：修改活动设定（${next.active ? "启用" : "暂停"} · ${next.cost} 分 · ${next.validDays} 天）`, "newmember.html#settings");
+        const s = await getDoc(doc(db, "settings", "newMember"));
+        settings = s.exists() ? s.data() : {};
+        paintCamp();
+        await renderSettings();
+        $("stMsg").className = "msg ok"; $("stMsg").textContent = "已保存 ✅";
+      } catch (err) {
+        $("stMsg").className = "msg err"; $("stMsg").textContent = "保存失败：" + errText(err);
+      } finally {
+        $("stSave").disabled = !(access && access.owner);
+      }
+    });
+    $("sCost").addEventListener("input", paintWelcome);
+
+    // ---------- 开始 ----------
+    requireAdmin(async u => {
+      user = u;
+      access = window.msAccess;
+      const h = location.hash.slice(1);
+      try { await load(); }
+      catch (e) {
+        $("list").innerHTML = `<p class="empty">载入失败：${esc(errText(e))}</p>`;
+        $("ovGrid").innerHTML = `<p class="empty">载入失败：${esc(errText(e))}<br>（Firestore 规则更新了吗？）</p>`;
+      }
+      if (["overview", "records", "review", "settings"].includes(h)) setTab(h);
+    });
+  </script>
+</body>
+</html>
