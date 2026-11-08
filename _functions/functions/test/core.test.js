@@ -297,6 +297,40 @@ test("15 已寄出不能再寄、不能取消、不能改回等待订单", async
   assert.equal(red.shipping.orderNo, o.no);
 });
 
+test("会员确认收货 → 迎新礼也变成已完成；漏掉的由每日检查补上", async () => {
+  async function shippedOne() {
+    const { m, rid, t } = await approved();
+    const o = await addOrder(m, m.accounts[0], t + DAY);
+    await core.onOrderWritten(db, o.no, null, o.data, { now: t + DAY });
+    await admin("nmConfirmOrder", at(OWNER, t + 2 * DAY), { rid, orderNo: o.no });
+    await admin("nmPacked", at(OWNER, t + 2 * DAY), { rid });
+    await admin("nmShipped", at(OWNER, t + 3 * DAY), { rid });
+    return { m, rid, t };
+  }
+  // 会员按确认收货（触发器）
+  const a = await shippedOne();
+  const redRef = db.collection("redemptions").doc("nm_" + a.rid);
+  const before = (await redRef.get()).data();
+  const after = { ...before, status: "completed", receivedAt: ts(a.t + 4 * DAY), completedAt: ts(a.t + 4 * DAY) };
+  await redRef.set(after);
+  await core.onRedemptionWritten(db, redRef.id, before, after, { now: a.t + 4 * DAY });
+  let rw = await reward(a.rid);
+  assert.equal(rw.status, "completed");
+  assert.equal(rw.receivedBy, "member");
+  assert.equal((await db.collection("members").doc(a.m.uid).get()).data().nmr.status, "completed");
+  // 再触发一次不会重复
+  assert.equal((await core.onRedemptionWritten(db, redRef.id, after, after, { now: a.t + 5 * DAY })).skipped, true);
+  // 触发器漏掉：每日检查补上（寄出 14 天后自动完成）
+  const b = await shippedOne();
+  const ref2 = db.collection("redemptions").doc("nm_" + b.rid);
+  await ref2.update({ status: "completed", completedAt: ts(b.t + 17 * DAY), autoCompleted: true });
+  const res = await core.daily(db, { now: b.t + 18 * DAY });
+  assert.ok(res.completed >= 1);
+  rw = await reward(b.rid);
+  assert.equal(rw.status, "completed");
+  assert.equal(rw.receivedBy, "auto");
+});
+
 test("关联订单被平台取消：只标记，不自动改状态", async () => {
   const { m, rid, t } = await approved();
   const o = await addOrder(m, m.accounts[0], t + DAY);
