@@ -96,6 +96,15 @@ exports.nmOnOrderWritten = onDocumentWritten({ document: "orders/{orderNo}", reg
     catch (e) { logger.error("nmOnOrderWritten", event.params.orderNo, e); }
   });
 
+// 会员按「确认收货」/ 寄出 14 天后自动完成：迎新礼也改成已完成
+exports.nmOnRedemptionWritten = onDocumentWritten({ document: "redemptions/{id}", region: DB_REGION },
+  async event => {
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    try { await core.onRedemptionWritten(db, event.params.id, before, after); }
+    catch (e) { logger.error("nmOnRedemptionWritten", event.params.id, e); }   // 每日检查会补上
+  });
+
 // 每天早上 9:05（马来西亚）：逾期 → 待管理员审核、到期提醒
 exports.nmDaily = onSchedule({ schedule: "5 9 * * *", timeZone: "Asia/Kuala_Lumpur", region: CALL_REGION },
   async () => {
