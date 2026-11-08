@@ -134,11 +134,11 @@ export function memberPicker(el, opts = {}) {
   const $q = el.querySelector(".mp-q"), $res = el.querySelector(".mp-res"), $chips = el.querySelector(".mp-chips");
   const label = (c, uid) => (c.members[uid] || {}).name || "(没有名字)";
   const accountsOf = (c, uid) => c.bindings.filter(b => b.uid === uid);
-  function changed() {
+  function changed(notify = true) {
     const c = cache;
     $chips.innerHTML = picked.map(uid => `<span class="mp-chip">${esc(c ? label(c, uid) : uid)}<button type="button" data-rm="${esc(uid)}" title="移除">✕</button></span>`).join("")
       + (picked.length ? `<span class="meta" style="align-self:center">共 ${picked.length} 位</span>` : "");
-    if (opts.onChange) opts.onChange(picked.slice());
+    if (notify && opts.onChange) opts.onChange(picked.slice());
   }
   const add = uids => { uids.forEach(u => { if (u && !picked.includes(u)) picked.push(u); }); changed(); };
   async function search() {
@@ -189,7 +189,7 @@ export function memberPicker(el, opts = {}) {
         + (miss.length ? ` 找不到（可能还没注册 / 还没关联平台）：${miss.join("、")}` : "");
     }
   });
-  changed();
+  changed(false);   // 第一次画出来时不回报（呼叫的页面这时可能还没准备好，例如会员公告页）
   return {
     get: () => picked.slice(),
     set: uids => { picked = [...new Set(uids)]; loadMemberIndex().then(changed).catch(changed); },

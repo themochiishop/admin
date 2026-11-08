@@ -339,6 +339,7 @@ export const NAV_GROUPS = [
   ] },
   { label: "设定", items: [
     ["notify", "notify.html", "📧", "邮件提醒"],
+    ["shipping", "shipping.html", "🚚", "运输公司"],
   ] },
 ];
 
@@ -502,9 +503,9 @@ export function requireAdmin(onReady) {
 
     // 👥 控制台的管理员权限：每一页要的权限见 admin-guard.js 的 MEMBER_PAGE_PERM
     const page = location.pathname.split("/").pop() || "index.html";
-    const need = MEMBER_PAGE_PERM[page] || "member";
+    const need = MEMBER_PAGE_PERM[page] || "member";   // 也可以是一组，有其中一项就可以
     const access = await getAccess(user);
-    if (!can(access, need)) {
+    if (!canAny(access, need)) {
       const first = access.ok ? firstMemberPage(access) : null;
       if (first && (page === "index.html" || page === "")) { location.replace(first); return; }   // 没有总览：直接去他能用的第一页
       app.classList.add("hidden");
@@ -544,11 +545,14 @@ const NAV_PERM = {
   members: "member.members", rewards: "member.shop", perks: "member.shop",
   home: "member.content", feed: "feed", announce: "member.content", storehelp: "member.content",
   notify: "member.settings", tiers: "member.settings", couponCheck: "member.shop",
+  shipping: ["member.redeem", "member.prizes"],
 };
+// 权限可以是一个，或一组（有其中一项就可以）
+const canAny = (access, k) => Array.isArray(k) ? k.some(x => can(access, x)) : can(access, k);
 function filterNav(access) {
   document.querySelectorAll(".side-scroll a[data-nk]").forEach(a => {
     const k = a.dataset.nk;
-    a.style.display = can(access, NAV_PERM[k] || "member") ? "" : "none";
+    a.style.display = canAny(access, NAV_PERM[k] || "member") ? "" : "none";
   });
   document.querySelectorAll(".side-scroll .side-group").forEach(g => {
     g.style.display = [...g.querySelectorAll("a[data-nk]")].some(a => a.style.display !== "none") ? "" : "none";
