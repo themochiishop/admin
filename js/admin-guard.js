@@ -36,6 +36,7 @@ export const PERM_TREE = [
       { id: "redeem", label: "🔔 兑换审核" },
       { id: "prizes", label: "🏆 中奖奖品" },
       { id: "members", label: "👥 会员" },
+      { id: "newMember", label: "🎉 新会员奖励" },
       { id: "shop", label: "🛍️ 商城" },
       { id: "content", label: "📝 内容" },
       { id: "settings", label: "⚙️ 设定" },
@@ -64,6 +65,7 @@ export const MEMBER_PAGE_PERM = {
   "redeem.html": "member.redeem",
   "prizes.html": "member.prizes",
   "members.html": "member.members", "member.html": "member.members",
+  "newmember.html": "member.newMember",
   "rewards.html": "member.shop", "perks.html": "member.shop",
   "home.html": "member.content", "announcements.html": "member.content", "storehelp.html": "member.content",
   "notify.html": "member.settings", "tiers.html": "member.settings",
@@ -72,7 +74,7 @@ export const MEMBER_PAGE_PERM = {
   "feed.html": "feed",
 };
 // 这个人进会员系统时，第一个能打开的页面（都没有就回传 null）
-const MEMBER_FIRST = ["index.html", "redeem.html", "prizes.html", "members.html", "rewards.html", "home.html", "notify.html", "feed.html"];
+const MEMBER_FIRST = ["index.html", "redeem.html", "prizes.html", "members.html", "newmember.html", "rewards.html", "home.html", "notify.html", "feed.html"];
 export function firstMemberPage(access) {
   return MEMBER_FIRST.find(p => can(access, MEMBER_PAGE_PERM[p])) || null;
 }
