@@ -254,7 +254,8 @@
       expired_review:   { label: "已逾期，待处理", tag: "tag-bad",  hot: true },
       ready_to_pack:    { label: "待打包",         tag: "tag-warn", hot: true },
       packed:           { label: "已打包，待寄出", tag: "tag-warn", hot: true },
-      shipped:          { label: "已寄出",         tag: "tag-ok" },
+      shipped:          { label: "已寄出，等会员签收", tag: "tag-pink" },
+      completed:        { label: "已完成（已签收）", tag: "tag-ok" },
       cancelled:        { label: "已取消",         tag: "" },
       refunded:         { label: "已取消并退分",   tag: "" },
     };
@@ -266,6 +267,7 @@
       rejectCandidate: "否决候选订单", confirmOrder: "确认订单", unlinkOrder: "换订单", packed: "确认打包",
       unpack: "拆包（改回待打包）", shipped: "确认寄出", extend: "延期", cancel: "取消", cancelRefund: "取消并退分",
       refund: "补退分", note: "备注", exception: "异常处理", expire: "超过期限，转为待处理", orderIssue: "关联订单被取消 / 退货",
+      received: "已签收（完成）",
     };
 
     let access = null, user = null;
@@ -377,7 +379,8 @@
         ["@review", "🔍 等待管理员审核", c("pending_approval") + c("order_review") + c("expired_review"), true],
         ["ready_to_pack", "📦 待打包", c("ready_to_pack"), true],
         ["packed", "🎀 已打包，待寄出", c("packed"), true],
-        ["shipped", "🚚 已寄出", c("shipped")],
+        ["shipped", "🚚 已寄出", c("shipped") + c("completed")],
+        ["completed", "✅ 已签收完成", c("completed")],
         ["cancelled", "✖️ 已取消", c("cancelled")],
         ["refunded", "↩️ 已退积分", c("refunded")],
         ["expired_review", "⏰ 逾期", c("expired_review"), true],
@@ -587,6 +590,7 @@
               ["审核人员", r.reviewedBy ? `${esc(r.reviewedBy)} · ${fmt(r.reviewedAt)}` : "-"],
               ["打包确认", r.packedBy ? `${esc(r.packedBy)} · ${fmt(r.packedAt)}` : "-"],
               ["寄送确认", r.shippedBy ? `${esc(r.shippedBy)} · ${fmt(r.shippedAt)}` : "-"],
+              ["签收", r.completedAt ? `${fmt(r.completedAt)} · ${r.receivedBy === "auto" ? "寄出 14 天后自动完成" : r.receivedBy === "member" ? "会员确认收货" : esc(r.receivedBy || "")}` : "-"],
               ["取消", r.cancelledAt ? `${esc(r.cancelledBy || "")} · ${fmt(r.cancelledAt)}${r.cancelReason ? " · " + esc(r.cancelReason) : ""}` : "-"],
             ])}
           </details>
