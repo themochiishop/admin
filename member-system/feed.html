@@ -46,6 +46,9 @@
     /* 从总览点进来的帖子 / 回复 */
     .item.focus { border-color: #db2777; box-shadow: 0 0 0 3px rgba(219,39,119,.18); }
     .cmt.focus { background: var(--pink-bg); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+    /* 🛡️ 屏蔽记录 */
+    mark.ph { background: #fde68a; color: #92400e; border-radius: 3px; padding: 0 2px; }
+    .flt-lbl { font-size: .75rem; color: var(--muted); margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -67,6 +70,7 @@
         <button data-tab="post" class="active">✏️ 发帖</button>
         <button data-tab="pending">⏳ 待审核 <span id="pendingBadge" class="tab-badge" hidden></span></button>
         <button data-tab="reports">🚩 检举 <span id="reportBadge" class="tab-badge" hidden></span></button>
+        <button data-tab="filter">🛡️ 屏蔽记录</button>
         <button data-tab="all">📋 全部帖子</button>
         <button data-tab="perm">🔐 权限设定</button>
         <button data-tab="titles">🏷️ 头衔管理</button>
@@ -101,6 +105,16 @@
         <p class="muted" style="font-size:.85rem;margin-bottom:10px">通过：留言变成 ***（原文保存在检举记录里，可以恢复）、帖子下架。驳回：保持原样。处理后检举的会员会在铃铛收到通知；被检举的人不会收到通知。</p>
         <div id="reportList"><p class="empty">载入中…</p></div>
         <details style="margin-top:16px"><summary>最近处理过的检举</summary><div id="reportDone" style="margin-top:10px"></div></details>
+      </section>
+
+      <!-- 🛡️ 屏蔽记录 -->
+      <section id="tab-filter" class="hidden">
+        <p class="muted" style="font-size:.85rem;margin-bottom:10px">会员在帖子、回复、编辑或简介里写了电话号码时，系统会自动换成 *** 再发出。这里保存原文，<mark class="ph">黄色</mark>是被屏蔽的部分。只有有「Mochii Feed」权限的人看得到。</p>
+        <div class="filter-row">
+          <button class="btn btn-ghost" id="reloadFilter">🔄 重新载入</button>
+          <span class="muted" style="font-size:.82rem">显示最新 100 笔</span>
+        </div>
+        <div id="filterList"><p class="empty">载入中…</p></div>
       </section>
 
       <!-- ② 待审核 -->
@@ -246,9 +260,10 @@
       const b = e.target.closest("button[data-tab]");
       if (!b) return;
       document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
-      ["post", "pending", "reports", "all", "perm", "titles"].forEach(k => $("tab-" + k).classList.toggle("hidden", k !== b.dataset.tab));
+      ["post", "pending", "reports", "filter", "all", "perm", "titles"].forEach(k => $("tab-" + k).classList.toggle("hidden", k !== b.dataset.tab));
       if (b.dataset.tab === "pending") loadPending();
       if (b.dataset.tab === "reports") loadReports();
+      if (b.dataset.tab === "filter") loadFilterLogs();
       if (b.dataset.tab === "all") loadAll();
       if (b.dataset.tab === "titles") { renderTitleRows(); loadAssigned(); }
     });
@@ -259,10 +274,11 @@
     //   #post=帖子ID&c=回复ID     → 打开那篇帖子，并展开回复、标出那一条
     function showTab(k) {
       document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x.dataset.tab === k));
-      ["post", "pending", "reports", "all", "perm", "titles"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== k));
+      ["post", "pending", "reports", "filter", "all", "perm", "titles"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== k));
     }
     async function openFromHash() {
       if (location.hash === "#reports") { document.querySelector('#tabs button[data-tab="reports"]').click(); return; }
+      if (location.hash === "#filter") { document.querySelector('#tabs button[data-tab="filter"]').click(); return; }
       if (location.hash === "#pending") {
         document.querySelector('#tabs button[data-tab="pending"]').click();
         document.querySelectorAll(".side-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "feed.html#pending"));
@@ -623,6 +639,49 @@
       try { (await getDocs(collection(db, "members"))).forEach(d => nameCache[d.id] = d.data().name || ""); } catch (e) {}
       return nameCache;
     }
+
+    // ---------- 🛡️ 屏蔽记录（filterLogs） ----------
+    // 要和前台 memberclub/js/phone-filter.js 一致（这里只用来把被屏蔽的部分标成黄色）
+    const PHONE = /(?:\+?60[\s.-]?|0)(?:1\d|[3-9])[\s.-]?\d{3,4}[\s.-]?\d{4}|\d{9,}/g;
+    const KIND = { post: "📰 发帖", comment: "💬 回复", editPost: "✏️ 编辑帖子", editComment: "✏️ 编辑回复", bio: "👤 简介" };
+    function markPhones(raw) {
+      const src = String(raw || "").replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+      let out = "", last = 0;
+      src.replace(PHONE, (m, i) => { out += esc(src.slice(last, i)) + `<mark class="ph">${esc(m)}</mark>`; last = i + m.length; return m; });
+      return out + esc(src.slice(last));
+    }
+    async function loadFilterLogs() {
+      $("filterList").innerHTML = `<p class="empty">载入中…</p>`;
+      try {
+        const snap = await getDocs(query(collection(db, "filterLogs"), orderBy("createdAt", "desc"), limit(100)));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        $("filterList").innerHTML = list.length ? list.map(r => {
+          const link = r.postId ? `feed.html#post=${encodeURIComponent(r.postId)}${r.commentId ? "&c=" + encodeURIComponent(r.commentId) : ""}` : "";
+          return `<div class="item" data-fid="${esc(r.id)}">
+            <div class="item-head"><div>
+              <div class="item-title">${esc(KIND[r.kind] || r.kind)} · <a href="member.html?uid=${encodeURIComponent(r.uid)}" target="_blank" title="打开会员详情">${esc(r.name || "会员")}</a></div>
+              <div class="meta">${fmtDate(toDate(r.createdAt), true)}</div>
+            </div></div>
+            <div class="flt-lbl">原文</div>
+            <div class="post-text" style="margin-top:2px">${markPhones(r.original)}</div>
+            <div class="flt-lbl">会员看到的</div>
+            <div class="post-text" style="margin-top:2px">${esc(r.masked || "")}</div>
+            <div class="actions">
+              ${link ? `<a class="btn btn-ghost" href="${link}">查看帖子</a>` : ""}
+              <button class="btn btn-bad owner-only" data-fdel>🗑 删除记录</button>
+            </div></div>`;
+        }).join("") : `<p class="empty">还没有屏蔽记录 🎉</p>`;
+        $("filterList").querySelectorAll("[data-fdel]").forEach(b => b.onclick = async () => {
+          if (!window.ownerOnly || !window.ownerOnly()) return;
+          if (!confirm("删除这笔屏蔽记录？原文会永久消失。")) return;
+          const id = b.closest("[data-fid]").dataset.fid;
+          b.disabled = true;
+          try { await deleteDoc(doc(db, "filterLogs", id)); b.closest("[data-fid]").remove(); }
+          catch (err) { alert("删除失败：" + err.message); b.disabled = false; }
+        });
+      } catch (err) { $("filterList").innerHTML = `<p class="empty">载入失败：${esc(err.message)}（请确认 Firestore 规则已加上 filterLogs）</p>`; }
+    }
+    $("reloadFilter").onclick = loadFilterLogs;
 
     // ---------- 全部帖子 ----------
     async function loadAll() {
