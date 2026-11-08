@@ -19,6 +19,7 @@ const S = {
   READY: "ready_to_pack",         // 订单确认，待打包
   PACKED: "packed",               // 已打包
   SHIPPED: "shipped",             // 已寄出
+  COMPLETED: "completed",         // 已完成（会员确认收货 / 寄出 14 天后自动完成）
   CANCELLED: "cancelled",         // 已取消（不退分）
   REFUNDED: "refunded",           // 已取消并退分
 };
@@ -34,7 +35,8 @@ const MOVES = {
   [S.READY]: [S.PACKED, S.REVIEW, S.CANCELLED, S.REFUNDED],
   [S.PACKED]: [S.SHIPPED, S.READY, S.CANCELLED, S.REFUNDED],
   [S.CANCELLED]: [S.REFUNDED],
-  [S.SHIPPED]: [],
+  [S.SHIPPED]: [S.COMPLETED],
+  [S.COMPLETED]: [],
   [S.REFUNDED]: [],
 };
 
@@ -93,6 +95,7 @@ const redemptionIdOf = rid => "nm_" + rid;
 function redemptionStatusOf(status) {
   if (status === S.APPROVAL) return "pending";
   if (status === S.SHIPPED) return "shipped";
+  if (status === S.COMPLETED) return "completed";
   if (status === S.CANCELLED || status === S.REFUNDED) return "cancelled";
   return "approved";
 }
@@ -614,7 +617,11 @@ function simpleMove(name, from, to, { needReason = false, field } = {}) {
     const upd = { status: to, updatedAt: at };
     if (field) { upd[field + "By"] = staff.email; upd[field + "At"] = at; }
     tx.update(ref, upd);
-    const redExtra = to === S.SHIPPED ? { shippedAt: at } : {};
+    // 寄出：和一般随单寄送的兑换一样，写入「随订单寄出 + 订单编号」，会员的兑换记录才看得到
+    const redExtra = to === S.SHIPPED ? {
+      shippedAt: at,
+      shipping: { withOrder: true, orderNo: reward.linkedOrder ? reward.linkedOrder.orderNo : "", platform: reward.linkedOrder ? reward.linkedOrder.platform : "" },
+    } : {};
     syncRedemption(tx, red, to, redExtra);
     syncMember(tx, db, reward.uid, { rid: data.rid, status: to, deadline: reward.deadline, updatedAt: at });
     addHistory(tx, db, data.rid, { action: name, from, to, by: staff.email, reason, txId: data.txId }, ctx);
@@ -917,6 +924,30 @@ function fmtMy(msv) {
 }
 
 // 每日：逾期 → 待管理员审核；到期前提醒。不删除、不扣分、不没收
+// 兑换记录变成「已完成」（会员按确认收货，或 Apps Script 寄出 14 天后自动完成）→ 迎新礼也改成已完成
+async function markReceived(db, red, redId, ctx = {}) {
+  if (!red || red.newMember !== true || red.status !== "completed" || !red.nmrId) return { skipped: true };
+  const ref = db.collection(COL.rewards).doc(red.nmrId);
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || snap.data().status !== S.SHIPPED) return { skipped: true };
+    const r = snap.data();
+    const at = ts(nowMs(ctx));
+    const doneAt = red.completedAt || red.receivedAt || at;
+    const by = red.autoCompleted ? "auto" : "member";
+    tx.update(ref, { status: S.COMPLETED, completedAt: doneAt, receivedBy: by, updatedAt: at });
+    syncMember(tx, db, r.uid, { rid: ref.id, status: S.COMPLETED, deadline: r.deadline, updatedAt: at });
+    addHistory(tx, db, ref.id, { action: "received", from: S.SHIPPED, to: S.COMPLETED,
+      by: by === "member" ? r.uid : "system", detail: { redemptionId: redId, auto: by === "auto" } }, ctx);
+    return { completed: true };
+  });
+}
+async function onRedemptionWritten(db, redId, before, after, ctx = {}) {
+  if (!after || after.newMember !== true) return { skipped: true };
+  if (after.status !== "completed" || (before && before.status === "completed")) return { skipped: true };
+  return markReceived(db, after, redId, ctx);
+}
+
 async function daily(db, ctx = {}) {
   const at = nowMs(ctx);
   const sSnap = await db.doc(SETTINGS_PATH.join("/")).get();
@@ -951,7 +982,18 @@ async function daily(db, ctx = {}) {
       if (done) reminded++;
     }
   }
-  return { expired, reminded };
+  // 补漏：已寄出、但兑换记录已经是「已完成」的（例如触发器漏掉）
+  let completed = 0;
+  const shipped = await db.collection(COL.rewards).where("status", "==", S.SHIPPED).get();
+  for (const d of shipped.docs) {
+    const r = d.data();
+    const red = await db.collection("redemptions").doc(r.redemptionId || redemptionIdOf(d.id)).get();
+    if (red.exists && red.data().status === "completed") {
+      const res = await markReceived(db, red.data(), red.id, ctx);
+      if (res.completed) completed++;
+    }
+  }
+  return { expired, reminded, completed };
 }
 
 function orderReasonText(reason) {
@@ -975,5 +1017,5 @@ module.exports = {
   nmApprove, nmReject, nmLinkOrder, nmRejectCandidate, nmConfirmOrder, nmUnlinkOrder,
   nmPacked, nmUnpack, nmShipped, nmExtend, nmCancelReward, nmRefund, nmNote, nmException,
   nmSaveSettings,
-  onOrderWritten, daily,
+  onOrderWritten, onRedemptionWritten, daily,
 };
