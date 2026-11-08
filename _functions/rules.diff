@@ -1,0 +1,68 @@
+--- firestore.rules.orig	2026-11-08 22:56:18.087044056 +0800
++++ firestore.rules	2026-11-08 22:56:18.097034806 +0800
+@@ -433,7 +433,9 @@
+         && exists(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId))
+         && request.resource.data.uid == get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.uid
+         && (request.resource.data.delta == -get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.cost
+-            || request.resource.data.delta == get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.cost);
++            || request.resource.data.delta == get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.cost)
++        // 🎉 新会员奖励（2026-11-08）：迎新礼的扣分 / 退分只能由后端（Cloud Functions）写
++        && get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.get('newMember', false) != true;
+       allow create: if bonusOk(id);
+       allow update, delete: if false;
+     }
+@@ -442,11 +444,12 @@
+     match /settings/{id} {
+       allow read: if true;
+       // club（俱乐部开放 / 维修中）和其他没列出来的：只有店主
+-      allow write: if ownerOk()
++      // 🎉 newMember（新会员奖励活动设定）：只能由后端改（保证版本号和兑换时的规则快照）
++      allow write: if id != 'newMember' && (ownerOk()
+         || ((id == 'shop' || id == 'perks') && club('shop'))
+         || ((id == 'home' || id == 'help') && club('content'))
+         || (id == 'prizeNotes' && club('prizes'))
+-        || (id == 'shipping' && (club('redeem') || club('prizes')));
++        || (id == 'shipping' && (club('redeem') || club('prizes'))));
+     }
+ 
+     // 📢 会员公告：会员可看，只有管理员能发、能删
+@@ -572,6 +575,25 @@
+       allow delete: if ownerOk();
+     }
+ 
++    // 🎉 新会员奖励（2026-11-08）：所有写入只能由后端（Cloud Functions）执行
++    // 会员看得到自己的纪录；后台要有 Member Club 的「新会员奖励」子权限（或整个 Member Club）
++    match /newMemberRewards/{rid} {
++      allow read: if club('newMember') || (signedIn() && resource.data.uid == request.auth.uid);
++      allow write: if false;
++      // 操作历史（含管理员备注）：只有后台看得到
++      match /history/{h} {
++        allow read: if club('newMember');
++        allow write: if false;
++      }
++    }
++    // 订单占用锁、事务纪录：只有后端用
++    match /nmrOrderLocks/{id} {
++      allow read, write: if false;
++    }
++    match /nmrTx/{id} {
++      allow read, write: if false;
++    }
++
+     // 兑换申请
+     match /redemptions/{id} {
+       allow read: if clubAny() || (signedIn() && resource.data.uid == request.auth.uid);
+@@ -608,10 +630,12 @@
+                 && (request.resource.data.get('delivery', '') == 'withOrder'
+                     || validAddr(request.resource.data.get('address', null)))));
+       // 管理员审核、发货；会员可以：取消「审核中」的申请、发货前修改地址、确认收货
+-      allow update: if club('redeem') || (
++      // 🎉 迎新礼（newMember == true）的兑换由后端处理：兑换审核不能改，会员也不能直接取消（要经后端）
++      allow update: if (club('redeem') && resource.data.get('newMember', false) != true) || (
+         signedIn() && resource.data.uid == request.auth.uid && (
+           // 取消审核中的申请
+           (resource.data.status == 'pending'
++            && resource.data.get('newMember', false) != true
+             && request.resource.data.status == 'cancelled'
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+           // 单独寄出：发货前（或配送异常时）填写 / 修改这笔的收货地址；填好后 addrPending 改回 false
