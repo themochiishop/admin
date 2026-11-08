@@ -1,0 +1,710 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===== 👥 控制台管理员权限（2026-11-03 第二阶段）=====
+    // 名单在 staff/{email}，权限在 perms：店主 mail@themochiishop.com 永远全部可以
+    // Member Club 可以是 true（全部）或一组子项目 { overview, redeem, prizes, members, shop, content, settings }
+    function stEmail() { return request.auth.token.email.lower(); }
+    function stDoc() { return get(/databases/$(database)/documents/staff/$(stEmail())).data; }
+    function isStaff() {
+      return request.auth != null && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/staff/$(stEmail()))
+        && stDoc().get('active', true) != false;
+    }
+    function ownerOk() {
+      return request.auth != null && request.auth.token.email == "mail@themochiishop.com"
+        && request.auth.token.email_verified == true;
+    }
+    // 一般权限（invoice 等）
+    function perm(key) { return ownerOk() || (isStaff() && stDoc().perms.get(key, false) == true); }
+    // Member Club 某一个子项目
+    function club(sub) {
+      return ownerOk() || (isStaff() && (stDoc().perms.get('member', false) == true
+        || (stDoc().perms.get('member', false) is map && stDoc().perms.member.get(sub, false) == true)));
+    }
+    // Member Club 任何一项
+    function clubAny() {
+      return ownerOk() || (isStaff() && (stDoc().perms.get('member', false) == true
+        || (stDoc().perms.get('member', false) is map && stDoc().perms.member.size() > 0)));
+    }
+    // 📰 Mochii Feed
+    function feedPerm() { return perm('feed'); }
+
+   // ===== PO / Invoice 工具（admin.themochiishop.com/invoice/）=====
+    // 客户 / 供应商名单
+    match /invoiceContacts/{id} {
+      allow read, create, update: if perm('invoice');
+      allow delete: if ownerOk();   // 只有店主可以删除
+    }
+    // 常用货品（描述 + 单价）
+    match /invoiceProducts/{id} {
+      allow read, write: if perm('invoice');
+    }
+    // 单据记录（单号、日期、对方、总额、整张单的内容）
+    match /invoiceDocs/{id} {
+      allow read, create, update: if perm('invoice');
+      allow delete: if ownerOk();   // 只有店主可以删除
+    }
+
+      // ===================== Mochii Feed（新增） =====================
+    function fdPath(c, id) { return /databases/$(database)/documents/$(c)/$(id); }
+    function fdIn() { return request.auth != null; }
+    // 后台：写入要「Mochii Feed」；读取另外开放给 Member Club 的「总览」「会员」（总览最近动态、会员资料的 Feed 统计）
+    function fdAdmin() { return feedPerm(); }
+    function fdAdminRead() { return feedPerm() || club('overview') || club('members'); }
+    function fdIsMem() { return fdIn() && exists(fdPath('members', request.auth.uid)); }
+    function fdMem() { return get(fdPath('members', request.auth.uid)).data; }
+    function fdRankOf(t) { return {'mochii': 0, 'silver': 1, 'gold': 2, 'diamond': 3, 'black': 4}.get(t, 0); }
+    function fdRank() { return fdIsMem() ? fdRankOf(fdMem().get('tier', 'mochii')) : -1; }
+    function fdCfg() { return exists(fdPath('feedConfig', 'main')) ? get(fdPath('feedConfig', 'main')).data : {}; }
+    function fdTitle() {
+      return exists(fdPath('feedTitles', request.auth.uid))
+        ? get(fdPath('feedTitles', request.auth.uid)).data.get('title', '') : '';
+    }
+    function fdPerm() {
+      return fdTitle() == '' ? 'none'
+        : fdCfg().get('titles', {}).get(fdTitle(), {}).get('perm', 'none');
+    }
+    function fdInternal() { return fdMem().get('internal', {}).get('on', false) == true; }
+    function fdBound() {
+      return exists(fdPath('feedPass', request.auth.uid))
+        && exists(fdPath('bindings', get(fdPath('feedPass', request.auth.uid)).data.bindId))
+        && get(fdPath('bindings', get(fdPath('feedPass', request.auth.uid)).data.bindId)).data.uid == request.auth.uid;
+    }
+    function fdMod() { return fdAdmin() || (fdIsMem() && fdPerm() == 'mod'); }
+    function fdCanReply() {
+      return fdIsMem() && (fdPerm() != 'none' || fdInternal() || fdBound())
+        && fdRank() >= fdCfg().get('replyRank', 0);
+    }
+    function fdCanPost() {
+      return fdIsMem() && (fdPerm() != 'none'
+        || ((fdInternal() || fdBound()) && fdRank() >= fdCfg().get('postRank', 1)));
+    }
+    function fdAutoPublish() { return fdPerm() != 'none' || fdRank() >= fdCfg().get('autoRank', 2); }
+    function fdPost(pid) { return get(fdPath('feedPosts', pid)).data; }
+    function fdCanSee(p) { return p.status == 'published' && fdRank() >= p.minRank; }
+    function fdAuthorOk(d) {
+      return d.authorUid == request.auth.uid
+        && d.authorName == fdMem().get('name', '')
+        && d.authorTier == fdMem().get('tier', 'mochii')
+        && d.authorTitle == fdTitle();
+    }
+
+    match /feedConfig/{id} {
+      allow read: if true;
+      allow write: if fdAdmin();
+    }
+    match /feedTitles/{uid} {
+      allow read: if true;
+      allow write: if fdAdmin() || club('members');   // 会员资料页也可以改头衔
+    }
+    match /feedPass/{uid} {
+      allow read, delete: if fdIn() && request.auth.uid == uid;
+      allow create, update: if fdIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['bindId', 'at'])
+        && request.resource.data.bindId is string
+        && get(fdPath('bindings', request.resource.data.bindId)).data.uid == uid;
+    }
+
+    match /feedPosts/{pid} {
+      allow read: if resource.data.status == 'published'
+        || fdAdminRead()
+        || (fdIn() && resource.data.authorUid == request.auth.uid);
+      allow create: if fdAdmin() || (
+        fdCanPost() && fdAuthorOk(request.resource.data)
+        && request.resource.data.keys().hasOnly(['type', 'status', 'minRank', 'authorUid', 'authorName',
+             'authorTier', 'authorTitle', 'thumb', 'imageCount', 'pinned', 'createdAt'])
+        && request.resource.data.type == 'normal'
+        && request.resource.data.minRank == 0
+        && request.resource.data.pinned == false
+        && request.resource.data.createdAt == request.time
+        && (request.resource.data.status == 'pending'
+            || (request.resource.data.status == 'published' && fdAutoPublish()))
+      );
+      // ✏️ 作者编辑自己的帖子：只能写 editedAt（= 现在），状态只能维持或改回「待审核」；
+      //    需要审核的会员编辑已公开的帖子，一定要改回待审核（防止批准后再改成不当内容）
+      allow update: if fdAdmin() || (fdIn() && resource.data.authorUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['editedAt', 'status'])
+        && request.resource.data.editedAt == request.time
+        && (request.resource.data.status == 'pending'
+            || (request.resource.data.status == resource.data.status
+                && (resource.data.status != 'published' || fdAutoPublish()))));
+      allow delete: if fdMod() || (fdIn() && resource.data.authorUid == request.auth.uid);
+
+      match /content/{doc} {
+        allow read: if fdAdminRead() || fdCanSee(fdPost(pid))
+          || (fdIn() && fdPost(pid).authorUid == request.auth.uid);
+        allow create: if fdAdmin() || (fdIn() && doc == 'main'
+          && getAfter(fdPath('feedPosts', pid)).data.authorUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['text', 'images'])
+          && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+          && request.resource.data.images is list && request.resource.data.images.size() <= 3);
+        // ✏️ 作者改文字：要和帖子的 editedAt 一起送出（上面帖子的规则会检查审核状态）
+        allow update: if fdAdmin() || (fdIn() && doc == 'main'
+          && fdPost(pid).authorUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text'])
+          && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+          && getAfter(fdPath('feedPosts', pid)).data.get('editedAt', null) == request.time);
+        allow delete: if fdMod() || (fdIn() && fdPost(pid).authorUid == request.auth.uid);
+      }
+
+            match /comments/{cid} {
+        allow read: if fdAdminRead() || fdCanSee(fdPost(pid));
+        allow create: if fdAdmin() || (
+          fdCanReply() && fdCanSee(fdPost(pid)) && fdAuthorOk(request.resource.data)
+          && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'authorTier',
+               'authorTitle', 'text', 'replyTo', 'replyToUid', 'postAuthorUid', 'createdAt'])
+          && request.resource.data.postAuthorUid == fdPost(pid).authorUid
+          && (!('replyToUid' in request.resource.data)
+              || request.resource.data.replyToUid == request.resource.data.replyTo.uid)
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+          && request.resource.data.createdAt == request.time
+        );
+        // ✏️ 作者编辑自己的回复（只能改文字，要附上 editedAt = 现在）
+        allow update: if fdAdmin() || (fdIn() && resource.data.authorUid == request.auth.uid
+          && resource.data.get('hidden', false) != true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+          && request.resource.data.editedAt == request.time);
+        allow delete: if fdMod() || (fdIn() && resource.data.authorUid == request.auth.uid);
+      }
+            match /likes/{uid} {
+        allow read: if fdAdminRead() || fdCanSee(fdPost(pid));
+               allow create: if fdIn() && request.auth.uid == uid && fdIsMem() && fdCanSee(fdPost(pid))
+          && request.resource.data.keys().hasOnly(['at', 'postAuthorUid']) && request.resource.data.at == request.time
+          && request.resource.data.postAuthorUid == (fdPost(pid).get('authorTier', '') == '' ? 'shop' : fdPost(pid).authorUid);
+        allow delete: if fdIn() && request.auth.uid == uid;
+      }
+    }
+
+    // 👤 会员的 Feed 资料（头像、简介）：公开可看；本人可改，名字、等级、头衔要和会员资料一致；管理员可重设
+    function fdAvatarOk(a) {
+      return a is string && (a == '' || a.matches('^p:[0-9]{1,2}$')
+        || (a.size() <= 60000 && a.matches('^data:image/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$')));
+    }
+    match /memberFeed/{uid} {
+      allow read: if true;
+      allow create, update: if fdAdmin() || club('members') || (fdIn() && request.auth.uid == uid && fdIsMem()
+                && request.resource.data.keys().hasOnly(['name', 'tier', 'title', 'avatar', 'bio', 'code', 'best', 'updatedAt'])
+        && request.resource.data.get('code', uid[0:8]) == uid[0:8]
+        && request.resource.data.name == fdMem().get('name', '')
+        && request.resource.data.tier == fdMem().get('tier', 'mochii')
+        && request.resource.data.title == fdTitle()
+        && request.resource.data.get('best', '') == fdMem().get('bestTier', '')
+        && request.resource.data.bio is string && request.resource.data.bio.size() <= 60
+        && fdAvatarOk(request.resource.data.avatar)
+        && (!request.resource.data.avatar.matches('^data:.*')
+            || fdInternal() || fdBound() || fdPerm() != 'none'));
+      allow delete: if fdAdmin() || club('members');
+    }
+
+    // ❤️ 获赞计数：主页数「某人收到多少赞」（点赞只记时间和帖子作者，没有其他内容）
+    match /{path=**}/likes/{lid} {
+      allow read: if true;
+    }
+    
+        // 💬 回复通知：会员可以读到「回复我的帖子」和「回复我」的回复（铃铛用）
+    match /{path=**}/comments/{cid} {
+      allow read: if fdAdminRead() || (fdIn() && (resource.data.postAuthorUid == request.auth.uid
+                                 || resource.data.replyToUid == request.auth.uid));   // 管理员：👁 会员视角的铃铛要读得到
+    }
+    // 🚩 检举：会员检举帖子或留言（每人每项一次，文件 ID = 目标_会员UID）；只有管理员能看全部、能处理
+    match /feedReports/{rid} {
+      allow read: if fdAdminRead()
+        || (fdIn() && (resource == null || resource.data.reporterUid == request.auth.uid));
+      allow create: if fdIsMem()
+        && request.resource.data.keys().hasOnly(['kind', 'postId', 'commentId', 'targetKey', 'targetUid',
+             'reporterUid', 'reason', 'note', 'text', 'status', 'createdAt'])
+        && rid == request.resource.data.targetKey + '_' + request.auth.uid
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.kind in ['post', 'comment']
+        && request.resource.data.reason in ['spam', 'abuse', 'inappropriate', 'other']
+        && request.resource.data.note is string && request.resource.data.note.size() <= 200
+        && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if fdAdmin();
+    }
+    // ===================== Mochii Feed 结束 =====================
+
+    // 📧 邮件提醒设定：只有管理员能看、能改（收件人邮箱不公开）
+    match /adminSettings/{id} {
+      allow read: if club('settings') || club('overview');
+      allow write: if club('settings');
+    }
+    
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function orderDoc(no) {
+      return get(/databases/$(database)/documents/orders/$(no));
+    }
+    function rewardDoc(id) {
+      return get(/databases/$(database)/documents/rewards/$(id));
+    }
+    // 手机号码：国际格式，例如 +60123456789
+    function validPhone(data) {
+      return !('phone' in data) || (data.phone is string && data.phone.matches('^[+][0-9]{8,15}$'));
+    }
+    // 📦 收货地址（马来西亚，邮编 5 位数）
+    function validAddr(a) {
+      return a is map
+        && a.keys().hasOnly(['name', 'phone', 'line1', 'line2', 'postcode', 'city', 'state', 'country'])
+        && a.name is string && a.name.size() > 0 && a.name.size() <= 60
+        && a.phone is string && a.phone.matches('^[+][0-9]{8,15}$')
+        && a.line1 is string && a.line1.size() > 0 && a.line1.size() <= 120
+        && a.get('line2', '') is string && a.get('line2', '').size() <= 120
+        && a.postcode is string && a.postcode.matches('^[0-9]{5}$')
+        && a.city is string && a.city.size() > 0 && a.city.size() <= 60
+        && a.state is string && a.state.size() > 0 && a.state.size() <= 40;
+    }
+    // 昵称：30 天内只能改一次（改名时要同时写入 nameChangedAt = 现在）
+    function nameChangeOk() {
+      let keys = request.resource.data.diff(resource.data).affectedKeys();
+      return (!('name' in keys) && !('nameChangedAt' in keys))
+        || (('name' in keys)
+          && request.resource.data.nameChangedAt == request.time
+          && (!('nameChangedAt' in resource.data)
+            || request.time > resource.data.nameChangedAt + duration.value(30, 'd')));
+    }
+    // 会员地址簿：最多 5 个
+    function validAddrBook(data) {
+      return !('addresses' in data) || (data.addresses is list && data.addresses.size() <= 5);
+    }
+
+    // 🎁 新会员欢迎礼 / 📝 完善资料奖励（分数要和会员网页 js/common.js 的 BONUSES 一致）
+    function myBinding(bid) {
+      return exists(/databases/$(database)/documents/bindings/$(bid))
+        && get(/databases/$(database)/documents/bindings/$(bid)).data.uid == request.auth.uid;
+    }
+    function bindingPlatform(bid) {
+      return get(/databases/$(database)/documents/bindings/$(bid)).data.platform;
+    }
+    function myProfile() {
+      return get(/databases/$(database)/documents/members/$(request.auth.uid)).data;
+    }
+    function isInternal() {
+      return myProfile().get('internal', {}).get('on', false) == true;
+    }
+    // 后台「额外福利」有设定就照设定；还没设定过就用预设分数
+    function perkCfg() {
+      return get(/databases/$(database)/documents/settings/perks).data;
+    }
+    function perkPts(key, dflt) {
+      return exists(/databases/$(database)/documents/settings/perks)
+        ? perkCfg().get(key, {}).get('points', dflt)
+        : dflt;
+    }
+    function perkOn(key) {
+      return !exists(/databases/$(database)/documents/settings/perks)
+        || perkCfg().get(key, {}).get('active', true) == true;
+    }
+    function bonusIs(docId, idPrefix, key, dflt, why) {
+      return docId == idPrefix + '_' + request.auth.uid
+        && request.resource.data.reason == why
+        && perkOn(key)
+        && request.resource.data.delta == perkPts(key, dflt);
+    }
+    // 📣 关注我们：后台「额外福利」有开、有填链接的平台才能领，每个平台一次（文件 ID 固定）
+    function followIs(docId, key, why) {
+      return docId == key + '_' + request.auth.uid
+        && request.resource.data.reason == why
+        && exists(/databases/$(database)/documents/settings/perks)
+        && perkCfg().get(key, {}).get('active', true) == true
+        && perkCfg().get(key, {}).get('link', '') != ''
+        && request.resource.data.delta == perkCfg().get(key, {}).get('points', 10)
+        && request.resource.data.delta > 0;
+    }
+    function followOk(docId) {
+      return followIs(docId, 'follow_shopee', '关注我们：Shopee')
+        || followIs(docId, 'follow_tiktok', '关注我们：TikTok')
+        || followIs(docId, 'follow_instagram', '关注我们：Instagram')
+        || followIs(docId, 'follow_facebook', '关注我们：Facebook')
+        || followIs(docId, 'follow_whatsapp', '关注我们：WhatsApp Channel');
+    }
+    // 🖼️ 头像积分（2026-11-08）：Feed 头像一定是自己上传的照片（系统头像 p:数字、名字第一个字都不算）
+    function avatarUploaded() {
+      return exists(/databases/$(database)/documents/memberFeed/$(request.auth.uid))
+        && get(/databases/$(database)/documents/memberFeed/$(request.auth.uid)).data.get('avatar', '').matches('^data:image/.*');
+    }
+    function bonusOk(docId) {
+      let d = request.resource.data;
+      return signedIn()
+        && d.keys().hasOnly(['uid', 'delta', 'reason', 'orderNo', 'bindingIds', 'availableAt', 'createdAt'])
+        && d.uid == request.auth.uid
+        && d.orderNo == null
+        && d.availableAt == request.time
+        && d.createdAt == request.time
+        && d.bindingIds is list
+        && (
+          // 🏷️ 内部会员（店主在后台标记）：不用绑定账号也能领
+          (isInternal() && (
+            bonusIs(docId, 'welcome', 'welcome', 50, '新会员欢迎礼')
+            || (bonusIs(docId, 'profile_birthday', 'birthday', 10, '完善资料：生日') && ('birthday' in myProfile()))
+            || (bonusIs(docId, 'profile_whatsapp', 'whatsapp', 10, '完善资料：WhatsApp 通知')
+                && myProfile().get('waOptIn', false) == true && ('phone' in myProfile()))
+            || bonusIs(docId, 'profile_platform2', 'platform2', 20, '完善资料：绑定第二个平台')
+            || (bonusIs(docId, 'profile_avatar', 'avatar', 20, '完善资料：上传头像') && avatarUploaded())
+            || followOk(docId)))
+          || (d.bindingIds.size() >= 1 && myBinding(d.bindingIds[0]) && (
+          bonusIs(docId, 'welcome', 'welcome', 50, '新会员欢迎礼')
+          || (bonusIs(docId, 'profile_birthday', 'birthday', 10, '完善资料：生日')
+              && ('birthday' in myProfile()))
+          || (bonusIs(docId, 'profile_whatsapp', 'whatsapp', 10, '完善资料：WhatsApp 通知')
+              && myProfile().get('waOptIn', false) == true
+              && ('phone' in myProfile()))
+          || (bonusIs(docId, 'profile_platform2', 'platform2', 20, '完善资料：绑定第二个平台')
+              && d.bindingIds.size() == 2
+              && myBinding(d.bindingIds[1])
+              && bindingPlatform(d.bindingIds[0]) != bindingPlatform(d.bindingIds[1]))
+          || (bonusIs(docId, 'profile_avatar', 'avatar', 20, '完善资料：上传头像') && avatarUploaded())
+          || followOk(docId)
+          ))
+        );
+    }
+
+    // 管理员名单：只能在 Firebase 控制台手动新增
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    // 会员资料
+    match /members/{uid} {
+      allow read: if isOwner(uid) || clubAny() || feedPerm();
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['name', 'email', 'birthday', 'phone', 'waOptIn', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && validPhone(request.resource.data);
+        
+      // 会员：名字、手机、WhatsApp 通知可以随时改；生日只能设定一次
+      // 管理员（「会员」权限）：可以更正名字、生日、手机；内部会员、Black Elite 只有店主能改
+      allow update: if validPhone(request.resource.data) && validAddrBook(request.resource.data) && ((isOwner(uid) && (
+              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'nameChangedAt', 'phone', 'waOptIn', 'notifSeenAt', 'addresses'])
+          && nameChangeOk()
+          && (!('notifSeenAt' in request.resource.data.diff(resource.data).affectedKeys())
+              || request.resource.data.notifSeenAt == request.time))
+        || (!('birthday' in resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['birthday']))
+      )) || (club('members')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'birthday', 'phone', 'waOptIn']))
+      || (ownerOk()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'birthday', 'phone', 'waOptIn', 'internal', 'blackElite'])));
+    }
+
+    // 订单：只有同步脚本能写
+    match /orders/{orderNo} {
+      allow read: if clubAny() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
+    // 平台账号绑定：会员用单号验证；管理员可代为绑定、解除绑定
+    match /bindings/{bindingId} {
+      allow read: if clubAny() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if request.resource.data.createdAt == request.time
+        && bindingId == request.resource.data.platform + '_' + request.resource.data.username
+        && (
+          (club('members')
+            && request.resource.data.keys().hasOnly(['uid', 'platform', 'username', 'verifyOrder', 'by', 'createdAt']))
+          || (signedIn()
+            && request.resource.data.keys().hasOnly(['uid', 'platform', 'username', 'verifyOrder', 'createdAt'])
+            && request.resource.data.uid == request.auth.uid
+            && exists(/databases/$(database)/documents/orders/$(request.resource.data.verifyOrder))
+            && orderDoc(request.resource.data.verifyOrder).data.username == request.resource.data.username
+            && orderDoc(request.resource.data.verifyOrder).data.platform == request.resource.data.platform)
+        );
+      allow update: if false;
+      allow delete: if ownerOk();   // 解除绑定：只有店主
+    }
+
+    // 积分流水：会员只能看自己的；管理员可新增（兑换扣分、手动调整），任何人都不能改或删
+    match /pointsLedger/{id} {
+      allow read: if clubAny() || (signedIn() && resource.data.uid == request.auth.uid);
+      // 手动调整积分、内部会员开通礼：只有店主
+      allow create: if ownerOk();
+      // 兑换审核：批准扣分、取消退回，金额要和那一笔兑换一致
+      allow create: if club('redeem')
+        && request.resource.data.get('redemptionId', null) is string
+        && exists(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId))
+        && request.resource.data.uid == get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.uid
+        && (request.resource.data.delta == -get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.cost
+            || request.resource.data.delta == get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.cost)
+        // 🎉 新会员奖励（2026-11-08）：迎新礼的扣分 / 退分只能由后端（Cloud Functions）写
+        && get(/databases/$(database)/documents/redemptions/$(request.resource.data.redemptionId)).data.get('newMember', false) != true;
+      allow create: if bonusOk(id);
+      allow update, delete: if false;
+    }
+
+    // 俱乐部设定（开放 / 维修中）：所有人可读，只有管理员能改
+    match /settings/{id} {
+      allow read: if true;
+      // club（俱乐部开放 / 维修中）和其他没列出来的：只有店主
+      // 🎉 newMember（新会员奖励活动设定）：只能由后端改（保证版本号和兑换时的规则快照）
+      allow write: if id != 'newMember' && (ownerOk()
+        || ((id == 'shop' || id == 'perks') && club('shop'))
+        || ((id == 'home' || id == 'help') && club('content'))
+        || (id == 'prizeNotes' && club('prizes'))
+        || (id == 'shipping' && (club('redeem') || club('prizes'))));
+    }
+
+    // 📢 会员公告：会员可看，只有管理员能发、能删
+    match /announcements/{id} {
+      allow read: if signedIn();
+      allow create: if club('content')
+        && request.resource.data.keys().hasOnly(['title', 'body', 'link', 'i18n', 'by', 'createdAt'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if ownerOk();   // 只有店主可以删除
+    }
+
+    // 🎯 指定会员的公告（2026-11-08）：只有收件人（uids 里有自己）和后台读得到；「内容」权限可以发，只有店主能删
+    match /memberMessages/{id} {
+      allow read: if clubAny() || (signedIn() && request.auth.uid in resource.data.uids);
+      allow create: if club('content')
+        && request.resource.data.keys().hasOnly(['uids', 'title', 'body', 'link', 'i18n', 'by', 'createdAt'])
+        && request.resource.data.uids is list
+        && request.resource.data.uids.size() > 0 && request.resource.data.uids.size() <= 300
+        && request.resource.data.title is string && request.resource.data.title.size() > 0
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if ownerOk();
+    }
+
+    // 🔗 绑定历史：管理员代绑 / 解除时写一笔；会员可看自己的，任何人都不能改或删
+    match /bindingLogs/{id} {
+      allow read: if clubAny() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if club('members') && request.resource.data.at == request.time;
+      allow update, delete: if false;
+    }
+
+    // 📋 管理员操作记录（后台总览「最近动态 › 管理员」）：
+    // 管理员只能用自己的邮箱、当下时间写一笔；只有管理员看得到；任何人都不能改或删
+    match /adminLog/{id} {
+      allow read: if clubAny() || feedPerm();
+      allow create: if (ownerOk() || isStaff())
+        && request.resource.data.keys().hasOnly(['type', 'text', 'link', 'by', 'byName', 'at'])
+        && request.resource.data.by == request.auth.token.email
+        && request.resource.data.at == request.time
+        && request.resource.data.text is string && request.resource.data.text.size() <= 300;
+      allow update, delete: if false;
+    }
+
+    // 🏠 会员首页：横幅、首页消息。会员可看，只有管理员能改
+    match /homeBanners/{id} {
+      allow read: if signedIn();
+      allow create, update: if club('content');
+      allow delete: if ownerOk();   // 只有店主可以删除
+    }
+    match /homeNews/{id} {
+      allow read: if signedIn();
+      allow create, update: if club('content');
+      allow delete: if ownerOk();   // 只有店主可以删除
+    }
+
+    // ❓ 帮助中心「商店帮助」：只有登入的会员看得到，后台编辑
+    match /storeFaq/{id} {
+      allow read: if signedIn();
+      allow create, update: if club('content');
+      allow delete: if ownerOk();   // 只有店主可以删除
+    }
+
+
+    // 🏆 每月抽奖中奖奖品：管理员添加；会员只能看自己的、领取、改地址、确认收到
+    function prizeAddrOk(a) {
+      return a is map
+        && a.keys().hasOnly(['name', 'phone', 'line1', 'line2', 'postcode', 'city', 'state', 'country'])
+        && a.name is string && a.name.size() > 0 && a.name.size() <= 60
+        && a.line1 is string && a.line1.size() > 0 && a.line1.size() <= 120;
+    }
+    match /prizeWins/{id} {
+      allow read: if clubAny() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if club('prizes');
+      allow delete: if ownerOk();
+      allow update: if club('prizes') || (
+        signedIn() && resource.data.uid == request.auth.uid && (
+          // 领取：待领取 → 待审核（单独包裹要带收货地址，随单发送不能带）
+          (resource.data.status == 'unclaimed'
+            && request.resource.data.status == 'claimed'
+            && request.resource.data.claimedAt == request.time
+            && (
+              (resource.data.delivery == 'separate'
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'claimedAt', 'address'])
+                && prizeAddrOk(request.resource.data.address))
+              || (resource.data.delivery != 'separate'
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'claimedAt']))
+            ))
+          // 修改收货地址：单独包裹，待审核或待发货时
+          || (resource.data.delivery == 'separate'
+            && (resource.data.status == 'claimed' || resource.data.status == 'approved')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['address', 'addressUpdatedAt'])
+            && request.resource.data.addressUpdatedAt == request.time
+            && prizeAddrOk(request.resource.data.address))
+          // 确认收到：已发货 → 已完成
+          || (resource.data.status == 'shipped'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.completedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt']))
+        )
+      );
+    }
+
+
+
+    // 奖品目录：公开可看，管理员管理
+    match /rewards/{id} {
+      allow read: if true;
+      allow create, update: if club('shop') && !('couponCode' in request.resource.data);
+      // 兑换审核：批准 / 取消 / 改测试时调整库存（只能改 stock，和款式的库存；款式不能新增或删除）
+      allow update: if club('redeem') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'variants'])
+        && request.resource.data.get('variants', {}).keys().hasOnly(resource.data.get('variants', {}).keys())
+        && resource.data.get('variants', {}).keys().hasOnly(request.resource.data.get('variants', {}).keys());
+      allow delete: if ownerOk();   // 只有店主可以删除奖品
+    }
+
+    // 🔒 共用优惠码：只有管理员能看能改；会员在兑换批准后，才会在自己的兑换记录里看到
+    match /rewardSecrets/{id} {
+      allow read: if club('shop') || club('redeem') || club('overview');
+      allow create, update: if club('shop');
+      allow delete: if ownerOk();
+    }
+
+    // 🎉 新会员奖励（2026-11-08）：所有写入只能由后端（Cloud Functions）执行
+    // 会员看得到自己的纪录；后台要有 Member Club 的「新会员奖励」子权限（或整个 Member Club）
+    match /newMemberRewards/{rid} {
+      allow read: if club('newMember') || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+      // 操作历史（含管理员备注）：只有后台看得到
+      match /history/{h} {
+        allow read: if club('newMember');
+        allow write: if false;
+      }
+    }
+    // 订单占用锁、事务纪录：只有后端用
+    match /nmrOrderLocks/{id} {
+      allow read, write: if false;
+    }
+    match /nmrTx/{id} {
+      allow read, write: if false;
+    }
+
+    // 兑换申请
+    match /redemptions/{id} {
+      allow read: if clubAny() || (signedIn() && resource.data.uid == request.auth.uid);
+      // 🎁 额外福利直接派送（2026-11-08）：只有店主，而且一定是 0 积分、已批准的赠送
+      allow create: if ownerOk() && request.resource.data.get('gift', false) == true
+        && request.resource.data.cost == 0 && request.resource.data.status == 'approved'
+        && request.resource.data.uid is string;
+      // 会员提交：奖品必须上架中，积分和名称必须与奖品目录一致
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'rewardId', 'rewardName', 'cost', 'status', 'createdAt', 'kind', 'address', 'delivery', 'variantId', 'variantName'])
+        // 📦 会员只能选随单寄送（单独寄出由管理员在审核时改）
+        && request.resource.data.get('delivery', 'withOrder') == 'withOrder'
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && rewardDoc(request.resource.data.rewardId).data.active == true
+        && rewardDoc(request.resource.data.rewardId).data.cost == request.resource.data.cost
+        && rewardDoc(request.resource.data.rewardId).data.name == request.resource.data.rewardName
+        // ⏰ 设定了下架时间的奖品，时间过了就不能再兑换
+        && (rewardDoc(request.resource.data.rewardId).data.get('endAt', null) == null
+            || rewardDoc(request.resource.data.rewardId).data.endAt > request.time)
+        // 🔒 未开放的奖品不能兑换；有开放时间的，时间到了才可以（用伺服器时间，改手机时间也没用）
+        && (rewardDoc(request.resource.data.rewardId).data.get('comingSoon', false) != true
+            || (rewardDoc(request.resource.data.rewardId).data.get('openAt', null) != null
+                && rewardDoc(request.resource.data.rewardId).data.openAt <= request.time))
+        // 🎨 有款式的奖品（2026-11-08）：一定要选一个存在的款式（名称要一致）；没有款式的奖品不能带款式
+        && ((rewardDoc(request.resource.data.rewardId).data.get('variants', {}).size() == 0
+              && !('variantId' in request.resource.data))
+            || (request.resource.data.get('variantId', '') in rewardDoc(request.resource.data.rewardId).data.get('variants', {})
+              && rewardDoc(request.resource.data.rewardId).data.variants[request.resource.data.variantId].name == request.resource.data.get('variantName', '')))
+        // 📦 实体奖品：随单寄送（不用地址），或旧版网页送来的有地址
+        && (rewardDoc(request.resource.data.rewardId).data.type == 'coupon'
+            || (request.resource.data.get('kind', '') == 'gift'
+                && (request.resource.data.get('delivery', '') == 'withOrder'
+                    || validAddr(request.resource.data.get('address', null)))));
+      // 管理员审核、发货；会员可以：取消「审核中」的申请、发货前修改地址、确认收货
+      // 🎉 迎新礼（newMember == true）的兑换由后端处理：兑换审核不能改，会员也不能直接取消（要经后端）
+      allow update: if (club('redeem') && resource.data.get('newMember', false) != true) || (
+        signedIn() && resource.data.uid == request.auth.uid && (
+          // 取消审核中的申请
+          (resource.data.status == 'pending'
+            && resource.data.get('newMember', false) != true
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+          // 单独寄出：发货前（或配送异常时）填写 / 修改这笔的收货地址；填好后 addrPending 改回 false
+          || (resource.data.status in ['pending', 'approved', 'problem']
+            && resource.data.get('kind', '') == 'gift'
+            && resource.data.get('delivery', 'separate') == 'separate'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['address', 'addressUpdatedAt', 'addrPending'])
+            && request.resource.data.get('addrPending', false) == false
+            && validAddr(request.resource.data.address)
+            && request.resource.data.addressUpdatedAt == request.time)
+          // 确认收货（照片、留言选填）
+          || (resource.data.status == 'shipped'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'receivedAt', 'completedAt', 'receipt'])
+            && request.resource.data.receivedAt == request.time
+            && request.resource.data.completedAt == request.time
+            && (!('receipt' in request.resource.data)
+              || (request.resource.data.receipt is map
+                && request.resource.data.receipt.keys().hasOnly(['photo', 'comment'])
+                && request.resource.data.receipt.photo is string && request.resource.data.receipt.photo.size() < 400000
+                && request.resource.data.receipt.comment is string && request.resource.data.receipt.comment.size() <= 200)))
+        )
+      );
+      allow delete: if false;
+    }
+
+        // 优惠券码库：只有管理员能看能改，会员从兑换记录里看到分配给自己的券码
+    match /coupons/{code} {
+      allow read: if club('shop') || club('redeem') || club('overview');
+      allow create, update: if club('shop') || club('redeem');
+      allow delete: if ownerOk();
+    }
+
+    // ====== 👥 控制台管理员与权限（2026-11-03 新增）======
+    // 店主（只有这个账号能改管理员名单）
+    function isStaffOwner() {
+      return request.auth != null
+        && request.auth.token.email == "mail@themochiishop.com"
+        && request.auth.token.email_verified == true;
+    }
+    function myStaffEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    // 管理员名单：文件编号 = email（小写）
+    match /staff/{email} {
+      allow read: if isStaffOwner()
+        || (request.auth != null && myStaffEmail() == email);
+      allow create, delete: if isStaffOwner();
+      allow update: if isStaffOwner()
+        || (request.auth != null && myStaffEmail() == email
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(["uid", "lastLoginAt", "authName", "photoURL"]));
+    }
+
+    // 会员系统管理员名单：店主可以加 / 删；
+    // 有「Member Club」或「Mochii Feed」权限、而且启用中的人，登录控制台时可以把自己加进去
+    // Member Club 可以是 true（全部）或一组子项目 { overview: true, redeem: true, … }
+    function staffHasClub(d) {
+      let m = d.perms.get("member", false);
+      return d.get("active", true) != false
+        && (m == true || (m is map && m.size() > 0) || d.perms.get("feed", false) == true);
+    }
+    match /admins/{uid} {
+      allow read, write: if isStaffOwner();
+      allow create: if request.auth != null && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/staff/$(myStaffEmail()))
+        && staffHasClub(get(/databases/$(database)/documents/staff/$(myStaffEmail())).data);
+    }
+    // ====== 以上 ======
+  }
+}
