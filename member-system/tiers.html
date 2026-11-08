@@ -34,7 +34,7 @@
       <div class="page-head">
         <div>
           <h2>💎 会员等级</h2>
-          <p class="muted">修改升级门槛（近 365 天消费）、积分倍数、生日积分、保级规则。改完要同时更新 Google 表格的 Apps Script（见最下面），等级才会照新规则计算。</p>
+          <p class="muted">修改升级门槛（近 365 天消费）、积分倍数、生日积分、保级规则。保存后，会员网页马上照新的规则显示；Google 表格的 Apps Script 下一次计算积分时（每天至少一次完整计算）也会自动读取新设定。</p>
         </div>
         <button class="btn btn-ghost" id="sugBtn">💡 依会员消费给我建议</button>
       </div>
@@ -67,12 +67,12 @@
         <div class="tip" id="newTier"></div>
       </div>
 
-      <div class="panel">
-        <h3>📋 给 Apps Script 的设定</h3>
-        <p class="meta" style="margin:-6px 0 8px">等级是由 Google 表格的 Apps Script（member-system-sync.gs）计算的。保存后，请把下面的数字对照改进脚本里的 <code>MS_TIERS</code>、<code>MS_TIER_VALID_MONTHS</code>、<code>MS_TIER_KEEP_RATIO</code>（脚本格式可能不一样，数字一致就好），再按「部署 → 管理部署 → 编辑 → 新版本」。会员网页会自动读新的设定，不用改。</p>
+      <details class="panel">
+        <summary style="cursor:pointer;font-weight:700">📋 目前的设定（文字版，备份用）</summary>
+        <p class="meta" style="margin:8px 0">Apps Script（member-system-sync.gs，2026-11-08 版）会自动读取后台的设定，不用再手动改脚本。这里只是让你复制一份留底。</p>
         <textarea id="gas" class="code" rows="12" readonly></textarea>
         <div class="actions"><button class="btn btn-ghost" id="copyGas">📋 复制</button></div>
-      </div>
+      </details>
     </div>
   </div>
 
@@ -230,7 +230,7 @@
       if (r.keepRatio !== rules.keepRatio) changes.push(["保级比例", `${Math.round(rules.keepRatio * 100)}% → ${Math.round(r.keepRatio * 100)}%`]);
       if (!changes.length) return msg("没有修改");
       if (!await previewSend({ title: "保存会员等级设定", to: "所有会员（会员网页的等级说明会马上更新）", rows: changes, okText: "💾 确认保存",
-        warn: "保存后请把「给 Apps Script 的设定」更新进脚本，等级计算才会用新规则。已经升级的会员不会因为改门槛马上降级（照保级规则）。" })) return;
+        warn: "Apps Script 下一次计算积分时会自动套用新规则（订单有变动时马上算，没变动的话每天一次）。已经升级的会员不会因为改门槛马上降级，照保级规则处理。" })) return;
       $("saveBtn").disabled = true;
       try {
         const tiers = {};
@@ -239,7 +239,7 @@
         await setDoc(doc(db, "settings", "perks"), { tiers, tierRules: r, tiersUpdatedAt: serverTimestamp(), tiersUpdatedBy: adminEmail }, { merge: true });
         saved = tiers; rules = r;
         logAdmin("settings", "修改了会员等级设定：" + changes.map(c => c[0] + " " + c[1]).join("、").slice(0, 250), "tiers.html");
-        msg("已保存 ✅ 记得更新 Apps Script", "ok");
+        msg("已保存 ✅ 会员网页马上更新；等级和积分在下一次自动计算时套用", "ok");
       } catch (e) { msg("保存失败：" + e.message, "err"); }
       finally { $("saveBtn").disabled = false; }
     });
