@@ -18,6 +18,10 @@
     .sum .b { background: var(--red-bg2); color: var(--red-tx); }
     .sum .w { background: var(--amber-bg2); color: var(--amber-tx); }
     .sum .g { background: var(--green-bg2); color: var(--green-tx); }
+    .who-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; margin: 4px 0 8px; }
+    .who-head b { color: var(--ink); }
+    .ct .acc { display: inline-block; margin: 0 6px 2px 0; }
+    .ct tr.off td { opacity: .55; }
     .tip { background: var(--soft2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: .84rem; color: var(--text2); line-height: 1.65; }
     @media (max-width: 700px) { .ct thead { display: none; } .ct tr { display: block; border-bottom: 1px solid var(--line); padding: 6px 0; } .ct td { display: block; border: 0; padding: 2px 6px; } }
   </style>
@@ -45,13 +49,16 @@
         </div>
         <div class="grid2">
           <label>这份记录是哪个券码（每行都有券码的话不用选）
-            <select id="defCode"><option value="">（每行自己找）</option></select>
+            <select id="defCode"><option value="">（选一张券，看谁兑换过）</option></select>
           </label>
           <label>平台
             <select id="plat"><option value="">两个都对照</option><option value="shopee">Shopee</option><option value="tiktok">TikTok</option></select>
           </label>
         </div>
-        <label>用券记录 <textarea id="raw" rows="8" placeholder="例如：&#10;250101ABCD12  buyer_abc  THEMA1B2C  RM5.00&#10;250102EFGH34  mochii.fan  THEMA1B2C  RM5.00"></textarea></label>
+        <!-- 🎫 选了券码 → 马上列出在俱乐部兑换过这张券的会员 -->
+        <div id="whoBox" class="hidden" style="margin-bottom:16px"></div>
+        <label>用券记录（选填：要找出「没兑换却用了券」的人时才贴）
+          <textarea id="raw" rows="6" placeholder="一行一个买家用户名，例如：&#10;jocelyn1714&#10;mochii.fan&#10;（也可以整份订单列表贴进来，系统会自己找用户名和券码）"></textarea></label>
         <div class="actions"><button class="btn btn-primary" id="runBtn">🔍 开始核对</button></div>
         <p id="msg" class="msg"></p>
       </div>
@@ -74,7 +81,7 @@
     const $ = id => document.getElementById(id);
     renderAdminNav("couponCheck");
     let codeInfo = {};   // 券码 → { rewardId, rewardName }
-    let bindings = [], members = {}, reds = [];
+    let bindings = [], members = {}, reds = [], allReds = [];
 
     async function loadAll() {
       const [rS, bS, mS, dS] = await Promise.all([
@@ -92,10 +99,11 @@
       });
       bindings = bS.docs.map(d => d.data());
       mS.docs.forEach(d => { members[d.id] = d.data(); });
-      reds = dS.docs.map(d => d.data()).filter(r => r.couponCode && !["rejected", "cancelled"].includes(r.status) && !r.test);
+      allReds = dS.docs.map(d => d.data()).filter(r => r.couponCode);
+      reds = allReds.filter(r => !["rejected", "cancelled"].includes(r.status) && !r.test);
       // 兑换记录里出现过、但已经不在奖品里的旧券码也算
       reds.forEach(r => { const c = r.couponCode.toUpperCase(); if (!codeInfo[c]) codeInfo[c] = { rewardId: r.rewardId, rewardName: r.rewardName + "（旧券码）" }; });
-      $("defCode").innerHTML = `<option value="">（每行自己找）</option>` + Object.entries(codeInfo)
+      $("defCode").innerHTML = `<option value="">（选一张券，看谁兑换过）</option>` + Object.entries(codeInfo)
         .map(([c, x]) => `<option value="${esc(c)}">${esc(c)} · ${esc(x.rewardName)}</option>`).join("");
     }
 
@@ -123,7 +131,7 @@
 
     $("runBtn").addEventListener("click", () => {
       const rows = parse($("raw").value, $("defCode").value, $("plat").value);
-      if (!rows.length) { $("msg").textContent = "没有读到资料，请确认有贴上内容"; $("msg").className = "msg err"; return; }
+      if (!rows.length) { $("msg").textContent = $("raw").value.trim() ? "没有读到资料：找不到用户名或券码" : "请先在「用券记录」贴上用了券的买家用户名（一行一个）"; $("msg").className = "msg err"; return; }
       $("msg").textContent = "";
       // 每位会员 × 每个券码：平台用了几次 vs 会员拿到几次
       const used = {};
@@ -155,6 +163,45 @@
         <td>${esc(x.why)}<div class="meta" title="原始资料">${esc(x.line.slice(0, 120))}</div></td></tr>`).join("");
       $("resPanel").classList.remove("hidden");
       $("resPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    // ---------- 🎫 兑换过这张券的会员 ----------
+    const ST = { pending: "审核中", approved: "已批准", shipped: "已发货", completed: "已完成", cancelled: "已取消", rejected: "已拒绝", problem: "配送异常" };
+    const fmt = v => { const d = v && v.toDate ? v.toDate() : v ? new Date(v) : null; return d && !isNaN(d) ? d.toLocaleDateString("en-GB") : "—"; };
+    let whoNames = [];
+    function renderWho() {
+      const code = $("defCode").value, plat = $("plat").value;
+      if (!code) { $("whoBox").classList.add("hidden"); return; }
+      const list = allReds.filter(r => r.couponCode.toUpperCase() === code)
+        .sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+      const real = list.filter(r => !["rejected", "cancelled"].includes(r.status) && !r.test);
+      const uids = [...new Set(real.map(r => r.uid))];
+      const accsOf = uid => bindings.filter(b => b.uid === uid && (!plat || b.platform === plat));
+      whoNames = [...new Set(uids.flatMap(u => accsOf(u).map(b => b.username)))];
+      $("whoBox").innerHTML = `
+        <div class="who-head">
+          <span>🎫 <b>${esc(code)}</b> · ${esc((codeInfo[code] || {}).rewardName || "")}：<b>${uids.length}</b> 位会员、兑换 <b>${real.length}</b> 次${list.length > real.length ? `（另有 ${list.length - real.length} 笔已取消 / 拒绝 / 测试，灰色显示）` : ""}</span>
+          ${whoNames.length ? `<button type="button" class="btn btn-ghost" id="copyNames">📋 复制所有用户名（${whoNames.length}）</button>` : ""}
+        </div>
+        ${list.length ? `<div style="overflow-x:auto"><table class="ct"><thead><tr><th>会员</th><th>关联的平台账号</th><th>兑换日期</th><th>状态</th></tr></thead><tbody>
+          ${list.map(r => {
+            const m = members[r.uid] || {}, off = ["rejected", "cancelled"].includes(r.status) || r.test;
+            const accs = accsOf(r.uid);
+            return `<tr class="${off ? "off" : ""}">
+              <td><a href="member.html?uid=${encodeURIComponent(r.uid)}" target="_blank">${esc(m.name || "(资料不存在)")}</a></td>
+              <td>${accs.length ? accs.map(b => `<span class="acc">${platformTag(b.platform)} <code>${esc(b.username)}</code></span>`).join("") : '<span class="meta">没有关联平台</span>'}</td>
+              <td>${fmt(r.createdAt)}</td>
+              <td>${esc(ST[r.status] || r.status || "")}${r.test ? ' <span class="tag tag-warn">🧪 测试</span>' : ""}${r.gift ? ' <span class="tag tag-pink">🎁 福利赠送</span>' : ""}</td></tr>`;
+          }).join("")}</tbody></table></div>` : `<p class="meta">还没有会员在俱乐部兑换过这张券。</p>`}`;
+      $("whoBox").classList.remove("hidden");
+    }
+    $("defCode").addEventListener("change", renderWho);
+    $("plat").addEventListener("change", renderWho);
+    $("whoBox").addEventListener("click", async e => {
+      if (e.target.id !== "copyNames") return;
+      const txt = whoNames.join("\n");
+      try { await navigator.clipboard.writeText(txt); e.target.textContent = "已复制 ✓"; setTimeout(renderWho, 1500); }
+      catch { prompt("请手动复制：", txt); }
     });
 
     requireAdmin(async () => {
