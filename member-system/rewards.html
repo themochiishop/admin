@@ -517,7 +517,7 @@ $("rimage").addEventListener("change", async () => {
 // ---------- 🎨 款式 ----------
 // variants 存成 { 款式ID: { name, image, order, stock } }（用 ID 当钥匙，Firestore 规则才能检查会员选的款式）
 let variantRows = [];   // [{ id, name, image, stock }]
-const MAX_VARIANTS = 8;
+const MAX_VARIANTS = 20;   // 最多 20 款（图片存在奖品资料里，Firestore 每笔上限 1MB，所以款式图压小一点）
 function renderVariants() {
   $("varList").innerHTML = variantRows.map((v, i) => `
     <div class="ntm-row var-row" data-vi="${i}">
@@ -561,8 +561,8 @@ $("varList").addEventListener("change", async e => {
   const f = e.target.closest("[data-vimg]");
   if (!f || !f.files[0]) return;
   readVariantInputs();
-  let url = await compressImage(f.files[0], 480);
-  if (url.length > 120000) url = await compressImage(f.files[0], 320);   // 款式图小一点，整笔奖品资料才不会太大
+  let url = await compressImage(f.files[0], 360);
+  if (url.length > 40000) url = await compressImage(f.files[0], 280);   // 款式图小一点（约 15–30KB），20 款也存得下
   variantRows[+f.dataset.vimg].image = url;
   renderVariants(); dirty = true;
 });
