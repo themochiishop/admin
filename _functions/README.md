@@ -60,6 +60,21 @@ firebase deploy --only functions --project member-system-27ae0
 - 如果问「清除旧映像档的天数（cleanup policy）」，输入 `1`
 - 看到 `Deploy complete!` 就完成
 
+### 6.5 部署后一定要做（每次部署 Functions 后都要再做一次）
+这个项目在 Google Workspace 组织下，组织政策不允许「所有人」呼叫，部署后网站会 403 呼叫不到。执行：
+```bash
+gcloud run services update nmmember --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
+gcloud run services update nmadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
+```
+检查（要看到「请先登入」）：
+```bash
+curl -s -X POST -H "Content-Type: application/json" -d '{"data":{"op":"ensure"}}' https://asia-southeast1-member-system-27ae0.cloudfunctions.net/nmMember
+```
+
+**第一次部署才需要（2026-11-09 已经做过）**：组织不会自动给预设服务账号权限，已手动加上
+`roles/cloudbuild.builds.builder`、`roles/datastore.user`、`roles/eventarc.eventReceiver`、`roles/run.invoker`
+（账号 `692900536052-compute@developer.gserviceaccount.com`）。
+
 ### 7. 更新 Firestore 规则
 Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` 全部内容贴上 → 发布。
 （和平常更新规则的方式一样。这份 = 你 11/08 的版本 + 4 处新增，对照见 `rules.diff`）
