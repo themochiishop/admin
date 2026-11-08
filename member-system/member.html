@@ -89,12 +89,6 @@
             </form>
           </div>
 
-          <!-- 📍 收货地址（只读；会员在前台「个人资料 › 收货地址」自己管理） -->
-          <div class="panel">
-            <h3>📍 收货地址 <span class="muted" id="addrCount" style="font-weight:400;font-size:.85rem"></span></h3>
-            <div id="addrList"><p class="meta">载入中…</p></div>
-          </div>
-
           <!-- 🏷️ 内部会员（员工 / 测试用） -->
           <div class="panel owner-only" id="internalPanel">
             <h3>🏷️ 内部会员</h3>
@@ -113,29 +107,9 @@
             <p id="bMsg" class="msg"></p>
           </div>
 
-          <!-- 📰 会员的 Feed -->
-          <div class="panel" id="feedPanel">
-            <h3 id="fpHead">📰 会员的 Feed</h3>
-            <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
-              <span id="fpAvatar"></span>
-              <div style="min-width:0">
-                <div id="fpBio" style="font-size:.9rem;color:#334155;white-space:pre-wrap"></div>
-                <div class="meta" id="fpStat"></div>
-              </div>
-            </div>
-            <label>头衔
-              <select id="fpTitle"></select>
-            </label>
-            <div class="actions">
-              <button type="button" class="btn btn-ghost" id="fpResetAv">重设头像</button>
-              <button type="button" class="btn btn-ghost" id="fpClearBio">清除简介</button>
-              <a class="btn btn-ghost" id="fpOpen" target="_blank">看会员的 Feed 主页 ↗</a>
-            </div>
-            <p id="fpMsg" class="msg"></p>
-          </div>
         </div>
 
-        <!-- 右：绑定 -->
+        <!-- 右：关联平台、收货地址、会员的 Feed（左右两栏高度差不多） -->
         <div>
           <div class="panel">
             <h3>绑定账号 <span class="muted" id="bindCount" style="font-weight:400;font-size:.85rem"></span></h3>
@@ -160,6 +134,33 @@
               <button type="submit" class="btn btn-primary" id="bBtn">绑定</button>
             </form>
             <p id="bindMsg" class="msg"></p>
+          </div>
+
+          <!-- 📍 收货地址（只读；会员在前台「个人资料 › 收货地址」自己管理） -->
+          <div class="panel">
+            <h3>📍 收货地址 <span class="muted" id="addrCount" style="font-weight:400;font-size:.85rem"></span></h3>
+            <div id="addrList"><p class="meta">载入中…</p></div>
+          </div>
+
+          <!-- 📰 会员的 Feed -->
+          <div class="panel" id="feedPanel">
+            <h3 id="fpHead">📰 会员的 Feed</h3>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+              <span id="fpAvatar"></span>
+              <div style="min-width:0">
+                <div id="fpBio" style="font-size:.9rem;color:var(--text2);white-space:pre-wrap"></div>
+                <div class="meta" id="fpStat"></div>
+              </div>
+            </div>
+            <label>头衔
+              <select id="fpTitle"></select>
+            </label>
+            <div class="actions">
+              <button type="button" class="btn btn-ghost" id="fpResetAv">重设头像</button>
+              <button type="button" class="btn btn-ghost" id="fpClearBio">清除简介</button>
+              <a class="btn btn-ghost" id="fpOpen" target="_blank">看会员的 Feed 主页 ↗</a>
+            </div>
+            <p id="fpMsg" class="msg"></p>
           </div>
         </div>
       </div>

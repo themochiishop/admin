@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>运输公司 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    @media (max-width: 640px) { .carrier-row .ntm-in { grid-template-columns: 1fr !important; } }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>🚚 运输公司 &amp; 查询链接</h2>
+          <p class="muted">兑换审核、中奖奖品填运单号时的「运输公司」下拉选单。</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="meta" style="margin:10px 0">兑换审核和中奖奖品的「运输公司」下拉选单都用这份名单（「其他（自己填写）」会自动放在最后）。<br>
+          查询链接：输入单号就会自动生成，<code>{no}</code> 会换成追踪单号；留空 = 不自动生成。第一次请用真实单号测试链接能不能打开。<br>
+          不常用的公司取消勾选「显示」就好；以前的记录照样显示原本的公司名称。</p>
+        <div id="carrierList"></div>
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" id="carrierAdd">➕ 添加运输公司</button>
+          <button class="btn btn-primary" id="tplSave">💾 保存</button>
+        </div>
+        <p id="tplMsg" class="msg"></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, logAdmin, esc, CARRIERS, loadCarriers } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("shipping");
+
+    // ---------- 查询链接模板 ----------
+    const carrierRow = c => `
+      <div class="ntm-row carrier-row" data-cid="${esc(c.id)}">
+        <div class="ntm-in" style="grid-template-columns:1fr 2fr auto">
+          <input data-c="name" maxlength="40" value="${esc(c.name)}" placeholder="公司名称，例如 Pos Laju">
+          <input data-c="tpl" maxlength="200" value="${esc(c.tpl || "")}" placeholder="查询链接（选填）https://…{no}">
+          <label class="inline" style="margin:0;white-space:nowrap"><input type="checkbox" data-c="on" ${c.on !== false ? "checked" : ""}> 显示</label>
+        </div>
+        <div class="ntm-btn">
+          <button type="button" class="btn btn-ghost" data-crow="up" title="上移">↑</button>
+          ${c.isNew ? `<button type="button" class="btn btn-ghost" data-crow="del" title="删除">✕</button>` : ""}
+        </div>
+      </div>`;
+    function renderCarrierEditor() {
+      $("carrierList").innerHTML = CARRIERS.filter(c => c.id !== "other").map(carrierRow).join("");
+    }
+    $("carrierAdd").addEventListener("click", () => {
+      $("carrierList").insertAdjacentHTML("beforeend", carrierRow({ id: "c" + Date.now().toString(36), name: "", tpl: "", on: true, isNew: true }));
+      $("carrierList").lastElementChild.querySelector("input").focus();
+    });
+    $("carrierList").addEventListener("click", e => {
+      const b = e.target.closest("[data-crow]");
+      if (!b) return;
+      const row = b.closest(".carrier-row");
+      if (b.dataset.crow === "del") row.remove();
+      if (b.dataset.crow === "up" && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+    });
+    $("tplSave").addEventListener("click", async () => {
+      const msg = (t, ty) => { $("tplMsg").textContent = t; $("tplMsg").className = "msg" + (ty ? " " + ty : ""); };
+      const carriers = [...$("carrierList").querySelectorAll(".carrier-row")].map(r => ({
+        id: r.dataset.cid,
+        name: r.querySelector('[data-c="name"]').value.trim().slice(0, 40),
+        tpl: r.querySelector('[data-c="tpl"]').value.trim().slice(0, 200),
+        on: r.querySelector('[data-c="on"]').checked,
+      }));
+      if (carriers.some(c => !c.name)) return msg("公司名称不能留空（不要的话请取消勾选「显示」）", "err");
+      if (carriers.some(c => c.tpl && (!/^https:\/\//i.test(c.tpl) || !c.tpl.includes("{no}")))) return msg("查询链接要以 https:// 开头，而且要有 {no}", "err");
+      if (!carriers.some(c => c.on)) return msg("至少要显示一间运输公司", "err");
+      $("tplSave").disabled = true;
+      try {
+        await setDoc(doc(db, "settings", "shipping"), { carriers, updatedAt: serverTimestamp() }, { merge: true });
+        logAdmin("settings", "修改了运输公司名单", "shipping.html");
+        await loadCarriers();
+        renderCarrierEditor();
+        msg("已保存 ✅ 兑换审核、中奖奖品重新整理后就会用新的名单", "ok");
+      } catch (err) { msg("保存失败：" + err.message, "err"); }
+      finally { $("tplSave").disabled = false; }
+    });
+
+
+    requireAdmin(async () => {
+      await loadCarriers();
+      renderCarrierEditor();
+    });
+  </script>
+</body>
+</html>
