@@ -293,6 +293,8 @@ test("15 已寄出不能再寄、不能取消、不能改回等待订单", async
   await rejects(admin("nmException", at(OWNER, t + 3 * DAY), { rid, to: "pending_order", reason: "x" }), "nm/bad-move");
   const red = (await db.collection("redemptions").doc("nm_" + rid).get()).data();
   assert.equal(red.status, "shipped");
+  assert.equal(red.shipping.withOrder, true);
+  assert.equal(red.shipping.orderNo, o.no);
 });
 
 test("关联订单被平台取消：只标记，不自动改状态", async () => {
