@@ -86,3 +86,29 @@ test("4 / 5 / 6 现有欢迎礼：第一次绑定可领，之后不能再领", a
     availableAt: serverTimestamp(), createdAt: serverTimestamp(),
   }));
 });
+
+// ---------------------------------------------------------------- 🎁 小礼物
+test("小礼物：会员只看得到自己的；领奖追踪 / 打包清单看得到全部；谁都不能直接写", async () => {
+  await env.withSecurityRulesDisabled(async c => {
+    const db = c.firestore();
+    await setDoc(doc(db, "smallGiftBatches/b1"), { giftName: "A", count: 2 });
+    await setDoc(doc(db, "smallGifts/b1__A"), { uid: "memA1", status: "pending", giftName: "A" });
+    await setDoc(doc(db, "smallGifts/b1__X"), { uid: null, status: "pending", giftName: "A" });
+    await setDoc(doc(db, "staff/claims@staff.test"), { active: true, perms: { draw: { claims: true } } });
+    await setDoc(doc(db, "staff/pack@staff.test"), { active: true, perms: { pack: true } });
+    await setDoc(doc(db, "staff/console@staff.test"), { active: true, perms: { draw: { console: true } } });
+  });
+  await assertSucceeds(getDoc(doc(member("memA1"), "smallGifts/b1__A")));
+  await assertFails(getDoc(doc(member("memB1"), "smallGifts/b1__A")));
+  await assertFails(getDoc(doc(member("memA1"), "smallGifts/b1__X")));
+  await assertFails(getDoc(doc(member("memA1"), "smallGiftBatches/b1")));
+  await assertFails(updateDoc(doc(member("memA1"), "smallGifts/b1__A"), { status: "sent" }));
+  for (const e of ["claims@staff.test", "pack@staff.test", "redeem@staff.test"]) {
+    await assertSucceeds(getDoc(doc(staff(e), "smallGifts/b1__X")));
+    await assertSucceeds(getDoc(doc(staff(e), "smallGiftBatches/b1")));
+    await assertFails(updateDoc(doc(staff(e), "smallGifts/b1__X"), { status: "sent" }));
+  }
+  await assertFails(getDoc(doc(staff("console@staff.test"), "smallGifts/b1__X")));
+  await assertFails(setDoc(doc(owner(), "smallGifts/new"), { uid: "memA1", status: "pending" }));
+  await assertSucceeds(getDoc(doc(owner(), "smallGifts/b1__X")));
+});
