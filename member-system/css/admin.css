@@ -202,3 +202,9 @@ select { margin-top: 4px; }
 .ntm-btn { display: flex; flex-direction: column; gap: 4px; }
 .ntm-btn .btn { padding: 5px 9px; }
 @media (max-width: 600px) { .nt-more { grid-template-columns: 1fr; } .nt-row { flex-wrap: wrap; } .nt-row input { flex-basis: 100%; } }
+
+/* 🏅 签到达人礼物库存提醒（js/ci-stock.js） */
+.ci-stock-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--amber-bg); border: 1px solid #fcd34d; color: var(--amber-tx); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: .88rem; }
+.ci-stock-bar .meta { color: var(--amber-tx); opacity: .85; }
+.ci-stock-bar .btn { padding: 7px 12px; font-size: .82rem; }
