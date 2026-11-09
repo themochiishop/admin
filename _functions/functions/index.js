@@ -1,5 +1,6 @@
 // Mochii Member Club — Cloud Functions 入口
-// 🎉 新会员奖励：会员用 nmMember、后台用 nmAdmin，两个 callable；另有 2 个触发器、1 个每日排程
+// 🎉 新会员奖励：会员用 nmMember、后台用 nmAdmin，两个 callable；另有触发器和每日排程
+// 📅 每日签到：会员用 ciMember
 "use strict";
 
 const { initializeApp } = require("firebase-admin/app");
@@ -9,6 +10,7 @@ const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
 const core = require("./src/core");
+const checkin = require("./src/checkin");   // 📅 每日签到
 
 initializeApp();
 const db = getFirestore();
@@ -78,6 +80,11 @@ exports.nmMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10
 // 后台：{ op: "approve" | "extend" | ..., rid, txId, ... }
 exports.nmAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5 },
   req => run(pick(ADMIN_OPS, req), req));
+
+// 📅 每日签到（会员）：{ op: "checkIn" }
+const CI_OPS = { checkIn: checkin.ciCheckIn };
+exports.ciMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10 },
+  req => run(pick(CI_OPS, req), req));
 
 // 新会员资料建立：活动启用后注册的才标记为新会员
 exports.nmOnMemberCreated = onDocumentCreated({ document: "members/{uid}", region: DB_REGION },

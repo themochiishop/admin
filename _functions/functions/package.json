@@ -5,7 +5,8 @@
   "main": "index.js",
   "engines": { "node": "22" },
   "scripts": {
-    "test": "node --test --test-concurrency=1 test/core.test.js"
+    "test": "node --test --test-concurrency=1 test/core.test.js",
+    "test:checkin": "node --test test/checkin.test.js"
   },
   "dependencies": {
     "firebase-admin": "^14.5.0",
