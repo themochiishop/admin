@@ -12,9 +12,9 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 | `functions/src/checkin.js` | 📅 每日签到逻辑（7 天一轮、每天一笔）+ 🏅 签到达人（30 天奖励、礼物、分享奖励、每日检查） |
 | `functions/test/checkin.test.js` | 签到 + 签到达人测试（17 项，不用模拟器：`npm run test:checkin`） |
 | `functions/src/smallgift.js` | 🎁 小礼物：建立一期、作废 / 恢复 / 寄出、每日检查 |
-| `functions/test/smallgift.test.js` | 小礼物测试（10 项，不用模拟器：`npm run test:smallgift`） |
+| `functions/test/smallgift.test.js` | 小礼物测试（11 项，不用模拟器：`npm run test:smallgift`） |
 | `functions/src/pack.js` | 🧺 打包清单：这一批、找单号、勾选寄出、打包完成 |
-| `functions/test/pack.test.js` | 打包清单测试（7 项，不用模拟器：`npm run test:pack`） |
+| `functions/test/pack.test.js` | 打包清单测试（8 项，不用模拟器：`npm run test:pack`） |
 | `functions/src/core.js` | 全部逻辑：状态机、积分、订单检查、权限 |
 | `functions/test/core.test.js` | 后端测试（22 项） |
 | `firestore.rules` | 完整规则（= 11/08 版 + 新会员奖励 4 处新增） |
@@ -117,12 +117,14 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 资料：`smallGiftBatches/{场次}`（每期：礼物名称、每单 / 每人、期限）、`smallGifts/{场次}__{单号或买家}`（每一份：单号、平台、用户名、会员 uid、状态 pending / sent / voided、期限）
 - `sgAdmin`（后台 callable）：`create`（领奖追踪按「生成小礼物」，要「领奖追踪」权限）、`void` / `restore` / `ship` / `unship`（「领奖追踪」或「📦 打包清单」权限）
 - 认人：先看 `orders/{单号}.uid`，再看 `bindings/{platform}_{username}`；认不到 = 非会员，每日检查会再试
+- 中过奖的人这期不送：`create` 带 `winners`，同一位会员（含绑定的其他平台账号）或同一个平台账号中过奖，他其他没中的单也不送（`skippedWinners`）
 - 每日 9:25 `sgDaily`：补认会员；期限内有新订单（看下单时间）→ 标 `orderFound` 不作废；过期没下单 → 作废（`voidReason: expired`）并通知会员；到期前 7 天铃铛提醒会员一次
 - 规则：两个集合都只有后端写；会员只能读自己的（`uid`）
 - 部署：`firebase deploy --only functions:sgAdmin,functions:sgDaily --project member-system-27ae0`，然后跑 `gcloud run services update sgadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0`，再把 `firestore.rules` 贴到 Firebase 控制台
 
 ## 🧺 打包清单（2026-11-10）
 页面：admin `pack/`（要「🧺 打包清单」权限）。扫一张单 → 这位顾客要随单寄出的全部东西。
+- `undo`：撤销这一包（订单取消 / 勾错）——打包清单寄出的小礼物 → 待寄、中奖奖品 / 兑换 → 待发货（会员已完成的不动；迎新礼只提醒）
 - `pkAdmin`（后台 callable）：`batch`（最近 14 天、没取消、没标记打包完成的订单 + 每张单要放的东西）、`lookup`（单号或买家名）、`ship`（勾选；`done: true` 同时标记这一包完成）、`done`（标记 / 取消打包完成）
 - 合并五种：🎁 小礼物（smallGifts pending）、🏆 中奖奖品（prizeWins 随单；claimed / approved 可勾，unclaimed 只提醒）、🛍️ 兑换（redemptions 实体随单；approved 可勾，pending 只提醒）、🏅 签到达人礼物（ciGift，pending 也可勾 = 批准 + 寄出，补货中会扣 1 库存）、🎉 迎新礼（newMemberRewards ready_to_pack / packed，走 core 的 已打包 → 已寄出）
 - 寄出写法和后台「随订单寄出」一样：`status: shipped`、`shippedAt`、`shipping: { withOrder: true, orderNo, by, via: "pack" }` → 会员看到已发货，14 天后自动完成照旧
