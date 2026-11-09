@@ -14,7 +14,7 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 | `functions/src/smallgift.js` | 🎁 小礼物：建立一期、作废 / 恢复 / 寄出、每日检查 |
 | `functions/test/smallgift.test.js` | 小礼物测试（11 项，不用模拟器：`npm run test:smallgift`） |
 | `functions/src/pack.js` | 🧺 打包清单：这一批、找单号、勾选寄出、打包完成 |
-| `functions/test/pack.test.js` | 打包清单测试（8 项，不用模拟器：`npm run test:pack`） |
+| `functions/test/pack.test.js` | 打包清单测试（9 项，不用模拟器：`npm run test:pack`） |
 | `functions/src/core.js` | 全部逻辑：状态机、积分、订单检查、权限 |
 | `functions/test/core.test.js` | 后端测试（22 项） |
 | `firestore.rules` | 完整规则（= 11/08 版 + 新会员奖励 4 处新增） |
@@ -130,7 +130,7 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 寄出写法和后台「随订单寄出」一样：`status: shipped`、`shippedAt`、`shipping: { withOrder: true, orderNo, by, via: "pack" }` → 会员看到已发货，14 天后自动完成照旧
 - 权限只在后端检查；回传只有单号、平台、用户名、会员名字、要放什么（没有地址、电话）。打包员不需要能直接读会员资料
 - `core.js`：迎新礼的「已打包」「已寄出」两个动作，有「打包清单」权限也可以做（其他迎新礼操作不变）
-- 新集合 `packDone/{单号}`（只有后端写）
+- 新集合 `packDone/{单号}`、`packMeta/state`（上次「这批打包完成」的时间，页面的「这次」= 之后下的单）——都只有后端写
 - 🏆 非会员抽奖得主：页面直接读领奖追踪（要同一个浏览器登录过领奖追踪），勾选会在领奖追踪标记已寄出
 - 部署：`firebase deploy --only functions:pkAdmin,functions:nmAdmin --project member-system-27ae0`，然后跑 `pkadmin` 和 `nmadmin` 的 `gcloud` 那两行，再贴规则
 

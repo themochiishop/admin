@@ -573,6 +573,11 @@ service cloud.firestore {
       allow read: if perm('pack');
       allow write: if false;
     }
+    // 🧺 打包清单：上次「这批打包完成」的时间（只有后端写）
+    match /packMeta/{id} {
+      allow read: if perm('pack');
+      allow write: if false;
+    }
     match /smallGifts/{id} {
       allow read: if drawClaims() || perm('pack') || clubAny()
         || (signedIn() && resource.data.uid == request.auth.uid);
