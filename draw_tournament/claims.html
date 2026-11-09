@@ -339,6 +339,8 @@
     });
     window.onBatchRender = () => { if (ready) draw(); };
 
+    // 这一场的得主（名次被撤销的不算）：送去后端，中过奖的人这期不送小礼物（同一个人的其他单 / 其他平台账号也不送）
+    const winnersOf = b => Object.values(b.items || {}).filter(x => x && !x.removed && x.orderNo).map(x => ({ orderNo: x.orderNo, name: x.name || "" }));
     // 这一场没得奖的订单 = 参加名单 − 得主（名次被撤销的人算没得奖）
     function nonWinners(b) {
       const won = new Set(Object.values(b.items || {}).filter(x => x && !x.removed).map(x => norm(x.orderNo)));
@@ -376,6 +378,7 @@
             <b class="text-amber-200 text-sm">🎁 小礼物「${esc(sgb.giftName)}」</b>
             <span class="text-amber-100/80">${sgb.mode === "person" ? "每人一份" : "每单一份"} · 期限到 ${fmtD(sgb.deadline)}</span>
             <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700">共 <b>${sgb.count}</b> 份（会员 ${sgb.members || 0}）</span>
+            ${sgb.skippedWinners ? `<span class="text-slate-400">中过奖不送 ${sgb.skippedWinners} 张单</span>` : ""}
             <span class="px-2 py-0.5 rounded bg-sky-950 border border-sky-700 text-sky-200">待寄 <b>${c.pending}</b></span>
             <span class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700 text-emerald-200">已寄出 <b>${c.sent}</b></span>
             ${c.voided ? `<span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">🚫 作废 <b>${c.voided}</b></span>` : ""}
@@ -421,7 +424,7 @@
             <input id="sgDays" type="number" min="1" max="365" value="${esc(vDays)}" class="w-20 bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100"></label>
           <button data-act="create" ${busy ? "disabled" : ""} class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded disabled:opacity-50">${busy ? "生成中…" : "🎁 生成小礼物"}</button>
         </div>
-        <p class="mt-2 text-[11px] text-slate-400">每人一份：同一位会员（包括绑定的其他平台账号）这一期没中的单合成一份。生成后礼物名称和送法不能再改。</p>`);
+        <p class="mt-2 text-[11px] text-slate-400">中过奖的人这期不送（他的其他单、绑定的其他平台账号也不送），所以实际份数可能比较少。每人一份：同一位会员这一期没中的单合成一份。生成后礼物名称和送法不能再改。</p>`);
     }
 
     panel.addEventListener("click", async e => {
@@ -451,11 +454,11 @@
         if (!giftName) { alert("请填写礼物名称"); return; }
         if (!(days >= 1 && days <= 365)) { alert("期限要 1–365 天"); return; }
         const list = nonWinners(b);
-        if (!confirm(`🎁 生成小礼物？\n\n期别：${b.label || id}\n礼物：${giftName}\n送法：${mode === "person" ? "每人一份" : "每单一份"}\n期限：${days} 天\n没得奖的订单：${list.length} 张\n\n生成后礼物名称和送法不能再改。`)) return;
+        if (!confirm(`🎁 生成小礼物？\n\n期别：${b.label || id}\n礼物：${giftName}\n送法：${mode === "person" ? "每人一份" : "每单一份"}\n期限：${days} 天\n没得奖的订单：${list.length} 张（中过奖的人的其他单会再扣掉）\n\n生成后礼物名称和送法不能再改。`)) return;
         busy = true; draw(true);
         try {
-          const r = (await sgAdmin({ op: "create", batchId: id, label: b.label || "", month: b.month || "", giftName, mode, days, list })).data;
-          alert(`✅ 已生成 ${r.count} 份小礼物（${r.orders} 张订单，其中 ${r.members} 份认得出是会员）`);
+          const r = (await sgAdmin({ op: "create", batchId: id, label: b.label || "", month: b.month || "", giftName, mode, days, list, winners: winnersOf(b) })).data;
+          alert(`✅ 已生成 ${r.count} 份小礼物（${r.orders} 张订单，其中 ${r.members} 份认得出是会员）${r.skippedWinners ? `\n中过奖的人不送：${r.skippedWinners} 张单` : ""}`);
         } catch (err) { alert("❌ 生成失败：" + errText(err)); }
         busy = false; draw(true);
       }
