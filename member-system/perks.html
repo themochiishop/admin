@@ -12,6 +12,7 @@
     .perk-table th, .perk-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
     .perk-table th { color: var(--muted); font-weight: 600; font-size: .82rem; }
     .perk-table input[type=number] { width: 90px; margin: 0; }
+    #ciRow input[type=number] { width: 100%; min-width: 48px; }
     .perk-table .cond { color: var(--muted); font-size: .8rem; }
     .perk-table input[type=url] { margin: 0; min-width: 220px; }
     .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: .85rem; }
@@ -74,6 +75,23 @@
           <button class="btn btn-primary" id="saveSys">保存</button>
         </div>
         <p id="sysMsg" class="msg"></p>
+      </div>
+
+      <!-- 📅 每日签到：后端（Cloud Function ciMember）发分 -->
+      <div class="panel">
+        <h3>📅 每日签到</h3>
+        <p class="meta" style="margin:-6px 0 10px">会员在首页按「签到」领分，7 天一轮；中间断一天就从第 1 天重新开始，每天 00:00（马来西亚时间）换日。只有已绑定订单的会员（或内部会员）能签到。<br>
+          <b>要先部署云函数 ciMember 再打开</b>，不然会员按了会显示失败。某一天填 0 = 那天只算签到、不给分。</p>
+        <table class="perk-table">
+          <thead><tr><th>第 1 天</th><th>第 2 天</th><th>第 3 天</th><th>第 4 天</th><th>第 5 天</th><th>第 6 天</th><th>第 7 天 🎁</th></tr></thead>
+          <tbody><tr id="ciRow"></tr></tbody>
+        </table>
+        <p class="meta" id="ciSum" style="margin:8px 0 0"></p>
+        <div class="actions" style="align-items:center">
+          <label class="switch"><input type="checkbox" id="ciOn"> 开放（会员首页显示签到卡片）</label>
+          <button class="btn btn-primary" id="saveCi">保存</button>
+        </div>
+        <p id="ciMsg" class="msg"></p>
       </div>
 
       <!-- 📣 关注我们：会员按「去关注」后自己领取 -->
@@ -171,6 +189,23 @@
             <td><label class="switch"><input type="checkbox" data-on="${p.key}" ${c.active === false ? "" : "checked"}> 开放</label></td>
           </tr>`;
       }).join("");
+    }
+
+    // 📅 每日签到（要和后端 _functions/functions/src/checkin.js 的预设一致）
+    const CI_DEFAULT = [1, 1, 2, 2, 3, 3, 8];
+    function ciPoints() { return [...document.querySelectorAll("[data-ci]")].map(i => parseInt(i.value, 10)); }
+    function ciSumText() {
+      const p = ciPoints();
+      const week = p.reduce((a, b) => a + (b > 0 ? b : 0), 0);
+      $("ciSum").textContent = `每轮（7 天）共 ${week} 分 · 天天签到一个月约 ${Math.round(week * 30 / 7)} 分`;
+    }
+    function renderCi() {
+      const c = cfg.checkin || {};
+      const pts = Array.isArray(c.points) && c.points.length === 7 ? c.points : CI_DEFAULT;
+      $("ciRow").innerHTML = pts.map((n, i) => `<td><input type="number" min="0" max="100" step="1" data-ci="${i}" value="${n}"></td>`).join("");
+      $("ciOn").checked = c.active === true;
+      $("ciRow").querySelectorAll("input").forEach(i => i.addEventListener("input", ciSumText));
+      ciSumText();
     }
 
     function renderFollow() {
@@ -369,6 +404,7 @@
       } catch (e) { setMsg($("sysMsg"), "载入失败：" + e.message, "err"); }
       renderSys();
       renderFollow();
+      renderCi();
       renderCustom();
       initGive();
 
@@ -385,6 +421,16 @@
         try { await save(patch); setMsg($("followMsg"), "已保存 ✅ 有填链接、有开放的平台会显示给会员", "ok"); }
         catch (err) { setMsg($("followMsg"), "保存失败：" + err.message, "err"); }
         finally { $("saveFollow").disabled = false; }
+      });
+      $("saveCi").addEventListener("click", async () => {
+        const points = ciPoints();
+        if (!points.every(n => Number.isInteger(n) && n >= 0 && n <= 100)) { setMsg($("ciMsg"), "每天的积分要填 0–100 的整数", "err"); return; }
+        $("saveCi").disabled = true;
+        try {
+          await save({ checkin: { active: $("ciOn").checked, points } });
+          setMsg($("ciMsg"), $("ciOn").checked ? "已保存 ✅ 会员首页会显示签到卡片" : "已保存 ✅ 签到目前关闭，会员看不到", "ok");
+        } catch (err) { setMsg($("ciMsg"), "保存失败：" + err.message, "err"); }
+        finally { $("saveCi").disabled = false; }
       });
       if (!cfg.updatedAt) setMsg($("sysMsg"), "目前用的是预设分数。按一次「保存」就会存成你的设定。", "");
 
