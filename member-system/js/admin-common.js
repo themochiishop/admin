@@ -341,6 +341,7 @@ export const NAV_GROUPS = [
   { label: "会员", items: [
     ["members", "members.html", "👥", "会员列表"],
     ["newMember", "newmember.html", "🎉", "新会员奖励", "nmBadge"],
+    ["checkin", "checkin.html", "📅", "签到记录"],
     ["tiers", "tiers.html", "💎", "会员等级"],
   ] },
   { label: "商城", items: [
@@ -561,7 +562,7 @@ export function requireAdmin(onReady) {
 // 侧边栏：只显示这个人有权限的页面（没有任何项目的分组整组隐藏）
 const NAV_PERM = {
   overview: "member.overview", redeem: "member.redeem", prizes: "member.prizes", feedReview: "feed",
-  members: "member.members", newMember: "member.newMember", rewards: "member.shop", perks: "member.shop",
+  members: "member.members", checkin: "member.members", newMember: "member.newMember", rewards: "member.shop", perks: "member.shop",
   home: "member.content", feed: "feed", announce: "member.content", storehelp: "member.content",
   notify: "member.settings", tiers: "member.settings", couponCheck: "member.shop",
   shipping: ["member.redeem", "member.prizes"],
