@@ -11,6 +11,8 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 | `functions/index.js` | 函式入口：`nmMember`（会员）、`nmAdmin`（后台）、`ciMember`（📅 签到）、`nmOnMemberCreated`、`nmOnOrderWritten`、`nmDaily` |
 | `functions/src/checkin.js` | 📅 每日签到逻辑（7 天一轮、每天一笔）+ 🏅 签到达人（30 天奖励、礼物、分享奖励、每日检查） |
 | `functions/test/checkin.test.js` | 签到 + 签到达人测试（17 项，不用模拟器：`npm run test:checkin`） |
+| `functions/src/smallgift.js` | 🎁 小礼物：建立一期、作废 / 恢复 / 寄出、每日检查 |
+| `functions/test/smallgift.test.js` | 小礼物测试（10 项，不用模拟器：`npm run test:smallgift`） |
 | `functions/src/core.js` | 全部逻辑：状态机、积分、订单检查、权限 |
 | `functions/test/core.test.js` | 后端测试（22 项） |
 | `firestore.rules` | 完整规则（= 11/08 版 + 新会员奖励 4 处新增） |
@@ -68,6 +70,7 @@ firebase deploy --only functions --project member-system-27ae0
 gcloud run services update nmmember --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 gcloud run services update nmadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 gcloud run services update cimember --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
+gcloud run services update sgadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 ```
 检查（要看到「请先登入」）：
 ```bash
@@ -105,6 +108,15 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 每日 9:15 `ciDaily`：礼物到期前 7 天铃铛提醒；过期且礼物建立后没有订单 → 取消、退库存（补货中的不退）、通知；有订单 → 标 `orderFound`，等管理员随单寄出
 - 设定 `settings/perks.checkin.m30 = { points, sharePts, giftRewardId, giftDays }`（预设 30 / 10 / 无礼物 / 30 天）
 - 部署：`firebase deploy --only functions:ciMember,functions:ciOnFeedPostWritten,functions:ciDaily --project member-system-27ae0`，然后再跑一次 6.5 的 `cimember`（触发器和排程不用）
+
+## 🎁 小礼物（2026-11-10）
+抽奖没得奖的买家，每期送一份小礼物，随下一单寄出。
+- 资料：`smallGiftBatches/{场次}`（每期：礼物名称、每单 / 每人、期限）、`smallGifts/{场次}__{单号或买家}`（每一份：单号、平台、用户名、会员 uid、状态 pending / sent / voided、期限）
+- `sgAdmin`（后台 callable）：`create`（领奖追踪按「生成小礼物」，要「领奖追踪」权限）、`void` / `restore` / `ship` / `unship`（「领奖追踪」或「📦 打包清单」权限）
+- 认人：先看 `orders/{单号}.uid`，再看 `bindings/{platform}_{username}`；认不到 = 非会员，每日检查会再试
+- 每日 9:25 `sgDaily`：补认会员；期限内有新订单（看下单时间）→ 标 `orderFound` 不作废；过期没下单 → 作废（`voidReason: expired`）并通知会员；到期前 7 天铃铛提醒会员一次
+- 规则：两个集合都只有后端写；会员只能读自己的（`uid`）
+- 部署：`firebase deploy --only functions:sgAdmin,functions:sgDaily --project member-system-27ae0`，然后跑 `gcloud run services update sgadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0`，再把 `firestore.rules` 贴到 Firebase 控制台
 
 ## 🛍️ 商城兑换（2026-11-09）
 - 会员：`rdMember({ op: "redeem", rewardId, variantId? })` → `{ id }`；`rdMember({ op: "cancel", id })`

@@ -29,6 +29,11 @@ service cloud.firestore {
     }
     // 📰 Mochii Feed
     function feedPerm() { return perm('feed'); }
+    // 🎁 每月抽奖 › 领奖追踪（draw 可以是 true 或 { console, test, claims }）
+    function drawClaims() {
+      return ownerOk() || (isStaff() && (stDoc().perms.get('draw', false) == true
+        || (stDoc().perms.get('draw', false) is map && stDoc().perms.draw.get('claims', false) == true)));
+    }
 
    // ===== PO / Invoice 工具（admin.themochiishop.com/invoice/）=====
     // 客户 / 供应商名单
@@ -556,6 +561,18 @@ service cloud.firestore {
     }
 
 
+
+    // 🎁 小礼物（抽奖没得奖 → 随下一单寄出）：只有后端（sgAdmin / sgDaily）写
+    //   后台：领奖追踪、📦 打包清单、Member Club 任何一项可以看；会员只能看自己的
+    match /smallGiftBatches/{id} {
+      allow read: if drawClaims() || perm('pack') || clubAny();
+      allow write: if false;
+    }
+    match /smallGifts/{id} {
+      allow read: if drawClaims() || perm('pack') || clubAny()
+        || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
 
     // 奖品目录：公开可看，管理员管理
     match /rewards/{id} {
