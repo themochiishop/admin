@@ -106,6 +106,15 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 设定 `settings/perks.checkin.m30 = { points, sharePts, giftRewardId, giftDays }`（预设 30 / 10 / 无礼物 / 30 天）
 - 部署：`firebase deploy --only functions:ciMember,functions:ciOnFeedPostWritten,functions:ciDaily --project member-system-27ae0`，然后再跑一次 6.5 的 `cimember`（触发器和排程不用）
 
+## 🛍️ 商城兑换（2026-11-09）
+- 会员：`rdMember({ op: "redeem", rewardId, variantId? })` → `{ id }`；`rdMember({ op: "cancel", id })`
+- 同一个 Transaction 检查：上架、非签到达人专属、已开放、没过下架时间、款式、库存、本期限兑次数、积分（已到账 − 审核中），通过才建立 pending 兑换并**马上扣库存**（奖品和款式），兑换带 `reserved: true`
+- 后台：`reserved` 的兑换批准时不再扣库存（标测试的会加回）；拒绝 / 会员取消时加回；旧的兑换（没有 reserved）照旧批准时扣
+- 规则：会员不能再直接建立兑换；`reserved` 的兑换会员只能经后端取消
+- 错误 key：`rd/sold-out`、`rd/points`、`rd/limit`、`rd/variant`、`rd/gone`、`rd/not-open`、`rd/ci-only`、`rd/closed`、`rd/not-member`、`rd/not-pending`、`rd/no-cancel`
+- 测试：`node --test test/redeem.test.js`（10 项，用 `test/fake-db.js`）
+- 部署：`firebase deploy --only functions:rdMember --project member-system-27ae0`，再跑 `gcloud run services update rdmember --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0`
+
 ## 网页怎么呼叫
 ```js
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
