@@ -112,3 +112,9 @@ test("小礼物：会员只看得到自己的；领奖追踪 / 打包清单看�
   await assertFails(setDoc(doc(owner(), "smallGifts/new"), { uid: "memA1", status: "pending" }));
   await assertSucceeds(getDoc(doc(owner(), "smallGifts/b1__X")));
 });
+
+test("打包清单：packDone 只有后端写", async () => {
+  await assertFails(setDoc(doc(staff("pack@staff.test"), "packDone/2611190000001"), { at: 1 }));
+  await assertSucceeds(getDoc(doc(staff("pack@staff.test"), "packDone/2611190000001")));
+  await assertFails(getDoc(doc(member("memA1"), "packDone/2611190000001")));
+});
