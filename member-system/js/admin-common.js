@@ -1,6 +1,7 @@
 // member-system 后台共用功能
 import { auth, db } from "./firebase-config.js";
 import { getAccess, can, MEMBER_PAGE_PERM, firstMemberPage, setupOwnerOnly } from "/js/admin-guard.js";
+import { refreshCiStockBadge } from "./ci-stock.js";   // 🏅 签到达人礼物库存提醒
 import {
   onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -344,7 +345,7 @@ export const NAV_GROUPS = [
   ] },
   { label: "商城", items: [
     ["rewards", "rewards.html", "🛍️", "商城奖品"],
-    ["perks", "perks.html", "🎁", "额外福利"],
+    ["perks", "perks.html", "🎁", "额外福利", "perksBadge"],
     ["couponCheck", "coupon-check.html", "🔍", "优惠码核对"],
   ] },
   { label: "内容", items: [
@@ -416,9 +417,9 @@ export function renderAdminNav(active) {
 function updateSideDot() {
   const dot = document.getElementById("sideDot");
   if (!dot) return;
-  const n = ["redeemBadge", "prizeBadge", "feedBadge", "nmBadge"].reduce((s, id) => {
+  const n = ["redeemBadge", "prizeBadge", "feedBadge", "nmBadge", "perksBadge"].reduce((s, id) => {
     const el = document.getElementById(id);
-    return s + (el && !el.hidden ? (parseInt(el.textContent, 10) || 0) : 0);
+    return s + (el && !el.hidden ? (parseInt(el.textContent, 10) || 1) : 0);   // 「!」算 1 件
   }, 0);
   dot.textContent = n > 99 ? "99+" : n;
   dot.hidden = !n;
@@ -552,6 +553,7 @@ export function requireAdmin(onReady) {
     if (can(access, "member.prizes")) refreshPrizeBadge();
     if (can(access, "feed")) refreshFeedBadge();
     if (can(access, "member.newMember")) refreshNmBadge();
+    if (can(access, "member.shop")) refreshCiStockBadge().then(updateSideDot);
   });
 }
 
