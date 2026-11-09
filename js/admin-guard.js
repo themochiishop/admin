@@ -64,7 +64,7 @@ export const MEMBER_PAGE_PERM = {
   "index.html": "member.overview", "": "member.overview",
   "redeem.html": "member.redeem",
   "prizes.html": "member.prizes",
-  "members.html": "member.members", "member.html": "member.members",
+  "members.html": "member.members", "member.html": "member.members", "checkin.html": "member.members",
   "newmember.html": "member.newMember",
   "rewards.html": "member.shop", "perks.html": "member.shop",
   "home.html": "member.content", "announcements.html": "member.content", "storehelp.html": "member.content",
