@@ -3,12 +3,14 @@
 位置：admin 仓库 `_functions/`（底线开头，GitHub Pages 不会把它发布到 admin.themochiishop.com）
 Firebase 项目：`member-system-27ae0` · 方案：Blaze
 
-目前只有一个功能：🎉 **新会员奖励（New Member Special）**。设计见项目文件 `新会员奖励-第二阶段设计.md` 和 `新会员奖励-第二阶段补充.md`。
+两个功能：🎉 **新会员奖励（New Member Special）**、📅 **每日签到**（2026-11-09）。设计见项目文件 `新会员奖励-第二阶段设计.md` 和 `新会员奖励-第二阶段补充.md`。
 
 ## 资料夹
 | 档案 | 用途 |
 |---|---|
-| `functions/index.js` | 函式入口：`nmMember`（会员）、`nmAdmin`（后台）、`nmOnMemberCreated`、`nmOnOrderWritten`、`nmDaily` |
+| `functions/index.js` | 函式入口：`nmMember`（会员）、`nmAdmin`（后台）、`ciMember`（📅 签到）、`nmOnMemberCreated`、`nmOnOrderWritten`、`nmDaily` |
+| `functions/src/checkin.js` | 📅 每日签到逻辑（7 天一轮、每天一笔） |
+| `functions/test/checkin.test.js` | 签到测试（9 项，不用模拟器：`npm run test:checkin`） |
 | `functions/src/core.js` | 全部逻辑：状态机、积分、订单检查、权限 |
 | `functions/test/core.test.js` | 后端测试（22 项） |
 | `firestore.rules` | 完整规则（= 11/08 版 + 新会员奖励 4 处新增） |
@@ -65,6 +67,7 @@ firebase deploy --only functions --project member-system-27ae0
 ```bash
 gcloud run services update nmmember --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 gcloud run services update nmadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
+gcloud run services update cimember --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 ```
 检查（要看到「请先登入」）：
 ```bash
@@ -85,6 +88,13 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 每天 9:05 会跑一次逾期检查（目前没有资料，什么都不做）
 
 ---
+
+## 📅 每日签到（2026-11-09）
+- 会员：`ciMember({ op: "checkIn" })` → `{ already, today, day, pts, streak, nextPts }`
+- 设定：`settings/perks.checkin = { active, points: [7 个数字] }`（后台「额外福利 › 每日签到」）；没设定过 = 关闭，预设分数 1·1·2·2·3·3·8
+- 状态：`checkins/{uid}`（会员只读自己的，只有后端写）；积分：`pointsLedger/checkin_{uid}_{yyyymmdd}`，原因「每日签到：第N天」
+- 只有绑定订单的会员或内部会员能签；错误 key：`ci/off`、`ci/need-bind`、`ci/not-member`、`ci/signin`
+- 只部署签到：`firebase deploy --only functions:ciMember --project member-system-27ae0`，然后做 6.5 的 `cimember` 那一行
 
 ## 网页怎么呼叫
 ```js
