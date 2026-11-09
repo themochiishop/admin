@@ -837,6 +837,7 @@
     }
     // ===================== 🎁 领奖清单（按月保存）=====================
     // 比赛结束后自动写入 draw_private/claimBatches/{场次}：{ label, createdAt, title, items: { 订单号: { name, orderNo, rank, rankKey, sort, contacted, shipped, note } } }
+    //   另存 participants: { 订单号: { n: 名字, o: 订单号 } }（第 1 轮全部参加的订单，给领奖追踪生成 🎁 小礼物）
     //   重置下一场也不会影响；联系 / 寄出进度在 claims.html 处理（控制台首页也有入口和提醒）
     const CLAIM_BATCHES = 'draw_private/claimBatches';
     const CLAIM_RANKS = ['rankChampion', 'rankRunnerUp', 'rankThird', 'rankFinalist', 'rankConsolation'];
@@ -921,7 +922,15 @@
         });
         // 名次被撤销的人：没动过就删掉，已经联系 / 寄出 / 有备注的保留并标记
         Object.keys(items).forEach(k => { if (!keep.has(k)) { const it = items[k] || {}; if (it.contacted || it.shipped || it.note) up[`items/${k}/removed`] = true; else up[`items/${k}`] = null; } });
-        return ref.update(up);
+        return ref.update(up).then(() => {
+          // 🎁 参加名单（第 1 轮全部订单）：领奖追踪用来算「没得奖的人」→ 生成小礼物
+          //   分开写：就算这一步失败，得主清单也已经更新好
+          const parts = {};
+          const r0 = (state.rounds || [])[0];
+          ((r0 && r0.candidates) || []).forEach(c => { if (c && c.orderNo) parts[claimKey(c)] = { n: c.name || '', o: c.orderNo }; });
+          if (!Object.keys(parts).length) return;
+          return ref.child('participants').set(parts).catch(e => console.warn('participants', e));
+        });
       }).then(() => {
         state.claimsPublishedSig = sig;
         saveState();

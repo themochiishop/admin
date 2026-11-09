@@ -57,6 +57,8 @@
   <main class="max-w-6xl mx-auto px-4 py-4">
     <div id="summary" class="flex flex-wrap gap-2 mb-4"></div>
     <div id="clubHint" class="hidden mb-4 rounded-lg border border-pink-800 bg-pink-950/40 px-3 py-2 text-xs text-pink-200"></div>
+    <!-- 🎁 小礼物：这一期没得奖的买家（下面最后一个 module 脚本负责） -->
+    <div id="sgPanel" class="hidden mb-4"></div>
     <div id="list"></div>
     <div id="footerTools" class="hidden mt-8 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
       <span>勾选和备注会自动保存（离开输入框即保存），只有后台账号看得到。</span>
@@ -206,6 +208,7 @@
       const list = $('list');
       const a = document.activeElement;
       if (a && list.contains(a) && a.type === 'text') return;            // 正在输入备注时先不刷新
+      if (window.onBatchRender) window.onBatchRender();                  // 🎁 小礼物区块跟着换场次
       if (!curId || !batches[curId]) {
         $('summary').innerHTML = '';
         $('footerTools').classList.add('hidden');
@@ -306,6 +309,156 @@
         window.clubPrizes = map;
         if (window.onClubPrizes) window.onClubPrizes();
       }, e => console.warn("prizeWins", e));
+    });
+  </script>
+  <!-- 🎁 小礼物：这一期没得奖的买家，每人 / 每单送一份，随下一单寄出（资料在会员系统 Firestore，只有后端 sgAdmin 写） -->
+  <script type="module">
+    import { app, auth, db } from "../member-system/js/firebase-config.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
+
+    const sgAdmin = httpsCallable(getFunctions(app, "asia-southeast1"), "sgAdmin");
+    const panel = document.getElementById("sgPanel");
+    const esc = x => String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const norm = o => String(o || "").replace(/\s/g, "").toUpperCase();
+    const fmtD = t => { const d = t && t.toDate ? t.toDate() : null; return d ? `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}` : "-"; };
+    const ST = { pending: "待寄", sent: "已寄出", voided: "已作废" };
+    const errText = e => (e && e.message) || String(e);
+
+    let ready = false, sgBatches = {}, gifts = [], giftsFor = null, unGifts = null, open = false, busy = false;
+
+    onAuthStateChanged(auth, user => {
+      if (!user || ready) return;
+      ready = true;
+      onSnapshot(collection(db, "smallGiftBatches"), snap => {
+        sgBatches = {};
+        snap.docs.forEach(d => { sgBatches[d.id] = d.data(); });
+        draw();
+      }, e => { console.warn("smallGiftBatches", e); ready = false; panel.classList.add("hidden"); });
+    });
+    window.onBatchRender = () => { if (ready) draw(); };
+
+    // 这一场没得奖的订单 = 参加名单 − 得主（名次被撤销的人算没得奖）
+    function nonWinners(b) {
+      const won = new Set(Object.values(b.items || {}).filter(x => x && !x.removed).map(x => norm(x.orderNo)));
+      return Object.values(b.participants || {}).filter(p => p && p.o && !won.has(norm(p.o))).map(p => ({ orderNo: p.o, name: p.n || "" }));
+    }
+
+    function watchGifts(id) {
+      if (giftsFor === id) return;
+      if (unGifts) unGifts();
+      giftsFor = id; gifts = []; unGifts = null;
+      if (!id || !sgBatches[id]) return;
+      unGifts = onSnapshot(query(collection(db, "smallGifts"), where("batchId", "==", id)), snap => {
+        gifts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        draw();
+      }, e => console.warn("smallGifts", e));
+    }
+
+    function draw(force) {
+      const f = document.activeElement;
+      if (!force && f && panel.contains(f) && (f.tagName === "INPUT" || f.tagName === "SELECT")) return;   // 正在填礼物名称时先不刷新
+      const id = typeof curId !== "undefined" ? curId : null;
+      const b = id && typeof batches !== "undefined" ? batches[id] : null;
+      if (!b) { panel.classList.add("hidden"); return; }
+      const box = (html, tone = "amber") => `<div class="rounded-lg border border-${tone}-700/60 bg-${tone}-950/30 p-3">${html}</div>`;
+      const sgb = sgBatches[id];
+      watchGifts(sgb ? id : null);
+      panel.classList.remove("hidden");
+
+      if (sgb) {                                   // 已经生成
+        const c = { pending: 0, sent: 0, voided: 0 };
+        gifts.forEach(g => { c[g.status] = (c[g.status] || 0) + 1; });
+        const rows = gifts.slice().sort((a, b) => (a.status === "pending" ? 0 : 1) - (b.status === "pending" ? 0 : 1) || String(a.name).localeCompare(String(b.name)));
+        panel.innerHTML = box(`
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+            <b class="text-amber-200 text-sm">🎁 小礼物「${esc(sgb.giftName)}」</b>
+            <span class="text-amber-100/80">${sgb.mode === "person" ? "每人一份" : "每单一份"} · 期限到 ${fmtD(sgb.deadline)}</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700">共 <b>${sgb.count}</b> 份（会员 ${sgb.members || 0}）</span>
+            <span class="px-2 py-0.5 rounded bg-sky-950 border border-sky-700 text-sky-200">待寄 <b>${c.pending}</b></span>
+            <span class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700 text-emerald-200">已寄出 <b>${c.sent}</b></span>
+            ${c.voided ? `<span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">🚫 作废 <b>${c.voided}</b></span>` : ""}
+            <button data-act="toggle" class="ml-auto px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded font-bold">${open ? "收起名单 ▲" : "📋 名单 ▼"}</button>
+          </div>
+          ${open ? `<div class="mt-3 max-h-[420px] overflow-auto rounded border border-slate-700">
+            <table class="w-full text-left text-xs">
+              <thead class="sticky top-0 bg-slate-800 text-slate-400"><tr><th class="py-1.5 px-2">买家</th><th class="py-1.5 px-2">订单号</th><th class="py-1.5 px-2">会员</th><th class="py-1.5 px-2">状态</th><th class="py-1.5 px-2"></th></tr></thead>
+              <tbody>${rows.map(g => `<tr class="border-t border-slate-700/60 ${g.status === "pending" ? "" : "opacity-60"}">
+                <td class="py-1.5 px-2 font-bold">${esc(g.name || g.username)} <span class="text-[10px] px-1 rounded ${g.platform === "tiktok" ? "tag-T" : g.platform === "shopee" ? "tag-S" : ""}">${g.platform === "tiktok" ? "TikTok" : g.platform === "shopee" ? "Shopee" : ""}</span></td>
+                <td class="py-1.5 px-2 font-mono text-slate-300">${(g.orderNos || []).map(esc).join("<br>")}</td>
+                <td class="py-1.5 px-2">${g.uid ? '<span class="text-pink-300">🎫 会员</span>' : '<span class="text-slate-500">—</span>'}</td>
+                <td class="py-1.5 px-2">${esc(ST[g.status] || g.status)}${g.status === "sent" && g.sentOrder ? `<div class="text-[10px] text-slate-400">随 ${esc(g.sentOrder)}</div>` : ""}${g.status === "voided" ? `<div class="text-[10px] text-slate-400">${g.voidReason === "expired" ? "过期没下单" : esc(g.voidNote || "手动作废")}</div>` : ""}${g.status === "pending" && g.orderFound ? '<div class="text-[10px] text-emerald-300">✅ 已下新单，等打包</div>' : ""}</td>
+                <td class="py-1.5 px-2 text-right whitespace-nowrap">${g.status === "pending" ? `<button data-act="void" data-id="${esc(g.id)}" class="px-2 py-0.5 border border-slate-600 hover:bg-slate-700 rounded">🚫 作废</button>` : g.status === "voided" ? `<button data-act="restore" data-id="${esc(g.id)}" class="px-2 py-0.5 border border-slate-600 hover:bg-slate-700 rounded">↩️ 恢复</button>` : ""}</td>
+              </tr>`).join("")}</tbody>
+            </table></div>
+            <p class="mt-2 text-[11px] text-slate-400">寄出在「📦 打包清单」勾选。过期没下单的会在每天早上自动作废，会员会收到通知；到期前 7 天会先提醒会员。</p>` : ""}`);
+        return;
+      }
+
+      if (!b.participants) {                       // 功能上线前的抽奖：没有参加名单
+        panel.innerHTML = box(`<div class="text-xs text-slate-300">🎁 <b>小礼物</b>：这一场没有参加名单（小礼物功能上线前的抽奖）。从下一期开始，比赛结束按「✅ 更新到领奖追踪」时会自动带上名单。</div>`, "slate");
+        return;
+      }
+
+      const list = nonWinners(b);
+      if (!list.length) { panel.innerHTML = box(`<div class="text-xs text-slate-300">🎁 这一场所有订单都得奖了，没有小礼物要送。</div>`, "slate"); return; }
+      const keep = id => { const el = document.getElementById(id); return el ? el.value : null; };
+      const vName = keep("sgName") ?? "", vMode = keep("sgMode") ?? "order", vDays = keep("sgDays") ?? "30";
+      panel.innerHTML = box(`
+        <div class="flex flex-wrap items-center gap-2">
+          <b class="text-amber-200 text-sm">🎁 小礼物</b>
+          <span class="text-xs text-amber-100/80">这一场有 <b>${list.length}</b> 张订单没得奖，送一份小礼物，随买家下一单寄出</span>
+        </div>
+        <div class="mt-2.5 flex flex-wrap items-end gap-2 text-xs">
+          <label class="flex flex-col gap-1">礼物名称
+            <input id="sgName" maxlength="60" value="${esc(vName)}" placeholder="例如：Mochii 贴纸" class="w-48 bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-amber-400"></label>
+          <label class="flex flex-col gap-1">送法
+            <select id="sgMode" class="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100">
+              <option value="order" ${vMode === "order" ? "selected" : ""}>每单一份</option>
+              <option value="person" ${vMode === "person" ? "selected" : ""}>每人一份</option></select></label>
+          <label class="flex flex-col gap-1">期限（天）
+            <input id="sgDays" type="number" min="1" max="365" value="${esc(vDays)}" class="w-20 bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-slate-100"></label>
+          <button data-act="create" ${busy ? "disabled" : ""} class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded disabled:opacity-50">${busy ? "生成中…" : "🎁 生成小礼物"}</button>
+        </div>
+        <p class="mt-2 text-[11px] text-slate-400">每人一份：同一位会员（包括绑定的其他平台账号）这一期没中的单合成一份。生成后礼物名称和送法不能再改。</p>`);
+    }
+
+    panel.addEventListener("click", async e => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn || busy) return;
+      const act = btn.dataset.act, id = (typeof curId !== "undefined") ? curId : null;
+      if (act === "toggle") { open = !open; draw(true); return; }
+      if (act === "void" || act === "restore") {
+        const g = gifts.find(x => x.id === btn.dataset.id);
+        if (!g) return;
+        let note = "";
+        if (act === "void") {
+          note = prompt(`作废 ${g.name || g.username} 的小礼物？\n可以填原因（可留空）：`, "");
+          if (note === null) return;
+        } else if (!confirm(`恢复 ${g.name || g.username} 的小礼物？\n恢复后不会再自动过期作废。`)) return;
+        btn.disabled = true;
+        try { await sgAdmin({ op: act, id: g.id, note: note.trim() }); }
+        catch (err) { alert("❌ " + errText(err)); btn.disabled = false; }
+        return;
+      }
+      if (act === "create") {
+        const b = batches[id];
+        if (!b) return;
+        const giftName = document.getElementById("sgName").value.trim();
+        const mode = document.getElementById("sgMode").value;
+        const days = parseInt(document.getElementById("sgDays").value, 10);
+        if (!giftName) { alert("请填写礼物名称"); return; }
+        if (!(days >= 1 && days <= 365)) { alert("期限要 1–365 天"); return; }
+        const list = nonWinners(b);
+        if (!confirm(`🎁 生成小礼物？\n\n期别：${b.label || id}\n礼物：${giftName}\n送法：${mode === "person" ? "每人一份" : "每单一份"}\n期限：${days} 天\n没得奖的订单：${list.length} 张\n\n生成后礼物名称和送法不能再改。`)) return;
+        busy = true; draw(true);
+        try {
+          const r = (await sgAdmin({ op: "create", batchId: id, label: b.label || "", month: b.month || "", giftName, mode, days, list })).data;
+          alert(`✅ 已生成 ${r.count} 份小礼物（${r.orders} 张订单，其中 ${r.members} 份认得出是会员）`);
+        } catch (err) { alert("❌ 生成失败：" + errText(err)); }
+        busy = false; draw(true);
+      }
     });
   </script>
 </body>
