@@ -359,6 +359,10 @@ export const NAV_GROUPS = [
     ["notify", "notify.html", "📧", "邮件提醒"],
     ["shipping", "shipping.html", "🚚", "运输公司"],
   ] },
+  { label: "参考", items: [
+    ["faq", "faq.html", "📖", "客服 FAQ"],
+    ["changelog", "changelog.html", "🕒", "更新记录"],
+  ] },
 ];
 
 export function renderAdminNav(active) {
@@ -566,6 +570,7 @@ const NAV_PERM = {
   home: "member.content", feed: "feed", announce: "member.content", storehelp: "member.content",
   notify: "member.settings", tiers: "member.settings", couponCheck: "member.shop",
   shipping: ["member.redeem", "member.prizes"],
+  faq: "member", changelog: "_owner",   // _owner：没有人会被勾这一项 = 只有店主
 };
 // 权限可以是一个，或一组（有其中一项就可以）
 const canAny = (access, k) => Array.isArray(k) ? k.some(x => can(access, x)) : can(access, k);
