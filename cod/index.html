@@ -264,9 +264,10 @@
     .awb-main-content { flex: 1; }
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .awb-logo-group { display: flex; align-items: center; gap: 8px; }
-    .awb-logo { margin-left: 15px; width: 40px; height: 40px; object-fit: contain; }
-    .awb-title { padding-left: 20px; font-family: "Georgia", serif; font-size: 20px; font-weight: bold; color: #000; }
-    #barcode { width: 110px; height: 42px; }
+    .awb-logo { margin-left: 0; width: 40px; height: 40px; object-fit: contain; }
+    .awb-title { padding-left: 4px; font-family: "Georgia", serif; font-size: 18px; font-weight: bold; color: #000; white-space: nowrap; }
+    /* 条码保持原始比例，不可用 CSS 压缩，否则热敏打印线条会糊、扫不出 */
+    #barcode { display: block; flex-shrink: 0; }
 
     .awb-divider-thick { border-top: 2px solid #000; margin-bottom: 10px; }
     .awb-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
@@ -461,7 +462,7 @@
         <div class="awb-main-content">
           <div class="awb-header">
             <div class="awb-logo-group">
-              <img src="https://admin.themochiishop.com/logo.png" alt="Logo" class="awb-logo" onerror="this.src='https://via.placeholder.com/34?text=Mochii'">
+              <img src="https://admin.themochiishop.com/logo.png" alt="Logo" class="awb-logo" onerror="this.onerror=null; this.style.visibility='hidden'">
               <span class="awb-title">Order List</span>
             </div>
             <svg id="barcode"></svg>
@@ -784,11 +785,12 @@
         JsBarcode("#barcode", orderId, { 
           format: "CODE128", 
           lineColor: "#000", 
-          width: 1.1, 
-          height: 32, 
+          width: 0.945,          /* 打印时每条最细线 = 0.25mm = 热敏机 2 个点 */
+          height: 34,
+          margin: 10,            /* 左右留白，扫描器需要 */
           displayValue: true,    
-          fontSize: 22,          
-          textMargin: 2,         
+          fontSize: 11,          
+          textMargin: 1,         
           font: "monospace"      
         });
       } catch(e) { console.log(e); }
