@@ -267,3 +267,16 @@ test("每日检查：补货中的礼物过期不加回库存；订单早于礼�
   assert.equal(r.expired, 1);
   assert.equal(db.data.get("rewards/gift1").stock, 0);
 });
+
+test("签到状态被删掉、今天已经有积分：不再给分，并把状态补回今天", async () => {
+  const db = fakeDb({ ...ON, ...member("r1"), ...bound("r1") });
+  await ci.ciCheckIn(db, { uid: "r1", now: myt("2026-11-09", 10) });
+  db.data.delete("checkins/r1");   // 模拟资料被删
+  const r = await ci.ciCheckIn(db, { uid: "r1", now: myt("2026-11-09", 12) });
+  assert.equal(r.already, true); assert.equal(r.repaired, true); assert.equal(r.day, 1);
+  assert.equal(ledger(db, "r1").length, 1);
+  assert.equal(db.data.get("checkins/r1").lastDate, "2026-11-09");
+  // 明天照常是第 2 天
+  const t = await ci.ciCheckIn(db, { uid: "r1", now: myt("2026-11-10") });
+  assert.equal(t.day, 2); assert.equal(t.already, false);
+});
