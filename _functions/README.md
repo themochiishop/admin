@@ -9,8 +9,8 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 | 档案 | 用途 |
 |---|---|
 | `functions/index.js` | 函式入口：`nmMember`（会员）、`nmAdmin`（后台）、`ciMember`（📅 签到）、`nmOnMemberCreated`、`nmOnOrderWritten`、`nmDaily` |
-| `functions/src/checkin.js` | 📅 每日签到逻辑（7 天一轮、每天一笔） |
-| `functions/test/checkin.test.js` | 签到测试（9 项，不用模拟器：`npm run test:checkin`） |
+| `functions/src/checkin.js` | 📅 每日签到逻辑（7 天一轮、每天一笔）+ 🏅 签到达人（30 天奖励、礼物、分享奖励、每日检查） |
+| `functions/test/checkin.test.js` | 签到 + 签到达人测试（17 项，不用模拟器：`npm run test:checkin`） |
 | `functions/src/core.js` | 全部逻辑：状态机、积分、订单检查、权限 |
 | `functions/test/core.test.js` | 后端测试（22 项） |
 | `firestore.rules` | 完整规则（= 11/08 版 + 新会员奖励 4 处新增） |
@@ -95,6 +95,16 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 状态：`checkins/{uid}`（会员只读自己的，只有后端写）；积分：`pointsLedger/checkin_{uid}_{yyyymmdd}`，原因「每日签到：第N天」
 - 只有绑定订单的会员或内部会员能签；错误 key：`ci/off`、`ci/need-bind`、`ci/not-member`、`ci/signin`
 - 只部署签到：`firebase deploy --only functions:ciMember --project member-system-27ae0`，然后做 6.5 的 `cimember` 那一行
+
+## 🏅 签到达人（2026-11-09，设计见项目文件「签到达人-设计.md」）
+- 连续签满 30 天（每满 30 天一次）：`ciMember checkIn` 回传多一个 `milestone: { streak, points, sharePts, badges, gift: { name, backorder, days } | null }`
+  - +30 分 `pointsLedger/checkin_m30_{uid}_{yyyymmdd}`（原因「签到达人：连续 30 天」）
+  - 礼物兑换 `redemptions/ci_{uid}_{yyyymmdd}`：0 积分、pending、随单寄送、`gift: true`、`ciGift: true`、`deadline`；库存 0 → `backorder: true`
+  - 徽章 `memberFeed/{uid}.ciBadge`（只有后端能写）；分享资格 `checkins/{uid}.share = { ms, claimed, postId }`
+- 分享奖励 `ciOnFeedPostWritten`：`feedPosts` 有 `tag: "checkin"`、`ciMs` = 达标日期，变成已发布 → +10 `pointsLedger/checkin_share_{uid}_{yyyymmdd}`
+- 每日 9:15 `ciDaily`：礼物到期前 7 天铃铛提醒；过期且礼物建立后没有订单 → 取消、退库存（补货中的不退）、通知；有订单 → 标 `orderFound`，等管理员随单寄出
+- 设定 `settings/perks.checkin.m30 = { points, sharePts, giftRewardId, giftDays }`（预设 30 / 10 / 无礼物 / 30 天）
+- 部署：`firebase deploy --only functions:ciMember,functions:ciOnFeedPostWritten,functions:ciDaily --project member-system-27ae0`，然后再跑一次 6.5 的 `cimember`（触发器和排程不用）
 
 ## 网页怎么呼叫
 ```js
