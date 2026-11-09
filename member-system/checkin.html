@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>签到记录 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    .ci-wrap { max-width: 1400px; margin: 14px auto 0; padding: 0 16px 30px; }
+    .ci-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .ci-head h2 { margin: 0; flex: 1; font-size: 1.2rem; color: var(--ink); }
+    .ci-head .muted { font-size: .78rem; }
+    /* 今日概况 */
+    .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .ov-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+    .ov-card:hover { border-color: #f9a8d4; }
+    .ov-card .n { font-size: 1.6rem; font-weight: 800; line-height: 1.1; }
+    .ov-card .l { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+    .ov-card.hot { background: var(--rose-bg); border-color: #fda4af; }
+    /* 分页 */
+    .ci-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .ci-tabs button { border: 1px solid var(--line2); background: var(--card); color: var(--ink); border-radius: 10px; padding: 7px 14px; font-weight: 700; font-size: .88rem; cursor: pointer; }
+    .ci-tabs button.active { background: #db2777; border-color: #db2777; color: #fff; }
+    .ci-tabs .cnt { background: #dc2626; color: #fff; border-radius: 999px; padding: 0 7px; font-size: .72rem; margin-left: 4px; }
+    .ci-tabs button.active .cnt { background: #fff; color: #db2777; }
+
+    /* ===== 左右两栏（后台会员系统模板1） ===== */
+    .rw-layout { display: grid; grid-template-columns: minmax(340px, 5fr) 7fr; gap: 14px; height: calc(100vh - 250px); min-height: 480px; }
+    .rw-left, .rw-right { min-height: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .rw-toolbar { padding: 12px 14px 8px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .rw-top { display: flex; align-items: center; gap: 8px; }
+    .rw-top h3 { flex: 1; font-size: 1.05rem; color: var(--ink); margin: 0; }
+    .rw-top .btn { padding: 6px 10px; font-size: .82rem; }
+    .rw-toolbar input, .rw-toolbar select { margin: 0; padding: 7px 10px; font-size: .86rem; }
+    .rw-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .rw-chips button { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: .76rem; font-weight: 600; cursor: pointer; }
+    .rw-chips button.on { background: #db2777; border-color: #db2777; color: #fff; }
+    .rw-chips button .n { opacity: .7; margin-left: 3px; }
+    .rw-list { flex: 1; overflow-y: auto; padding: 6px; }
+    .rw-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+    .rw-row:hover { background: var(--soft2); }
+    .rw-row.sel { background: var(--pink-bg); border-color: #f9a8d4; }
+    .rw-row .th { width: 42px; height: 42px; border-radius: 10px; background: var(--soft); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; }
+    .rw-row .th b { font-size: 1rem; color: var(--ink); }
+    .rw-row .th small { font-size: .6rem; color: var(--muted); margin-top: 2px; }
+    .rw-row .th.today { background: var(--green-bg); }
+    .rw-row .th.broken { opacity: .55; }
+    .rw-row .tx { flex: 1; min-width: 0; }
+    .rw-row .nm { font-weight: 700; font-size: .88rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+    .rw-row .sb { font-size: .74rem; color: var(--muted); display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+    .rw-row .sb .tag { font-size: .66rem; padding: 1px 6px; }
+    .badge-mini { width: 16px; height: 16px; vertical-align: -3px; }
+    .rw-right { position: relative; }
+    .rw-empty { margin: auto; text-align: center; color: var(--muted); font-size: .9rem; padding: 30px; }
+    .rw-editor { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+    .rw-ehead { display: flex; align-items: center; gap: 10px; padding: 12px 16px 6px; flex-wrap: wrap; }
+    .rw-ehead h3 { margin: 0; font-size: 1.05rem; color: var(--ink); flex: 1; }
+    .rw-back { display: none; padding: 5px 10px; font-size: .8rem; }
+    .rw-body { flex: 1; overflow-y: auto; padding: 10px 16px; }
+    .rw-sec { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+    .rw-sec h4 { margin: 0 0 8px; font-size: .9rem; color: var(--ink); }
+    @media (max-width: 899px) {
+      .rw-layout { grid-template-columns: 1fr; height: calc(100vh - 54px - 250px); }
+      .rw-right { display: none; }
+      body.rw-editing .rw-left { display: none; }
+      body.rw-editing .rw-right { display: flex; }
+      .rw-back { display: inline-flex; }
+    }
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; font-size: .86rem; }
+    .kv .k { color: var(--muted); }
+    .kv .v { color: var(--ink); }
+    /* 最近 60 天月历 */
+    .cal { display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px; max-width: 520px; }
+    .cal div { aspect-ratio: 1; border-radius: 6px; background: var(--soft); display: flex; align-items: center; justify-content: center; font-size: .66rem; color: var(--faint); position: relative; }
+    .cal div.on { background: linear-gradient(135deg, #ff6fae, #7c5cff); color: #fff; font-weight: 700; }
+    .cal div.star::after { content: ""; position: absolute; inset: -2px; border: 2px solid #f59e0b; border-radius: 8px; }
+    .cal div.today { outline: 2px solid #db2777; outline-offset: 1px; }
+    .cal-legend { font-size: .74rem; color: var(--muted); margin-top: 6px; }
+    /* 表格 */
+    .tbl-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+    .tbl-tools input, .tbl-tools select { width: auto; margin: 0; padding: 6px 9px; font-size: .86rem; }
+    .tbl-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: auto; }
+    table.ci-tbl { width: 100%; border-collapse: collapse; font-size: .84rem; }
+    .ci-tbl th, .ci-tbl td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+    .ci-tbl th { color: var(--muted); font-weight: 600; font-size: .78rem; background: var(--soft2); position: sticky; top: 0; }
+    .ci-tbl tr:last-child td { border-bottom: 0; }
+    .ci-tbl a { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="ci-wrap">
+      <div class="ci-head">
+        <h2>📅 签到记录</h2>
+        <span class="muted" id="updated"></span>
+        <a class="btn btn-ghost" href="perks.html#checkin">⚙️ 签到设定</a>
+        <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+      </div>
+      <p id="errBox" class="msg err hidden"></p>
+
+      <div class="ov-grid" id="ovGrid"></div>
+
+      <div class="ci-tabs" id="tabs">
+        <button data-tab="members" class="active">👥 会员签到状态</button>
+        <button data-tab="stars">🏅 签到达人纪录</button>
+        <button data-tab="gifts">🎁 签到礼物发放<span class="cnt" id="giftCnt" hidden></span></button>
+      </div>
+
+      <!-- 👥 会员签到状态（左清单、右详情） -->
+      <section id="tab-members">
+        <div class="rw-layout">
+          <div class="rw-left">
+            <div class="rw-toolbar">
+              <div class="rw-top">
+                <h3>会员 <span class="muted" id="memCount" style="font-size:.8rem;font-weight:400"></span></h3>
+                <button class="btn btn-ghost" id="exportMembers">⬇ 导出 CSV</button>
+              </div>
+              <div style="display:flex;gap:8px">
+                <input id="q" placeholder="搜寻会员名字 / email" autocomplete="off">
+                <select id="sort" style="width:auto">
+                  <option value="streak">按连续天数</option>
+                  <option value="last">按最后签到</option>
+                  <option value="total">按累计天数</option>
+                  <option value="badges">按签到达人次数</option>
+                </select>
+              </div>
+              <div class="rw-chips" id="chips"></div>
+            </div>
+            <div class="rw-list" id="memList"><p class="rw-empty">载入中…</p></div>
+          </div>
+          <div class="rw-right" id="detail"><p class="rw-empty">← 点左边的会员看签到详情</p></div>
+        </div>
+      </section>
+
+      <!-- 🏅 签到达人纪录 -->
+      <section id="tab-stars" class="hidden">
+        <div class="tbl-tools">
+          <input id="starQ" placeholder="搜寻会员" autocomplete="off">
+          <span class="muted" id="starCount" style="font-size:.82rem"></span>
+          <span style="flex:1"></span>
+          <button class="btn btn-ghost" id="exportStars">⬇ 导出 CSV</button>
+        </div>
+        <div class="tbl-wrap"><table class="ci-tbl"><thead><tr>
+          <th>达标日期</th><th>会员</th><th>连续</th><th>积分</th><th>礼物</th><th>分享到 Feed</th>
+        </tr></thead><tbody id="starRows"></tbody></table></div>
+      </section>
+
+      <!-- 🎁 签到礼物发放 -->
+      <section id="tab-gifts" class="hidden">
+        <div class="tbl-tools">
+          <select id="giftSt">
+            <option value="">全部状态</option>
+            <option value="open">进行中（待审核 / 待寄出）</option>
+            <option value="pending">待审核</option>
+            <option value="approved">待寄出</option>
+            <option value="shipped">已寄出</option>
+            <option value="done">已完成</option>
+            <option value="expired">已过期</option>
+            <option value="cancelled">已取消 / 拒绝</option>
+          </select>
+          <span class="muted" id="giftCount" style="font-size:.82rem"></span>
+          <span style="flex:1"></span>
+          <a class="btn btn-ghost" href="redeem.html">🔔 去兑换审核</a>
+          <button class="btn btn-ghost" id="exportGifts">⬇ 导出 CSV</button>
+        </div>
+        <div class="tbl-wrap"><table class="ci-tbl"><thead><tr>
+          <th>建立日期</th><th>会员</th><th>礼物</th><th>状态</th><th>下单期限</th><th>期限内下单</th><th>兑换编号</th>
+        </tr></thead><tbody id="giftRows"></tbody></table></div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module">
+    // 📅 签到记录（只看不改）：会员签到状态、签到达人纪录、签到礼物发放
+    // 读取：checkins（每位签过到的会员 1 笔）、members（名字）、签到达人积分纪录、签到分享帖、签到礼物兑换
+    // 导出 CSV 用已经读到的资料，不会多读资料库
+    import { db } from "./js/firebase-config.js";
+    import {
+      collection, query, where, getDocs, getDoc, doc
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { requireAdmin, renderAdminNav, esc, toDate, fmtDate, TIER_LABELS, redeemCode } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("checkin");
+
+    const BADGE = '<img class="badge-mini" src="https://www.themochiishop.com/memberclub/img/ci-badge.png" alt="">';
+    const MYT = 8 * 3600000, DAY = 86400000;
+    const mytDate = ms => new Date(ms + MYT).toISOString().slice(0, 10);
+    const today = () => mytDate(Date.now());
+    const yesterday = () => mytDate(Date.now() - DAY);
+    const compact = d => d.replace(/-/g, "");
+    const fromCompact = s => `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+    const showDate = d => d ? d.split("-").reverse().join("/") : "–";
+
+    let members = {}, states = [], stars = [], gifts = {}, shares = {}, posts = {}, cfg = {};
+    let chip = "all", curUid = null;
+
+    // ---------- 读取 ----------
+    async function load() {
+      $("errBox").classList.add("hidden");
+      const [mS, cS, sS, shS, gS, pS, perks] = await Promise.all([
+        getDocs(collection(db, "members")),
+        getDocs(collection(db, "checkins")),
+        getDocs(query(collection(db, "pointsLedger"), where("reason", ">=", "签到达人：连续"), where("reason", "<", "签到达人：连续"))),
+        getDocs(query(collection(db, "pointsLedger"), where("reason", "==", "签到达人：分享到 Feed"))),
+        getDocs(query(collection(db, "redemptions"), where("ciGift", "==", true))),
+        getDocs(query(collection(db, "feedPosts"), where("tag", "==", "checkin"))).catch(() => ({ docs: [] })),
+        getDoc(doc(db, "settings", "perks")).catch(() => null),
+      ]);
+      cfg = perks && perks.exists() ? (perks.data().checkin || {}) : {};
+      members = {};
+      mS.docs.forEach(d => members[d.id] = d.data());
+      states = cS.docs.map(d => ({ uid: d.id, ...d.data() }));
+      // 达标纪录：文件 ID = checkin_m30_{uid}_{yyyymmdd}
+      stars = sS.docs.map(d => {
+        const x = d.data(), m = d.id.match(/^checkin_m30_(.+)_(\d{8})$/);
+        return { id: d.id, uid: x.uid, date: m ? fromCompact(m[2]) : mytDate(+toDate(x.createdAt)), points: x.delta,
+          streak: +((String(x.reason).match(/(\d+)/) || [])[1] || 30) };
+      }).sort((a, b) => b.date.localeCompare(a.date));
+      shares = {};
+      shS.docs.forEach(d => { const m = d.id.match(/^checkin_share_(.+)_(\d{8})$/); if (m) shares[m[1] + "_" + m[2]] = d.data(); });
+      gifts = {};
+      gS.docs.forEach(d => { gifts[d.id] = { id: d.id, ...d.data() }; });
+      posts = {};
+      pS.docs.forEach(d => { const p = d.data(); if (p.ciMs) posts[p.authorUid + "_" + compact(p.ciMs)] = { id: d.id, ...p }; });
+      $("updated").textContent = "更新于 " + new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+      renderAll();
+    }
+
+    // ---------- 小工具 ----------
+    const nameOf = uid => (members[uid] || {}).name || "（没有名字）";
+    const memLink = uid => `<a href="member.html?uid=${encodeURIComponent(uid)}" target="_blank">${esc(nameOf(uid))}</a>`;
+    // 现在的状态：今天已签 / 昨天有签（今天还没签）/ 已断签
+    function statusOf(s) {
+      if (s.lastDate === today()) return "today";
+      if (s.lastDate === yesterday()) return "open";
+      return "broken";
+    }
+    const liveStreak = s => statusOf(s) === "broken" ? 0 : (s.streak || 0);
+    const nearStar = s => { const k = liveStreak(s); return k > 0 && k % 30 >= 25; };
+    const ST_TAG = { today: '<span class="tag tag-ok">今天已签</span>', open: '<span class="tag tag-warn">今天还没签</span>', broken: '<span class="tag">已断签</span>' };
+    const GIFT_ST = {
+      pending: ["待审核", "tag-warn"], approved: ["待寄出", "tag-blue"], problem: ["配送异常", "tag-bad"],
+      shipped: ["已寄出", "tag-blue"], received: ["已完成", "tag-ok"], completed: ["已完成", "tag-ok"],
+      rejected: ["已拒绝", "tag-bad"], cancelled: ["已取消", ""],
+    };
+    function giftLabel(g) {
+      if (!g) return ["没有礼物", ""];
+      if (g.status === "cancelled" && !g.adminCancelled && g.decidedBy === "system") return ["已过期", "tag-bad"];
+      const [l, c] = GIFT_ST[g.status] || [g.status, ""];
+      return [l + (g.backorder && ["pending", "approved"].includes(g.status) ? " · 补货中" : ""), c];
+    }
+    const giftTag = g => { const [l, c] = giftLabel(g); return `<span class="tag ${c}">${esc(l)}</span>`; };
+    // 分享：已分享（+积分）/ 审核中 / 还没分享
+    function shareOf(uid, ymd) {
+      const sh = shares[uid + "_" + ymd], p = posts[uid + "_" + ymd];
+      if (sh) return { label: `已分享 +${sh.delta}`, cls: "tag-ok", post: p };
+      if (p) return { label: p.status === "pending" ? "审核中" : p.status === "rejected" ? "已退回" : "已发布", cls: p.status === "pending" ? "tag-warn" : "", post: p };
+      return { label: "还没分享", cls: "", post: null };
+    }
+    const postLink = p => p ? ` <a href="feed.html#post=${encodeURIComponent(p.id)}" target="_blank">查看帖子</a>` : "";
+
+    // ---------- 今日概况 ----------
+    function renderOverview() {
+      const t = states.filter(s => statusOf(s) === "today").length;
+      const live = states.filter(s => statusOf(s) !== "broken").length;
+      const near = states.filter(nearStar).length;
+      const pts = states.reduce((a, s) => a + (Number(s.totalPts) || 0), 0) + stars.reduce((a, s) => a + (Number(s.points) || 0), 0)
+        + Object.values(shares).reduce((a, s) => a + (Number(s.delta) || 0), 0);
+      const gl = Object.values(gifts);
+      const gPend = gl.filter(g => g.status === "pending").length, gShip = gl.filter(g => ["approved", "problem"].includes(g.status)).length;
+      const card = (n, l, act, hot) => `<button class="ov-card${hot ? " hot" : ""}" data-go="${act}"><div class="n">${n}</div><div class="l">${l}</div></button>`;
+      $("ovGrid").innerHTML = (cfg.active === true ? "" : `<div class="ov-card hot" style="grid-column:1/-1;cursor:default">⚠️ 签到功能目前是<b>关闭</b>的，会员首页不会显示签到卡片。到「⚙️ 签到设定」打开。</div>`)
+        + card(t, "今天签到", "m:today")
+        + card(live, "连续签到中", "m:live")
+        + card(near, "快满 30 天（25 天以上）", "m:near", near > 0)
+        + card(stars.length, `${BADGE} 签到达人人次`, "t:stars")
+        + card(gPend, "签到礼物待审核", "g:pending", gPend > 0)
+        + card(gShip, "签到礼物待寄出", "g:approved", gShip > 0)
+        + card(pts.toLocaleString(), "签到累计发出积分", "m:all");
+      $("giftCnt").hidden = !(gPend + gShip); $("giftCnt").textContent = gPend + gShip;
+    }
+    $("ovGrid").addEventListener("click", e => {
+      const b = e.target.closest("[data-go]");
+      if (!b) return;
+      const [k, v] = b.dataset.go.split(":");
+      if (k === "m") { chip = v; showTab("members"); renderMembers(); }
+      if (k === "t") showTab("stars");
+      if (k === "g") { $("giftSt").value = v; showTab("gifts"); renderGifts(); }
+    });
+
+    // ---------- 分页 ----------
+    function showTab(k) {
+      document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === k));
+      ["members", "stars", "gifts"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== k));
+    }
+    $("tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) showTab(b.dataset.tab); });
+
+    // ---------- 👥 会员签到状态 ----------
+    const CHIPS = [["all", "全部"], ["today", "今天已签"], ["open", "今天还没签"], ["live", "连续中"], ["near", "快满 30 天"], ["broken", "已断签"], ["star", "签到达人"]];
+    const chipTest = { all: () => true, today: s => statusOf(s) === "today", open: s => statusOf(s) === "open",
+      live: s => statusOf(s) !== "broken", near: nearStar, broken: s => statusOf(s) === "broken", star: s => (s.badges || 0) > 0 };
+    function filteredMembers() {
+      const q = $("q").value.trim().toLowerCase();
+      const list = states.filter(chipTest[chip] || chipTest.all).filter(s => {
+        if (!q) return true;
+        const m = members[s.uid] || {};
+        return (m.name || "").toLowerCase().includes(q) || (m.email || "").toLowerCase().includes(q);
+      });
+      const by = $("sort").value;
+      const key = { streak: liveStreak, last: s => s.lastDate || "", total: s => s.total || 0, badges: s => s.badges || 0 }[by];
+      return list.sort((a, b) => (key(b) > key(a) ? 1 : key(b) < key(a) ? -1 : 0));
+    }
+    function renderMembers() {
+      $("chips").innerHTML = CHIPS.map(([k, l]) => `<button data-chip="${k}" class="${chip === k ? "on" : ""}">${l}<span class="n">${states.filter(chipTest[k]).length}</span></button>`).join("");
+      const list = filteredMembers();
+      $("memCount").textContent = `${list.length} / ${states.length}`;
+      $("memList").innerHTML = list.length ? list.map(s => {
+        const st = statusOf(s), k = liveStreak(s), m = members[s.uid] || {};
+        return `<div class="rw-row${s.uid === curUid ? " sel" : ""}" data-uid="${esc(s.uid)}">
+          <div class="th ${st}"><b>${k}</b><small>连续</small></div>
+          <div class="tx">
+            <div class="nm">${esc(nameOf(s.uid))}${(s.badges || 0) > 0 ? ` ${BADGE}×${s.badges}` : ""}</div>
+            <div class="sb">${ST_TAG[st]}${st !== "broken" ? `<span>本轮第 ${s.day} 天</span>` : `<span>上次连续 ${s.streak || 0} 天</span>`}
+              <span>· 最后 ${showDate(s.lastDate)}</span>${nearStar(s) ? `<span class="tag tag-pink">再 ${30 - (k % 30)} 天达标</span>` : ""}
+              ${m.tier ? `<span>· ${esc((TIER_LABELS[m.tier] || "").replace(/<[^>]+>/g, "") || m.tier)}</span>` : ""}</div>
+          </div></div>`;
+      }).join("") : `<p class="rw-empty">${states.length ? "没有符合条件的会员" : "还没有会员签到"}</p>`;
+    }
+    $("chips").addEventListener("click", e => { const b = e.target.closest("[data-chip]"); if (b) { chip = b.dataset.chip; renderMembers(); } });
+    $("q").addEventListener("input", renderMembers);
+    $("sort").addEventListener("change", renderMembers);
+    $("memList").addEventListener("click", e => { const r = e.target.closest("[data-uid]"); if (r) openMember(r.dataset.uid); });
+
+    // ---------- 会员详情（右边） ----------
+    async function openMember(uid) {
+      curUid = uid;
+      renderMembers();
+      document.body.classList.add("rw-editing");
+      const s = states.find(x => x.uid === uid) || {};
+      const st = statusOf(s), m = members[uid] || {};
+      const myStars = stars.filter(x => x.uid === uid);
+      $("detail").innerHTML = `<div class="rw-editor">
+        <div class="rw-ehead"><button class="btn btn-ghost rw-back" id="back">← 返回</button>
+          <h3>${esc(nameOf(uid))} ${(s.badges || 0) > 0 ? `${BADGE}×${s.badges}` : ""}</h3>
+          <a class="btn btn-ghost" href="member.html?uid=${encodeURIComponent(uid)}" target="_blank">👤 会员详情</a></div>
+        <div class="rw-body">
+          <div class="rw-sec"><h4>签到状态</h4><div class="kv">
+            <div class="k">现在</div><div class="v">${ST_TAG[st]}</div>
+            <div class="k">连续天数</div><div class="v">${liveStreak(s)} 天${st === "broken" ? `（上次连续 ${s.streak || 0} 天）` : ""}</div>
+            <div class="k">本轮第几天</div><div class="v">${st === "broken" ? "–" : `第 ${s.day} 天`}</div>
+            <div class="k">最后签到</div><div class="v">${showDate(s.lastDate)}</div>
+            <div class="k">累计签到</div><div class="v">${s.total || 0} 天</div>
+            <div class="k">签到积分</div><div class="v">${(s.totalPts || 0).toLocaleString()} 分（每日签到，不含签到达人奖励）</div>
+            <div class="k">签到达人</div><div class="v">${s.badges || 0} 次</div>
+            <div class="k">分享资格</div><div class="v">${s.share && s.share.ms ? (s.share.claimed ? `已分享（${showDate(s.share.ms)} 达标）` : `<span class="tag tag-warn">还没分享</span>（${showDate(s.share.ms)} 达标）`) : "没有"}</div>
+            <div class="k">Email</div><div class="v">${esc(m.email || "")}</div>
+          </div></div>
+          <div class="rw-sec"><h4>最近 60 天</h4><div id="cal"><p class="muted" style="font-size:.84rem">载入中…</p></div></div>
+          <div class="rw-sec"><h4>${BADGE} 签到达人纪录</h4>${myStars.length ? myStars.map(x => {
+            const ymd = compact(x.date), g = gifts["ci_" + uid + "_" + ymd], sh = shareOf(uid, ymd);
+            return `<div class="kv" style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--line)">
+              <div class="k">${showDate(x.date)}</div><div class="v">连续 ${x.streak} 天 · +${x.points} 分</div>
+              <div class="k">礼物</div><div class="v">${g ? `${esc(g.rewardName || "")} ${giftTag(g)}` : "没有礼物"}</div>
+              <div class="k">分享</div><div class="v"><span class="tag ${sh.cls}">${esc(sh.label)}</span>${postLink(sh.post)}</div></div>`;
+          }).join("") : `<p class="muted" style="font-size:.84rem">还没有</p>`}</div>
+        </div></div>`;
+      $("back").onclick = () => document.body.classList.remove("rw-editing");
+      // 月历：这位会员的积分纪录里，ID 是 checkin_{uid}_{yyyymmdd} 的就是那天有签到
+      try {
+        const lS = await getDocs(query(collection(db, "pointsLedger"), where("uid", "==", uid)));
+        if (curUid !== uid) return;
+        const days = new Set(), starDays = new Set(myStars.map(x => compact(x.date)));
+        lS.docs.forEach(d => { const mm = d.id.match(/^checkin_(?!m30_|share_).+_(\d{8})$/); if (mm) days.add(mm[1]); });
+        const cells = [];
+        for (let i = 59; i >= 0; i--) {
+          const dt = mytDate(Date.now() - i * DAY), ymd = compact(dt);
+          cells.push(`<div class="${days.has(ymd) ? "on" : ""}${starDays.has(ymd) ? " star" : ""}${i === 0 ? " today" : ""}" title="${showDate(dt)}${days.has(ymd) ? " ✓" : ""}">${+dt.slice(8)}</div>`);
+        }
+        $("cal").innerHTML = `<div class="cal">${cells.join("")}</div>
+          <div class="cal-legend">粉色 = 有签到 · 橘色框 = 签到达人达标 · 粉框 = 今天（某天设 0 分的话那天不会显示）</div>`;
+      } catch (e) { $("cal").innerHTML = `<p class="msg err">载入失败：${esc(e.message)}</p>`; }
+    }
+
+    // ---------- 🏅 签到达人纪录 ----------
+    function filteredStars() {
+      const q = $("starQ").value.trim().toLowerCase();
+      return stars.filter(x => !q || nameOf(x.uid).toLowerCase().includes(q));
+    }
+    function renderStars() {
+      const list = filteredStars();
+      $("starCount").textContent = `${list.length} 笔`;
+      $("starRows").innerHTML = list.length ? list.map(x => {
+        const ymd = compact(x.date), g = gifts["ci_" + x.uid + "_" + ymd], sh = shareOf(x.uid, ymd);
+        return `<tr><td>${showDate(x.date)}</td><td>${memLink(x.uid)}</td><td>${x.streak} 天</td><td>+${x.points}</td>
+          <td>${g ? `${esc(g.rewardName || "")} ${giftTag(g)}` : '<span class="muted">没有礼物</span>'}</td>
+          <td><span class="tag ${sh.cls}">${esc(sh.label)}</span>${postLink(sh.post)}</td></tr>`;
+      }).join("") : `<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">还没有签到达人</td></tr>`;
+    }
+    $("starQ").addEventListener("input", renderStars);
+
+    // ---------- 🎁 签到礼物发放 ----------
+    function giftGroup(g) {
+      const [l] = giftLabel(g);
+      if (l === "已过期") return "expired";
+      if (["received", "completed"].includes(g.status)) return "done";
+      if (["cancelled", "rejected"].includes(g.status)) return "cancelled";
+      return g.status === "problem" ? "approved" : g.status;
+    }
+    function filteredGifts() {
+      const f = $("giftSt").value;
+      return Object.values(gifts).filter(g => {
+        const grp = giftGroup(g);
+        return !f || (f === "open" ? ["pending", "approved"].includes(grp) : grp === f);
+      }).sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));
+    }
+    function renderGifts() {
+      const list = filteredGifts();
+      $("giftCount").textContent = `${list.length} 笔`;
+      $("giftRows").innerHTML = list.length ? list.map(g => {
+        const dl = toDate(g.deadline), open = ["pending", "approved", "problem"].includes(g.status);
+        return `<tr><td>${fmtDate(toDate(g.createdAt))}</td><td>${memLink(g.uid)}</td><td>${esc(g.rewardName || "")}</td><td>${giftTag(g)}</td>
+          <td>${dl ? fmtDate(dl) + (open && dl < new Date() ? ' <span class="tag tag-bad">已过期限</span>' : "") : "–"}</td>
+          <td>${g.orderFound ? '<span class="tag tag-ok">✅ 有</span>' : open ? '<span class="muted">还没有</span>' : "–"}</td>
+          <td><a href="redeem.html" title="去兑换审核处理"><code>${esc(redeemCode(g.id))}</code></a></td></tr>`;
+      }).join("") : `<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">没有签到礼物</td></tr>`;
+    }
+    $("giftSt").addEventListener("change", renderGifts);
+
+    // ---------- ⬇ 导出 CSV（用已经读到的资料，不多读资料库；Excel 可以直接打开）----------
+    function downloadCsv(name, head, rows) {
+      const cell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const text = [head, ...rows].map(r => r.map(cell).join(",")).join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" }));
+      a.download = `mochii-${name}-${today()}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+    const ST_TXT = { today: "今天已签", open: "今天还没签", broken: "已断签" };
+    $("exportMembers").onclick = () => downloadCsv("checkin-members",
+      ["会员", "Email", "状态", "连续天数", "本轮第几天", "最后签到", "累计签到天数", "签到积分", "签到达人次数", "分享资格"],
+      filteredMembers().map(s => [nameOf(s.uid), (members[s.uid] || {}).email || "", ST_TXT[statusOf(s)], liveStreak(s), statusOf(s) === "broken" ? "" : s.day,
+        s.lastDate || "", s.total || 0, s.totalPts || 0, s.badges || 0,
+        s.share && s.share.ms ? (s.share.claimed ? "已分享" : "还没分享") : ""]));
+    $("exportStars").onclick = () => downloadCsv("checkin-stars",
+      ["达标日期", "会员", "连续天数", "积分", "礼物", "礼物状态", "分享"],
+      filteredStars().map(x => { const ymd = compact(x.date), g = gifts["ci_" + x.uid + "_" + ymd];
+        return [x.date, nameOf(x.uid), x.streak, x.points, g ? g.rewardName : "", giftLabel(g)[0], shareOf(x.uid, ymd).label]; }));
+    $("exportGifts").onclick = () => downloadCsv("checkin-gifts",
+      ["建立日期", "会员", "礼物", "状态", "下单期限", "期限内下单", "兑换编号"],
+      filteredGifts().map(g => [fmtDate(toDate(g.createdAt)), nameOf(g.uid), g.rewardName || "", giftLabel(g)[0],
+        toDate(g.deadline) ? fmtDate(toDate(g.deadline)) : "", g.orderFound ? "有" : "", redeemCode(g.id)]));
+
+    function renderAll() {
+      renderOverview(); renderMembers(); renderStars(); renderGifts();
+      if (curUid) openMember(curUid);
+    }
+    function run() {
+      $("reloadBtn").disabled = true;
+      load().catch(e => { $("errBox").textContent = "载入失败：" + e.message; $("errBox").classList.remove("hidden"); })
+        .finally(() => { $("reloadBtn").disabled = false; });
+    }
+    $("reloadBtn").addEventListener("click", run);
+    requireAdmin(() => run());
+  </script>
+</body>
+</html>
