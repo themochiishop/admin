@@ -233,3 +233,14 @@ test("撤销这一包：打包清单寄出的全部退回，打包完成取消�
   assert.ok(b.parcels.find(p => p.orderNo === "2611190000001").items.some(i => i.id === "w1"));
   await rejects(pk.pkUndo(db, NOBODY, { orderNo: "2611190000001" }), "pk/no-perm");
 });
+
+test("这批打包完成：记下时间（没有订单也可以）；batch 回传 lastFinishAt", async () => {
+  const db = fakeDb(SEED());
+  assert.equal((await pk.pkBatch(db, PACKER)).lastFinishAt, null);
+  await pk.pkDone(db, { ...PACKER, now: T0 - 3600000 }, { orderNos: [], finish: true });
+  const b = await pk.pkBatch(db, PACKER);
+  assert.equal(b.lastFinishAt, T0 - 3600000); assert.equal(b.lastFinishBy, "pack@x.com");
+  await pk.pkDone(db, PACKER, { orderNos: ["2611190000003"], finish: true });
+  assert.ok(db.data.get("packDone/2611190000003"));
+  assert.equal((await pk.pkBatch(db, PACKER)).lastFinishAt, T0);
+});
