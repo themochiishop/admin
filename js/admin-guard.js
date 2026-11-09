@@ -28,6 +28,8 @@ export const PERM_TREE = [
     { id: "invoice", icon: "📄", label: "PO / Invoice" },
     { id: "search", icon: "🔍", label: "订单查询" },
     { id: "cod", icon: "📦", label: "COD 手动 AWB 打印" },
+    // 打包清单：勾选随单寄出的小礼物、中奖奖品、兑换商品（2026-11-10）
+    { id: "pack", icon: "🧺", label: "打包清单" },
   ] },
   { group: "🎫 会员与内容", items: [
     // 会员系统按页面细分；以前整个勾了（member: true）的人，等于下面全部都有
@@ -52,7 +54,7 @@ export const PERM_TREE = [
 // 权限模板：新增人员时一键套用，之后可以再微调
 export const PRESETS = [
   { id: "streamer", label: "🎥 主播", perms: { hub: true, wheel: true, draw: { console: true, test: true, claims: true } } },
-  { id: "cs", label: "💬 客服", perms: { entry: true, search: true, cod: true, member: { redeem: true, prizes: true, members: true } } },
+  { id: "cs", label: "💬 客服", perms: { entry: true, search: true, cod: true, pack: true, member: { redeem: true, prizes: true, members: true } } },
   { id: "all", label: "✅ 全部", perms: "all" },
   { id: "none", label: "⬜ 清空", perms: {} },
 ];
