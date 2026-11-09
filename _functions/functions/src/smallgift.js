@@ -99,8 +99,9 @@ function message(uid, kind, vars, at) {
 }
 
 // ---------- 建立一期（领奖追踪按「生成小礼物」）----------
-// data: { batchId, label, month, giftName, mode: "order"|"person", days, list: [{ orderNo, name }] }
+// data: { batchId, label, month, giftName, mode: "order"|"person", days, list: [{ orderNo, name }], winners: [{ orderNo, name }] }
 //   list = 这一场没得奖的订单（领奖追踪算好再送来）
+//   winners = 这一场的得主：中过奖的人这期不送小礼物（同一位会员的其他平台账号也算；非会员按平台 + 用户名）
 async function sgCreate(db, ctx, data) {
   const who = await requirePerm(db, ctx, ["claims"]);
   const now = nowMs(ctx);
@@ -130,10 +131,23 @@ async function sgCreate(db, ctx, data) {
   }
   if (!list.length) fail("sg/empty", "没有有效的订单号", "invalid-argument");
 
+  // 得主：认出是谁（会员 uid / 平台 + 用户名）
+  const wonU = new Set(), wonP = new Set();
+  const pkey = (platform, username) => (platform || "x") + "_" + String(username || "").toLowerCase();
+  for (const w of (Array.isArray(data.winners) ? data.winners : []).slice(0, 500)) {
+    const no = normNo(w && w.orderNo);
+    if (!/^[A-Z0-9]{6,40}$/.test(no)) continue;
+    const b = await resolveBuyer(db, no, String((w && w.name) || "").trim().slice(0, 60));
+    if (b.uid) wonU.add(b.uid);
+    if (b.username) wonP.add(pkey(b.platform, b.username));
+  }
+
   // 认人 + 分组：每单一份 = 一张单一份；每人一份 = 同一位会员（或同一个平台账号）合成一份
   const groups = new Map();
+  let skipped = 0;
   for (const x of list) {
     const b = await resolveBuyer(db, x.orderNo, x.name);
+    if ((b.uid && wonU.has(b.uid)) || (b.username && wonP.has(pkey(b.platform, b.username)))) { skipped++; continue; }
     const key = mode === "order" ? x.orderNo
       : b.uid ? "u_" + b.uid : "p_" + (b.platform || "x") + "_" + (b.username || x.orderNo).toLowerCase();
     const g = groups.get(key);
@@ -141,10 +155,11 @@ async function sgCreate(db, ctx, data) {
     groups.set(key, { key, orderNos: [x.orderNo], name: x.name || b.username, platform: b.platform, username: b.username, uid: b.uid });
   }
 
+  if (!groups.size) fail("sg/all-won", "没得奖的订单都是这一期中过奖的人，不用送小礼物");
   const deadline = now + days * DAY;
   const base = { batchId, label, giftName, mode, status: "pending", deadline: tsOf(deadline), createdAt: tsOf(now), by: who.email };
   let members = 0;
-  await batchRef.set({ label, month, giftName, mode, days, deadline: tsOf(deadline), count: groups.size, orders: list.length,
+  await batchRef.set({ label, month, giftName, mode, days, deadline: tsOf(deadline), count: groups.size, orders: list.length - skipped, skippedWinners: skipped,
     members: 0, createdAt: tsOf(now), by: who.email });
   for (const g of groups.values()) {
     if (g.uid) members++;
@@ -153,7 +168,7 @@ async function sgCreate(db, ctx, data) {
     });
   }
   await batchRef.update({ members });
-  return { ok: true, count: groups.size, orders: list.length, members };
+  return { ok: true, count: groups.size, orders: list.length - skipped, members, skippedWinners: skipped };
 }
 
 // ---------- 单份操作：作废 / 恢复 / 寄出 / 取消寄出 ----------

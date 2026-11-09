@@ -273,4 +273,31 @@ async function pkDone(db, ctx, data = {}) {
   return { ok: true, count: list.length };
 }
 
-module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkShip, pkDone };
+// ---------- ↩️ 撤销这一包（例如订单打包后被取消）----------
+//   打包清单寄出的东西（随这张单）全部退回：小礼物 → 待寄；中奖奖品 / 兑换 → 待发货；这一包的「打包完成」也取消
+//   只退还没完成的（会员按了确认收到 / 已自动完成的不动）；迎新礼要到「新会员奖励」处理
+async function pkUndo(db, ctx, data = {}) {
+  await requirePack(db, ctx);
+  const orderNo = normNo(data.orderNo);
+  if (!noOk(orderNo)) fail("pk/bad-order", "订单号不正确", "invalid-argument");
+  const r = { smallGifts: 0, prizes: 0, redemptions: 0, welcome: 0, kept: 0 };
+  for (const d of (await db.collection("smallGifts").where("sentOrder", "==", orderNo).get()).docs) {
+    if (d.data().status !== "sent") continue;
+    await d.ref.update({ status: "pending", sentAt: null, sentOrder: null, sentBy: null });
+    r.smallGifts++;
+  }
+  for (const [col, key] of [["prizeWins", "prizes"], ["redemptions", "redemptions"]]) {
+    for (const d of (await db.collection(col).where("shipping.orderNo", "==", orderNo).get()).docs) {
+      const x = d.data();
+      if (x.newMember === true) { if (x.status === "shipped") r.welcome++; continue; }   // 迎新礼：只提醒
+      if (!x.shipping || x.shipping.via !== "pack") continue;          // 不是打包清单寄出的不动
+      if (x.status !== "shipped") { r.kept++; continue; }
+      await d.ref.update({ status: "approved", shippedAt: null, shipping: null });
+      r[key]++;
+    }
+  }
+  await db.collection("packDone").doc(orderNo).delete();
+  return { ok: true, ...r };
+}
+
+module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkShip, pkDone, pkUndo };
