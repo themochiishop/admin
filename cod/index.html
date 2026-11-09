@@ -263,9 +263,12 @@
 
     .awb-main-content { flex: 1; }
     .awb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .awb-logo-group { display: flex; align-items: center; gap: 8px; }
-    .awb-logo { margin-left: 0; width: 40px; height: 40px; object-fit: contain; }
-    .awb-title { padding-left: 4px; font-family: "Georgia", serif; font-size: 18px; font-weight: bold; color: #000; white-space: nowrap; }
+    /* logo 左边与下方 USER NAME 对齐（同为 22px） */
+    .awb-logo-group { display: flex; align-items: center; gap: 6px; padding-left: 22px; }
+    .awb-logo { height: 40px; width: auto; display: block; }   /* 黑白版 logo，热敏打印才清楚 */
+    .awb-title { display: flex; flex-direction: column; line-height: 1.1; color: #000; white-space: nowrap; }
+    .awb-title-main { font-size: 11.2px; font-weight: 800; letter-spacing: .2px; }
+    .awb-title-sub { font-size: 6.3px; font-weight: 700; letter-spacing: 1.1px; color: #333; margin-top: 4px; padding-top: 4px; border-top: 1.5px solid #000; }
     /* 条码保持原始比例，不可用 CSS 压缩，否则热敏打印线条会糊、扫不出 */
     #barcode { display: block; flex-shrink: 0; }
 
@@ -462,8 +465,8 @@
         <div class="awb-main-content">
           <div class="awb-header">
             <div class="awb-logo-group">
-              <img src="https://admin.themochiishop.com/logo.png" alt="Logo" class="awb-logo" onerror="this.onerror=null; this.style.visibility='hidden'">
-              <span class="awb-title">Order List</span>
+              <img src="logo-bw.png" alt="The Mochii Shop" class="awb-logo" onerror="this.onerror=null; this.style.visibility='hidden'">
+              <span class="awb-title"><span class="awb-title-main">ORDER LIST</span><span class="awb-title-sub">PACKING SLIP</span></span>
             </div>
             <svg id="barcode"></svg>
           </div>
@@ -787,7 +790,8 @@
           lineColor: "#000", 
           width: 0.945,          /* 打印时每条最细线 = 0.25mm = 热敏机 2 个点 */
           height: 34,
-          margin: 10,            /* 左右留白，扫描器需要 */
+          margin: 10,            /* 左边留白，扫描器需要 */
+          marginRight: 0,        /* 右边留白由面单边距提供，条码右缘对齐分隔线 */
           displayValue: true,    
           fontSize: 11,          
           textMargin: 1,         
