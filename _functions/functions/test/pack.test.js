@@ -27,7 +27,7 @@ function fakeDb(seed = {}) {
   const runQuery = q => {
     const docs = [...data.entries()]
       .filter(([k]) => depth(k) === depth(q.col) + 1 && k.startsWith(q.col + "/"))
-      .filter(([, d]) => q.conds.every(([f, op, v]) => op === "==" ? d[f] === v : cmpVal(d[f]) >= cmpVal(v)))
+      .filter(([, d]) => q.conds.every(([f, op, v]) => { const x = f.split(".").reduce((o, k) => (o == null ? o : o[k]), d); return op === "==" ? x === v : cmpVal(x) >= cmpVal(v); }))
       .map(([k]) => snapOf(ref(k)));
     return { empty: !docs.length, docs };
   };
@@ -211,4 +211,25 @@ test("打包完成 / 取消打包完成", async () => {
   await pk.pkDone(db, PACKER, { orderNos: ["2611190000003"], undo: true });
   assert.equal(db.data.get("packDone/2611190000003"), undefined);
   await rejects(pk.pkDone(db, PACKER, { orderNos: [] }), "pk/empty");
+});
+
+test("撤销这一包：打包清单寄出的全部退回，打包完成取消；会员已确认收到的不动", async () => {
+  const db = fakeDb(SEED());
+  const items = ["sg:b__1", "prize:w1", "red:r1", "red:ci_u1_20261119", "nm:uAqmar01_1"].map(s => ({ kind: s.split(":")[0], id: s.split(":")[1] }));
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000001", items, txId: "tx_undo1234", done: true });
+  db.data.set("redemptions/r9", { uid: "u1", kind: "gift", status: "completed", shipping: { withOrder: true, orderNo: "2611190000001", via: "pack" } });
+  db.data.set("redemptions/r8", { uid: "u1", kind: "gift", status: "shipped", shipping: { withOrder: true, orderNo: "2611190000001" } });   // 后台自己寄的
+  const r = await pk.pkUndo(db, PACKER, { orderNo: "2611190000001" });
+  assert.deepEqual(r, { ok: true, smallGifts: 1, prizes: 1, redemptions: 2, welcome: 1, kept: 1 });
+  assert.equal(db.data.get("smallGifts/b__1").status, "pending");
+  assert.equal(db.data.get("prizeWins/w1").status, "approved"); assert.equal(db.data.get("prizeWins/w1").shipping, null);
+  assert.equal(db.data.get("redemptions/r1").status, "approved");
+  assert.equal(db.data.get("redemptions/ci_u1_20261119").status, "approved");   // 签到达人礼物回到待发货（库存已扣，不再动）
+  assert.equal(db.data.get("redemptions/r9").status, "completed");
+  assert.equal(db.data.get("redemptions/r8").status, "shipped");
+  assert.equal(db.data.get("packDone/2611190000001"), undefined);
+  // 退回后这一批又看得到
+  const b = await pk.pkBatch(db, PACKER);
+  assert.ok(b.parcels.find(p => p.orderNo === "2611190000001").items.some(i => i.id === "w1"));
+  await rejects(pk.pkUndo(db, NOBODY, { orderNo: "2611190000001" }), "pk/no-perm");
 });

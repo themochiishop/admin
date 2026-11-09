@@ -112,7 +112,7 @@ test("平台：5 开头 TikTok、2 开头 Shopee", () => {
 test("每单一份：去掉重复单号，认出会员（订单 uid / 绑定）", async () => {
   const db = fakeDb(SEED);
   const r = await create(db, OWNER);
-  assert.deepEqual(r, { ok: true, count: 3, orders: 3, members: 2 });
+  assert.deepEqual(r, { ok: true, count: 3, orders: 3, members: 2, skippedWinners: 0 });
   const g = Object.fromEntries(gifts(db).map(x => [x.orderNos[0], x]));
   assert.equal(g["2610082JN7CQR9"].uid, "u1");
   assert.equal(g["587070631390577755"].uid, "u1");                 // 靠 TikTok 绑定认出
@@ -239,4 +239,17 @@ test("每日：买家后来加入 Club → 补认会员，过期时有通知", a
   const g = gifts(db).find(x => x.orderNos[0] === "261014HN714REB");
   assert.equal(g.uid, "u9"); assert.equal(g.status, "voided");
   assert.ok(msgs(db).some(m => m.uids[0] === "u9" && /作废/.test(m.title)));
+});
+
+test("中过奖的人这期不送小礼物：同一位会员的其他平台账号也算；非会员按平台 + 用户名", async () => {
+  const db = fakeDb({ ...SEED, "orders/261014WINNER": { username: "buyer2", platform: "shopee", orderTime: T0 - 15 * DAY } });
+  // u1 用 Shopee 单中奖 → 他的 TikTok 单（靠绑定认出）也不送；buyer2 另一张单中奖 → 这张也不送
+  const r = await create(db, OWNER, { winners: [{ orderNo: "2610082JN7CQR9", name: "aqmar" }, { orderNo: "261014WINNER", name: "buyer2" }],
+    list: [{ orderNo: "587070631390577755", name: "aqmar77" }, { orderNo: "261014HN714REB", name: "buyer2" }, { orderNo: "261020NEWBIE", name: "nurul" }] });
+  assert.equal(r.count, 1); assert.equal(r.skippedWinners, 2);
+  assert.deepEqual(gifts(db).map(g => g.orderNos[0]), ["261020NEWBIE"]);
+  assert.equal(db.data.get("smallGiftBatches/20261101200000").skippedWinners, 2);
+  // 全部都是中过奖的人 → 不建立
+  await rejects(create(fakeDb(SEED), OWNER, { batchId: "b2", winners: [{ orderNo: "2610082JN7CQR9", name: "aqmar" }],
+    list: [{ orderNo: "587070631390577755", name: "aqmar77" }] }), "sg/all-won");
 });
