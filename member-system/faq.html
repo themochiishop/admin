@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>客服 FAQ · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    .sf-search { width: 100%; padding: 10px 14px; border: 1px solid var(--line2); border-radius: 10px; background: var(--card); color: var(--ink); font-size: .95rem; box-sizing: border-box; }
+    .sf-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 4px; }
+    .sf-chips button { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: .8rem; font-weight: 600; cursor: pointer; }
+    .sf-chips button.on { background: #db2777; border-color: #db2777; color: #fff; }
+    .sf-chips .n { opacity: .7; margin-left: 3px; }
+    .sf-count { font-size: .8rem; color: var(--muted); margin: 10px 2px 6px; }
+    .sf-item { border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin-bottom: 8px; }
+    .sf-item summary { padding: 11px 14px; cursor: pointer; font-weight: 600; color: var(--ink); list-style: none; display: flex; gap: 8px; align-items: baseline; }
+    .sf-item summary::-webkit-details-marker { display: none; }
+    .sf-item summary::before { content: "▸"; color: var(--faint); }
+    .sf-item[open] summary::before { content: "▾"; }
+    .sf-cat { font-size: .7rem; font-weight: 600; color: var(--muted); background: var(--soft); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+    .sf-body { padding: 0 14px 12px 30px; }
+    .sf-a { white-space: pre-line; line-height: 1.6; color: var(--text); background: var(--soft2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+    .sf-copy { margin-top: 6px; padding: 4px 10px; font-size: .78rem; }
+    .sf-how { margin-top: 10px; font-size: .86rem; line-height: 1.55; color: var(--text2); }
+    .sf-how b { color: var(--ink); }
+    mark { background: #fde68a; color: inherit; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>📖 客服 FAQ</h2>
+          <p class="muted">会员常问的问题。灰框里的回答可以直接复制给会员；🛠 是后台怎么查。需要英文 / 马来文版本，请到
+            <a href="https://www.themochiishop.com/memberclub/help.html" target="_blank" rel="noopener">前台帮助中心</a> 切换语言复制。</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <input id="q" class="sf-search" type="search" placeholder="🔍 搜索问题、回答或后台页面…" autocomplete="off">
+        <div id="chips" class="sf-chips"></div>
+        <div id="count" class="sf-count"></div>
+        <div id="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
+    import { CATS, ITEMS } from "./js/staff-faq.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("faq");
+
+    const CAT_NAME = Object.fromEntries(CATS);
+    let cat = "all";
+    const norm = s => String(s || "").toLowerCase();
+
+    // 搜索字标黄（先转义再标）
+    function hl(text, words) {
+      let h = esc(text);
+      words.forEach(w => {
+        const re = new RegExp(esc(w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+        h = h.replace(re, m => `<mark>${m}</mark>`);
+      });
+      return h;
+    }
+
+    function render() {
+      const words = norm($("q").value).split(/\s+/).filter(Boolean);
+      const hit = it => words.every(w => norm(it.q + " " + it.a + " " + it.how + " " + CAT_NAME[it.cat]).includes(w));
+      const found = ITEMS.filter(hit);
+      const count = c => found.filter(it => it.cat === c).length;
+      $("chips").innerHTML =
+        `<button type="button" data-c="all" class="${cat === "all" ? "on" : ""}">全部<span class="n">${found.length}</span></button>` +
+        CATS.map(([c, name]) => `<button type="button" data-c="${c}" class="${cat === c ? "on" : ""}">${name}<span class="n">${count(c)}</span></button>`).join("");
+      const list = found.filter(it => cat === "all" || it.cat === cat);
+      $("count").textContent = words.length ? `找到 ${list.length} 题` : `共 ${list.length} 题`;
+      $("list").innerHTML = list.length ? list.map(it => {
+        const i = ITEMS.indexOf(it);
+        return `
+        <details class="sf-item"${words.length ? " open" : ""}>
+          <summary>${cat === "all" ? `<span class="sf-cat">${CAT_NAME[it.cat]}</span>` : ""}<span>${hl(it.q, words)}</span></summary>
+          <div class="sf-body">
+            <div class="sf-a">${hl(it.a, words)}</div>
+            <button type="button" class="btn btn-ghost sf-copy" data-copy="${i}">📋 复制回答</button>
+            ${it.how ? `<div class="sf-how"><b>🛠 后台：</b>${hl(it.how, words)}</div>` : ""}
+          </div>
+        </details>`;
+      }).join("") : `<p class="empty">没有找到相关问题。</p>`;
+    }
+
+    $("q").addEventListener("input", render);
+    $("chips").addEventListener("click", e => {
+      const b = e.target.closest("button[data-c]");
+      if (!b) return;
+      cat = b.dataset.c; render();
+    });
+    $("list").addEventListener("click", async e => {
+      const b = e.target.closest("button[data-copy]");
+      if (!b) return;
+      const text = ITEMS[+b.dataset.copy].a;
+      try { await navigator.clipboard.writeText(text); }
+      catch { prompt("请手动复制：", text); return; }
+      b.textContent = "已复制 ✓";
+      setTimeout(() => { b.textContent = "📋 复制回答"; }, 1500);
+    });
+
+    requireAdmin(() => render());
+  </script>
+</body>
+</html>

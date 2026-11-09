@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>更新记录 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    .cl-search { width: 100%; padding: 10px 14px; border: 1px solid var(--line2); border-radius: 10px; background: var(--card); color: var(--ink); font-size: .95rem; box-sizing: border-box; }
+    .cl-count { font-size: .8rem; color: var(--muted); margin: 10px 2px 4px; }
+    .cl-day { font-weight: 700; color: var(--ink); margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+    .cl-row { display: grid; grid-template-columns: 52px 62px 1fr; gap: 10px; padding: 7px 2px; border-bottom: 1px dashed var(--line); font-size: .9rem; line-height: 1.55; }
+    .cl-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .cl-side { color: var(--text2); font-size: .8rem; padding-top: 1px; }
+    .cl-area { font-weight: 600; color: var(--ink); }
+    .cl-text { color: var(--text); }
+    mark { background: #fde68a; color: inherit; border-radius: 2px; }
+    @media (max-width: 640px) {
+      .cl-row { grid-template-columns: 44px 1fr; }
+      .cl-side { grid-column: 2; grid-row: 1; }
+      .cl-body { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>🕒 更新记录</h2>
+          <p class="muted">Mochii建站（网站、控制台、会员俱乐部、Hub…）每一项功能什么时候加上去、改了什么。时间是上传到 GitHub 的时间（马来西亚时间），最新的在最上面。</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <input id="q" class="cl-search" type="search" placeholder="🔍 搜索功能、页面或日期，例如：签到、Feed、11-02…" autocomplete="off">
+        <div id="count" class="cl-count"></div>
+        <div id="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
+    import { LOG } from "./js/changelog-data.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("changelog");
+
+    const norm = s => String(s || "").toLowerCase();
+    const rows = LOG.slice().sort((a, b) => b.t.localeCompare(a.t));
+    const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
+    const dayLabel = d => `${d}（星期${WEEK[new Date(Date.parse(d + "T00:00:00Z")).getUTCDay()]}）`;
+
+    function hl(text, words) {
+      let h = esc(text);
+      words.forEach(w => {
+        const re = new RegExp(esc(w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+        h = h.replace(re, m => `<mark>${m}</mark>`);
+      });
+      return h;
+    }
+
+    function render() {
+      const words = norm($("q").value).split(/\s+/).filter(Boolean);
+      const list = rows.filter(r => words.every(w => norm(`${r.t} ${r.side} ${r.area} ${r.text}`).includes(w)));
+      $("count").textContent = words.length ? `找到 ${list.length} 条` : `共 ${list.length} 条`;
+      let html = "", day = "";
+      list.forEach(r => {
+        const d = r.t.slice(0, 10);
+        if (d !== day) { day = d; html += `<div class="cl-day">${hl(dayLabel(d), words)}</div>`; }
+        html += `
+          <div class="cl-row">
+            <div class="cl-time">${hl(r.t.slice(11), words)}</div>
+            <div class="cl-side">${hl(r.side, words)}</div>
+            <div class="cl-body"><span class="cl-area">${hl(r.area, words)}</span> · <span class="cl-text">${hl(r.text, words)}</span></div>
+          </div>`;
+      });
+      $("list").innerHTML = html || `<p class="empty">没有找到相关记录。</p>`;
+    }
+
+    $("q").addEventListener("input", render);
+    requireAdmin(() => render());
+  </script>
+</body>
+</html>
