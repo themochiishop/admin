@@ -11,6 +11,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
 const core = require("./src/core");
 const checkin = require("./src/checkin");   // 📅 每日签到
+const redeem = require("./src/redeem");     // 🛍️ 商城兑换（扣库存）
 
 initializeApp();
 const db = getFirestore();
@@ -85,6 +86,12 @@ exports.nmAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5 }
 const CI_OPS = { checkIn: checkin.ciCheckIn };
 exports.ciMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10 },
   req => run(pick(CI_OPS, req), req));
+
+// 🛍️ 商城兑换（会员）：{ op: "redeem", rewardId, variantId? } / { op: "cancel", id }
+//    建立兑换时马上扣库存（reserved），不会超卖；也会检查积分够不够
+const RD_OPS = { redeem: redeem.rdRedeem, cancel: redeem.rdCancel };
+exports.rdMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10 },
+  req => run(pick(RD_OPS, req), req));
 
 // 🏅 签到达人：签到分享帖（tag = "checkin"）变成已发布 → +10 分（金卡以下要等管理员批准）
 exports.ciOnFeedPostWritten = onDocumentWritten({ document: "feedPosts/{pid}", region: DB_REGION },
