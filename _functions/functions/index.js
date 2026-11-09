@@ -1,6 +1,6 @@
 // Mochii Member Club — Cloud Functions 入口
 // 🎉 新会员奖励：会员用 nmMember、后台用 nmAdmin，两个 callable；另有触发器和每日排程
-// 📅 每日签到：会员用 ciMember
+// 📅 每日签到：会员用 ciMember；🏅 签到达人：ciOnFeedPostWritten（分享奖励）、ciDaily（礼物到期）
 "use strict";
 
 const { initializeApp } = require("firebase-admin/app");
@@ -85,6 +85,22 @@ exports.nmAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5 }
 const CI_OPS = { checkIn: checkin.ciCheckIn };
 exports.ciMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10 },
   req => run(pick(CI_OPS, req), req));
+
+// 🏅 签到达人：签到分享帖（tag = "checkin"）变成已发布 → +10 分（金卡以下要等管理员批准）
+exports.ciOnFeedPostWritten = onDocumentWritten({ document: "feedPosts/{pid}", region: DB_REGION },
+  async event => {
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    try { await checkin.onFeedPostWritten(db, event.params.pid, before, after); }
+    catch (e) { logger.error("ciOnFeedPostWritten", event.params.pid, e); }
+  });
+
+// 🏅 每天早上 9:15（马来西亚）：签到达人礼物到期前 7 天提醒、过期取消
+exports.ciDaily = onSchedule({ schedule: "15 9 * * *", timeZone: "Asia/Kuala_Lumpur", region: CALL_REGION },
+  async () => {
+    const r = await checkin.ciDaily(db);
+    logger.info("ciDaily", r);
+  });
 
 // 新会员资料建立：活动启用后注册的才标记为新会员
 exports.nmOnMemberCreated = onDocumentCreated({ document: "members/{uid}", region: DB_REGION },
