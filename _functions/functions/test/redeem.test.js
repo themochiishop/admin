@@ -116,3 +116,10 @@ test("没设库存（不限）的奖品照常兑换，不写库存", async () =>
   await rd.rdRedeem(db, ctx("m1"), { rewardId: "u" });
   assert.equal(db.data.get("rewards/u").stock, undefined);
 });
+
+test("有款式：总库存不准（例如手动填 0）也照款式库存判断", async () => {
+  const db = fakeDb(base({ "rewards/g5": { name: "香氛", type: "gift", cost: 50, active: true, stock: 0,
+    variants: { a1: { name: "A1", stock: 2 } } } }));
+  await rd.rdRedeem(db, ctx("m1"), { rewardId: "g5", variantId: "a1" });
+  assert.equal(db.data.get("rewards/g5").variants.a1.stock, 1);
+});
