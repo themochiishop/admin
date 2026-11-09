@@ -435,7 +435,7 @@
                   <div class="item-title">${authorLine(p)}</div>
                   <div class="meta">${fmtDate(toDate(p.createdAt), true)} · ${rankLabel(p.minRank)} · 🖼 ${p.imageCount || 0} · ❤️ ${p.nLike} · 💬 ${p.nCmt}${p.pinned ? " · 📌 置顶" : ""}${toDate(p.editedAt) ? ` · ✏️ ${fmtDate(toDate(p.editedAt), true)} 编辑过` : ""}</div>
                 </div>
-                <div>${p.editedAt && p.status === "pending" ? '<span class="tag tag-warn">✏️ 修改后重新送审</span> ' : ""}${STATUS[p.status] || ""}</div>
+                <div>${p.tag === "checkin" ? `<span class="tag tag-pink" title="签到达人分享帖：发布（批准）后系统自动给会员分享积分">📅 签到分享${p.status === "pending" ? " · 批准后会员 +分" : ""}</span> ` : ""}${p.editedAt && p.status === "pending" ? '<span class="tag tag-warn">✏️ 修改后重新送审</span> ' : ""}${STATUS[p.status] || ""}</div>
               </div>
               <div class="post-text">${esc(p.content.text)}</div>
               ${p.rejectReason ? `<div class="meta">退回原因：${esc(p.rejectReason)}</div>` : ""}

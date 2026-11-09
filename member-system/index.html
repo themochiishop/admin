@@ -160,6 +160,7 @@
       </div>
 
       <div id="errBox" class="err-box hidden"></div>
+      <div id="ciStockBox"></div>
 
       <div class="bento">
         <!-- 🔔 待处理 -->
@@ -240,6 +241,8 @@
 
   <script type="module">
     import { db } from "./js/firebase-config.js";
+    import { can } from "/js/admin-guard.js";
+    import { ciStockState, ciStockBannerHTML, bindCiStockBanner, refreshCiStockBadge } from "./js/ci-stock.js";   // 🏅 签到达人礼物库存提醒
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners, openReportCount, NM_ACTIONABLE
     } from "./js/admin-common.js";
@@ -560,7 +563,16 @@
       $("clubBtn").addEventListener("click", () => $("clubSwitch").click());
     }
 
+    // 🏅 签到达人礼物库存剩 20 / 10：最上面一条黄色提醒（有「商城」权限的人才看得到、才能按）
+    async function loadCiStock() {
+      const a = window.msAccess;
+      if (!can(a, "member.shop")) return;
+      const st = await ciStockState();
+      $("ciStockBox").innerHTML = ciStockBannerHTML(st);
+      bindCiStockBanner($("ciStockBox"), st, () => { loadCiStock(); refreshCiStockBadge(); });
+    }
     function run() {
+      loadCiStock();
       $("reloadBtn").disabled = true;
       load().catch(e => {
         $("errBox").textContent = "载入失败：" + e.message;

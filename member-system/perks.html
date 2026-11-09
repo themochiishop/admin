@@ -87,6 +87,21 @@
           <tbody><tr id="ciRow"></tr></tbody>
         </table>
         <p class="meta" id="ciSum" style="margin:8px 0 0"></p>
+
+        <div id="checkin"></div>
+        <h4 style="margin:18px 0 6px">🏅 签到达人（连续签满 30 天，之后每满 30 天一次）</h4>
+        <p class="meta" style="margin:0 0 10px">达标时同时发：积分 + 🎁 礼物（自动建立 0 积分兑换，随下一单寄出，在「兑换审核」处理）+ 徽章次数 +1。会员可以发一篇签到分享帖，发布后再给分享积分（金卡以下要你在 Feed 审核批准）。</p>
+        <div id="ciStockBox"></div>
+        <div class="grid2">
+          <label>30 天奖励积分 <input type="number" id="m30Pts" min="0" max="1000" step="1"></label>
+          <label>分享到 Feed 奖励积分 <input type="number" id="m30Share" min="0" max="1000" step="1"></label>
+          <label>签到达人礼物
+            <select id="m30Gift"><option value="">（不送礼物，只给积分）</option></select>
+          </label>
+          <label>礼物下单期限（天） <input type="number" id="m30Days" min="1" max="365" step="1"></label>
+        </div>
+        <p class="meta" id="m30GiftInfo" style="margin:-4px 0 0"></p>
+        <p class="meta" style="margin:6px 0 0">礼物请先到「商城奖品」新增一个<b>实体奖品</b>，设成 <b>🙈 隐藏</b>（会员在商城看不到、不能自己换），填好图片和库存，再回来这里选它。库存剩 20、剩 10 会提醒你；卖到 0 时新的礼物会标「补货中」。</p>
         <div class="actions" style="align-items:center">
           <label class="switch"><input type="checkbox" id="ciOn"> 开放（会员首页显示签到卡片）</label>
           <button class="btn btn-primary" id="saveCi">保存</button>
@@ -163,6 +178,7 @@
     import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, where, limit, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { requireAdmin, renderAdminNav, logAdmin, esc, PERK_DEFAULTS, FOLLOW_DEFAULTS } from "./js/admin-common.js";
     import { previewSend, memberPicker } from "./js/send-tools.js";
+    import { ciStockState, ciStockBannerHTML, bindCiStockBanner, refreshCiStockBadge } from "./js/ci-stock.js";   // 🏅 签到达人礼物库存提醒
     import { noteBoxHTML, readNoteBox, noteFields, bindNoteBoxes } from "./js/note-i18n.js";
 
     const $ = id => document.getElementById(id);
@@ -206,6 +222,40 @@
       $("ciOn").checked = c.active === true;
       $("ciRow").querySelectorAll("input").forEach(i => i.addEventListener("input", ciSumText));
       ciSumText();
+      const m = c.m30 || {};
+      $("m30Pts").value = Number.isInteger(m.points) ? m.points : 30;
+      $("m30Share").value = Number.isInteger(m.sharePts) ? m.sharePts : 10;
+      $("m30Days").value = Number.isInteger(m.giftDays) ? m.giftDays : 30;
+      loadGiftOptions(m.giftRewardId || "");
+      loadCiStock();
+    }
+    // 礼物选单：实体奖品（隐藏的排前面）
+    let giftRewards = [];
+    async function loadGiftOptions(cur) {
+      try {
+        const snap = await getDocs(collection(db, "rewards"));
+        giftRewards = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.type !== "coupon");
+      } catch (e) { giftRewards = []; }
+      const hid = r => !r.active && (r.hidden === true || !r.delistedAt);
+      giftRewards.sort((a, b) => (hid(b) - hid(a)) || String(a.name).localeCompare(String(b.name)));
+      $("m30Gift").innerHTML = `<option value="">（不送礼物，只给积分）</option>` + giftRewards.map(r =>
+        `<option value="${esc(r.id)}" ${r.id === cur ? "selected" : ""}>${hid(r) ? "🙈 " : r.active ? "🛍️ " : "⛔ "}${esc(r.name)}${typeof r.stock === "number" ? `（库存 ${r.stock}）` : "（不限库存）"}</option>`).join("");
+      if (cur && !giftRewards.some(r => r.id === cur)) $("m30Gift").insertAdjacentHTML("beforeend", `<option value="${esc(cur)}" selected>⚠️ 找不到原本选的奖品（可能已删除）</option>`);
+      giftInfo();
+    }
+    function giftInfo() {
+      const r = giftRewards.find(x => x.id === $("m30Gift").value);
+      $("m30GiftInfo").textContent = !r ? "" : r.active
+        ? "⚠️ 这个奖品目前在商城上架中，会员也能自己用积分换。建议改成「隐藏」。"
+        : r.variants && Object.keys(r.variants).length ? "⚠️ 这个奖品有款式，签到礼物不会选款式，寄出前请自己决定。" : "";
+    }
+    async function loadCiStock() {
+      const st = await ciStockState();
+      $("ciStockBox").innerHTML = ciStockBannerHTML(st);
+      bindCiStockBanner($("ciStockBox"), st, async () => {
+        const snap = await getDoc(ref); cfg = snap.exists() ? snap.data() : {};
+        loadGiftOptions(((cfg.checkin || {}).m30 || {}).giftRewardId || ""); loadCiStock(); refreshCiStockBadge();
+      });
     }
 
     function renderFollow() {
@@ -405,6 +455,7 @@
       renderSys();
       renderFollow();
       renderCi();
+      $("m30Gift").addEventListener("change", giftInfo);
       renderCustom();
       initGive();
 
@@ -425,9 +476,14 @@
       $("saveCi").addEventListener("click", async () => {
         const points = ciPoints();
         if (!points.every(n => Number.isInteger(n) && n >= 0 && n <= 100)) { setMsg($("ciMsg"), "每天的积分要填 0–100 的整数", "err"); return; }
+        const m30 = { points: parseInt($("m30Pts").value, 10), sharePts: parseInt($("m30Share").value, 10),
+          giftDays: parseInt($("m30Days").value, 10), giftRewardId: $("m30Gift").value };
+        if (!(m30.points >= 0 && m30.points <= 1000) || !(m30.sharePts >= 0 && m30.sharePts <= 1000)) { setMsg($("ciMsg"), "签到达人积分要填 0–1000 的整数", "err"); return; }
+        if (!(m30.giftDays >= 1 && m30.giftDays <= 365)) { setMsg($("ciMsg"), "礼物下单期限要填 1–365 天", "err"); return; }
         $("saveCi").disabled = true;
         try {
-          await save({ checkin: { active: $("ciOn").checked, points } });
+          await save({ checkin: { active: $("ciOn").checked, points, m30 } });
+          loadCiStock(); refreshCiStockBadge();
           setMsg($("ciMsg"), $("ciOn").checked ? "已保存 ✅ 会员首页会显示签到卡片" : "已保存 ✅ 签到目前关闭，会员看不到", "ok");
         } catch (err) { setMsg($("ciMsg"), "保存失败：" + err.message, "err"); }
         finally { $("saveCi").disabled = false; }

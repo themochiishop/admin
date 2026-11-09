@@ -317,16 +317,22 @@
       const expired = end && end <= new Date();
       return `<div class="meta">🔒 ${P}${v.name ? ` · <code>${esc(v.name)}</code>` : ""}${end ? ` · ${expired ? '<span class="tag tag-bad">平台券已过期</span>' : "到期 " + fmtDate(end)}` : ""}${v.note ? " · " + esc(v.note) : ""}</div>`;
     }
+    // 🏅 签到达人礼物：下单期限（期限内没有新订单，系统每天早上自动取消）
+    function ciLine(r) {
+      if (!r.ciGift || !["pending", "approved", "problem"].includes(r.status)) return "";
+      const d = toDate(r.deadline);
+      return `<div class="meta">🏅 ${esc(r.giftReason || "签到达人")}${d ? ` · 下单期限 ${fmtDate(d)}` : ""}${r.orderFound ? ' · <span class="tag tag-ok">✅ 期限内已下单</span>' : ""}${r.backorder ? " · 礼物库存不足，补货后批准会扣 1 个库存" : ""}</div>`;
+    }
     function head(r, extra = "") {
       const m = members[r.uid] || {};
       return `
         <div class="item-head">
           <div style="min-width:0;flex:1">
-            <div class="item-title">${kindTag(r)} ${isTest(r) ? '<span class="tag tag-warn">🧪 测试</span> ' : ""}${r.gift ? `<span class="tag tag-pink" title="${esc(r.giftReason || "")}">🎁 福利赠送</span> ` : ""}${esc(r.rewardName)}${r.variantName ? ` <span class="tag tag-blue">🎨 ${esc(r.variantName)}</span>` : ""} · ${r.cost} 分 ${extra}</div>
+            <div class="item-title">${kindTag(r)} ${isTest(r) ? '<span class="tag tag-warn">🧪 测试</span> ' : ""}${r.ciGift ? `<span class="tag tag-pink" title="${esc(r.giftReason || "")}">🏅 签到达人礼物</span> ` : r.gift ? `<span class="tag tag-pink" title="${esc(r.giftReason || "")}">🎁 福利赠送</span> ` : ""}${r.ciGift && r.backorder ? '<span class="tag tag-warn">📦 补货中</span> ' : ""}${esc(r.rewardName)}${r.variantName ? ` <span class="tag tag-blue">🎨 ${esc(r.variantName)}</span>` : ""} · ${r.cost} 分 ${extra}</div>
             <div class="meta"><a href="member.html?uid=${encodeURIComponent(r.uid)}">${esc(m.name || "")}</a>${isInternal(r.uid) ? ' <span class="tag tag-pink">🏷️ 内部会员</span>' : ""} · ${esc(m.email || "")} · 申请于 ${fmtDate(r.createdAt, true)}${r.decidedAt ? " · 批准/处理 " + fmtDate(r.decidedAt, true) : ""}</div>
           </div>
           <code class="rno">${redeemCode(r.id)}</code>
-        </div>${voucherLine(r)}`;
+        </div>${voucherLine(r)}${ciLine(r)}`;
     }
 
     // 待发货：依寄送方式显示
@@ -506,7 +512,9 @@
       const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
       if (bal.spendable < r.cost &&
           !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return false;
-      if (!test && reward && typeof reward.stock === "number" && reward.stock <= 0 &&
+      // 🏅 签到达人礼物：系统建立时已经扣过库存（补货中的除外），批准时不再扣
+      const ciReserved = r.ciGift === true && !r.backorder;
+      if (!test && !ciReserved && reward && typeof reward.stock === "number" && reward.stock <= 0 &&
           !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return false;
       // 🎨 款式库存（有设定才扣）
       const vr = r.variantId && reward && reward.variants ? reward.variants[r.variantId] : null;
@@ -550,8 +558,10 @@
       if (nf.note) Object.assign(update, nf);
       if (couponCode) update.couponCode = couponCode;
       if (dv) Object.assign(update, dv);   // 📦 实体奖品的寄送方式（和地址）
+      if (r.ciGift && r.backorder && !test) update.backorder = false;   // 补货中 → 批准时才扣库存
       batch.update(doc(db, "redemptions", r.id), update);
-      batch.set(doc(collection(db, "pointsLedger")), {
+      // 0 积分（签到达人礼物、福利赠送）不写扣分记录，积分明细不会多一行 0
+      if (r.cost > 0) batch.set(doc(collection(db, "pointsLedger")), {
         uid: r.uid, delta: -r.cost, reason: "兑换：" + r.rewardName, orderNo: null,
         redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
       });
@@ -560,7 +570,7 @@
           used: true, usedBy: r.uid, redemptionId: r.id, usedAt: serverTimestamp()
         });
       }
-      if (!test && reward && typeof reward.stock === "number") {
+      if (!test && !ciReserved && reward && typeof reward.stock === "number") {
         batch.update(doc(db, "rewards", r.rewardId), { stock: increment(-1) });
       }
       if (!test && vr && typeof vr.stock === "number") {
@@ -576,13 +586,23 @@
       const update = { status: "rejected", decidedAt: serverTimestamp() };
       const nf = noteFields(note);
       if (nf.note) Object.assign(update, nf);
+      // 🏅 签到达人礼物：系统建立时扣过的库存加回去
+      if (r.ciGift && !r.backorder) {
+        const rs = await getDoc(doc(db, "rewards", r.rewardId));
+        const batch = writeBatch(db);
+        batch.update(doc(db, "redemptions", r.id), update);
+        if (rs.exists() && typeof rs.data().stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
+        await batch.commit();
+        return true;
+      }
       await updateDoc(doc(db, "redemptions", r.id), update);
       return true;
     }
 
     // ---------- 已批准后取消：退回积分、加回库存 ----------
     async function cancelApproved(r) {
-      const why = prompt(`取消「${r.rewardName}」并退回 ${r.cost} 分给会员？\n\n原因（会员看得到，选填，例如：缺货）：`, "");
+      const why = prompt(r.cost > 0 ? `取消「${r.rewardName}」并退回 ${r.cost} 分给会员？\n\n原因（会员看得到，选填，例如：缺货）：`
+        : `取消「${r.rewardName}」？（0 积分，不用退分）\n\n原因（会员看得到，选填，例如：缺货）：`, "");
       if (why === null) return false;
       if (!await previewSend({ title: "取消兑换并退回积分", to: whoOf(r), danger: true, okText: "确认取消并退回",
         rows: [["奖品", r.rewardName], ["退回积分", `+${r.cost} 分`]], note: why.trim(), noteLabel: "会员看到的取消原因" })) return false;
@@ -592,11 +612,12 @@
       batch.update(doc(db, "redemptions", r.id), {
         status: "cancelled", adminCancelled: true, cancelledAt: serverTimestamp(), cancelNote: why.trim(), cancelledBy: adminEmail
       });
-      batch.set(doc(collection(db, "pointsLedger")), {
+      if (r.cost > 0) batch.set(doc(collection(db, "pointsLedger")), {
         uid: r.uid, delta: r.cost, reason: "兑换取消退回：" + r.rewardName, orderNo: null,
         redemptionId: r.id, availableAt: serverTimestamp(), createdAt: serverTimestamp()
       });
-      if (!r.test && reward && typeof reward.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
+      // 补货中、还没扣库存的签到达人礼物不加回
+      if (!r.test && !(r.ciGift && r.backorder) && reward && typeof reward.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
       const vr = r.variantId && reward && reward.variants ? reward.variants[r.variantId] : null;
       if (!r.test && vr && typeof vr.stock === "number") batch.update(doc(db, "rewards", r.rewardId), { [`variants.${r.variantId}.stock`]: increment(1) });
       await batch.commit();
