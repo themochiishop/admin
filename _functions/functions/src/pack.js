@@ -141,7 +141,10 @@ async function pkBatch(db, ctx) {
   await memberNames(db, [...new Set(buyers.map(([, b]) => b.uid).filter(Boolean))], pend.names);
   for (const [o, b] of buyers) out.push(parcel(o, b, pend, pend.names, done.has(o.no)));
   out.sort((a, b) => (b.orderTime || 0) - (a.orderTime || 0));
-  return { ok: true, now, days: BATCH_DAYS, parcels: out };
+  // 「这次」= 上次按「这批打包完成」之后下的单（直播时间不固定，不能用日期算）
+  const meta = await db.collection("packMeta").doc("state").get();
+  const lastFinish = meta.exists ? toMs(meta.data().lastFinishAt) : null;
+  return { ok: true, now, days: BATCH_DAYS, lastFinishAt: lastFinish, lastFinishBy: meta.exists ? meta.data().lastFinishBy || "" : "", parcels: out };
 }
 
 // ---------- 找一张单（不在这一批里，例如比较早的单）或一个买家 ----------
@@ -260,11 +263,13 @@ async function pkShip(db, ctx, data = {}) {
 }
 
 // ---------- 标记打包完成（这一包 / 这一批）：之后不再出现在「这一批」----------
-//   data: { orderNos: [...], undo? }
+//   data: { orderNos: [...], undo?, finish? }   finish = 「这批打包完成」：记下时间，之后下的单才算下一批
 async function pkDone(db, ctx, data = {}) {
   const who = await requirePack(db, ctx);
   const list = [...new Set((Array.isArray(data.orderNos) ? data.orderNos : []).map(normNo))].filter(noOk).slice(0, 500);
-  if (!list.length) fail("pk/empty", "没有订单", "invalid-argument");
+  if (data.finish === true && data.undo !== true) {
+    await db.collection("packMeta").doc("state").set({ lastFinishAt: tsOf(nowMs(ctx)), lastFinishBy: who.email });
+  } else if (!list.length) fail("pk/empty", "没有订单", "invalid-argument");
   for (const no of list) {
     const ref = db.collection("packDone").doc(no);
     if (data.undo === true) await ref.delete();
