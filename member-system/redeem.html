@@ -512,13 +512,14 @@
       const bal = computeBalance(ledgers[r.uid] || [], all.filter(x => x.uid === r.uid), r.id);
       if (bal.spendable < r.cost &&
           !confirm(`会员可用积分只有 ${bal.spendable}，不足 ${r.cost} 分。仍要批准吗？（会员积分会变成负数）`)) return false;
-      // 🏅 签到达人礼物：系统建立时已经扣过库存（补货中的除外），批准时不再扣
-      const ciReserved = r.ciGift === true && !r.backorder;
+      // 库存已经在建立时扣过（不再扣）：
+      //   🛍️ 会员经后端兑换（reserved）、🏅 签到达人礼物（补货中的除外）
+      const ciReserved = r.reserved === true || (r.ciGift === true && !r.backorder);
       if (!test && !ciReserved && reward && typeof reward.stock === "number" && reward.stock <= 0 &&
           !confirm("这个奖品的库存已经是 0，仍要批准吗？")) return false;
       // 🎨 款式库存（有设定才扣）
       const vr = r.variantId && reward && reward.variants ? reward.variants[r.variantId] : null;
-      if (!test && vr && typeof vr.stock === "number" && vr.stock <= 0 &&
+      if (!test && !ciReserved && vr && typeof vr.stock === "number" && vr.stock <= 0 &&
           !confirm(`款式「${vr.name}」的库存已经是 0，仍要批准吗？`)) return false;
 
       // 优惠券：共用优惠码（存在只有管理员能读的 rewardSecrets）；没有就从券码库取一组
@@ -559,6 +560,8 @@
       if (couponCode) update.couponCode = couponCode;
       if (dv) Object.assign(update, dv);   // 📦 实体奖品的寄送方式（和地址）
       if (r.ciGift && r.backorder && !test) update.backorder = false;   // 补货中 → 批准时才扣库存
+      // 🧪 标成测试：测试兑换不占库存 → 建立时保留的库存加回去
+      const giveBack = test && r.reserved === true;
       batch.update(doc(db, "redemptions", r.id), update);
       // 0 积分（签到达人礼物、福利赠送）不写扣分记录，积分明细不会多一行 0
       if (r.cost > 0) batch.set(doc(collection(db, "pointsLedger")), {
@@ -573,8 +576,14 @@
       if (!test && !ciReserved && reward && typeof reward.stock === "number") {
         batch.update(doc(db, "rewards", r.rewardId), { stock: increment(-1) });
       }
-      if (!test && vr && typeof vr.stock === "number") {
+      if (!test && !ciReserved && vr && typeof vr.stock === "number") {
         batch.update(doc(db, "rewards", r.rewardId), { [`variants.${r.variantId}.stock`]: increment(-1) });
+      }
+      if (giveBack) {
+        const back = {};
+        if (reward && typeof reward.stock === "number") back.stock = increment(1);
+        if (vr && typeof vr.stock === "number") back[`variants.${r.variantId}.stock`] = increment(1);
+        if (Object.keys(back).length) batch.update(doc(db, "rewards", r.rewardId), back);
       }
       await batch.commit();
       return true;
@@ -586,12 +595,17 @@
       const update = { status: "rejected", decidedAt: serverTimestamp() };
       const nf = noteFields(note);
       if (nf.note) Object.assign(update, nf);
-      // 🏅 签到达人礼物：系统建立时扣过的库存加回去
-      if (r.ciGift && !r.backorder) {
+      // 建立时扣过的库存加回去：🛍️ 会员经后端兑换（reserved，含款式）、🏅 签到达人礼物（补货中的除外）
+      if (r.reserved === true || (r.ciGift && !r.backorder)) {
         const rs = await getDoc(doc(db, "rewards", r.rewardId));
+        const rw = rs.exists() ? rs.data() : null;
         const batch = writeBatch(db);
         batch.update(doc(db, "redemptions", r.id), update);
-        if (rs.exists() && typeof rs.data().stock === "number") batch.update(doc(db, "rewards", r.rewardId), { stock: increment(1) });
+        const back = {};
+        if (rw && typeof rw.stock === "number") back.stock = increment(1);
+        const vr = r.variantId && rw && rw.variants ? rw.variants[r.variantId] : null;
+        if (vr && typeof vr.stock === "number") back[`variants.${r.variantId}.stock`] = increment(1);
+        if (Object.keys(back).length) batch.update(doc(db, "rewards", r.rewardId), back);
         await batch.commit();
         return true;
       }
