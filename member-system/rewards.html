@@ -192,6 +192,7 @@
             </label>
             <label>库存（留空 = 不限）
               <input type="number" id="rstock" min="0" step="1">
+              <small class="muted" id="rstockHint"></small>
             </label>
             <label>每位会员限兑次数（留空 = 不限）
               <input type="number" id="rlimit" min="1" step="1">
@@ -537,6 +538,21 @@ function renderVariants() {
       </div>
     </div>`).join("");
   $("varAdd").classList.toggle("hidden", variantRows.length >= MAX_VARIANTS);
+  syncMainStock();
+}
+// 📦 有款式：总库存 = 各款式库存加起来（自动算，不能手动改）；有一款没填库存 = 不限
+function variantTotal() {
+  readVariantInputs();
+  const named = variantRows.filter(v => v.name);
+  if (!named.length) return undefined;   // 没有款式：用手动填的库存
+  return named.every(v => typeof v.stock === "number") ? named.reduce((a, v) => a + v.stock, 0) : null;
+}
+function syncMainStock() {
+  const tot = variantTotal();
+  const on = tot !== undefined;
+  $("rstock").disabled = on;
+  if (on) $("rstock").value = tot == null ? "" : tot;
+  $("rstockHint").textContent = !on ? "" : tot == null ? "有款式：有一款没填库存 = 不限" : "有款式：自动 = 各款式库存加起来";
 }
 function readVariantInputs() {
   variantRows.forEach((v, i) => {
@@ -558,6 +574,7 @@ $("varList").addEventListener("click", e => {
   if (up) { const i = +up.dataset.vup; if (i > 0) [variantRows[i - 1], variantRows[i]] = [variantRows[i], variantRows[i - 1]]; }
   renderVariants(); dirty = true;
 });
+$("varList").addEventListener("input", syncMainStock);   // 改款式库存时，总库存跟着变
 $("varList").addEventListener("change", async e => {
   const f = e.target.closest("[data-vimg]");
   if (!f || !f.files[0]) return;
@@ -1073,7 +1090,8 @@ showPreview(currentImage);
 
     $("rewardForm").addEventListener("submit", async e => {
       e.preventDefault();
-      const stockText = $("rstock").value.trim();
+      const vTotal = variantTotal();   // 有款式：总库存自动 = 各款式加起来
+      const stockText = vTotal === undefined ? $("rstock").value.trim() : (vTotal == null ? "" : String(vTotal));
       const data = {
         name: $("rname").value.trim(),
         description: $("rdesc").value.trim(),
