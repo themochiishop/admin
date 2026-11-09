@@ -137,9 +137,22 @@ async function ciCheckIn(db, ctx) {
 
     const state = stSnap.exists ? stSnap.data() : null;
     const step = nextStep(state, today);
-    if (step.already || ledSnap.exists) {
-      return { already: true, today, day: state ? state.day : step.day, streak: step.streak,
-        nextPts: s.points[(state ? state.day : step.day) % 7] };
+    if (step.already) {
+      return { already: true, today, day: state.day, streak: step.streak, nextPts: s.points[state.day % 7] };
+    }
+    // 🔧 今天的签到积分已经有了，但签到状态不是今天（例如 checkins 资料被删掉或改过）：
+    //    不再给分，照今天那笔积分的「第N天」把状态补回来，首页才不会又显示可以签到
+    if (ledSnap.exists) {
+      const m = String(ledSnap.data().reason || "").match(/第(\d)天/);
+      const day = m ? Math.min(7, Math.max(1, +m[1])) : step.day;
+      const fixed = {
+        ...(state || {}), lastDate: today, day,
+        streak: step.streak, total: (state && Number(state.total)) || 1,
+        totalPts: (state && Number(state.totalPts)) || (Number(ledSnap.data().delta) || 0),
+        badges: (state && Number(state.badges)) || 0, updatedAt: nowTs, repairedAt: nowTs,
+      };
+      tx.set(stateRef, fixed);
+      return { already: true, repaired: true, today, day, streak: fixed.streak, nextPts: s.points[day % 7] };
     }
 
     // 🏅 签到达人：读礼物奖品（所有读取要在写入之前）
