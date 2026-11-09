@@ -74,8 +74,8 @@ async function rdRedeem(db, ctx, data = {}) {
       variant = { id: variantId, ...variants[variantId] };
     } else if (variantId) fail("rd/variant", "这个奖品没有款式", "invalid-argument");
 
-    // 库存（奖品和款式都有设定才检查）
-    if (typeof r.stock === "number" && r.stock <= 0) fail("rd/sold-out", "已兑完");
+    // 库存：有款式的奖品只看款式库存（总库存 = 各款式加起来，后台自动算）；没有款式的看奖品本身的库存
+    if (!hasVariants && typeof r.stock === "number" && r.stock <= 0) fail("rd/sold-out", "已兑完");
     if (variant && typeof variant.stock === "number" && variant.stock <= 0) fail("rd/sold-out", "这一款已兑完");
 
     // 本期限兑次数（换新码之后重新算；拒绝、取消的不算）
