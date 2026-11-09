@@ -1,6 +1,7 @@
 // Mochii Member Club — Cloud Functions 入口
 // 🎉 新会员奖励：会员用 nmMember、后台用 nmAdmin，两个 callable；另有触发器和每日排程
 // 📅 每日签到：会员用 ciMember；🏅 签到达人：ciOnFeedPostWritten（分享奖励）、ciDaily（礼物到期）
+// 🎁 小礼物：后台用 sgAdmin；sgDaily 每日检查
 "use strict";
 
 const { initializeApp } = require("firebase-admin/app");
@@ -12,6 +13,7 @@ const logger = require("firebase-functions/logger");
 const core = require("./src/core");
 const checkin = require("./src/checkin");   // 📅 每日签到
 const redeem = require("./src/redeem");     // 🛍️ 商城兑换（扣库存）
+const smallgift = require("./src/smallgift"); // 🎁 小礼物（抽奖没得奖 → 随下一单寄出）
 
 initializeApp();
 const db = getFirestore();
@@ -92,6 +94,20 @@ exports.ciMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10
 const RD_OPS = { redeem: redeem.rdRedeem, cancel: redeem.rdCancel };
 exports.rdMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10 },
   req => run(pick(RD_OPS, req), req));
+
+// 🎁 小礼物（后台）：{ op: "create", batchId, giftName, mode, days, list } / { op: "void" | "restore" | "ship" | "unship", id, ... }
+//    建立：「领奖追踪」权限；作废 / 恢复 / 寄出：「领奖追踪」或「📦 打包清单」权限（检查在 smallgift.js）
+const SG_OPS = { create: smallgift.sgCreate, void: smallgift.sgVoid, restore: smallgift.sgRestore,
+  ship: smallgift.sgShip, unship: smallgift.sgUnship };
+exports.sgAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5, timeoutSeconds: 300 },
+  req => run(pick(SG_OPS, req), req));
+
+// 🎁 每天早上 9:25（马来西亚）：小礼物补认会员、期限内有下单就保留、过期作废、到期前 7 天提醒
+exports.sgDaily = onSchedule({ schedule: "25 9 * * *", timeZone: "Asia/Kuala_Lumpur", region: CALL_REGION, timeoutSeconds: 540 },
+  async () => {
+    const r = await smallgift.sgDaily(db);
+    logger.info("sgDaily", r);
+  });
 
 // 🏅 签到达人：签到分享帖（tag = "checkin"）变成已发布 → +10 分（金卡以下要等管理员批准）
 exports.ciOnFeedPostWritten = onDocumentWritten({ document: "feedPosts/{pid}", region: DB_REGION },
