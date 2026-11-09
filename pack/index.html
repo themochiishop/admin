@@ -226,7 +226,7 @@
       if (!l.length && !sent.length) {
         $("result").innerHTML = `<div class="none"><div class="big">⭕</div><b>这包不用放</b>
           <div class="hint">${esc(p.orderNo)} · ${esc(p.username || "")} ${plat} 没有要随单寄出的东西</div>
-          ${p.done ? "" : `<button class="btn btn-line" data-done="${esc(p.orderNo)}" style="margin-top:10px">标记这包打包完成</button>`}</div>`;
+          ${p.done ? undoBtn(p) : `<button class="btn btn-line" data-done="${esc(p.orderNo)}" style="margin-top:10px">标记这包打包完成</button>`}</div>`;
       } else {
         const all = c.length === 0;
         $("result").innerHTML = `<div class="result ${all ? "is-done" : ""}">
@@ -239,11 +239,13 @@
             ${other.length ? `<div class="note">💡 这位顾客这一批有不只一包：${other.map(i => esc(i.prep || i.title)).join("、")} 放其中一包就好</div>` : ""}
             ${c.length ? `<button class="btn btn-ok" data-all="${esc(p.orderNo)}" ${busy ? "disabled" : ""}>✅ 全部已放入（${c.length} 样）</button>`
               : p.done ? "" : `<button class="btn btn-line" data-done="${esc(p.orderNo)}" style="margin-top:10px;width:100%">标记这包打包完成</button>`}
+            ${sent.length || p.done ? undoBtn(p) : ""}
           </div></div>`;
       }
       document.querySelectorAll(".row").forEach(r => r.classList.toggle("sel", r.dataset.no === p.orderNo));
       if (scroll && innerWidth <= 860) $("result").scrollIntoView({ behavior: "smooth", block: "start" });
     }
+    const undoBtn = p => `<button class="btn btn-line" data-undo="${esc(p.orderNo)}" ${busy ? "disabled" : ""} style="margin-top:10px;width:100%;font-size:.82rem">↩️ 撤销这一包（订单取消 / 勾错了）</button>`;
     const item = (i, sent) => `<div class="it ${sent ? "sent" : ""}"><span class="ic">${i.icon}</span>
       <span class="nm"><b>${esc(i.title)}</b><small>${sent ? "✅ 已放入" : esc(i.sub || "")}</small></span>
       ${sent ? "" : `<input type="checkbox" data-item="${esc(i.id)}" ${busy ? "disabled" : ""} title="放进这一包">`}</div>`;
@@ -299,6 +301,27 @@
       busy = false;
       if (failed.length) { beep(false); alert("有些没成功：\n\n" + failed.join("\n")); }
       else { beep(true); toast(done ? "✅ 这一包打包完成" : "✅ 已放入"); }
+      await load();
+    }
+
+    // ---------- ↩️ 撤销这一包：打包清单寄出的东西全部退回（订单被取消、勾错了）----------
+    async function undo(p) {
+      if (!confirm(`↩️ 撤销 ${p.orderNo}（${p.username || ""}）这一包？\n\n这一包用打包清单勾过的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`)) return;
+      busy = true; show(p, false);
+      try {
+        const r = (await pkAdmin({ op: "undo", orderNo: p.orderNo })).data;
+        // 🏆 非会员得主（领奖追踪）：这次在这里勾的也退回
+        let cl = 0;
+        for (const i of (sentLog.get(p.orderNo) || []).filter(i => i.kind === "claim")) {
+          try { await claimDb.ref(`draw_private/claimBatches/${i.bid}/items/${i.key}`).update({ shipped: false }); cl++; claimItems.push(i); } catch (e) {}
+        }
+        sentLog.delete(p.orderNo);
+        const n = r.smallGifts + r.prizes + r.redemptions + cl;
+        alert(`↩️ 已撤销：退回 ${n} 样${r.smallGifts ? `\n• 小礼物 ${r.smallGifts}` : ""}${r.prizes ? `\n• 中奖奖品 ${r.prizes}` : ""}${r.redemptions ? `\n• 兑换 / 签到达人礼物 ${r.redemptions}` : ""}${cl ? `\n• 领奖追踪 ${cl}` : ""}`
+          + (r.welcome ? `\n\n⚠️ 这一包有 ${r.welcome} 份迎新礼已寄出，要到「新会员奖励」处理` : "")
+          + (r.kept ? `\n\nℹ️ ${r.kept} 样会员已确认收到 / 已完成，没有退回` : ""));
+      } catch (e) { alert("❌ " + errText(e)); }
+      busy = false;
       await load();
     }
 
@@ -425,6 +448,8 @@
       }
       const all = t.closest("[data-all]");
       if (all && sel) { ship(sel, canLeft(sel), true); return; }
+      const un = t.closest("[data-undo]");
+      if (un && sel && !busy) { undo(sel); return; }
       const dn = t.closest("[data-done]");
       if (dn && sel) { ship(sel, [], true); return; }
       const row = t.closest(".row[data-no]");
