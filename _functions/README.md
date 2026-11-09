@@ -13,6 +13,8 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 | `functions/test/checkin.test.js` | 签到 + 签到达人测试（17 项，不用模拟器：`npm run test:checkin`） |
 | `functions/src/smallgift.js` | 🎁 小礼物：建立一期、作废 / 恢复 / 寄出、每日检查 |
 | `functions/test/smallgift.test.js` | 小礼物测试（10 项，不用模拟器：`npm run test:smallgift`） |
+| `functions/src/pack.js` | 🧺 打包清单：这一批、找单号、勾选寄出、打包完成 |
+| `functions/test/pack.test.js` | 打包清单测试（7 项，不用模拟器：`npm run test:pack`） |
 | `functions/src/core.js` | 全部逻辑：状态机、积分、订单检查、权限 |
 | `functions/test/core.test.js` | 后端测试（22 项） |
 | `firestore.rules` | 完整规则（= 11/08 版 + 新会员奖励 4 处新增） |
@@ -71,6 +73,7 @@ gcloud run services update nmmember --no-invoker-iam-check --region=asia-southea
 gcloud run services update nmadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 gcloud run services update cimember --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 gcloud run services update sgadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
+gcloud run services update pkadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0
 ```
 检查（要看到「请先登入」）：
 ```bash
@@ -117,6 +120,17 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 每日 9:25 `sgDaily`：补认会员；期限内有新订单（看下单时间）→ 标 `orderFound` 不作废；过期没下单 → 作废（`voidReason: expired`）并通知会员；到期前 7 天铃铛提醒会员一次
 - 规则：两个集合都只有后端写；会员只能读自己的（`uid`）
 - 部署：`firebase deploy --only functions:sgAdmin,functions:sgDaily --project member-system-27ae0`，然后跑 `gcloud run services update sgadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0`，再把 `firestore.rules` 贴到 Firebase 控制台
+
+## 🧺 打包清单（2026-11-10）
+页面：admin `pack/`（要「🧺 打包清单」权限）。扫一张单 → 这位顾客要随单寄出的全部东西。
+- `pkAdmin`（后台 callable）：`batch`（最近 14 天、没取消、没标记打包完成的订单 + 每张单要放的东西）、`lookup`（单号或买家名）、`ship`（勾选；`done: true` 同时标记这一包完成）、`done`（标记 / 取消打包完成）
+- 合并五种：🎁 小礼物（smallGifts pending）、🏆 中奖奖品（prizeWins 随单；claimed / approved 可勾，unclaimed 只提醒）、🛍️ 兑换（redemptions 实体随单；approved 可勾，pending 只提醒）、🏅 签到达人礼物（ciGift，pending 也可勾 = 批准 + 寄出，补货中会扣 1 库存）、🎉 迎新礼（newMemberRewards ready_to_pack / packed，走 core 的 已打包 → 已寄出）
+- 寄出写法和后台「随订单寄出」一样：`status: shipped`、`shippedAt`、`shipping: { withOrder: true, orderNo, by, via: "pack" }` → 会员看到已发货，14 天后自动完成照旧
+- 权限只在后端检查；回传只有单号、平台、用户名、会员名字、要放什么（没有地址、电话）。打包员不需要能直接读会员资料
+- `core.js`：迎新礼的「已打包」「已寄出」两个动作，有「打包清单」权限也可以做（其他迎新礼操作不变）
+- 新集合 `packDone/{单号}`（只有后端写）
+- 🏆 非会员抽奖得主：页面直接读领奖追踪（要同一个浏览器登录过领奖追踪），勾选会在领奖追踪标记已寄出
+- 部署：`firebase deploy --only functions:pkAdmin,functions:nmAdmin --project member-system-27ae0`，然后跑 `pkadmin` 和 `nmadmin` 的 `gcloud` 那两行，再贴规则
 
 ## 🛍️ 商城兑换（2026-11-09）
 - 会员：`rdMember({ op: "redeem", rewardId, variantId? })` → `{ id }`；`rdMember({ op: "cancel", id })`

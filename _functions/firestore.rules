@@ -568,6 +568,11 @@ service cloud.firestore {
       allow read: if drawClaims() || perm('pack') || clubAny();
       allow write: if false;
     }
+    // 🧺 打包清单：已打包完成的订单（只有后端 pkAdmin 写）
+    match /packDone/{orderNo} {
+      allow read: if perm('pack');
+      allow write: if false;
+    }
     match /smallGifts/{id} {
       allow read: if drawClaims() || perm('pack') || clubAny()
         || (signedIn() && resource.data.uid == request.auth.uid);
