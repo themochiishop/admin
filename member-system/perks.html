@@ -101,7 +101,7 @@
           <label>礼物下单期限（天） <input type="number" id="m30Days" min="1" max="365" step="1"></label>
         </div>
         <p class="meta" id="m30GiftInfo" style="margin:-4px 0 0"></p>
-        <p class="meta" style="margin:6px 0 0">礼物请先到「商城奖品」新增一个<b>实体奖品</b>，设成 <b>🙈 隐藏</b>（会员在商城看不到、不能自己换），填好图片和库存，再回来这里选它。库存剩 20、剩 10 会提醒你；卖到 0 时新的礼物会标「补货中」。</p>
+        <p class="meta" style="margin:6px 0 0">礼物请先到「商城奖品」新增一个<b>实体奖品</b>，勾 <b>🏅 签到达人专属</b>（会员在商城看得到、不能用积分换，当作签到宣传），或设成 <b>🙈 隐藏</b>（会员看不到）。填好图片和库存，再回来这里选它。库存剩 20、剩 10 会提醒你；卖到 0 时新的礼物会标「补货中」。</p>
         <div class="actions" style="align-items:center">
           <label class="switch"><input type="checkbox" id="ciOn"> 开放（会员首页显示签到卡片）</label>
           <button class="btn btn-primary" id="saveCi">保存</button>
@@ -237,15 +237,18 @@
         giftRewards = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.type !== "coupon");
       } catch (e) { giftRewards = []; }
       const hid = r => !r.active && (r.hidden === true || !r.delistedAt);
-      giftRewards.sort((a, b) => (hid(b) - hid(a)) || String(a.name).localeCompare(String(b.name)));
+      // 🏅 签到达人专属的排最前面，再来是隐藏的
+      giftRewards.sort((a, b) => (!!b.ciOnly - !!a.ciOnly) || (hid(b) - hid(a)) || String(a.name).localeCompare(String(b.name)));
       $("m30Gift").innerHTML = `<option value="">（不送礼物，只给积分）</option>` + giftRewards.map(r =>
-        `<option value="${esc(r.id)}" ${r.id === cur ? "selected" : ""}>${hid(r) ? "🙈 " : r.active ? "🛍️ " : "⛔ "}${esc(r.name)}${typeof r.stock === "number" ? `（库存 ${r.stock}）` : "（不限库存）"}</option>`).join("");
+        `<option value="${esc(r.id)}" ${r.id === cur ? "selected" : ""}>${r.ciOnly ? "🏅 " : hid(r) ? "🙈 " : r.active ? "🛍️ " : "⛔ "}${esc(r.name)}${typeof r.stock === "number" ? `（库存 ${r.stock}）` : "（不限库存）"}</option>`).join("");
       if (cur && !giftRewards.some(r => r.id === cur)) $("m30Gift").insertAdjacentHTML("beforeend", `<option value="${esc(cur)}" selected>⚠️ 找不到原本选的奖品（可能已删除）</option>`);
       giftInfo();
     }
     function giftInfo() {
       const r = giftRewards.find(x => x.id === $("m30Gift").value);
-      $("m30GiftInfo").textContent = !r ? "" : r.active
+      $("m30GiftInfo").textContent = !r ? "" : r.ciOnly
+        ? (r.active ? "✅ 签到达人专属：会员在商城看得到、不能兑换，达标时系统自动送出。" : "✅ 签到达人专属（目前没上架，会员在商城看不到）。")
+        : r.active
         ? "⚠️ 这个奖品目前在商城上架中，会员也能自己用积分换。建议改成「隐藏」。"
         : r.variants && Object.keys(r.variants).length ? "⚠️ 这个奖品有款式，签到礼物不会选款式，寄出前请自己决定。" : "";
     }

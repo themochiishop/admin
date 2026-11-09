@@ -182,7 +182,7 @@
           <details class="rw-sec" open><summary>💰 积分、类型、库存、分类</summary>
           <div class="grid2">
             <label>所需积分
-              <input type="number" id="rcost" required min="1" step="1">
+              <input type="number" id="rcost" required min="0" step="1">
             </label>
             <label>类型
               <select id="rtype">
@@ -248,6 +248,7 @@
           </details>
           <details class="rw-sec" open><summary>🛒 上架 / 开放 / 下架时间</summary>
           <label class="inline"><input type="checkbox" id="ractive" checked> 上架（会员看得到）</label>
+          <label class="inline" title="会员在商城看得到，但不能用积分兑换；会员连续签到 30 天时由系统自动送出（到「额外福利 › 签到达人礼物」选它）"><input type="checkbox" id="rciOnly"> 🏅 签到达人专属（不能用积分兑换，积分可填 0）</label>
           <div class="open-box">
             <div class="row"><span class="k">开放状态</span>
               <label><input type="radio" name="ropen" value="open" checked> ✅ 已开放</label>
@@ -905,7 +906,7 @@ $("rimageRemove").addEventListener("click", () => {
             ${r.image ? `<img class="th" src="${esc(r.image)}" alt="">` : `<span class="th">${isCoupon ? "🎫" : "🎁"}</span>`}
             <div class="tx">
               <div class="nm">${esc(r.name)}</div>
-              <div class="sb">${r.cost} 分 · ${rowTags(r)}${isCoupon && r.voucher && r.voucher.name ? ` · <code style="font-size:.68rem">${esc(r.voucher.name)}</code>` : ""}</div>
+              <div class="sb">${r.ciOnly ? '<span class="tag tag-pink">🏅 签到达人专属</span>' : r.cost + " 分"} · ${rowTags(r)}${isCoupon && r.voucher && r.voucher.name ? ` · <code style="font-size:.68rem">${esc(r.voucher.name)}</code>` : ""}</div>
             </div>
             ${warnOf(r) ? '<span class="wa" title="有提醒：打开看看">⚠️</span>' : ""}
           </div>`;
@@ -988,6 +989,7 @@ $("rimageRemove").addEventListener("click", () => {
       $("rend").classList.toggle("hidden", !end);
       $("rend").value = end ? toLocalInput(end) : "";
       $("ractive").checked = r ? !!r.active : true;
+      $("rciOnly").checked = !!(r && r.ciOnly);
       const soon = !!(r && r.comingSoon);
       document.querySelector(`input[name=ropen][value=${soon ? "soon" : "open"}]`).checked = true;
       document.querySelector(`input[name=rmode][value=${r && r.openMode === "countdown" ? "countdown" : "date"}]`).checked = true;
@@ -1082,6 +1084,7 @@ showPreview(currentImage);
         category: $("rcat").value,
         endAt: $("rendOn").checked && $("rend").value ? Timestamp.fromDate(new Date($("rend").value)) : null,
         active: $("ractive").checked,
+        ciOnly: $("rciOnly").checked,   // 🏅 签到达人专属：商城显示、不能兑换（规则也挡）
         ...shelfFields($("rid").value, $("ractive").checked),
         ...readOpen(),
         image: currentImage,
@@ -1118,7 +1121,7 @@ showPreview(currentImage);
         $("formMsg").className = "msg err";
         return;
       }
-      if (!data.name || !(data.cost > 0)) {
+      if (!data.name || !(data.cost > 0 || (data.ciOnly && data.cost === 0))) {
         $("formMsg").textContent = "请填写名称和正确的积分";
         $("formMsg").className = "msg err";
         return;
