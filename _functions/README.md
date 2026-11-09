@@ -5,7 +5,7 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 
 两个功能：🎉 **新会员奖励（New Member Special）**、📅 **每日签到**（2026-11-09）。设计见项目文件 `新会员奖励-第二阶段设计.md` 和 `新会员奖励-第二阶段补充.md`。
 
-## 资料夹
+## 资料夹 
 | 档案 | 用途 |
 |---|---|
 | `functions/index.js` | 函式入口：`nmMember`（会员）、`nmAdmin`（后台）、`ciMember`（📅 签到）、`nmOnMemberCreated`、`nmOnOrderWritten`、`nmDaily` |
