@@ -8,7 +8,9 @@
 //   🎉 迎新礼        newMemberRewards ready_to_pack / packed 可以勾（走 core 的 已打包 → 已寄出）；
 //                                    pending_order / order_review 只提醒（要先到新会员奖励确认订单）
 //
-// 「这一批」= 最近 14 天、还没标记打包完成（packDone/{单号}）、没有取消的订单
+// 以扫描为准（PDA 第二版，2026-11-10）：扫到哪一张单 = 这一包现在要出货 → 列出这位顾客所有还没寄的东西（不管多久以前）
+// 「今天要寄出的包裹」= 页面选的时间段（直播时段 / 一天 / 自定义）里下的单，只用来列清单和准备数量
+// 寄出时一起存运输公司、运单号、查询链接、一张照片（五种都存）
 // 权限：店主，或有「🧺 打包清单」权限的人（只在后端检查；这些人不需要能直接读会员资料）
 // 回传给页面的只有打包需要的资料：单号、平台、用户名、会员名字、要放什么；没有地址、电话
 "use strict";
@@ -61,7 +63,7 @@ async function loadPending(db) {
 
   for (const g of await byStatus(db, "smallGifts", ["pending"])) {
     const key = g.uid ? "u:" + g.uid : userKey(g.platform, g.username);
-    add(key, { kind: "sg", id: g.id, icon: "🎁", title: `小礼物「${g.giftName || ""}」`,
+    add(key, { kind: "sg", id: g.id, icon: "🎁", title: `小礼物「${g.giftName || ""}」`, uname: g.username || "",
       sub: `${g.label || ""}抽奖没得奖${g.deadline ? " · 期限到 " + fmt(toMs(g.deadline)) : ""}`, prep: g.giftName || "小礼物", can: true });
   }
   for (const w of await byStatus(db, "prizeWins", ["unclaimed", "claimed", "approved"])) {
@@ -125,26 +127,36 @@ function parcel(o, buyer, pend, names, done) {
   };
 }
 
-// ---------- 这一批 ----------
-async function pkBatch(db, ctx) {
+// ---------- 今天要寄出的包裹（时间段）+ 全部待寄 ----------
+//   data: { from, to }（毫秒；最长 62 天）；没给 = 最近 14 天
+const MAX_RANGE = 62 * DAY;
+async function pkBatch(db, ctx, data = {}) {
   await requirePack(db, ctx);
   const now = nowMs(ctx);
-  const since = now - BATCH_DAYS * DAY;
+  let from = Number(data.from), to = Number(data.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) { from = now - BATCH_DAYS * DAY; to = now + DAY; }
+  if (!(to > from) || to - from > MAX_RANGE) fail("pk/bad-range", "时间段不正确（最长 62 天）", "invalid-argument");
   const pend = await loadPending(db);
-  const snap = await db.collection("orders").where("orderTime", ">=", tsOf(since)).get();
-  const orders = snap.docs.map(d => ({ no: d.id, ...d.data() })).filter(o => o.status !== "refunded");
-  const doneSnap = await db.collection("packDone").where("at", ">=", tsOf(since - 7 * DAY)).get();
+  const snap = await db.collection("orders").where("orderTime", ">=", tsOf(from)).get();
+  const orders = snap.docs.map(d => ({ no: d.id, ...d.data() }))
+    .filter(o => o.status !== "refunded" && (toMs(o.orderTime) || 0) <= to);
+  const doneSnap = await db.collection("packDone").where("at", ">=", tsOf(from - 7 * DAY)).get();
   const done = new Set(doneSnap.docs.map(d => d.id));
   const cache = new Map(), out = [];
   const buyers = [];
   for (const o of orders) { const b = await buyerOf(db, o, cache); buyers.push([o, b]); }
   await memberNames(db, [...new Set(buyers.map(([, b]) => b.uid).filter(Boolean))], pend.names);
   for (const [o, b] of buyers) out.push(parcel(o, b, pend, pend.names, done.has(o.no)));
-  out.sort((a, b) => (b.orderTime || 0) - (a.orderTime || 0));
-  // 「这次」= 上次按「这批打包完成」之后下的单（直播时间不固定，不能用日期算）
-  const meta = await db.collection("packMeta").doc("state").get();
-  const lastFinish = meta.exists ? toMs(meta.data().lastFinishAt) : null;
-  return { ok: true, now, days: BATCH_DAYS, lastFinishAt: lastFinish, lastFinishBy: meta.exists ? meta.data().lastFinishBy || "" : "", parcels: out };
+  out.sort((a, b) => (a.orderTime || 0) - (b.orderTime || 0));
+  // 🗂️ 全部待寄：每位顾客还没寄的东西（含还没下单的会员）
+  const uids = [...pend.by.keys()].filter(k => k.startsWith("u:")).map(k => k.slice(2));
+  await memberNames(db, uids, pend.names);
+  const pending = [...pend.by.entries()].map(([key, items]) => {
+    const isU = key.startsWith("u:");
+    return { key, uid: isU ? key.slice(2) : null, member: isU ? (pend.names.get(key.slice(2)) || "会员") : null,
+      username: isU ? "" : key.split(":").slice(2).join(":"), platform: isU ? "" : key.split(":")[1], items };
+  });
+  return { ok: true, now, from, to, parcels: out, pending };
 }
 
 // ---------- 找一张单（不在这一批里，例如比较早的单）或一个买家 ----------
@@ -177,9 +189,9 @@ async function pkLookup(db, ctx, data = {}) {
 
 // ---------- ✅ 勾选：放进这一包 ----------
 //   data: { orderNo, items: [{ kind, id }], txId }   每样各自处理，一样失败不影响其他
-async function shipOne(db, ctx, who, orderNo, it, txBase) {
+async function shipOne(db, ctx, who, orderNo, it, txBase, ship = {}) {
   const at = tsOf(nowMs(ctx));
-  const shipping = { withOrder: true, orderNo, by: who.email, via: "pack" };
+  const shipping = { withOrder: true, orderNo, by: who.email, via: "pack", ...ship };
   if (it.kind === "sg") {
     const ref = db.collection("smallGifts").doc(it.id);
     return db.runTransaction(async tx => {
@@ -188,7 +200,7 @@ async function shipOne(db, ctx, who, orderNo, it, txBase) {
       const g = s.data();
       if (g.status === "sent") return "already";
       if (g.status !== "pending") fail("pk/state", "小礼物已作废");
-      tx.update(ref, { status: "sent", sentAt: at, sentOrder: orderNo, sentBy: who.email });
+      tx.update(ref, { status: "sent", sentAt: at, sentOrder: orderNo, sentBy: who.email, shipping });
       return "ok";
     });
   }
@@ -240,14 +252,44 @@ async function shipOne(db, ctx, who, orderNo, it, txBase) {
     if (n.status === core.S.READY) await core.nmPacked(db, ctx, { rid: it.id, txId: tid("p") });
     else if (n.status !== core.S.PACKED) fail("pk/state", "迎新礼还没确认订单");
     await core.nmShipped(db, ctx, { rid: it.id, txId: tid("s") });
+    // 运单号、照片：补进迎新礼的兑换（会员看得到）和迎新礼纪录（后台看得到）
+    const after = (await db.collection("newMemberRewards").doc(it.id).get()).data() || {};
+    if (after.redemptionId) {
+      const rref = db.collection("redemptions").doc(after.redemptionId);
+      const r = await rref.get();
+      if (r.exists) await rref.update({ shipping: { ...(r.data().shipping || {}), ...shipping } });
+    }
+    await db.collection("newMemberRewards").doc(it.id).update({ shipping });
     return "ok";
   }
   fail("pk/bad-kind", "不认识的种类", "invalid-argument");
+}
+// 运单资料：{ carrier, carrierName, trackingNo, trackingUrl, photo }（全部选填；页面那边决定要不要必填）
+const PHOTO_MAX = 300 * 1024;
+function cleanShip(x) {
+  if (!x || typeof x !== "object") return {};
+  const out = {};
+  const carrier = String(x.carrier || "").trim();
+  if (carrier) { if (!/^[a-z0-9_-]{1,20}$/.test(carrier)) fail("pk/bad-ship", "运输公司不正确", "invalid-argument"); out.carrier = carrier; }
+  const name = String(x.carrierName || "").trim();
+  if (name) { if (name.length > 40) fail("pk/bad-ship", "运输公司名称太长", "invalid-argument"); out.carrierName = name; }
+  const no = String(x.trackingNo || "").replace(/\s/g, "").toUpperCase();
+  if (no) { if (!/^[A-Z0-9-]{4,40}$/.test(no)) fail("pk/bad-ship", "运单号不正确", "invalid-argument"); out.trackingNo = no; }
+  const url = String(x.trackingUrl || "").trim();
+  if (url) { if (!/^https:\/\/[^\s"'<>]{4,300}$/i.test(url)) fail("pk/bad-ship", "查询链接要以 https:// 开头", "invalid-argument"); out.trackingUrl = url; }
+  const ph = x.photo;
+  if (ph) {
+    if (typeof ph !== "string" || !/^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/.test(ph)) fail("pk/bad-ship", "照片格式不正确", "invalid-argument");
+    if (ph.length > PHOTO_MAX) fail("pk/bad-ship", "照片太大", "invalid-argument");
+    out.photos = [ph];
+  }
+  return out;
 }
 async function pkShip(db, ctx, data = {}) {
   const who = await requirePack(db, ctx);
   const orderNo = normNo(data.orderNo);
   if (!noOk(orderNo)) fail("pk/bad-order", "订单号不正确", "invalid-argument");
+  const ship = cleanShip(data.ship);
   const items = Array.isArray(data.items) ? data.items.slice(0, 30) : [];
   const txBase = /^[A-Za-z0-9_-]{8,64}$/.test(data.txId || "") ? data.txId : fail("pk/bad-txid", "缺少事务 ID", "invalid-argument");
   const results = [];
@@ -255,7 +297,7 @@ async function pkShip(db, ctx, data = {}) {
     if (!it || !["sg", "prize", "red", "nm"].includes(it.kind) || typeof it.id !== "string" || !/^[A-Za-z0-9_-]{1,260}$/.test(it.id)) {
       results.push({ id: it && it.id, ok: false, error: "资料不正确" }); continue;
     }
-    try { results.push({ kind: it.kind, id: it.id, ok: true, result: await shipOne(db, ctx, who, orderNo, it, txBase) }); }
+    try { results.push({ kind: it.kind, id: it.id, ok: true, result: await shipOne(db, ctx, who, orderNo, it, txBase, ship) }); }
     catch (e) { results.push({ kind: it.kind, id: it.id, ok: false, error: e instanceof NmError ? e.message : "系统错误" }); }
   }
   if (data.done === true) await db.collection("packDone").doc(orderNo).set({ at: tsOf(nowMs(ctx)), by: who.email });
@@ -288,7 +330,7 @@ async function pkUndo(db, ctx, data = {}) {
   const r = { smallGifts: 0, prizes: 0, redemptions: 0, welcome: 0, kept: 0 };
   for (const d of (await db.collection("smallGifts").where("sentOrder", "==", orderNo).get()).docs) {
     if (d.data().status !== "sent") continue;
-    await d.ref.update({ status: "pending", sentAt: null, sentOrder: null, sentBy: null });
+    await d.ref.update({ status: "pending", sentAt: null, sentOrder: null, sentBy: null, shipping: null });
     r.smallGifts++;
   }
   for (const [col, key] of [["prizeWins", "prizes"], ["redemptions", "redemptions"]]) {
