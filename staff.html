@@ -285,7 +285,8 @@
 
     // ---------- 🎁 抽奖系统（draw-tournament）名单同步 ----------
     // 抽奖系统是另一个 Firebase 项目，要用店主账号另外登录一次（这台电脑会记住）
-    // 名单存在 draw_staff/{email，点换成逗号}：{ console, claims, name, email }
+    // 名单存在 draw_staff/{email，点换成逗号}：{ console, claims, pack, name, email }
+    //   pack = 🧺 打包清单：打包页面读得到领奖追踪的名单，只能改「已寄出」和备注（进不了领奖追踪页）
     const drawApp = initializeApp({
       apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
       authDomain: "draw-tournament.firebaseapp.com",
@@ -299,8 +300,8 @@
     function drawEntry(s) {
       if (!s || s.active === false) return null;
       const acc = { ok: true, perms: s.perms };
-      const v = { console: can(acc, "draw.console"), claims: can(acc, "draw.claims") };
-      return v.console || v.claims ? { ...v, name: s.name || "", email: s.id || s.email } : null;
+      const v = { console: can(acc, "draw.console"), claims: can(acc, "draw.claims"), pack: can(acc, "pack") };
+      return v.console || v.claims || v.pack ? { ...v, name: s.name || "", email: s.id || s.email } : null;
     }
     // 一个人：写入或移除。回传 "ok" / "skip"（没连接）/ "fail"
     async function syncDraw(s, removeOnly = false) {
@@ -325,7 +326,7 @@
       let n = 0;
       new Set([...Object.keys(cur), ...Object.keys(want)]).forEach(k => {
         const a = cur[k] || null, b = want[k] || null;
-        if (!a !== !b || (a && b && (a.console !== b.console || a.claims !== b.claims))) n++;
+        if (!a !== !b || (a && b && (a.console !== b.console || a.claims !== b.claims || !!a.pack !== !!b.pack))) n++;
       });
       return n;
     }
