@@ -296,7 +296,10 @@
     function shipInfo(r) {
       const s = r.shipping || {};
       if (s.withOrder) return `
-        <div class="addr-box">📦 <b>已随订单一起寄出</b>${s.orderNo ? ` · 订单 <code>${esc(s.orderNo)}</code>` : ""}
+        <div class="addr-box">📦 <b>已随订单一起寄出</b>${s.orderNo ? ` · 订单 <code>${esc(s.orderNo)}</code>` : ""}${s.via === "pack" ? " · 🧺 打包清单" : ""}
+          ${s.trackingNo ? `<div class="meta">🚚 <b>${esc(s.carrierName || "")}</b> · <code style="word-break:break-all">${esc(s.trackingNo)}</code></div>` : ""}
+          ${s.trackingUrl ? `<div class="meta" style="word-break:break-all"><a href="${esc(s.trackingUrl)}" target="_blank">🔗 ${esc(s.trackingUrl)}</a></div>` : ""}
+          ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}">`).join("")}</div>` : ""}
           <div class="meta">发货 ${fmtDate(toDate(r.shippedAt), true)}${s.by ? " · " + esc(s.by) : ""}</div>
           ${s.note ? `<div class="meta">留言：${noteBadge(s.note, s.noteI18n)}</div>` : ""}</div>`;
       return `

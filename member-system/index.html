@@ -94,6 +94,8 @@
     .todo-row .n { font-weight: 800; font-size: .95rem; min-width: 28px; text-align: center; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--faint); font-variant-numeric: tabular-nums; }
     .todo-row.has .n { background: #e11d48; color: #fff; }
     .todo-row:not(.has) { color: var(--faint); }
+    .todo-row.pack { border-style: dashed; border-color: #db2777; color: var(--text2); }
+    .todo-row.pack.has .n { background: #db2777; }
     .todo-done { font-size: .82rem; color: var(--green-tx); font-weight: 600; grid-column: 1 / -1; margin-top: 2px; }
 
     /* 等级分布 */
@@ -303,7 +305,25 @@
           <span class="tx">${r.t}</span>
           <span class="n">${r.n === null ? "…" : r.n}</span>
         </a>`).join("") +
-        (loaded === rows.length && !total ? `<div class="todo-done" style="grid-column:1/-1">✓ 目前没有要处理的事，休息一下 ☕</div>` : "");
+        (loaded === rows.length && !total ? `<div class="todo-done" style="grid-column:1/-1">✓ 目前没有要处理的事，休息一下 ☕</div>` : "") +
+        // 🧺 随单寄出的东西：和上面「待发货」有重叠，所以不算进总数；只是捷径到打包清单
+        (packN !== null ? `<a class="todo-row pack ${packN ? "has" : ""}" href="../pack/#all" title="打包时扫单号会自动列出；这里是所有还没寄的（含还没下单的会员）">
+          <span class="ic">🧺</span><span class="tx">待随单寄出（打包清单）</span><span class="n">${packN}</span></a>` : "");
+    }
+    let packN = null;   // null = 没有「🧺 打包清单」权限 → 不显示
+    async function loadPackCount(redemptions, wins) {
+      if (!can(window.msAccess, "pack")) return;
+      const red = redemptions.filter(r => r.uid && r.kind === "gift" && r.newMember !== true && r.status === "approved"
+        && (r.delivery || (r.address ? "separate" : "withOrder")) === "withOrder").length;
+      const ci = redemptions.filter(r => r.uid && r.ciGift === true && r.status === "pending" && (r.delivery || "withOrder") === "withOrder").length;
+      const pw = wins.filter(w => w.uid && w.delivery !== "separate" && (w.status === "claimed" || w.status === "approved")).length;
+      const cnt = q => getCountFromServer(q).then(x => x.data().count).catch(() => 0);
+      const [sg, nm] = await Promise.all([
+        cnt(query(collection(db, "smallGifts"), where("status", "==", "pending"))),
+        cnt(query(collection(db, "newMemberRewards"), where("status", "in", ["ready_to_pack", "packed"]))),
+      ]);
+      packN = red + ci + pw + sg + nm;
+      renderTodo();
     }
 
     // ---------- 主要资料 ----------
@@ -341,6 +361,7 @@
       todo.nm.n = await getCountFromServer(query(collection(db, "newMemberRewards"), where("status", "in", NM_ACTIONABLE)))
         .then(s => s.data().count).catch(() => 0);
       renderTodo();
+      loadPackCount(redemptions, wins);   // 🧺 不等它
 
       // 会员（统计不算内部会员）
       const real = Object.values(members).filter(m => !isInternal(m.uid));

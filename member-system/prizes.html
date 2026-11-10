@@ -854,8 +854,10 @@
     }
     function shipInfo(w) {
       const s = w.shipping || {};
-      if (!s.trackingNo && !(s.photos || []).length) return "";
-      return `<div class="addr-box">${s.trackingNo ? `🚚 <b>${esc(s.carrierName || "")}</b> · <code>${esc(s.trackingNo)}</code>` : "📷 发货图片"}
+      // 🧺 打包清单：随订单一起寄出（扫单时一起存的运单号、照片也显示在下面）
+      const viaPack = s.withOrder ? `<div class="meta" style="margin-bottom:4px">📦 <b>随订单${s.orderNo ? ` <code>${esc(s.orderNo)}</code>` : ""} 一起寄出</b>${s.via === "pack" ? " · 🧺 打包清单" : ""}${s.by ? " · " + esc(s.by) : ""}</div>` : "";
+      if (!s.trackingNo && !(s.photos || []).length) return viaPack ? `<div class="addr-box">${viaPack}${w.shippedAt ? `<div class="meta">发货 ${fmtDate(toDate(w.shippedAt), true)}</div>` : ""}</div>` : "";
+      return `<div class="addr-box">${viaPack}${s.trackingNo ? `🚚 <b>${esc(s.carrierName || "")}</b> · <code>${esc(s.trackingNo)}</code>` : "📷 发货图片"}
         ${(s.photos || []).length ? `<div class="photos">${s.photos.map(p => `<img src="${esc(p)}" alt="">`).join("")}</div>` : ""}
         ${s.trackingUrl ? `<div class="meta"><a href="${esc(s.trackingUrl)}" target="_blank">🔗 ${esc(s.trackingUrl)}</a></div>` : ""}
         ${w.shippedAt ? `<div class="meta">发货 ${fmtDate(toDate(w.shippedAt), true)}</div>` : ""}</div>`;
