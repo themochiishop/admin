@@ -64,13 +64,20 @@ async function loadPending(db) {
   for (const g of await byStatus(db, "smallGifts", ["pending"])) {
     const key = g.uid ? "u:" + g.uid : userKey(g.platform, g.username);
     add(key, { kind: "sg", id: g.id, icon: "🎁", title: `小礼物「${g.giftName || ""}」`, uname: g.username || "",
-      sub: `${g.label || ""}抽奖没得奖${g.deadline ? " · 期限到 " + fmt(toMs(g.deadline)) : ""}`, prep: g.giftName || "小礼物", can: true });
+      sub: `${g.label || ""}抽奖没得奖${g.deadline ? " · 期限到 " + fmt(toMs(g.deadline)) : ""}`, prep: g.giftName || "小礼物", can: true,
+      src: g.label ? `${g.label}抽奖` : "抽奖",
+      en: { title: `Small gift "${g.giftName || ""}"`, sub: `${g.label ? g.label + " " : ""}draw · not won${g.deadline ? " · until " + fmt(toMs(g.deadline)) : ""}`,
+        prep: g.giftName || "Small gift", src: g.label ? `${g.label} draw` : "Draw" } });
   }
   for (const w of await byStatus(db, "prizeWins", ["unclaimed", "claimed", "approved"])) {
     if (!w.uid || w.delivery === "separate") continue;
-    const base = { kind: "prize", id: w.id, icon: "🏆", title: `中奖奖品「${w.prizeName || ""}」`, prep: w.prizeName || "中奖奖品" };
-    if (w.status === "unclaimed") add("u:" + w.uid, { ...base, sub: `${w.drawMonth || ""} · 会员还没按领取`, can: false, warn: "会员还没领取" });
-    else add("u:" + w.uid, { ...base, sub: `${w.drawMonth || ""} · ${w.status === "claimed" ? "待审核（勾选 = 批准 + 已寄出）" : "待发货"}`, can: true });
+    const base = { kind: "prize", id: w.id, icon: "🏆", title: `中奖奖品「${w.prizeName || ""}」`, prep: w.prizeName || "中奖奖品",
+      src: `${w.drawMonth || ""} 抽奖`.trim() };
+    const en = { title: `Prize "${w.prizeName || ""}"`, prep: w.prizeName || "Prize", src: `${w.drawMonth || ""} draw`.trim() };
+    if (w.status === "unclaimed") add("u:" + w.uid, { ...base, sub: `${w.drawMonth || ""} · 会员还没按领取`, can: false, warn: "会员还没领取",
+      en: { ...en, sub: `${w.drawMonth || ""} · member hasn't claimed yet`, warn: "Member hasn't claimed yet" } });
+    else add("u:" + w.uid, { ...base, sub: `${w.drawMonth || ""} · ${w.status === "claimed" ? "待审核（勾选 = 批准 + 已寄出）" : "待发货"}`, can: true,
+      en: { ...en, sub: `${w.drawMonth || ""} · ${w.status === "claimed" ? "to review (tick = approve + shipped)" : "to ship"}` } });
   }
   for (const r of await byStatus(db, "redemptions", ["pending", "approved"])) {
     if (!r.uid || r.kind !== "gift" || r.newMember === true) continue;
@@ -78,21 +85,31 @@ async function loadPending(db) {
     if (dlv !== "withOrder") continue;
     if (r.ciGift === true) {
       add("u:" + r.uid, { kind: "red", id: r.id, icon: "🏅", title: `签到达人礼物「${r.rewardName || ""}」`, prep: r.rewardName || "签到达人礼物",
-        sub: r.status === "pending" ? (r.backorder ? "补货中 · 勾选会扣 1 个库存" : "勾选 = 批准 + 已寄出") : "待发货", can: true });
+        sub: r.status === "pending" ? (r.backorder ? "补货中 · 勾选会扣 1 个库存" : "勾选 = 批准 + 已寄出") : "待发货", can: true, src: "签到达人",
+        en: { title: `Check-in gift "${r.rewardName || ""}"`, prep: r.rewardName || "Check-in gift", src: "Check-in streak",
+          sub: r.status === "pending" ? (r.backorder ? "backorder · ticking uses 1 stock" : "tick = approve + shipped") : "to ship" } });
       continue;
     }
     const title = `兑换「${r.rewardName || ""}」${r.variantName ? "（" + r.variantName + "）" : ""}`;
-    if (r.status === "pending") add("u:" + r.uid, { kind: "red", id: r.id, icon: "🛍️", title, prep: r.rewardName, sub: "待审核", can: false, warn: "要先到「兑换审核」批准" });
-    else add("u:" + r.uid, { kind: "red", id: r.id, icon: "🛍️", title, prep: r.rewardName, sub: `${r.cost ? r.cost + " 分 · " : ""}待发货${r.test ? " · 🧪 测试" : ""}`, can: true });
+    const enT = `Redeem "${r.rewardName || ""}"${r.variantName ? " (" + r.variantName + ")" : ""}`;
+    if (r.status === "pending") add("u:" + r.uid, { kind: "red", id: r.id, icon: "🛍️", title, prep: r.rewardName, sub: "待审核", can: false, warn: "要先到「兑换审核」批准",
+      src: "商城兑换", en: { title: enT, prep: r.rewardName, sub: "to review", warn: "Approve it in Redemptions first", src: "Rewards shop" } });
+    else add("u:" + r.uid, { kind: "red", id: r.id, icon: "🛍️", title, prep: r.rewardName, sub: `${r.cost ? r.cost + " 分 · " : ""}待发货${r.test ? " · 🧪 测试" : ""}`, can: true,
+      src: "商城兑换", en: { title: enT, prep: r.rewardName, sub: `${r.cost ? r.cost + " pts · " : ""}to ship${r.test ? " · 🧪 test" : ""}`, src: "Rewards shop" } });
   }
   for (const n of await byStatus(db, "newMemberRewards", ["ready_to_pack", "packed", "pending_order", "order_review"])) {
     if (!n.uid) continue;
     if (n.memberName) names.set(n.uid, n.memberName);
     const g = (n.gift && n.gift.name) || "迎新礼";
-    const base = { kind: "nm", id: n.id, icon: "🎉", title: `迎新礼「${g}」`, prep: "迎新礼 " + g };
+    const gEn = (n.gift && n.gift.name) || "Welcome gift";
+    const base = { kind: "nm", id: n.id, icon: "🎉", title: `迎新礼「${g}」`, prep: "迎新礼 " + g, src: "新会员奖励" };
+    const en = { title: `Welcome gift "${gEn}"`, prep: "Welcome gift " + gEn, src: "New member reward" };
+    const lo = (n.linkedOrder && n.linkedOrder.orderNo) || "";
     if (n.status === "ready_to_pack" || n.status === "packed")
-      add("u:" + n.uid, { ...base, sub: `订单 ${(n.linkedOrder && n.linkedOrder.orderNo) || "-"}${n.test ? " · 🧪 测试" : ""}`, can: true, linkedOrder: (n.linkedOrder && n.linkedOrder.orderNo) || "" });
-    else if (n.status === "order_review") add("u:" + n.uid, { ...base, sub: "有候选订单待确认", can: false, warn: "要先到「新会员奖励」确认订单" });
+      add("u:" + n.uid, { ...base, sub: `订单 ${lo || "-"}${n.test ? " · 🧪 测试" : ""}`, can: true, linkedOrder: lo,
+        en: { ...en, sub: `order ${lo || "-"}${n.test ? " · 🧪 test" : ""}` } });
+    else if (n.status === "order_review") add("u:" + n.uid, { ...base, sub: "有候选订单待确认", can: false, warn: "要先到「新会员奖励」确认订单",
+      en: { ...en, sub: "candidate order to confirm", warn: "Confirm the order in New member rewards first" } });
   }
   return { by, names };
 }
@@ -116,6 +133,18 @@ async function memberNames(db, uids, names) {
     const m = await db.collection("members").doc(uid).get();
     names.set(uid, m.exists ? (m.data().name || "") : "");
   }
+}
+// 会员绑定的平台账号（只回传平台 + 用户名，最多 4 个）
+async function memberAccounts(db, uids) {
+  const out = new Map();
+  for (const uid of uids) {
+    const s = await db.collection("bindings").where("uid", "==", uid).get();
+    out.set(uid, s.docs.map(d => {
+      const b = d.data() || {}, i = d.id.indexOf("_");
+      return { platform: b.platform || (i > 0 ? d.id.slice(0, i) : ""), username: String(b.username || (i > 0 ? d.id.slice(i + 1) : "")) };
+    }).filter(a => a.username).slice(0, 4));
+  }
+  return out;
 }
 function parcel(o, buyer, pend, names, done) {
   const keys = [buyer.uid ? "u:" + buyer.uid : null, userKey(buyer.platform, buyer.username)].filter(Boolean);
@@ -151,10 +180,12 @@ async function pkBatch(db, ctx, data = {}) {
   // 🗂️ 全部待寄：每位顾客还没寄的东西（含还没下单的会员）
   const uids = [...pend.by.keys()].filter(k => k.startsWith("u:")).map(k => k.slice(2));
   await memberNames(db, uids, pend.names);
+  const accts = await memberAccounts(db, uids);
   const pending = [...pend.by.entries()].map(([key, items]) => {
     const isU = key.startsWith("u:");
+    const uname = isU ? "" : (items.find(i => i.uname) || {}).uname || key.split(":").slice(2).join(":");
     return { key, uid: isU ? key.slice(2) : null, member: isU ? (pend.names.get(key.slice(2)) || "会员") : null,
-      username: isU ? "" : key.split(":").slice(2).join(":"), platform: isU ? "" : key.split(":")[1], items };
+      username: uname, platform: isU ? "" : key.split(":")[1], accounts: isU ? (accts.get(key.slice(2)) || []) : [], items };
   });
   return { ok: true, now, from, to, parcels: out, pending };
 }
