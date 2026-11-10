@@ -234,13 +234,53 @@ test("撤销这一包：打包清单寄出的全部退回，打包完成取消�
   await rejects(pk.pkUndo(db, NOBODY, { orderNo: "2611190000001" }), "pk/no-perm");
 });
 
-test("这批打包完成：记下时间（没有订单也可以）；batch 回传 lastFinishAt", async () => {
+test("时间段：只列这段时间下的单；全部待寄列出每位顾客（含还没下单的会员）", async () => {
   const db = fakeDb(SEED());
-  assert.equal((await pk.pkBatch(db, PACKER)).lastFinishAt, null);
-  await pk.pkDone(db, { ...PACKER, now: T0 - 3600000 }, { orderNos: [], finish: true });
-  const b = await pk.pkBatch(db, PACKER);
-  assert.equal(b.lastFinishAt, T0 - 3600000); assert.equal(b.lastFinishBy, "pack@x.com");
-  await pk.pkDone(db, PACKER, { orderNos: ["2611190000003"], finish: true });
-  assert.ok(db.data.get("packDone/2611190000003"));
-  assert.equal((await pk.pkBatch(db, PACKER)).lastFinishAt, T0);
+  db.data.set("prizeWins/w7", { uid: "u7", prizeName: "鞋", status: "approved", delivery: "withOrder" });   // u7 还没下单
+  db.data.set("members/u7", { name: "Ali" });
+  const r = await pk.pkBatch(db, PACKER, { from: T0 - 1.5 * DAY, to: T0 });
+  assert.deepEqual(r.parcels.map(p => p.orderNo), ["2611190000001", "2611190000003"]);   // 一天前的单；旧的到这段以外
+  const ali = r.pending.find(x => x.uid === "u7");
+  assert.equal(ali.member, "Ali"); assert.deepEqual(ali.items.map(i => i.id), ["w7"]);
+  const b2 = r.pending.find(x => x.key.startsWith("p:"));
+  assert.equal(b2.username, "buyer2"); assert.equal(b2.platform, "shopee");
+  assert.ok(r.pending.find(x => x.uid === "u1").items.length >= 5);
+  await rejects(pk.pkBatch(db, PACKER, { from: T0, to: T0 - 1 }), "pk/bad-range");
+  await rejects(pk.pkBatch(db, PACKER, { from: T0 - 70 * DAY, to: T0 }), "pk/bad-range");
+});
+
+const PHOTO = "data:image/webp;base64," + "A".repeat(2000);
+const SHIP = { carrier: "spx", carrierName: "SPX Express", trackingNo: " spxmy0634571606 1a", trackingUrl: "https://spx.com.my/track?SPXMY06345716061A", photo: PHOTO };
+test("寄出时存运输公司、运单号、链接、照片（五种都存）", async () => {
+  const db = fakeDb(SEED());
+  const items = ["sg:b__1", "prize:w1", "red:r1", "red:ci_u1_20261119", "nm:uAqmar01_1"].map(s => ({ kind: s.split(":")[0], id: s.split(":")[1] }));
+  const r = await pk.pkShip(db, PACKER, { orderNo: "2611190000001", items, txId: "tx_ship1234", done: true, ship: SHIP });
+  assert.equal(r.ok, true, JSON.stringify(r.results));
+  const want = { withOrder: true, orderNo: "2611190000001", by: "pack@x.com", via: "pack", carrier: "spx", carrierName: "SPX Express",
+    trackingNo: "SPXMY06345716061A", trackingUrl: "https://spx.com.my/track?SPXMY06345716061A", photos: [PHOTO] };
+  assert.deepEqual(db.data.get("smallGifts/b__1").shipping, want);
+  assert.deepEqual(db.data.get("prizeWins/w1").shipping, want);
+  assert.deepEqual(db.data.get("redemptions/r1").shipping, want);
+  assert.deepEqual(db.data.get("redemptions/ci_u1_20261119").shipping, want);
+  const nmRed = db.data.get("redemptions/nm_u1_1").shipping;                // 迎新礼的兑换：原本的资料 + 运单号、照片
+  assert.equal(nmRed.trackingNo, "SPXMY06345716061A"); assert.deepEqual(nmRed.photos, [PHOTO]); assert.equal(nmRed.withOrder, true);
+  assert.equal(db.data.get("newMemberRewards/uAqmar01_1").shipping.trackingNo, "SPXMY06345716061A");
+  // 撤销：小礼物的运单资料也清掉
+  await pk.pkUndo(db, PACKER, { orderNo: "2611190000001" });
+  assert.equal(db.data.get("smallGifts/b__1").shipping, null);
+});
+
+test("运单资料不对会挡（整包都不寄）", async () => {
+  const db = fakeDb(SEED());
+  const go = ship => pk.pkShip(db, PACKER, { orderNo: "2611190000001", items: [{ kind: "sg", id: "b__1" }], txId: "tx_bad12345", ship });
+  await rejects(go({ trackingUrl: "http://x.com/1" }), "pk/bad-ship");
+  await rejects(go({ trackingNo: "a b<c" }), "pk/bad-ship");
+  await rejects(go({ carrier: "SPX!" }), "pk/bad-ship");
+  await rejects(go({ photo: "data:text/html;base64,AAAA" }), "pk/bad-ship");
+  await rejects(go({ photo: "data:image/jpeg;base64," + "A".repeat(320 * 1024) }), "pk/bad-ship");
+  assert.equal(db.data.get("smallGifts/b__1").status, "pending");
+  // 没有运单资料也可以（页面取消「需要运单号 / 照片」时）
+  const r = await go(undefined);
+  assert.equal(r.ok, true);
+  assert.deepEqual(db.data.get("smallGifts/b__1").shipping, { withOrder: true, orderNo: "2611190000001", by: "pack@x.com", via: "pack" });
 });
