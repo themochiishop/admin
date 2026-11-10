@@ -120,6 +120,7 @@
     .row.sel { outline: 2px solid #db2777; }
     .empty { padding: 40px 10px; text-align: center; color: var(--muted); }
     .sub { font-size: .76rem; color: var(--muted); margin: 2px 2px 10px; }
+    .claimhint .btn-claim { border: 0; background: #db2777; color: #fff; border-radius: 8px; padding: 5px 10px; font-weight: 700; font-size: .78rem; cursor: pointer; margin: 4px 2px 0; }
     .claimhint { font-size: .76rem; color: var(--muted); background: var(--soft2); border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; }
 
     /* 准备：两个文件夹卡 */
@@ -219,12 +220,12 @@
       <div id="hist" class="hist"></div>
     </section>
     <section id="tabList" class="tab">
-      <div id="claimHint" class="claimhint" hidden></div>
       <div id="rangeInfo" class="sub"></div>
       <div id="chips" class="chips"></div>
       <div id="list"><div class="empty">读取中…</div></div>
     </section>
     <section id="tabPrep" class="tab">
+      <div id="claimHint" class="claimhint" hidden></div>
       <div class="folders" id="folders">
         <button data-fd="today" class="on"><span data-t="fdToday">📦 今天要寄</span><span class="n" id="nToday" hidden></span></button>
         <button data-fd="all"><span data-t="fdAll">🗂️ 全部待寄</span><span class="n" id="nAll" hidden></span></button>
@@ -334,7 +335,8 @@
         trkWord: "运单号", phFail: e => `照片读取失败：${e}`, partFail: "有些没成功：", savedOk: "✅ 这一包放好了",
         undoConfirm: (no, u) => `↩️ 撤销 ${no}（${u}）这一包？\n\n这一包用打包清单寄出的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n运单号、照片也会一起清掉。\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`,
         undone: n => `↩️ 已撤销：退回 ${n} 样`, undoWelcome: n => `\n\n⚠️ 这一包有 ${n} 份迎新礼已寄出，要到「新会员奖励」处理`, undoKept: n => `\n\nℹ️ ${n} 样会员已确认收到 / 已完成，没有退回`,
-        claimHint: '🏆 非会员抽奖得主的奖品：<a href="../draw_tournament/claims.html" target="_blank">登录领奖追踪</a> 后重新整理这一页，也会一起列出。',
+        claimHint: '🏆 非会员抽奖得主的奖品也要一起列出：<button type="button" class="btn-claim" data-claim="login">🔑 连接领奖追踪</button>（用你的 Google 账号登录一次，这台手机会记住）',
+        claimDenied: e => `🏆 读不到领奖追踪的名单（${e}）：请店主到「👥 管理员」按「立即同步」，或确认登录的是对的账号。<button type="button" class="btn-claim" data-claim="switch">换账号</button>`,
         noClaimLogin: "没有登录领奖追踪", claimPrize: "奖品", claimTitle: r => `领奖追踪「${r}」`, claimSub: "非会员得主", claimMemSub: "会员得主",
         claimMemWarn: "会员得奖：先到会员系统「🏆 中奖奖品」添加 / 发奖，才会出现在这里", claimMemTag: "⚠️ 先到中奖奖品发奖",
       },
@@ -373,7 +375,8 @@
         trkWord: "Tracking no.", phFail: e => `Couldn't read photo: ${e}`, partFail: "Some failed:", savedOk: "✅ Parcel packed",
         undoConfirm: (no, u) => `↩️ Undo parcel ${no} (${u})?\n\nEverything shipped with this parcel via Packing goes back:\n• Small gifts → pending\n• Prizes, redemptions, check-in gifts → to ship\nTracking no. and photo are cleared too.\n\nItems the member already confirmed received stay as they are. Welcome gifts are handled in New member rewards.`,
         undone: n => `↩️ Undone: ${n} item(s) returned`, undoWelcome: n => `\n\n⚠️ ${n} welcome gift(s) in this parcel were shipped — handle them in New member rewards`, undoKept: n => `\n\nℹ️ ${n} item(s) already received / completed, not returned`,
-        claimHint: '🏆 Prizes of non-member draw winners: <a href="../draw_tournament/claims.html" target="_blank">sign in to Claim tracking</a>, then reload this page to list them too.',
+        claimHint: '🏆 List prizes of non-member draw winners too: <button type="button" class="btn-claim" data-claim="login">🔑 Connect Claim tracking</button> (sign in once with your Google account; this phone remembers it)',
+        claimDenied: e => `🏆 Can't read the Claim tracking list (${e}): ask the owner to press "Sync now" in 👥 Staff, or check you signed in with the right account. <button type="button" class="btn-claim" data-claim="switch">Switch account</button>`,
         noClaimLogin: "Not signed in to Claim tracking", claimPrize: "Prize", claimTitle: r => `Claim "${r}"`, claimSub: "non-member winner", claimMemSub: "member winner",
         claimMemWarn: "Member winner: add / award it in Member system › 🏆 Prizes first, then it shows up here", claimMemTag: "⚠️ Award it in Prizes first",
       },
@@ -914,7 +917,7 @@
 
     // ---------- 🏆 领奖追踪（非会员得主）：同一个浏览器登录过领奖追踪才读得到 ----------
     async function setupClaims() {
-      if (!access || !can(access, "draw.claims")) return;
+      if (!access || !can(access, "pack")) return;   // 🧺 打包清单权限就够（店主在「👥 管理员」同步后，抽奖系统那边只让打包员读名单、改「已寄出」和备注）
       try {
         await loadScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
         await loadScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js");
@@ -924,7 +927,9 @@
         fb.auth().onAuthStateChanged(async u => {
           if (!u) { $("claimHint").hidden = false; $("claimHint").innerHTML = t("claimHint"); return; }
           claimDb = fb.database();
-          const v = (await claimDb.ref("draw_private/claimBatches").once("value")).val() || {};
+          let v;
+          try { v = (await claimDb.ref("draw_private/claimBatches").once("value")).val() || {}; }
+          catch (e) { claimDb = null; $("claimHint").hidden = false; $("claimHint").innerHTML = t("claimDenied", esc(u.email || errText(e))); return; }
           claimItems = [];
           Object.entries(v).forEach(([bid, b]) => Object.entries((b && b.items) || {}).forEach(([k, x]) => {
             if (!x || x.removed || x.voided || x.shipped) return;
@@ -940,6 +945,19 @@
         });
       } catch (e) { console.warn("claims", e); }
     }
+    // 🔑 连接领奖追踪（不用打开领奖追踪页）
+    $("claimHint").addEventListener("click", async e => {
+      const b = e.target.closest("[data-claim]"); if (!b || !window.firebase) return;
+      const fa = window.firebase.auth();
+      try {
+        if (b.dataset.claim === "switch") await fa.signOut();
+        const pv = new window.firebase.auth.GoogleAuthProvider(); pv.setCustomParameters({ prompt: "select_account" });
+        await fa.signInWithPopup(pv).catch(err => {
+          if (err.code === "auth/popup-blocked" || err.code === "auth/operation-not-supported-in-this-environment") return fa.signInWithRedirect(pv);
+          throw err;
+        });
+      } catch (err) { if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") alert("❌ " + errText(err)); }
+    });
     // 用订单号对会员系统「🏆 中奖奖品」（和领奖追踪页一样）：
     //   会员系统有这笔 → 交给会员那一笔（已寄出就不再出现；待寄的会以 🏆 中奖奖品出现）
     //   没有，但买家账号绑定了会员 → 标成会员，要先到中奖奖品发奖
