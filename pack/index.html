@@ -22,12 +22,10 @@
     .bar { background: #0f172a; color: #fff; padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .bar a { color: #94a3b8; font-size: 1.1rem; padding: 2px 6px; }
     .bar h1 { font-size: 1rem; white-space: nowrap; }
-    .bar .sp { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+    .bar .sp { margin-left: auto; display: flex; gap: 6px; align-items: center; min-width: 0; }
     .bar button { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 7px; padding: 5px 8px; font-size: .74rem; cursor: pointer; white-space: nowrap; }
     .bar button.on { background: #854d0e; border-color: #ca8a04; color: #fef9c3; }
-    .seg { display: inline-flex; border: 1px solid #334155; border-radius: 7px; overflow: hidden; }
-    .seg button { border: 0; border-radius: 0; }
-    .seg button.on { background: #db2777; color: #fff; }
+    .bar .range { background: #db2777; border-color: #db2777; color: #fff; font-weight: 700; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
 
     .scanbar { background: #0f172a; padding: 0 10px 10px; display: flex; gap: 8px; flex-shrink: 0; }
     .scanbar input { flex: 1; min-width: 0; font-size: 1.15rem; padding: 12px; border: 2px solid #db2777; border-radius: 10px; background: #fff; color: #0f172a; font-family: ui-monospace, Menlo, monospace; letter-spacing: .5px; }
@@ -35,6 +33,7 @@
     .scanbar button { border: 0; border-radius: 10px; font-size: 1.15rem; padding: 0 14px; cursor: pointer; background: #1e293b; color: #fff; }
     .scanbar .cam { background: #db2777; font-weight: 700; font-size: .95rem; }
     .scanbar button.off { opacity: .55; }
+    .scanhint { background: #0f172a; color: #f9a8d4; font-size: .78rem; padding: 0 12px 8px; margin-top: -4px; flex-shrink: 0; }
 
     .stats { display: flex; gap: 6px; padding: 7px 10px; background: var(--card); border-bottom: 1px solid var(--line); font-size: .76rem; color: var(--text2); flex-shrink: 0; overflow-x: auto; white-space: nowrap; }
     .stats b { color: var(--ink); }
@@ -53,8 +52,7 @@
     .idle b { display: block; color: var(--ink); font-size: 1.1rem; margin: 6px 0 4px; }
     .res { border-radius: 14px; overflow: hidden; border: 3px solid #db2777; background: var(--card); }
     .res-head { background: #db2777; color: #fff; padding: 12px 14px; }
-    .res.ok { border-color: #16a34a; } .res.ok .res-head { background: #16a34a; }
-    .res.none { border-color: #16a34a; } .res.none .res-head { background: #16a34a; }
+    .res.ok, .res.none { border-color: #16a34a; } .res.ok .res-head, .res.none .res-head { background: #16a34a; }
     .res.warn { border-color: #d97706; } .res.warn .res-head { background: #d97706; }
     .res.err { border-color: #dc2626; } .res.err .res-head { background: #dc2626; }
     .res-head .big { font-size: 1.6rem; font-weight: 900; line-height: 1.15; }
@@ -62,18 +60,37 @@
     .res-head .who { font-size: 1rem; font-weight: 700; margin-top: 2px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .tag { font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.22); color: #fff; }
     .res-body { padding: 4px 10px 10px; }
-    .it { display: flex; align-items: center; gap: 10px; padding: 12px 4px; border-bottom: 1px dashed var(--line); min-height: 64px; cursor: pointer; }
+    .sec-t { font-size: .78rem; font-weight: 800; color: var(--muted); margin: 12px 2px 2px; }
+    .it { display: flex; align-items: center; gap: 10px; padding: 12px 4px; border-bottom: 1px dashed var(--line); min-height: 60px; cursor: pointer; }
     .it:last-of-type { border-bottom: 0; }
-    .it .ic { font-size: 1.7rem; width: 38px; text-align: center; flex-shrink: 0; }
+    .it .ic { font-size: 1.6rem; width: 36px; text-align: center; flex-shrink: 0; }
     .it .nm { flex: 1; min-width: 0; }
-    .it .nm b { color: var(--ink); font-size: 1.05rem; display: block; }
+    .it .nm b { color: var(--ink); font-size: 1.02rem; display: block; }
     .it .nm small { display: block; color: var(--muted); font-size: .78rem; margin-top: 1px; }
-    .it .ck { width: 40px; height: 40px; border-radius: 10px; border: 3px solid var(--line2); display: grid; place-items: center; font-size: 1.4rem; flex-shrink: 0; color: #fff; }
+    .it .ck { width: 38px; height: 38px; border-radius: 10px; border: 3px solid var(--line2); display: grid; place-items: center; font-size: 1.3rem; flex-shrink: 0; color: #fff; font-weight: 900; }
+    .it.on .ck { background: #16a34a; border-color: #16a34a; }
+    .it.off { opacity: .55; } .it.off .nm small::after { content: " · 这次不寄，留到下一单"; color: var(--amber-tx); }
     .it.sent { opacity: .55; cursor: default; } .it.sent b { text-decoration: line-through; }
-    .it.sent .ck { background: #16a34a; border-color: #16a34a; }
+    .it.sent .ck { background: #64748b; border-color: #64748b; }
     .warn { background: var(--amber-bg); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: .86rem; color: var(--amber-tx); }
     .note { font-size: .8rem; color: var(--blue-tx); background: var(--blue-bg); border-radius: 10px; padding: 8px 11px; margin-top: 8px; }
     .linkbtn { display: block; width: 100%; margin-top: 10px; background: none; border: 1px dashed var(--line2); color: var(--text2); border-radius: 10px; padding: 10px; font-size: .84rem; cursor: pointer; }
+
+    /* 🚚 运单 + 📷 照片 */
+    .ship { margin-top: 12px; border: 2px solid var(--line2); border-radius: 12px; padding: 10px; background: var(--soft2); }
+    .ship .row2 { display: flex; gap: 8px; }
+    .ship label { display: block; font-size: .74rem; color: var(--muted); margin: 6px 0 3px; font-weight: 700; }
+    .ship select, .ship input[type=text], .ship input[type=url] { width: 100%; font-size: .95rem; padding: 9px 10px; border: 1.5px solid var(--line2); border-radius: 9px; background: var(--card); color: var(--ink); }
+    .ship .trk { font-family: ui-monospace, Menlo, monospace; }
+    .ship .need { display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 700; color: var(--ink); margin: 2px 0 0; cursor: pointer; }
+    .ship .need input { width: 22px; height: 22px; accent-color: #db2777; }
+    .ship .miss { color: #db2777; font-size: .78rem; font-weight: 700; margin-left: auto; }
+    .ship .ok { color: var(--green-tx); font-size: .78rem; font-weight: 700; margin-left: auto; }
+    .ship hr { border: 0; border-top: 1px dashed var(--line2); margin: 10px 0; }
+    .photo { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+    .photo img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 2px solid #16a34a; }
+    .photo .shot { flex: 1; border: 2px dashed #db2777; background: var(--card); color: #db2777; border-radius: 10px; padding: 14px; font-weight: 800; font-size: .95rem; cursor: pointer; }
+    .photo .del { background: none; border: 1px solid var(--line2); color: var(--text2); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 
     .hist { margin-top: 14px; }
     .hist h3 { font-size: .78rem; color: var(--muted); font-weight: 600; margin: 0 2px 6px; }
@@ -94,26 +111,36 @@
     .row .what i { font-style: normal; display: inline-block; background: var(--soft); border-radius: 6px; padding: 1px 7px; margin: 2px 4px 0 0; font-size: .78rem; color: var(--text); }
     .row .what i.w { color: var(--amber-tx); background: var(--amber-bg); }
     .row .st { font-size: .82rem; font-weight: 800; white-space: nowrap; color: #db2777; }
-    .row.done { opacity: .5; } .row.done .st { color: var(--green-tx); }
+    .row.done .st { color: var(--green-tx); } .row.done { opacity: .6; }
+    .row.none .st { color: var(--muted); font-weight: 600; }
     .row.sel { outline: 2px solid #db2777; }
     .empty { padding: 40px 10px; text-align: center; color: var(--muted); }
     .sub { font-size: .76rem; color: var(--muted); margin: 2px 2px 10px; }
-    .finish { width: 100%; margin-top: 10px; padding: 13px; border-radius: 10px; border: 2px solid #16a34a; background: var(--green-bg); color: var(--green-tx); font-weight: 800; font-size: .95rem; cursor: pointer; }
     .claimhint { font-size: .76rem; color: var(--muted); background: var(--soft2); border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; }
 
-    /* 准备 */
+    /* 准备：两个文件夹卡 */
+    .folders { display: flex; gap: 0; margin-bottom: 10px; border-bottom: 2px solid var(--line2); }
+    .folders button { flex: 1; border: 2px solid transparent; border-bottom: 0; background: none; padding: 10px 6px; font-size: .9rem; font-weight: 800; color: var(--muted); border-radius: 12px 12px 0 0; cursor: pointer; margin-bottom: -2px; }
+    .folders button.on { background: var(--card); color: var(--ink); border-color: var(--line2); border-bottom: 2px solid var(--card); }
+    .folders .n { display: inline-block; background: #db2777; color: #fff; font-size: .7rem; border-radius: 99px; padding: 0 6px; margin-left: 4px; }
     .prep { display: grid; gap: 8px; }
-    .prep div { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-    .prep .ic { font-size: 1.6rem; }
-    .prep .nm { flex: 1; color: var(--ink); font-weight: 700; }
-    .prep .n { font-size: 1.5rem; font-weight: 900; color: #db2777; }
+    .pg { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .pg summary { list-style: none; } .pg summary::-webkit-details-marker { display: none; }
+    .pg summary > div { display: flex; align-items: center; gap: 10px; padding: 13px 14px; cursor: pointer; }
+    .pg .ic { font-size: 1.5rem; }
+    .pg .nm { flex: 1; color: var(--ink); font-weight: 700; }
+    .pg .n { font-size: 1.45rem; font-weight: 900; color: #db2777; }
+    .pg ul { list-style: none; margin: 0; padding: 0 14px 10px 54px; font-size: .82rem; color: var(--text2); }
+    .pg li { padding: 4px 0; border-top: 1px dashed var(--line); display: flex; gap: 8px; }
+    .pg li span { margin-left: auto; font-size: .74rem; font-weight: 700; }
+    .pg li .t { color: #16a34a; } .pg li .w { color: var(--muted); }
 
     /* 下方：大按钮 + 分页 */
     .act { flex-shrink: 0; padding: 8px 10px; background: var(--card); border-top: 1px solid var(--line); }
-    .act button { width: 100%; border: 0; border-radius: 12px; padding: 16px; font-size: 1.15rem; font-weight: 900; cursor: pointer; }
+    .act button { width: 100%; border: 0; border-radius: 12px; padding: 15px; font-size: 1.1rem; font-weight: 900; cursor: pointer; }
     .act .go { background: #16a34a; color: #fff; }
+    .act .go.dis { background: var(--soft); color: var(--muted); }
     .act .next { background: var(--navy); color: #fff; }
-    .act button:disabled { opacity: .55; }
     .tabs { flex-shrink: 0; display: flex; background: #0f172a; padding-bottom: env(safe-area-inset-bottom); }
     .tabs button { flex: 1; background: none; border: 0; color: #94a3b8; padding: 9px 4px 8px; font-size: .78rem; cursor: pointer; position: relative; }
     .tabs button .i { display: block; font-size: 1.25rem; }
@@ -121,12 +148,22 @@
     .tabs button.on::before { content: ""; position: absolute; top: 0; left: 25%; right: 25%; height: 3px; background: #db2777; border-radius: 0 0 3px 3px; }
     .tabs .n { position: absolute; top: 3px; left: calc(50% + 8px); background: #db2777; color: #fff; font-size: .62rem; border-radius: 99px; padding: 0 5px; }
 
-    /* 电脑 / 平板横向：扫描 + 清单 + 准备 并排，不用分页 */
+    /* 电脑 / 平板横向：扫描 + 清单 + 准备 并排 */
     body.wide .tabs { display: none; }
-    body.wide main { gap: 0; }
-    body.wide #tabScan { flex: 0 0 440px; border-right: 1px solid var(--line); }
-    body.wide #tabPrep { flex: 0 0 260px; border-left: 1px solid var(--line); }
-    body.wide .act { position: static; }
+    body.wide #tabScan { flex: 0 0 460px; border-right: 1px solid var(--line); }
+    body.wide #tabPrep { flex: 0 0 300px; border-left: 1px solid var(--line); }
+
+    /* 弹窗：时间段 */
+    .modal2 { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 90; display: flex; align-items: flex-end; justify-content: center; }
+    .modal2 .box { background: var(--card); width: 100%; max-width: 480px; border-radius: 18px 18px 0 0; padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); }
+    @media (min-width: 600px) { .modal2 { align-items: center; } .modal2 .box { border-radius: 18px; } }
+    .modal2 h2 { font-size: 1.05rem; color: var(--ink); margin-bottom: 4px; }
+    .opt { display: block; border: 2px solid var(--line2); border-radius: 12px; padding: 12px; margin-top: 10px; cursor: pointer; }
+    .opt.on { border-color: #db2777; background: var(--pink-bg); }
+    .opt b { color: var(--ink); } .opt small { display: block; color: var(--muted); margin-top: 3px; font-size: .8rem; }
+    .opt input[type=date], .opt input[type=datetime-local] { margin-top: 8px; width: 100%; padding: 8px; border: 1.5px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); font-size: .9rem; }
+    .opt .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .modal2 .go { width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 12px; background: #db2777; color: #fff; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
 
     /* 📷 */
     .camv { position: fixed; inset: 0; background: rgba(0,0,0,.94); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
@@ -144,17 +181,18 @@
   <div class="bar">
     <a href="../" title="回到控制台">←</a><h1>🧺 打包</h1>
     <div class="sp">
-      <span class="seg" title="这次 = 上次按「这批打包完成」之后下的单"><button data-scope="now" class="on">这次</button><button data-scope="all">14 天</button></span>
-      <button id="wakeBtn" title="屏幕常亮：进入后 1 小时内不会自动关屏（有操作会再延长），按一下可以关掉">🔆 常亮</button>
+      <button id="rangeBtn" class="range" title="今天要寄出的包裹：哪个时间段下的单">📅 …</button>
+      <button id="wakeBtn" title="屏幕常亮：进入后 1 小时内不会自动关屏（有操作会再延长），按一下可以关掉">🔆</button>
       <button id="themeBtn" title="白色 / 暗黑模式">🌓</button>
       <button id="reloadBtn" title="重新读取">🔄</button>
     </div>
   </div>
   <div class="scanbar">
-    <input id="q" placeholder="扫描 / 输入单号、买家名" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
+    <input id="q" placeholder="扫描订单号 / 追踪号" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
     <button id="kbBtn" title="⌨️ 键盘：关掉后点输入框不会跳出键盘（PDA 扫描枪用）">⌨️</button>
     <button id="camBtn" class="cam">📷 扫描</button>
   </div>
+  <div class="scanhint" id="scanHint" hidden></div>
   <div class="stats" id="stats">读取中…</div>
 
   <main>
@@ -164,13 +202,16 @@
     </section>
     <section id="tabList" class="tab">
       <div id="claimHint" class="claimhint" hidden></div>
-      <div id="scopeInfo" class="sub"></div>
+      <div id="rangeInfo" class="sub"></div>
       <div id="chips" class="chips"></div>
       <div id="list"><div class="empty">读取中…</div></div>
-      <button id="finishBtn" class="finish">✅ 这批打包完成</button>
     </section>
     <section id="tabPrep" class="tab">
-      <div class="sub">打包前先把这些拿齐（这次还没放的）</div>
+      <div class="folders" id="folders">
+        <button data-fd="today" class="on">📦 今天要寄<span class="n" id="nToday" hidden></span></button>
+        <button data-fd="all">🗂️ 全部待寄<span class="n" id="nAll" hidden></span></button>
+      </div>
+      <div id="prepSub" class="sub"></div>
       <div id="prep" class="prep"></div>
     </section>
   </main>
@@ -182,16 +223,32 @@
     <button data-tab="tabPrep"><span class="i">🎁</span>准备<span class="n" id="nPrep" hidden></span></button>
   </nav>
 
+  <!-- 📅 时间段：同一天只弹第一次 -->
+  <div id="rangeModal" class="modal2" hidden>
+    <div class="box">
+      <h2>📅 今天要寄出的包裹</h2>
+      <div class="sub" style="margin:0">选哪个时间段下的单。扫描不受影响：扫到任何一张单都会显示那位会员所有待寄的东西。</div>
+      <label class="opt" data-opt="live"><b>🎥 直播时段</b><small id="optLive"></small></label>
+      <label class="opt" data-opt="day"><b>📆 一天</b><small>00:00 – 23:59</small><input type="date" id="optDay"></label>
+      <label class="opt" data-opt="custom"><b>✏️ 自定义</b><small>自己选开始和结束</small>
+        <div class="two"><input type="datetime-local" id="optFrom"><input type="datetime-local" id="optTo"></div></label>
+      <button class="go" id="rangeGo">确定</button>
+    </div>
+  </div>
+
+  <input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
+
   <div id="cam" class="camv" hidden>
     <div class="frame"><video id="video" playsinline muted></video></div>
-    <p id="camMsg">把订单号条码对准框框</p>
+    <p id="camMsg">把条码对准框框</p>
     <button id="camClose">关闭</button>
   </div>
 
   <script type="module">
-    import { app } from "../member-system/js/firebase-config.js";
+    import { app, db } from "../member-system/js/firebase-config.js";
     import { can } from "/js/admin-guard.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const pkAdmin = httpsCallable(getFunctions(app, "asia-southeast1"), "pkAdmin");
     const $ = id => document.getElementById(id);
@@ -202,21 +259,51 @@
     const PLAT = { shopee: "Shopee", tiktok: "TikTok" };
     const txId = () => "pk_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
     const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
-    const fmtT = ms => { const d = new Date(ms); return `${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+    const pad = n => String(n).padStart(2, "0");
+    const fmtT = ms => { const d = new Date(ms); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const DAY = 86400000;
 
-    let all = [], parcels = [], filter = "todo", sel = null, busy = false, access = null, lastFinish = null;
-    let scope = store.get("pkScope") === "all" ? "all" : "now";
-    const hist = [];              // 这次打开页面扫过的单（最新在前）
-    let claimItems = [];          // 🏆 领奖追踪：非会员得主（没在会员系统「中奖奖品」里的）
-    let claimDb = null;
-    const DRAW_CONFIG = { apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ", authDomain: "draw-tournament.firebaseapp.com", databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "draw-tournament", storageBucket: "draw-tournament.firebasestorage.app", messagingSenderId: "803720903757", appId: "1:803720903757:web:8b561daabc0d69af9e7004" };
-    const sentLog = new Map();   // 这次打开页面已经放进去的东西（单号 → 东西），放好后还显示「✅ 已放入」
-
-    function toast(msg) {
-      const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
-      document.body.appendChild(t); setTimeout(() => t.remove(), 1800);
+    // 订单号格式：Shopee = 6 位日期 + 8 位英数；TikTok = 5 开头 18 位数字
+    const isOrderNo = t => /^\d{6}[A-Z0-9]{8}$/.test(t) || /^5\d{17}$/.test(t);
+    // 追踪号：至少 8 个数字（买家名不会这样）、或已知开头
+    const looksTracking = t => !isOrderNo(t) && /^[A-Z0-9-]{8,40}$/.test(t) && ((t.match(/\d/g) || []).length >= 8 || /^(SPX|NV|JNT|JT)/.test(t));
+    // 从追踪号认运输公司（认不出来 = 不改，手动选）
+    function guessCarrier(t) {
+      if (/^SPX/.test(t)) return "spx";
+      if (/^NV/.test(t)) return "ninjavan";
+      if (/^(EP|ER|EE|EM|EN|PL|CP|EA)\d/.test(t) || /^[A-Z]{2}\d{9}MY$/.test(t)) return "poslaju";
+      if (/^\d+$/.test(t)) return "jnt";
+      return "";
     }
-    // 扫到 / 勾选的回馈：手机震动 + 短音（要放东西 = 两声高音，不用放 = 一声，错误 = 低音）
+
+    let all = [], pending = [], filter = "all", folder = "today", sel = null, busy = false, access = null, range = null;
+    const hist = [];
+    let claimItems = [], claimDb = null;
+    const DRAW_CONFIG = { apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ", authDomain: "draw-tournament.firebaseapp.com", databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "draw-tournament", storageBucket: "draw-tournament.firebasestorage.app", messagingSenderId: "803720903757", appId: "1:803720903757:web:8b561daabc0d69af9e7004" };
+    const sentLog = new Map();   // 这次打开页面已经放进去的东西（单号 → 东西）
+
+    // 🚚 运输公司（和「兑换审核 › 运输公司」同一份设定）
+    let CARRIERS = [
+      { id: "spx", name: "SPX Express", tpl: "https://spx.com.my/track?{no}" },
+      { id: "jnt", name: "J&T Express", tpl: "https://www.jtexpress.my/tracking/{no}" },
+      { id: "poslaju", name: "Pos Laju", tpl: "" }, { id: "ninjavan", name: "Ninja Van", tpl: "" }, { id: "citylink", name: "City-Link Express", tpl: "" },
+    ];
+    async function loadCarriers() {
+      try {
+        const s = await getDoc(doc(db, "settings", "shipping"));
+        const d = s.exists() ? s.data() || {} : {};
+        if (Array.isArray(d.carriers) && d.carriers.length) {
+          const list = d.carriers.filter(c => c && c.id && c.id !== "other" && c.name && c.on !== false).map(c => ({ id: c.id, name: c.name, tpl: c.tpl || "" }));
+          ["spx", "jnt", "poslaju", "ninjavan", "citylink"].forEach(id => { if (!list.some(c => c.id === id)) { const c = CARRIERS.find(x => x.id === id); if (c) list.push(c); } });
+          CARRIERS = list;
+        } else if (d.trackTpl) CARRIERS.forEach(c => { if (d.trackTpl[c.id]) c.tpl = d.trackTpl[c.id]; });
+      } catch (e) { console.warn("carriers", e); }
+    }
+    const carrierOf = id => CARRIERS.find(c => c.id === id);
+    const linkOf = (id, no) => { const c = carrierOf(id); return c && c.tpl && no ? c.tpl.replace("{no}", encodeURIComponent(no)) : ""; };
+
+    function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
     let actx = null;
     function beep(kind = "ok") {
       const pat = { ok: [[1040, .09]], items: [[1200, .08], [1500, .1]], bad: [[320, .25]] }[kind] || [[1040, .09]];
@@ -242,9 +329,9 @@
     function wakeTouch() { if (wakeOn) { wakeUntil = Date.now() + WAKE_MS; if (!wake) wakeGet(); } }
     function paintWake() {
       const b = $("wakeBtn");
-      if (!wakeOk) { b.textContent = "🔆 不支持"; b.classList.remove("on"); b.title = "这台手机 / 浏览器不支持屏幕常亮（iPhone 要 iOS 16.4 以上的 Safari）"; return; }
+      if (!wakeOk) { b.textContent = "🔆 ✕"; b.classList.remove("on"); b.title = "这台手机 / 浏览器不支持屏幕常亮（iPhone 要 iOS 16.4 以上的 Safari）"; return; }
       const min = Math.max(0, Math.ceil((wakeUntil - Date.now()) / 60000));
-      b.textContent = wakeOn ? (wake ? `🔆 常亮 ${min}′` : "🔆 点一下") : "🌙 常亮关";
+      b.textContent = wakeOn ? (wake ? `🔆 ${min}′` : "🔆 点一下") : "🌙";
       b.classList.toggle("on", wakeOn && !!wake);
     }
     setInterval(() => {
@@ -252,7 +339,6 @@
       paintWake();
     }, 20000);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wakeGet(); });
-    // 有些手机要先碰一下屏幕才能开常亮；之后每次操作都延长
     document.addEventListener("pointerdown", () => wakeTouch(), { passive: true });
     $("wakeBtn").onclick = () => {
       if (!wakeOk) { alert("这台手机 / 浏览器不支持屏幕常亮。\niPhone：要 iOS 16.4 以上，用 Safari 打开。\nAndroid：用 Chrome 打开。"); return; }
@@ -260,213 +346,358 @@
       if (wakeOn) { wakeUntil = Date.now() + WAKE_MS; wakeGet(); toast("🔆 屏幕常亮 1 小时"); } else { wakeDrop(); toast("🌙 屏幕常亮已关闭"); }
     };
 
-    // ---------- ⌨️ 键盘开关（PDA 扫描枪：关掉键盘，输入框一直可以接收扫描）----------
+    // ---------- ⌨️ 键盘开关（PDA 扫描枪）----------
     let kbOn = store.get("pkKb") !== "off";
-    function paintKb() { $("q").inputMode = kbOn ? "text" : "none"; $("kbBtn").classList.toggle("off", !kbOn); $("kbBtn").title = kbOn ? "键盘：开（按一下关掉，PDA 扫描枪用）" : "键盘：关（按一下打开）"; }
+    function paintKb() { $("q").inputMode = kbOn ? "text" : "none"; $("kbBtn").classList.toggle("off", !kbOn); }
     $("kbBtn").onclick = () => { kbOn = !kbOn; store.set("pkKb", kbOn ? "on" : "off"); paintKb(); $("q").blur(); setTimeout(focusQ, 50); };
-    function focusQ() { if (!$("cam").hidden || busy) return; const a = document.activeElement; if (a && a !== $("q") && a.tagName === "INPUT") return; $("q").focus({ preventScroll: true }); }
+    function focusQ() { if (!$("cam").hidden || !$("rangeModal").hidden || busy) return; const a = document.activeElement; if (a && a !== $("q") && (a.tagName === "INPUT" || a.tagName === "SELECT")) return; $("q").focus({ preventScroll: true }); }
+
+    // ---------- 📅 时间段（同一天只弹第一次）----------
+    function liveRange(now = new Date()) {
+      const a = new Date(now), b = new Date(now);
+      if (now.getHours() >= 20) { a.setHours(20, 0, 0, 0); b.setDate(b.getDate() + 1); b.setHours(8, 0, 0, 0); }
+      else { a.setDate(a.getDate() - 1); a.setHours(20, 0, 0, 0); b.setHours(8, 0, 0, 0); }
+      return { from: a.getTime(), to: b.getTime() };
+    }
+    function dayRange(s) { const a = new Date(s + "T00:00:00"); return { from: a.getTime(), to: a.getTime() + DAY - 1 }; }
+    const rangeLabel = r => r.mode === "day" ? `📅 ${fmtT(r.from).slice(0, 5)} 一天` : `📅 ${fmtT(r.from)} – ${fmtT(r.to)}`;
+    let rOpt = "live";
+    function openRange() {
+      const lr = liveRange();
+      $("optLive").textContent = `${fmtT(lr.from)} – ${fmtT(lr.to)}（晚上 8 点到早上 8 点）`;
+      const y = new Date(Date.now() - DAY);
+      if (!$("optDay").value) $("optDay").value = ymd(y);
+      const loc = ms => { const d = new Date(ms); return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+      if (!$("optFrom").value) { $("optFrom").value = loc(lr.from); $("optTo").value = loc(lr.to); }
+      rOpt = range ? range.mode : "live";
+      paintOpt();
+      $("rangeModal").hidden = false;
+    }
+    function paintOpt() { document.querySelectorAll(".opt").forEach(o => o.classList.toggle("on", o.dataset.opt === rOpt)); }
+    document.querySelectorAll(".opt").forEach(o => o.addEventListener("click", () => { rOpt = o.dataset.opt; paintOpt(); }));
+    $("rangeGo").onclick = () => {
+      let r;
+      if (rOpt === "live") r = { mode: "live", ...liveRange() };
+      else if (rOpt === "day") { if (!$("optDay").value) return alert("请选日期"); r = { mode: "day", ...dayRange($("optDay").value) }; }
+      else {
+        const a = new Date($("optFrom").value).getTime(), b = new Date($("optTo").value).getTime();
+        if (!(a < b)) return alert("结束时间要在开始时间之后");
+        if (b - a > 62 * DAY) return alert("最长 62 天");
+        r = { mode: "custom", from: a, to: b };
+      }
+      range = r; store.set("pkRange", JSON.stringify({ ...r, day: ymd(new Date()) }));
+      $("rangeModal").hidden = true; paintRange(); load(); focusQ();
+    };
+    $("rangeBtn").onclick = openRange;
+    function paintRange() { $("rangeBtn").textContent = range ? rangeLabel(range) : "📅 选时间段"; }
+    function initRange() {
+      try {
+        const s = JSON.parse(store.get("pkRange") || "null");
+        if (s && s.day === ymd(new Date()) && s.from && s.to) { range = { mode: s.mode, from: s.from, to: s.to }; paintRange(); return true; }
+      } catch (e) {}
+      range = { mode: "live", ...liveRange() }; paintRange();
+      return false;
+    }
 
     // ---------- 读取 ----------
     async function load() {
       try {
-        const r = (await pkAdmin({ op: "batch" })).data;
+        const r = (await pkAdmin({ op: "batch", from: range.from, to: range.to })).data;
         all = r.parcels || [];
-        lastFinish = r.lastFinishAt || null;
+        pending = r.pending || [];
         all.forEach(p => { attachClaims(p); addSent(p); });
-        applyScope();
-        if (sel) { const p = all.find(x => x.orderNo === sel.orderNo); if (p) show(p, false); }
+        render();
+        if (sel) { const p = all.find(x => x.orderNo === sel.p.orderNo); if (p) { sel.p = p; showSel(false); } }
       } catch (e) {
         $("stats").innerHTML = `<span class="pill am">❌ 读取失败：${esc(errText(e))}</span>`;
         $("list").innerHTML = "";
       }
     }
-    // 「这次」= 上次按「这批打包完成」之后下的单；「14 天」= 最近 14 天全部
-    function applyScope() {
-      parcels = scope === "now" && lastFinish ? all.filter(p => (p.orderTime || 0) >= lastFinish) : all;
-      document.querySelectorAll("[data-scope]").forEach(b => b.classList.toggle("on", b.dataset.scope === scope));
-      $("scopeInfo").textContent = scope === "now"
-        ? (lastFinish ? `这次：${fmtT(lastFinish)}（上次按「这批打包完成」）之后下的单` : "还没按过「这批打包完成」，先显示最近 14 天")
-        : "最近 14 天的单（用来找漏掉没打包的）";
-      render();
-    }
     const left = p => p.items.filter(i => !i.sent);
     function addSent(p) { (sentLog.get(p.orderNo) || []).forEach(i => { if (!p.items.some(j => j.id === i.id)) p.items.push({ ...i, sent: true }); }); }
     const canLeft = p => left(p).filter(i => i.can);
     const warns = p => left(p).filter(i => !i.can);
-
-    function render() {
-      const todo = parcels.filter(p => !p.done && left(p).length);
-      const done = parcels.filter(p => p.done && p.items.length);
-      const warnP = parcels.filter(p => !p.done && warns(p).length);
-      const open = parcels.filter(p => !p.done);
-      // 准备：这次还没放的东西（同一样东西在同一顾客的两包，只算一次）
-      const seen = new Set(), prep = new Map();
-      todo.forEach(p => canLeft(p).forEach(i => {
-        if (seen.has(i.id)) return; seen.add(i.id);
-        const k = i.prep || i.title, cur = prep.get(i.icon + k) || { icon: i.icon, k, n: 0 }; cur.n++; prep.set(i.icon + k, cur);
-      }));
-      const P = [...prep.values()].sort((a, b) => b.n - a.n);
-      $("prep").innerHTML = P.length ? P.map(x => `<div><span class="ic">${x.icon}</span><span class="nm">${esc(x.k)}</span><span class="n">×${x.n}</span></div>`).join("")
-        : '<div class="empty" style="border:0;background:none;display:block">这次没有要放的东西 🎉</div>';
-      const nPrep = P.reduce((s, x) => s + x.n, 0);
-      $("nPrep").hidden = !nPrep; $("nPrep").textContent = nPrep;
-      $("nList").hidden = !todo.length; $("nList").textContent = todo.length;
-      const scanned = hist.length;
-      $("stats").innerHTML = `<span class="pill">${scope === "now" ? "这次" : "14 天"} <b>${open.length}</b> 单</span>
-        <span class="pill pk">要放东西 <b>${todo.length}</b> 包</span>
-        <span class="pill gn">已放好 <b>${done.length}</b></span>
-        ${warnP.length ? `<span class="pill am">⚠️ 待处理 <b>${warnP.length}</b></span>` : ""}
-        ${scanned ? `<span class="pill">已扫 <b>${scanned}</b></span>` : ""}`;
-      const C = { todo: ["要放东西", todo.length], done: ["已放好", done.length], warn: ["⚠️ 待处理", warnP.length], all: ["全部", parcels.length] };
-      $("chips").innerHTML = Object.entries(C).map(([k, [t, n]]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}">${t} ${n}</button>`).join("");
-      const list = filter === "todo" ? todo : filter === "done" ? done : filter === "warn" ? warnP : parcels;
-      $("list").innerHTML = !list.length ? `<div class="empty">${filter === "todo" ? "🎉 这次没有要放东西的包裹" : "没有"}</div>`
-        : list.map(p => {
-          const l = left(p), c = canLeft(p).length;
-          return `<div class="row ${p.done && !c ? "done" : ""} ${sel && sel.orderNo === p.orderNo ? "sel" : ""}" data-no="${esc(p.orderNo)}">
-            <div class="l"><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username || "-")}${p.uid ? " 🎫" : ""}</div>
-              <div class="what">${l.length ? l.map(i => `<i class="${i.can ? "" : "w"}">${i.icon} ${esc(i.prep || i.title)}${i.can ? "" : " ⚠️"}</i>`).join("") : '<i>（没有要放的）</i>'}</div></div>
-            <span class="st">${c ? c + " 样" : p.done ? "✅" : warns(p).length ? "⚠️" : "—"}</span></div>`;
-        }).join("");
-      renderHist();
+    const buyerKey = p => p.uid ? "u:" + p.uid : `p:${p.platform}:${String(p.username || "").toLowerCase()}`;
+    // 同一位会员今天有几包：东西显示在第一包（还没放好的、下单最早的）
+    function owners() {
+      const m = new Map();
+      all.filter(p => !p.done).forEach(p => { const k = buyerKey(p); if (canLeft(p).length && !m.has(k)) m.set(k, p.orderNo); });
+      return m;
     }
 
-    // ---------- 这一包 ----------
-    function show(p, fresh = true) {
-      sel = p;
+    function render() {
+      const own = owners();
+      const rows = all.map(p => {
+        const k = buyerKey(p), isOwner = own.get(k) === p.orderNo;
+        const c = isOwner ? canLeft(p) : [];
+        const st = p.done && !c.length ? "done" : c.length ? "todo" : own.has(k) ? "other" : warns(p).length ? "warn" : "none";
+        return { p, c, st };
+      });
+      // 今天要准备：东西只算一次
+      const seen = new Set(), todayItems = [];
+      rows.forEach(r => r.c.forEach(i => { if (!seen.has(i.id)) { seen.add(i.id); todayItems.push({ ...i, who: r.p.username, today: true }); } }));
+      const nTodo = rows.filter(r => r.st === "todo").length, nDone = rows.filter(r => r.st === "done").length, nWarn = rows.filter(r => warns(r.p).length && !r.p.done).length;
+      $("nList").hidden = !all.length; $("nList").textContent = all.length;
+      $("nPrep").hidden = !todayItems.length; $("nPrep").textContent = todayItems.length;
+      $("stats").innerHTML = `<span class="pill">今天 <b>${all.length}</b> 包</span>
+        <span class="pill pk">要放东西 <b>${nTodo}</b></span>
+        <span class="pill gn">已放好 <b>${nDone}</b></span>
+        ${nWarn ? `<span class="pill am">⚠️ <b>${nWarn}</b></span>` : ""}
+        <span class="pill">准备 <b>${todayItems.length}</b> 件</span>`;
+      $("rangeInfo").textContent = `今天要寄出的包裹：${fmtT(range.from)} – ${fmtT(range.to)} 下的单（点上面 📅 可以换）`;
+      // 清单
+      const F = { all: ["全部", rows.length], todo: ["🎁 要放东西", nTodo], none: ["⭕ 不用放", rows.filter(r => r.st === "none" || r.st === "other").length], done: ["✅ 已放好", nDone] };
+      $("chips").innerHTML = Object.entries(F).map(([k, [t, n]]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}">${t} ${n}</button>`).join("");
+      const list = rows.filter(r => filter === "all" || r.st === filter || (filter === "none" && r.st === "other"));
+      $("list").innerHTML = !list.length ? `<div class="empty">${all.length ? "没有" : "这个时间段没有订单"}</div>` : list.map(r => {
+        const p = r.p, w = warns(p);
+        const what = r.st === "todo" ? r.c.map(i => `<i>${i.icon} ${esc(i.prep || i.title)}</i>`).join("") + w.map(i => `<i class="w">${i.icon} ${esc(i.prep || i.title)} ⚠️</i>`).join("")
+          : r.st === "other" ? `<i>↪ 东西在同会员的另一包</i>` : r.st === "done" ? p.items.filter(i => i.sent).map(i => `<i>${i.icon} ${esc(i.prep || i.title)}</i>`).join("") : w.map(i => `<i class="w">${i.icon} ${esc(i.prep || i.title)} ⚠️</i>`).join("");
+        const st = r.st === "todo" ? `🎁 ${r.c.length} 样` : r.st === "done" ? "✅ 已放好" : r.st === "warn" ? "⚠️" : "⭕ 不用放";
+        return `<div class="row ${r.st === "done" ? "done" : r.st === "none" || r.st === "other" ? "none" : ""} ${sel && sel.p.orderNo === p.orderNo ? "sel" : ""}" data-no="${esc(p.orderNo)}">
+          <div class="l"><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username || "-")}${p.uid ? " 🎫" : ""}</div>${what ? `<div class="what">${what}</div>` : ""}</div>
+          <span class="st">${st}</span></div>`;
+      }).join("");
+      // 准备
+      renderPrep(todayItems);
+      renderHist();
+    }
+    function renderPrep(todayItems) {
+      // 全部待寄：每位顾客还没寄的（可以寄的；含今天没单的）
+      const allItems = [];
+      const todayKeys = new Set(all.filter(p => canLeft(p).length).map(buyerKey));
+      pending.forEach(g => g.items.filter(i => i.can).forEach(i => allItems.push({ ...i, who: g.member || g.username || "-", today: todayKeys.has(g.key) })));
+      claimItems.forEach(c => allItems.push({ ...c, who: c.name, today: all.some(p => !p.uid && String(p.username || "").toLowerCase() === c.name) }));
+      $("nToday").hidden = !todayItems.length; $("nToday").textContent = todayItems.length;
+      $("nAll").hidden = !allItems.length; $("nAll").textContent = allItems.length;
+      document.querySelectorAll("[data-fd]").forEach(b => b.classList.toggle("on", b.dataset.fd === folder));
+      const src = folder === "today" ? todayItems : allItems;
+      $("prepSub").textContent = folder === "today" ? "今天这些包裹要放的东西，打包前先拿齐（点开看是谁的）" : "所有还存着、还没寄出的东西（含还没下单的会员）";
+      const G = new Map();
+      src.forEach(i => { const k = i.icon + (i.prep || i.title); const g = G.get(k) || { icon: i.icon, k: i.prep || i.title, list: [] }; g.list.push(i); G.set(k, g); });
+      const P = [...G.values()].sort((a, b) => b.list.length - a.list.length);
+      $("prep").innerHTML = P.length ? P.map(g => `<details class="pg"><summary style="list-style:none"><div><span class="ic">${g.icon}</span><span class="nm">${esc(g.k)}</span><span class="n">×${g.list.length}</span></div></summary>
+        <ul>${g.list.map(i => `<li>${esc(i.who || "-")}${folder === "all" ? `<span class="${i.today ? "t" : "w"}">${i.today ? "今天有单" : "等下单"}</span>` : ""}</li>`).join("")}</ul></details>`).join("")
+        : `<div class="empty">${folder === "today" ? "今天没有要放的东西 🎉" : "没有存着的东西 🎉"}</div>`;
+    }
+
+    // ---------- 这一包：勾选 + 运单 + 照片 ----------
+    function openParcel(p) {
+      const c = canLeft(p);
+      sel = { p, on: new Set(c.map(i => i.id)), ship: { carrier: "", trackingNo: "", trackingUrl: "", photo: "" }, needTrk: true, needPh: true };
+      showSel(true);
+    }
+    function showSel(fresh) {
+      const { p } = sel;
       const l = left(p), c = canLeft(p), w = warns(p), sent = p.items.filter(i => i.sent);
-      const other = l.filter(i => all.some(x => x !== p && !x.done && left(x).some(j => j.id === i.id)));
+      // 只留还在的勾选
+      sel.on = new Set([...sel.on].filter(id => c.some(i => i.id === id)));
+      const others = all.filter(x => x !== p && !x.done && buyerKey(x) === buyerKey(p)).map(x => x.orderNo);
       const plat = PLAT[p.platform] ? `<span class="tag">${PLAT[p.platform]}</span>` : "";
       const mem = p.uid ? `<span class="tag">🎫 ${esc(p.member || "会员")}</span>` : "";
       const head = big => `<div class="res-head"><div class="big">${big}</div><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username || "-")} ${plat}${mem}</div></div>`;
       let html;
-      if (!l.length && !sent.length) {
-        html = `<div class="res none">${head("⭕ 不用放")}<div class="res-body"><div class="note" style="margin-top:10px">这包没有要随单寄出的东西，直接打包。</div>
+      if (!c.length && !sent.length) {
+        html = `<div class="res ${w.length ? "warn" : "none"}">${head(w.length ? "⚠️ 先处理" : "⭕ 不用放")}<div class="res-body">
+          ${w.map(i => `<div class="warn">⚠️ ${i.icon} <b>${esc(i.title)}</b>：${esc(i.warn || i.sub)}</div>`).join("")}
+          ${w.length ? "" : `<div class="note" style="margin-top:10px">这包没有要随单寄出的东西，直接打包。</div>`}
           ${p.done ? undoLink(p) : ""}</div></div>`;
       } else {
-        const cls = c.length ? "" : w.length && !sent.length ? "warn" : "ok";
-        const big = c.length ? `🎁 要放 ${c.length} 样` : sent.length && !w.length ? "✅ 已全部放好" : sent.length ? "✅ 已放好（还有待处理）" : "⚠️ 先处理";
-        html = `<div class="res ${cls}">${head(big)}<div class="res-body">
-          ${c.map(i => item(i, false)).join("")}
-          ${sent.map(i => item(i, true)).join("")}
+        const n = sel.on.size;
+        html = `<div class="res ${c.length ? "" : "ok"}">${head(c.length ? `🎁 要放 ${n} 样` : "✅ 已放好")}<div class="res-body">
+          ${c.length ? `<div class="sec-t">放进这一包（取消勾选 = 这次不寄，留到下一单）</div>` + c.map(i => item(i, sel.on.has(i.id) ? "on" : "off")).join("") : ""}
+          ${sent.length ? `<div class="sec-t">已放入</div>` + sent.map(i => item(i, "sent")).join("") : ""}
           ${w.map(i => `<div class="warn">⚠️ ${i.icon} <b>${esc(i.title)}</b>：${esc(i.warn || i.sub)}</div>`).join("")}
-          ${other.length ? `<div class="note">💡 这位顾客这次有不只一包：${other.map(i => esc(i.prep || i.title)).join("、")} 放其中一包就好</div>` : ""}
+          ${others.length && c.length ? `<div class="note">💡 这位会员今天还有 ${others.length} 包（${others.map(o => "…" + o.slice(-6)).join("、")}）。这包没勾的，扫那一包时会再出现。</div>` : ""}
+          ${c.length ? shipForm() : ""}
           ${sent.length || p.done ? undoLink(p) : ""}</div></div>`;
       }
       $("result").innerHTML = html;
       if (fresh) { $("result").firstElementChild.classList.add("flash"); addHist(p); }
-      paintAct();
+      paintHint(); paintAct();
       document.querySelectorAll(".row").forEach(r => r.classList.toggle("sel", r.dataset.no === p.orderNo));
     }
+    const item = (i, st) => `<div class="it ${st}" ${st === "sent" ? "" : `data-item="${esc(i.id)}"`}><span class="ic">${i.icon}</span>
+      <span class="nm"><b>${esc(i.title)}</b><small>${st === "sent" ? "✅ 已放入" : esc(i.sub || "")}</small></span><span class="ck">${st === "on" ? "✓" : st === "sent" ? "✓" : ""}</span></div>`;
     const undoLink = p => `<button class="linkbtn" data-undo="${esc(p.orderNo)}">↩️ 撤销这一包（订单取消 / 勾错了）</button>`;
-    const item = (i, sent) => `<div class="it ${sent ? "sent" : ""}" ${sent ? "" : `data-item="${esc(i.id)}"`}><span class="ic">${i.icon}</span>
-      <span class="nm"><b>${esc(i.title)}</b><small>${sent ? "✅ 已放入" : esc(i.sub || "")}</small></span><span class="ck">${sent ? "✓" : ""}</span></div>`;
-    // 下方大按钮
+    function shipForm() {
+      const s = sel.ship;
+      const opts = CARRIERS.map(c => `<option value="${esc(c.id)}" ${s.carrier === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+      return `<div class="ship">
+        <label class="need"><input type="checkbox" data-need="trk" ${sel.needTrk ? "checked" : ""}>🚚 需要运单号${sel.needTrk ? (s.trackingNo ? '<span class="ok">✅ 已扫</span>' : '<span class="miss">扫面单上的追踪号</span>') : ""}</label>
+        ${sel.needTrk ? `<div class="row2"><div style="flex:0 0 42%"><label>运输公司</label><select data-sf="carrier"><option value="">— 选 —</option>${opts}</select></div>
+          <div style="flex:1"><label>运单号</label><input type="text" class="trk" data-sf="trackingNo" value="${esc(s.trackingNo)}" placeholder="扫追踪号条码" autocomplete="off" autocapitalize="characters"></div></div>
+          <label>查询链接</label><input type="url" data-sf="trackingUrl" value="${esc(s.trackingUrl)}" placeholder="https://…（选好公司会自动生成）">` : ""}
+        <hr>
+        <label class="need"><input type="checkbox" data-need="ph" ${sel.needPh ? "checked" : ""}>📷 需要上传照片${sel.needPh ? (s.photo ? '<span class="ok">✅ 已拍</span>' : '<span class="miss">拍一张包裹照片</span>') : ""}</label>
+        ${sel.needPh ? `<div class="photo">${s.photo ? `<img src="${esc(s.photo)}" alt=""><button class="del" data-ph="del">✕ 删掉</button><button class="shot" data-ph="shot" style="flex:0 0 auto;padding:10px">重拍</button>` : `<button class="shot" data-ph="shot">📷 拍照</button>`}</div>` : ""}
+      </div>`;
+    }
+    // 还缺什么（缺了不能保存）
+    function missing() {
+      if (!sel || !canLeft(sel.p).length) return [];
+      const m = [];
+      if (!sel.on.size) m.push("勾选要放的东西");
+      if (sel.needTrk && !sel.ship.trackingNo) m.push("扫追踪号");
+      if (sel.needTrk && sel.ship.trackingNo && !sel.ship.carrier) m.push("选运输公司");
+      if (sel.needTrk && sel.ship.trackingUrl && !/^https:\/\//i.test(sel.ship.trackingUrl)) m.push("链接要 https://");
+      if (sel.needPh && !sel.ship.photo) m.push("拍照");
+      return m;
+    }
+    function paintHint() {
+      const h = $("scanHint");
+      if (sel && canLeft(sel.p).length && sel.needTrk && !sel.ship.trackingNo) { h.hidden = false; h.textContent = "👉 下一步：扫面单上的「追踪号」条码"; }
+      else h.hidden = true;
+    }
     function paintAct() {
       const a = $("act");
       if (!sel) { a.hidden = true; return; }
-      const c = canLeft(sel);
       a.hidden = false;
-      a.innerHTML = c.length ? `<button class="go" data-all ${busy ? "disabled" : ""}>✅ 全部已放入（${c.length} 样）</button>`
-        : `<button class="next" data-next>▶ 扫下一包</button>`;
+      const c = canLeft(sel.p);
+      if (!c.length) { a.innerHTML = `<button class="next" data-next>▶ 扫下一包</button>`; return; }
+      const m = missing();
+      a.innerHTML = m.length ? `<button class="go dis" data-save>还要：${esc(m.join("、"))}</button>`
+        : `<button class="go" data-save ${busy ? "disabled" : ""}>💾 保存＝已放好（${sel.on.size} 样）</button>`;
     }
     function idle() {
       sel = null;
       $("result").innerHTML = `<div class="idle"><div class="big">📦</div><b>扫面单上的订单号条码</b>扫描枪、📷 相机，或输入单号后几位 / 买家名</div>`;
-      paintAct();
+      paintHint(); paintAct();
     }
-    // 扫过的单（这次打开页面）
-    function addHist(p) { const i = hist.findIndex(h => h.orderNo === p.orderNo); if (i >= 0) hist.splice(i, 1); hist.unshift({ orderNo: p.orderNo }); if (hist.length > 30) hist.pop(); renderHist(); }
+    function addHist(p) { const i = hist.findIndex(h => h === p.orderNo); if (i >= 0) hist.splice(i, 1); hist.unshift(p.orderNo); if (hist.length > 30) hist.pop(); renderHist(); }
     function renderHist() {
-      if (!hist.length) { $("hist").innerHTML = ""; return; }
-      $("hist").innerHTML = `<h3>刚刚扫过</h3>` + hist.slice(0, 12).map(h => {
-        const p = all.find(x => x.orderNo === h.orderNo) || (sel && sel.orderNo === h.orderNo ? sel : null);
+      $("hist").innerHTML = !hist.length ? "" : `<h3>刚刚扫过</h3>` + hist.slice(0, 10).map(no => {
+        const p = all.find(x => x.orderNo === no) || (sel && sel.p.orderNo === no ? sel.p : null);
         if (!p) return "";
         const c = canLeft(p).length, s = p.items.filter(i => i.sent).length;
-        const st = c ? `<span class="st" style="color:#db2777">🎁 ${c} 样没放</span>` : s ? '<span class="st" style="color:var(--green-tx)">✅ 已放好</span>' : warns(p).length ? '<span class="st" style="color:var(--amber-tx)">⚠️</span>' : '<span class="st" style="color:var(--muted)">⭕ 不用放</span>';
+        const st = c ? `<span class="st" style="color:#db2777">🎁 ${c} 样没放</span>` : s || p.done ? '<span class="st" style="color:var(--green-tx)">✅ 已放好</span>' : '<span class="st" style="color:var(--muted)">⭕ 不用放</span>';
         return `<div class="hrow" data-no="${esc(p.orderNo)}"><span class="no">…${esc(p.orderNo.slice(-6))}</span><span class="who">${esc(p.username || "")}</span>${st}</div>`;
       }).join("");
     }
 
-    // ---------- 找 ----------
+    // ---------- 扫描 / 输入 ----------
     async function find(raw) {
       const q = String(raw || "").trim();
       if (!q) return;
       wakeTouch();
       const n = norm(q);
-      $("q").value = ""; $("q").placeholder = q;          // 清空，下一次扫描直接进来
+      $("q").value = ""; $("q").placeholder = q;
       tab("tabScan");
-      if (isTracking(n)) { beep("bad"); sel = null; paintAct();
-        $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">⚠️ 这是追踪号</div><div class="no">${esc(q)}</div></div>
-          <div class="res-body"><div class="note" style="margin-top:10px">请扫面单上「订单号」的条码（不是快递追踪号）。</div></div></div>`; return; }
+      // 先比对今天的订单：是订单号就打开那一包
       let p = all.find(x => x.orderNo === n);
-      if (!p && n.length >= 4) { const m = all.filter(x => x.orderNo.endsWith(n)); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, `单号后几位「${q}」有 ${m.length} 张单`); }
-      if (!p) { const m = all.filter(x => (x.username || "").toLowerCase() === q.toLowerCase()); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, `买家「${q}」有 ${m.length} 张单`); }
-      if (p) { beep(canLeft(p).length ? "items" : "ok"); show(p); return; }
-      // 不在这 14 天里：问后端（比较早的单 / 买家名）
+      if (!p) {
+        // 打开的包裹还要放东西 → 这一下是追踪号
+        if (sel && canLeft(sel.p).length && looksTracking(n)) { setTracking(n); return; }
+        if (!sel && looksTracking(n) && /^(SPX|NV)|^\d{12,16}$|^[A-Z]{2}\d{9,12}[A-Z]{0,2}$/.test(n)) {
+          beep("bad"); toast("这是追踪号：请先扫「订单号」"); return;
+        }
+      }
+      if (!p && n.length >= 4 && !isOrderNo(n)) { const m = all.filter(x => x.orderNo.endsWith(n)); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, `单号后几位「${q}」有 ${m.length} 张单`); }
+      if (!p && !isOrderNo(n)) { const m = all.filter(x => (x.username || "").toLowerCase() === q.toLowerCase()); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, `买家「${q}」有 ${m.length} 张单`); }
+      if (p) { beep(canLeft(p).length ? "items" : "ok"); openParcel(p); return; }
+      // 不在今天的时间段：问后端（任何一天的单都可以扫）
       $("result").innerHTML = '<div class="idle"><div class="big">🔎</div><b>查找中…</b></div>';
       try {
         const r = (await pkAdmin(noOk(n) ? { op: "lookup", orderNo: n } : { op: "lookup", username: q })).data;
-        if (!r.found) { beep("bad"); sel = null; paintAct();
+        if (!r.found) { beep("bad"); sel = null; paintAct(); paintHint();
           $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">❌ 找不到</div><div class="no">${esc(q)}</div></div>
-            <div class="res-body"><div class="note" style="margin-top:10px">订单要先录入（订单录入页或表格提交），同步后才查得到。<br>扫到的是追踪号的话，请扫「订单号」的条码。</div></div></div>`; return; }
+            <div class="res-body"><div class="note" style="margin-top:10px">订单要先录入（订单录入页或表格提交），同步后才查得到。</div></div></div>`; return; }
         const x = r.parcel;
         attachClaims(x); addSent(x);
         if (!all.some(y => y.orderNo === x.orderNo)) all.push(x);
         beep(canLeft(x).length ? "items" : "ok");
-        show(x);
+        openParcel(x); render();
       } catch (e) { beep("bad"); $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">❌ 出错了</div></div><div class="res-body"><div class="note" style="margin-top:10px">${esc(errText(e))}</div></div></div>`; }
     }
+    function setTracking(no) {
+      const s = sel.ship;
+      s.trackingNo = no;
+      const g = guessCarrier(no);
+      if (g && carrierOf(g)) s.carrier = g;
+      s.trackingUrl = linkOf(s.carrier, no) || s.trackingUrl;
+      sel.needTrk = true;
+      beep("ok"); toast(`🚚 ${carrierOf(s.carrier) ? carrierOf(s.carrier).name : "运单号"} ${no}`);
+      showSel(false);
+    }
     function listPick(m, title) {
-      beep("ok"); sel = null; paintAct();
+      beep("ok"); sel = null; paintAct(); paintHint();
       $("result").innerHTML = `<div class="note">${esc(title)}，选一张：</div>` +
         m.map(p => `<div class="row" data-no="${esc(p.orderNo)}" style="margin-top:6px"><div class="l"><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username)}</div></div>
           <span class="st">${canLeft(p).length ? canLeft(p).length + " 样" : "—"}</span></div>`).join("");
     }
 
-    // ---------- 勾选 ----------
-    async function ship(p, items, done) {
-      if (busy) return;
+    // ---------- 📷 照片（压缩到大约 100KB 内）----------
+    function compress(file) {
+      return new Promise((ok, no) => {
+        const img = new Image();
+        img.onload = () => {
+          let max = 900, url = "";
+          for (let i = 0; i < 4; i++) {
+            const k = Math.min(1, max / Math.max(img.width, img.height));
+            const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+            c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+            url = c.toDataURL("image/webp", .72);
+            if (!url.startsWith("data:image/webp")) url = c.toDataURL("image/jpeg", .75);
+            if (url.length < 140 * 1024) break;
+            max = Math.round(max * .75);
+          }
+          URL.revokeObjectURL(img.src); ok(url);
+        };
+        img.onerror = no; img.src = URL.createObjectURL(file);
+      });
+    }
+    $("photoIn").addEventListener("change", async e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = "";
+      if (!f || !sel) return;
+      try { sel.ship.photo = await compress(f); beep("ok"); } catch (err) { alert("照片读取失败：" + errText(err)); }
+      showSel(false);
+    });
+
+    // ---------- 💾 保存＝已放好 ----------
+    async function save() {
+      if (busy || !sel) return;
+      const m = missing();
+      if (m.length) { beep("bad"); toast("还要：" + m.join("、")); return; }
+      const p = sel.p, items = canLeft(p).filter(i => sel.on.has(i.id));
+      const s = sel.ship, ship = {};
+      if (sel.needTrk && s.trackingNo) { const c = carrierOf(s.carrier); Object.assign(ship, { carrier: s.carrier, carrierName: c ? c.name : "", trackingNo: s.trackingNo, trackingUrl: s.trackingUrl }); }
+      if (sel.needPh && s.photo) ship.photo = s.photo;
       wakeTouch();
       const svr = items.filter(i => i.kind !== "claim"), cl = items.filter(i => i.kind === "claim");
       busy = true; paintAct();
       const failed = [];
       try {
-        if (svr.length || done) {
-          const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id })), txId: txId(), done: !!done })).data;
-          (r.results || []).forEach(x => {
-            const it = svr.find(i => i.id === x.id);
-            if (!x.ok) failed.push(`${(it || {}).title || x.id}：${x.error}`);
-            else if (it) sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([it]));
-          });
-        }
+        const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id })), txId: txId(), done: true, ship })).data;
+        (r.results || []).forEach(x => {
+          const it = svr.find(i => i.id === x.id);
+          if (!x.ok) failed.push(`${(it || {}).title || x.id}：${x.error}`);
+          else if (it) sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([it]));
+        });
         for (const i of cl) {
-          try { await shipClaim(i, p.orderNo); sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([i])); }
+          try { await shipClaim(i, p.orderNo, ship); sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([i])); }
           catch (e) { failed.push(`${i.title}：${errText(e)}`); }
         }
       } catch (e) { failed.push(errText(e)); }
       busy = false;
       if (failed.length) { beep("bad"); alert("有些没成功：\n\n" + failed.join("\n")); }
-      else { beep("ok"); toast(done ? "✅ 这一包放好了" : "✅ 已放入"); }
+      else { beep("ok"); toast("✅ 这一包放好了"); }
       await load();
       focusQ();
     }
 
-    // ---------- ↩️ 撤销这一包：打包清单寄出的东西全部退回（订单被取消、勾错了）----------
+    // ---------- ↩️ 撤销这一包 ----------
     async function undo(p) {
-      if (!confirm(`↩️ 撤销 ${p.orderNo}（${p.username || ""}）这一包？\n\n这一包用打包清单勾过的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`)) return;
+      if (!confirm(`↩️ 撤销 ${p.orderNo}（${p.username || ""}）这一包？\n\n这一包用打包清单寄出的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n运单号、照片也会一起清掉。\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`)) return;
       busy = true; paintAct();
       try {
         const r = (await pkAdmin({ op: "undo", orderNo: p.orderNo })).data;
-        let cl = 0;     // 🏆 非会员得主（领奖追踪）：这次在这里勾的也退回
+        let cl = 0;
         for (const i of (sentLog.get(p.orderNo) || []).filter(i => i.kind === "claim")) {
           try { await claimDb.ref(`draw_private/claimBatches/${i.bid}/items/${i.key}`).update({ shipped: false }); cl++; claimItems.push(i); } catch (e) {}
         }
         sentLog.delete(p.orderNo);
         const n = r.smallGifts + r.prizes + r.redemptions + cl;
-        alert(`↩️ 已撤销：退回 ${n} 样${r.smallGifts ? `\n• 小礼物 ${r.smallGifts}` : ""}${r.prizes ? `\n• 中奖奖品 ${r.prizes}` : ""}${r.redemptions ? `\n• 兑换 / 签到达人礼物 ${r.redemptions}` : ""}${cl ? `\n• 领奖追踪 ${cl}` : ""}`
-          + (r.welcome ? `\n\n⚠️ 这一包有 ${r.welcome} 份迎新礼已寄出，要到「新会员奖励」处理` : "")
-          + (r.kept ? `\n\nℹ️ ${r.kept} 样会员已确认收到 / 已完成，没有退回` : ""));
+        alert(`↩️ 已撤销：退回 ${n} 样` + (r.welcome ? `\n\n⚠️ 这一包有 ${r.welcome} 份迎新礼已寄出，要到「新会员奖励」处理` : "") + (r.kept ? `\n\nℹ️ ${r.kept} 样会员已确认收到 / 已完成，没有退回` : ""));
       } catch (e) { alert("❌ " + errText(e)); }
       busy = false;
       await load();
@@ -480,8 +711,7 @@
         await loadScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js");
         await loadScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js");
         const fb = window.firebase;
-        // 和领奖追踪同一组设定（这段本来就公开在网页里）→ 同一个网站登录过领奖追踪，这里就直接是登录状态
-        if (!fb.apps.length) fb.initializeApp(DRAW_CONFIG);
+        if (!fb.apps.length) fb.initializeApp(DRAW_CONFIG);   // 和领奖追踪同一组设定 → 同一个网站登录过就直接是登录状态
         fb.auth().onAuthStateChanged(async u => {
           if (!u) { $("claimHint").hidden = false; $("claimHint").innerHTML = '🏆 非会员抽奖得主的奖品：<a href="../draw_tournament/claims.html" target="_blank">登录领奖追踪</a> 后重新整理这一页，也会一起列出。'; return; }
           claimDb = fb.database();
@@ -494,7 +724,7 @@
               name: String(x.name || "").toLowerCase(), orderNo: x.orderNo || "" });
           }));
           $("claimHint").hidden = true;
-          all.forEach(attachClaims); applyScope(); if (sel) show(sel, false);
+          all.forEach(attachClaims); render(); if (sel) showSel(false);
         });
       } catch (e) { console.warn("claims", e); }
     }
@@ -502,27 +732,28 @@
       return new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok();
         const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
     }
-    // 只给非会员：会员的得奖在会员系统「🏆 中奖奖品」处理（已经列在这一包里）
     const platOfNo = no => { const c = norm(no).charAt(0); return c === "5" ? "tiktok" : c === "2" ? "shopee" : ""; };
     function attachClaims(p) {
       if (p.uid || !claimItems.length) return;
-      const mine = claimItems.filter(c => c.name && c.name === String(p.username || "").toLowerCase() && (!platOfNo(c.orderNo) || platOfNo(c.orderNo) === p.platform));
-      mine.forEach(c => { if (!p.items.some(i => i.id === c.id)) p.items.push({ ...c }); });
+      claimItems.filter(c => c.name && c.name === String(p.username || "").toLowerCase() && (!platOfNo(c.orderNo) || platOfNo(c.orderNo) === p.platform))
+        .forEach(c => { if (!p.items.some(i => i.id === c.id)) p.items.push({ ...c }); });
     }
-    async function shipClaim(i, orderNo) {
+    async function shipClaim(i, orderNo, ship) {
       if (!claimDb) throw new Error("没有登录领奖追踪");
       const ref = claimDb.ref(`draw_private/claimBatches/${i.bid}/items/${i.key}`);
       const cur = (await ref.once("value")).val() || {};
-      const note = [cur.note, `随 ${orderNo} 寄出（打包清单）`].filter(Boolean).join(" · ").slice(0, 200);
+      const trk = ship.trackingNo ? ` · ${ship.carrierName || ""} ${ship.trackingNo}` : "";
+      const note = [cur.note, `随 ${orderNo} 寄出${trk}（打包清单）`].filter(Boolean).join(" · ").slice(0, 200);
       await ref.update({ shipped: true, note, ts: window.firebase.database.ServerValue.TIMESTAMP });
       claimItems = claimItems.filter(c => c.id !== i.id);
     }
 
-    // ---------- 📷 相机扫描（Chrome / Android 用内建 BarcodeDetector；iPhone 用 ZXing）----------
+    // ---------- 📷 相机扫条码（Chrome / Android 用内建 BarcodeDetector；iPhone 用 ZXing）----------
     let stream = null, stopScan = null;
     async function openCam() {
       wakeTouch();
-      $("cam").hidden = false; $("camMsg").textContent = "把订单号条码对准框框";
+      $("cam").hidden = false;
+      $("camMsg").textContent = sel && canLeft(sel.p).length && !sel.ship.trackingNo ? "扫「追踪号」条码" : "扫「订单号」条码";
       const video = $("video");
       const done = text => { closeCam(); find(text); };
       try {
@@ -533,7 +764,7 @@
           let alive = true; stopScan = () => { alive = false; };
           const tick = async () => {
             if (!alive) return;
-            try { const r = await det.detect(video); const hit = pick(r.map(x => x.rawValue)); if (hit) return done(hit); } catch (e) {}
+            try { const r = await det.detect(video); const hit = r.map(x => norm(x.rawValue)).find(t => noOk(t) || /^[A-Z0-9-]{8,40}$/.test(t)); if (hit) return done(hit); } catch (e) {}
             setTimeout(tick, 120);
           };
           tick();
@@ -541,31 +772,17 @@
           await loadScript("https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js");
           const reader = new ZXingBrowser.BrowserMultiFormatReader();
           const ctl = await reader.decodeFromConstraints({ video: { facingMode: "environment" } }, video, res => {
-            if (!res) return; const hit = pick([res.getText()]); if (hit) done(hit);
+            if (!res) return; const t = norm(res.getText()); if (/^HTTPS?:/.test(t)) return; if (noOk(t) || /^[A-Z0-9-]{8,40}$/.test(t)) done(t);
           });
           stopScan = () => ctl.stop();
         }
-      } catch (e) {
-        $("camMsg").textContent = "❌ 打不开相机：" + errText(e) + "（请允许使用相机，或直接输入单号）";
-      }
-    }
-    // 只认订单号；扫到追踪号 / 网址就提示
-    function isTracking(t) { return /^SPX|^JNT|^JT\d|^MY\d|^NLMY|^ER\d/.test(t) || /^HTTPS?:/.test(t); }
-    function pick(vals) {
-      for (const v of vals) {
-        const t = norm(v);
-        if (isTracking(t)) { $("camMsg").textContent = "⚠️ 这是追踪号或网址，请扫「订单号」的条码"; continue; }
-        if (noOk(t)) return t;
-      }
-      return null;
+      } catch (e) { $("camMsg").textContent = "❌ 打不开相机：" + errText(e) + "（请允许使用相机，或直接输入）"; }
     }
     function closeCam() {
       try { stopScan && stopScan(); } catch (e) {}
       stopScan = null;
       if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-      $("video").srcObject = null;
-      $("cam").hidden = true;
-      focusQ();
+      $("video").srcObject = null; $("cam").hidden = true; focusQ();
     }
 
     // ---------- 分页（手机）/ 并排（电脑）----------
@@ -579,49 +796,52 @@
     paintWide();
 
     // ---------- 事件 ----------
-    // 扫描枪：扫完会送出 Enter（有些是 Tab）
     $("q").addEventListener("keydown", e => {
-      if ((e.key === "Enter" || e.key === "Tab") && !e.isComposing) {
-        if (!$("q").value.trim()) return;
-        e.preventDefault(); find($("q").value);
-      }
+      if ((e.key === "Enter" || e.key === "Tab") && !e.isComposing) { if (!$("q").value.trim()) return; e.preventDefault(); find($("q").value); }
     });
     $("camBtn").onclick = openCam;
     $("camClose").onclick = closeCam;
     $("reloadBtn").onclick = () => load();
     $("themeBtn").onclick = () => {
       const t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", t);
-      store.set("msAdminTheme", t);
+      document.documentElement.setAttribute("data-theme", t); store.set("msAdminTheme", t);
     };
-    document.querySelectorAll("[data-scope]").forEach(b => b.onclick = () => { scope = b.dataset.scope; store.set("pkScope", scope); applyScope(); });
     document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { tab(b.dataset.tab); if (b.dataset.tab === "tabScan") focusQ(); });
     $("chips").addEventListener("click", e => { const b = e.target.closest("button[data-f]"); if (b) { filter = b.dataset.f; render(); } });
+    $("folders").addEventListener("click", e => { const b = e.target.closest("button[data-fd]"); if (b) { folder = b.dataset.fd; render(); } });
+    // 运单表单
+    $("result").addEventListener("change", e => {
+      const t = e.target;
+      if (!sel) return;
+      if (t.dataset.need === "trk") { sel.needTrk = t.checked; showSel(false); }
+      else if (t.dataset.need === "ph") { sel.needPh = t.checked; showSel(false); }
+      else if (t.dataset.sf === "carrier") { sel.ship.carrier = t.value; sel.ship.trackingUrl = linkOf(t.value, sel.ship.trackingNo); showSel(false); }
+      else if (t.dataset.sf === "trackingNo") { const n = norm(t.value); sel.ship.trackingNo = n; if (n) { const g = guessCarrier(n); if (g && carrierOf(g) && !sel.ship.carrier) sel.ship.carrier = g; sel.ship.trackingUrl = linkOf(sel.ship.carrier, n) || sel.ship.trackingUrl; } showSel(false); }
+      else if (t.dataset.sf === "trackingUrl") { sel.ship.trackingUrl = t.value.trim(); paintAct(); }
+    });
+    $("result").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset && e.target.dataset.sf) { e.preventDefault(); e.target.blur(); } });
     document.addEventListener("click", e => {
       const t = e.target;
       const it = t.closest("[data-item]");
-      if (it && sel && !busy) { const x = left(sel).find(i => i.id === it.dataset.item); if (x) ship(sel, [x], !canLeft(sel).some(i => i.id !== x.id)); return; }
-      if (t.closest("[data-all]") && sel && !busy) { ship(sel, canLeft(sel), true); return; }
+      if (it && sel && !busy) { const id = it.dataset.item; sel.on.has(id) ? sel.on.delete(id) : sel.on.add(id); showSel(false); return; }
+      const ph = t.closest("[data-ph]");
+      if (ph && sel) { if (ph.dataset.ph === "del") { sel.ship.photo = ""; showSel(false); } else $("photoIn").click(); return; }
+      if (t.closest("[data-save]")) { save(); return; }
       if (t.closest("[data-next]")) { idle(); focusQ(); return; }
-      if (t.closest("[data-undo]") && sel && !busy) { undo(sel); return; }
+      if (t.closest("[data-undo]") && sel && !busy) { undo(sel.p); return; }
       const row = t.closest(".row[data-no], .hrow[data-no]");
-      if (row) { const p = all.find(x => x.orderNo === row.dataset.no); if (p) { tab("tabScan"); show(p); } return; }
-      // 点到空白地方：回到扫描框（扫描枪随时可以扫）
-      if (!t.closest("input, button, a, select, textarea")) setTimeout(focusQ, 0);
+      if (row) { const p = all.find(x => x.orderNo === row.dataset.no); if (p) { tab("tabScan"); openParcel(p); } return; }
+      if (!t.closest("input, button, a, select, textarea, label, summary, details")) setTimeout(focusQ, 0);
     });
-    $("finishBtn").onclick = async () => {
-      const open = parcels.filter(p => !p.done);
-      const unfinished = open.filter(p => canLeft(p).length);
-      if (!confirm((unfinished.length
-        ? `还有 ${unfinished.length} 包没勾完（${unfinished.map(p => p.username).slice(0, 5).join("、")}${unfinished.length > 5 ? "…" : ""}）。\n没勾的东西会保留，那位顾客下一单还会出现。\n\n`
-        : "") + `✅ 这批打包完成？\n\n${open.length} 张单会标记完成；之后下的单算「下一次」。`)) return;
-      try { await pkAdmin({ op: "done", orderNos: open.map(p => p.orderNo), finish: true }); toast("✅ 这批打包完成"); }
-      catch (e) { alert("❌ " + errText(e)); }
-      hist.length = 0; idle(); await load(); tab("tabScan"); focusQ();
-    };
 
     paintKb(); paintWake(); idle();
-    window.__access.then(a => { access = a; load(); setupClaims(); wakeGet(); focusQ(); });
+    const haveRange = initRange();
+    window.__access.then(async a => {
+      access = a;
+      await loadCarriers();
+      load(); setupClaims(); wakeGet();
+      if (!haveRange) openRange(); else focusQ();
+    });
   </script>
 </body>
 </html>
