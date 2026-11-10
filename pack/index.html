@@ -4,7 +4,7 @@
   <!-- 🔐 要「🧺 打包清单」权限；资料全部经后端 pkAdmin（只回传打包需要的资料） -->
   <script type="module">import { guard } from "/js/admin-guard.js"; window.__access = guard("pack");</script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -182,6 +182,13 @@
 
     /* 电脑 / 平板横向：扫描 + 清单 + 准备 并排 */
     body.wide .tabs { display: none; }
+    /* 📱 手机：扫描框、保存按钮移到下面（右手拇指按得到）：标题 → 统计 → 内容 → 下一步提示 → 保存 → 扫描框 → 分页 */
+    body:not(.wide) > .bar { order: 1; } body:not(.wide) > .stats { order: 2; } body:not(.wide) > main { order: 3; }
+    body:not(.wide) > .scanhint { order: 4; margin-top: 0; padding: 7px 12px 2px; }
+    body:not(.wide) > .act { order: 5; background: #0f172a; border-top: 0; padding: 6px 10px 2px; }
+    body:not(.wide) > .scanbar { order: 6; padding: 8px 10px; border-top: 1px solid #1e293b; }
+    body:not(.wide) > .tabs { order: 7; }
+    body:not(.wide) > .scanhint { box-shadow: 0 -1px 0 #1e293b; }
     body.wide #tabScan { flex: 0 0 460px; border-right: 1px solid var(--line); }
     body.wide #tabPrep { flex: 0 0 300px; border-left: 1px solid var(--line); }
 
@@ -280,7 +287,7 @@
       <div class="srow"><b>🌐 语言 / Language</b>
         <div class="seg" data-seg="lang"><button data-v="zh">中文</button><button data-v="en">English</button></div></div>
       <div class="srow"><b data-t="setWake">🔆 屏幕常亮</b><small id="wakeInfo"></small>
-        <div class="seg" data-seg="wake"><button data-v="on" data-t="on">开</button><button data-v="off" data-t="off">关</button></div></div>
+        <div class="seg" data-seg="wake"><button data-v="off" data-t="off">关</button><button data-v="30" data-t="m30">30 分钟</button><button data-v="60" data-t="m60">1 小时</button></div></div>
       <div class="srow"><b data-t="setTheme">🌓 主题</b>
         <div class="seg" data-seg="theme"><button data-v="light" data-t="light">☀️ 白色</button><button data-v="dark" data-t="dark">🌙 黑色</button></div></div>
       <button class="go" id="setClose" data-t="done">完成</button>
@@ -325,10 +332,10 @@
         rangeH: "📅 今天要寄出的包裹", rangeSub: "选哪个时间段下的单。扫描不受影响：扫到任何一张单都会显示那位会员所有待寄的东西。",
         optLive: "🎥 直播时段", optDay: "📆 一天", optCustom: "✏️ 自定义", optCustomS: "自己选开始和结束", ok: "确定", liveHint: "（晚上 8 点到早上 8 点）",
         pickRange: "📅 选时间段", pickDate: "请选日期", endAfter: "结束时间要在开始时间之后", max62: "最长 62 天",
-        setH: "⚙️ 设置", setWake: "🔆 屏幕常亮", setTheme: "🌓 主题", on: "开", off: "关", light: "☀️ 白色", dark: "🌙 黑色", done: "完成",
-        wakeOnInfo: m => `开着：还剩 ${m} 分钟（有操作会再延长到 1 小时）`, wakeWait: "开着（回到这一页时生效）", wakeOffInfo: "关着：手机照平常自动关屏",
+        setH: "⚙️ 设置", setWake: "🔆 屏幕常亮", setTheme: "🌓 主题", on: "开", off: "关", m30: "30 分钟", m60: "1 小时", light: "☀️ 白色", dark: "🌙 黑色", done: "完成",
+        wakeOnInfo: (m, w) => `开着：还剩 ${m} 分钟（有操作会再延长到 ${w === 30 ? "30 分钟" : "1 小时"}）`, wakeWait: "开着（回到这一页时生效）", wakeOffInfo: "关着：手机照平常自动关屏",
         wakeNo: "这台手机 / 浏览器不支持（iPhone 要 iOS 16.4 以上的 Safari；Android 用 Chrome）",
-        wakeOnToast: "🔆 屏幕常亮 1 小时", wakeOffToast: "🌙 屏幕常亮已关闭", wakeIdleToast: "🌙 1 小时没有操作，屏幕常亮已关闭",
+        wakeOnToast: w => `🔆 屏幕常亮 ${w === 30 ? "30 分钟" : "1 小时"}（有操作会延长）`, wakeOffToast: "🌙 屏幕常亮已关闭", wakeIdleToast: w => `🌙 ${w === 30 ? "30 分钟" : "1 小时"}没有操作，屏幕常亮已关闭`,
         camAim: "把条码对准框框", camOrder: "扫「订单号」条码", camTrk: "扫「追踪号」条码", camErr: e => `❌ 打不开相机：${e}（请允许使用相机，或直接输入）`,
         loadFail: e => `❌ 读取失败：${e}`,
         statToday: n => `今天 <b>${n}</b> 包`, statTodo: n => `要放东西 <b>${n}</b>`, statDone: n => `已打包 <b>${n}</b>`, statPrep: n => `准备 <b>${n}</b> 件`,
@@ -368,10 +375,10 @@
         rangeH: "📅 Today's parcels", rangeSub: "Orders placed in which time range. Scanning isn't affected: any order you scan shows everything that member is still owed.",
         optLive: "🎥 Live session", optDay: "📆 One day", optCustom: "✏️ Custom", optCustomS: "Pick your own start and end", ok: "OK", liveHint: " (8 pm to 8 am)",
         pickRange: "📅 Pick a range", pickDate: "Please pick a date", endAfter: "End time must be after start time", max62: "62 days at most",
-        setH: "⚙️ Settings", setWake: "🔆 Keep screen on", setTheme: "🌓 Theme", on: "On", off: "Off", light: "☀️ Light", dark: "🌙 Dark", done: "Done",
-        wakeOnInfo: m => `On: ${m} min left (any activity extends it to 1 hour)`, wakeWait: "On (takes effect when you're back on this page)", wakeOffInfo: "Off: the phone sleeps as usual",
+        setH: "⚙️ Settings", setWake: "🔆 Keep screen on", setTheme: "🌓 Theme", on: "On", off: "Off", m30: "30 min", m60: "1 hour", light: "☀️ Light", dark: "🌙 Dark", done: "Done",
+        wakeOnInfo: (m, w) => `On: ${m} min left (any activity extends it to ${w === 30 ? "30 min" : "1 hour"})`, wakeWait: "On (takes effect when you're back on this page)", wakeOffInfo: "Off: the phone sleeps as usual",
         wakeNo: "Not supported on this phone / browser (iPhone needs Safari on iOS 16.4+; Android use Chrome)",
-        wakeOnToast: "🔆 Screen stays on for 1 hour", wakeOffToast: "🌙 Keep screen on is off", wakeIdleToast: "🌙 No activity for 1 hour, keep screen on turned off",
+        wakeOnToast: w => `🔆 Screen stays on for ${w === 30 ? "30 min" : "1 hour"} (activity extends it)`, wakeOffToast: "🌙 Keep screen on is off", wakeIdleToast: w => `🌙 No activity for ${w === 30 ? "30 min" : "1 hour"}, keep screen on turned off`,
         camAim: "Point the barcode at the frame", camOrder: "Scan the ORDER NO. barcode", camTrk: "Scan the TRACKING NO. barcode", camErr: e => `❌ Can't open camera: ${e} (allow camera access, or type it in)`,
         loadFail: e => `❌ Failed to load: ${e}`,
         statToday: n => `Today <b>${n}</b> parcels`, statTodo: n => `To add <b>${n}</b>`, statDone: n => `Packed <b>${n}</b>`, statPrep: n => `Prepare <b>${n}</b>`,
@@ -484,8 +491,11 @@
     }
 
     // ---------- 🔆 屏幕常亮：进入后至少 1 小时，有操作就再延长 1 小时（⚙️ 里开关）----------
-    const WAKE_MS = 60 * 60000;
-    let wake = null, wakeOn = store.get("pkWake") !== "off", wakeUntil = Date.now() + WAKE_MS;
+    // pkWake：off / 30 / 60（分钟）；以前存的 "on" = 60
+    const wakePref = store.get("pkWake");
+    let wakeMin = wakePref === "30" ? 30 : 60;
+    const wakeMs = () => wakeMin * 60000;
+    let wake = null, wakeOn = wakePref !== "off", wakeUntil = Date.now() + wakeMs();
     const wakeOk = "wakeLock" in navigator;
     async function wakeGet() {
       if (!wakeOk || !wakeOn || wake || document.visibilityState !== "visible") return paintWake();
@@ -493,11 +503,12 @@
       paintWake();
     }
     function wakeDrop() { try { wake && wake.release(); } catch (e) {} wake = null; paintWake(); }
-    function wakeTouch() { if (wakeOn) { wakeUntil = Date.now() + WAKE_MS; if (!wake) wakeGet(); } }
-    function setWake(on) {
+    function wakeTouch() { if (wakeOn) { wakeUntil = Date.now() + wakeMs(); if (!wake) wakeGet(); } }
+    function setWake(v) {   // "off" / "30" / "60"
       if (!wakeOk) return;
-      wakeOn = on; store.set("pkWake", on ? "on" : "off");
-      if (on) { wakeUntil = Date.now() + WAKE_MS; wakeGet(); toast(t("wakeOnToast")); } else { wakeDrop(); toast(t("wakeOffToast")); }
+      wakeOn = v !== "off"; if (wakeOn) wakeMin = v === "30" ? 30 : 60;
+      store.set("pkWake", wakeOn ? String(wakeMin) : "off");
+      if (wakeOn) { wakeUntil = Date.now() + wakeMs(); wakeGet(); toast(t("wakeOnToast", wakeMin)); } else { wakeDrop(); toast(t("wakeOffToast")); }
       paintSet();
     }
     function paintWake() {
@@ -505,22 +516,29 @@
       if (!$("setModal").hidden) paintSet();
     }
     setInterval(() => {
-      if (wakeOn && Date.now() > wakeUntil) { wakeOn = false; wakeDrop(); toast(t("wakeIdleToast")); }
+      if (wakeOn && Date.now() > wakeUntil) { wakeOn = false; wakeDrop(); toast(t("wakeIdleToast", wakeMin)); }
       paintWake();
     }, 20000);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wakeGet(); });
     document.addEventListener("pointerdown", () => wakeTouch(), { passive: true });
 
+    // ---------- ⌨️ 跳出键盘时：整页缩到键盘上面（扫描框在下面才不会被盖住）----------
+    if (window.visualViewport) {
+      const vv = window.visualViewport;
+      const fit = () => { const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop); document.body.style.bottom = gap > 40 ? gap + "px" : ""; };
+      vv.addEventListener("resize", fit); vv.addEventListener("scroll", fit);
+    }
+
     // ---------- ⚙️ 设置：语言 / 屏幕常亮 / 主题 ----------
     const theme = () => document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
     function paintSet() {
-      const v = { lang, wake: wakeOn ? "on" : "off", theme: theme() };
+      const v = { lang, wake: wakeOn ? String(wakeMin) : "off", theme: theme() };
       document.querySelectorAll("#setModal .seg").forEach(sg => sg.querySelectorAll("button").forEach(b => {
         b.classList.toggle("on", b.dataset.v === v[sg.dataset.seg]);
         if (sg.dataset.seg === "wake") b.disabled = !wakeOk;
       }));
       const min = Math.max(0, Math.ceil((wakeUntil - Date.now()) / 60000));
-      $("wakeInfo").textContent = !wakeOk ? t("wakeNo") : !wakeOn ? t("wakeOffInfo") : wake ? t("wakeOnInfo", min) : t("wakeWait");
+      $("wakeInfo").textContent = !wakeOk ? t("wakeNo") : !wakeOn ? t("wakeOffInfo") : wake ? t("wakeOnInfo", min, wakeMin) : t("wakeWait");
     }
     function openSet() { paintSet(); $("setModal").hidden = false; }
     function closeSet() { $("setModal").hidden = true; focusQ(); }
@@ -531,7 +549,7 @@
       const b = e.target.closest(".seg button"); if (!b || b.disabled) return;
       const k = b.closest(".seg").dataset.seg, v = b.dataset.v;
       if (k === "lang" && v !== lang) { lang = v; store.set("pkLang", v); repaintAll(); }
-      else if (k === "wake") setWake(v === "on");
+      else if (k === "wake") setWake(v);
       else if (k === "theme") { document.documentElement.setAttribute("data-theme", v); store.set("msAdminTheme", v); }
       paintSet();
     });
