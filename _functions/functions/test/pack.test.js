@@ -308,3 +308,21 @@ test("领奖追踪：用订单号对会员系统的中奖奖品；绑定的账�
   assert.deepEqual(r.res.c, { club: null, uid: null });
   await rejects(pk.pkClaims(db, { uid: "x", email: "a@b.c", emailVerified: true }, { items: [] }), "pk/no-perm");
 });
+
+test("不用放的包裹：没有东西也能「已打包好」，记下运单号和照片", async () => {
+  const db = fakeDb(SEED());
+  const r = await pk.pkShip(db, PACKER, { orderNo: "2611190000003", items: [], txId: "tx_empty1234", done: true, ship: SHIP });
+  assert.equal(r.ok, true);
+  const d = db.data.get("packDone/2611190000003");
+  assert.equal(d.by, "pack@x.com"); assert.equal(d.ship.trackingNo, "SPXMY06345716061A"); assert.ok(d.ship.photo.startsWith("data:image/"));
+  const b = await pk.pkBatch(db, PACKER, {});
+  const p = b.parcels.find(x => x.orderNo === "2611190000003");
+  assert.equal(p.done, true); assert.equal(p.packed.trackingNo, "SPXMY06345716061A"); assert.equal(p.packed.photo, true);
+  assert.equal(JSON.stringify(b).includes("base64"), false);   // 照片不回传
+  // 没勾运单号 / 照片也可以
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000002", items: [], txId: "tx_empty5678", done: true });
+  assert.equal(db.data.get("packDone/2611190000002").ship, undefined);
+  // 撤销
+  await pk.pkUndo(db, PACKER, { orderNo: "2611190000003" });
+  assert.equal(db.data.get("packDone/2611190000003"), undefined);
+});
