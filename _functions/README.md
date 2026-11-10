@@ -5,7 +5,7 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 
 两个功能：🎉 **新会员奖励（New Member Special）**、📅 **每日签到**（2026-11-09）。设计见项目文件 `新会员奖励-第二阶段设计.md` 和 `新会员奖励-第二阶段补充.md`。
 
-## 资料夹 
+## 资料夹
 | 档案 | 用途 |
 |---|---|
 | `functions/index.js` | 函式入口：`nmMember`（会员）、`nmAdmin`（后台）、`ciMember`（📅 签到）、`nmOnMemberCreated`、`nmOnOrderWritten`、`nmDaily` |
@@ -14,7 +14,7 @@ Firebase 项目：`member-system-27ae0` · 方案：Blaze
 | `functions/src/smallgift.js` | 🎁 小礼物：建立一期、作废 / 恢复 / 寄出、每日检查 |
 | `functions/test/smallgift.test.js` | 小礼物测试（11 项，不用模拟器：`npm run test:smallgift`） |
 | `functions/src/pack.js` | 🧺 打包清单：这一批、找单号、勾选寄出、打包完成 |
-| `functions/test/pack.test.js` | 打包清单测试（9 项，不用模拟器：`npm run test:pack`） |
+| `functions/test/pack.test.js` | 打包清单测试（11 项，不用模拟器：`npm run test:pack`） |
 | `functions/src/core.js` | 全部逻辑：状态机、积分、订单检查、权限 |
 | `functions/test/core.test.js` | 后端测试（22 项） |
 | `firestore.rules` | 完整规则（= 11/08 版 + 新会员奖励 4 处新增） |
@@ -122,17 +122,20 @@ Firebase 控制台 › Firestore Database › 规则 → 把 `firestore.rules` �
 - 规则：两个集合都只有后端写；会员只能读自己的（`uid`）
 - 部署：`firebase deploy --only functions:sgAdmin,functions:sgDaily --project member-system-27ae0`，然后跑 `gcloud run services update sgadmin --no-invoker-iam-check --region=asia-southeast1 --project=member-system-27ae0`，再把 `firestore.rules` 贴到 Firebase 控制台
 
-## 🧺 打包清单（2026-11-10）
-页面：admin `pack/`（要「🧺 打包清单」权限）。扫一张单 → 这位顾客要随单寄出的全部东西。
-- `undo`：撤销这一包（订单取消 / 勾错）——打包清单寄出的小礼物 → 待寄、中奖奖品 / 兑换 → 待发货（会员已完成的不动；迎新礼只提醒）
-- `pkAdmin`（后台 callable）：`batch`（最近 14 天、没取消、没标记打包完成的订单 + 每张单要放的东西）、`lookup`（单号或买家名）、`ship`（勾选；`done: true` 同时标记这一包完成）、`done`（标记 / 取消打包完成）
-- 合并五种：🎁 小礼物（smallGifts pending）、🏆 中奖奖品（prizeWins 随单；claimed / approved 可勾，unclaimed 只提醒）、🛍️ 兑换（redemptions 实体随单；approved 可勾，pending 只提醒）、🏅 签到达人礼物（ciGift，pending 也可勾 = 批准 + 寄出，补货中会扣 1 库存）、🎉 迎新礼（newMemberRewards ready_to_pack / packed，走 core 的 已打包 → 已寄出）
-- 寄出写法和后台「随订单寄出」一样：`status: shipped`、`shippedAt`、`shipping: { withOrder: true, orderNo, by, via: "pack" }` → 会员看到已发货，14 天后自动完成照旧
-- 权限只在后端检查；回传只有单号、平台、用户名、会员名字、要放什么（没有地址、电话）。打包员不需要能直接读会员资料
-- `core.js`：迎新礼的「已打包」「已寄出」两个动作，有「打包清单」权限也可以做（其他迎新礼操作不变）
-- 新集合 `packDone/{单号}`、`packMeta/state`（上次「这批打包完成」的时间，页面的「这次」= 之后下的单）——都只有后端写
-- 🏆 非会员抽奖得主：页面直接读领奖追踪（要同一个浏览器登录过领奖追踪），勾选会在领奖追踪标记已寄出
-- 部署：`firebase deploy --only functions:pkAdmin,functions:nmAdmin --project member-system-27ae0`，然后跑 `pkadmin` 和 `nmadmin` 的 `gcloud` 那两行，再贴规则
+## 🧺 打包清单（2026-11-10，PDA 第二版）
+页面：admin `pack/`（要「🧺 打包清单」权限）。以扫描为准：扫到哪一张单 = 这一包现在要出货 → 这位顾客所有还没寄的东西（不管多久以前），默认全部勾选。
+- `pkAdmin`（后台 callable）：
+  - `batch { from, to }`：这个时间段下的单（今天要寄出的包裹）+ 每张单的顾客待寄东西 + `pending`（全部待寄，含还没下单的会员）
+  - `lookup`（单号或买家名，任何一天的单都可以扫）
+  - `ship { orderNo, items, txId, done, ship }`：`ship = { carrier, carrierName, trackingNo, trackingUrl, photo }`（选填；页面默认要求运单号和照片）
+  - `done`、`undo`（撤销这一包：退回状态，运单资料一起清掉）
+- 合并五种：🎁 小礼物、🏆 中奖奖品（随单；claimed / approved 可勾，unclaimed 只提醒）、🛍️ 兑换（实体随单；approved 可勾，pending 只提醒）、🏅 签到达人礼物（pending 也可勾 = 批准 + 寄出）、🎉 迎新礼（走 core 的 已打包 → 已寄出，之后把运单资料补进它的兑换和纪录）
+- 寄出写法：`status: shipped`（小礼物 `sent`）、`shippedAt`、`shipping: { withOrder: true, orderNo, by, via: "pack", carrier, carrierName, trackingNo, trackingUrl, photos: [照片] }`；照片压缩后 ≤ 300KB（页面压到约 140KB 内）
+- 权限只在后端检查；回传只有单号、平台、用户名、会员名字、要放什么（没有地址、电话）
+- `core.js`：迎新礼的「已打包」「已寄出」两个动作，有「打包清单」权限也可以做
+- 集合 `packDone/{单号}`（这一包已放好）只有后端写；`packMeta` 第二版不再用
+- 🏆 非会员抽奖得主：页面直接读领奖追踪（同一个浏览器登录过领奖追踪），勾选会在领奖追踪标记已寄出，备注写运单号
+- 部署：`firebase deploy --only functions:pkAdmin --project member-system-27ae0`，然后跑 `pkadmin` 那行 `gcloud`
 
 ## 🛍️ 商城兑换（2026-11-09）
 - 会员：`rdMember({ op: "redeem", rewardId, variantId? })` → `{ id }`；`rdMember({ op: "cancel", id })`
