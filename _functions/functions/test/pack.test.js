@@ -319,6 +319,9 @@ test("不用放的包裹：没有东西也能「已打包好」，记下运单�
   const p = b.parcels.find(x => x.orderNo === "2611190000003");
   assert.equal(p.done, true); assert.equal(p.packed.trackingNo, "SPXMY06345716061A"); assert.equal(p.packed.photo, true);
   assert.equal(JSON.stringify(b).includes("base64"), false);   // 照片不回传
+  assert.ok((await pk.pkPhoto(db, PACKER, { orderNo: "2611190000003" })).photo.startsWith("data:image/"));   // 查看时读照片
+  assert.equal((await pk.pkPhoto(db, PACKER, { orderNo: "2611190000004" })).photo, null);
+  await rejects(pk.pkPhoto(db, NOBODY, { orderNo: "2611190000003" }), "pk/no-perm");
   // 没勾运单号 / 照片也可以
   await pk.pkShip(db, PACKER, { orderNo: "2611190000002", items: [], txId: "tx_empty5678", done: true });
   assert.equal(db.data.get("packDone/2611190000002").ship, undefined);
