@@ -16,16 +16,19 @@
   <style>
     /* ===== PDA 式版面：上 = 扫描列，中 = 结果，下 = 大按钮 + 分页 ===== */
     [hidden] { display: none !important; }
-    html, body { height: 100%; }
-    body { display: flex; flex-direction: column; overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; }
+    /* 整页贴满屏幕（手机网址列收起 / 展开都不会在底下留一条空白）*/
+    html { height: 100%; background: #0f172a; }
+    body { position: fixed; inset: 0; margin: 0; display: flex; flex-direction: column; overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; }
     input { user-select: text; }
     .bar { background: #0f172a; color: #fff; padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .bar a { color: #94a3b8; font-size: 1.1rem; padding: 2px 6px; }
     .bar h1 { font-size: 1rem; white-space: nowrap; }
-    .bar .sp { margin-left: auto; display: flex; gap: 6px; align-items: center; min-width: 0; }
-    .bar button { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 7px; padding: 5px 8px; font-size: .74rem; cursor: pointer; white-space: nowrap; }
-    .bar button.on { background: #854d0e; border-color: #ca8a04; color: #fef9c3; }
-    .bar .range { background: #db2777; border-color: #db2777; color: #fff; font-weight: 700; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+    .bar .sp { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .bar button { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; padding: 5px 8px; font-size: .74rem; cursor: pointer; white-space: nowrap; }
+    .bar .range { background: #db2777; border-color: #db2777; color: #fff; font-weight: 700; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+    .bar .ico { width: 38px; height: 34px; padding: 0; font-size: 1.05rem; position: relative; display: grid; place-items: center; }
+    .bar .ico.big { width: 44px; height: 38px; font-size: 1.35rem; }
+    .bar .ico .dot { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: #facc15; box-shadow: 0 0 0 2px #1e293b; }
 
     .scanbar { background: #0f172a; padding: 0 10px 10px; display: flex; gap: 8px; flex-shrink: 0; }
     .scanbar input { flex: 1; min-width: 0; font-size: 1.15rem; padding: 12px; border: 2px solid #db2777; border-radius: 10px; background: #fff; color: #0f172a; font-family: ui-monospace, Menlo, monospace; letter-spacing: .5px; }
@@ -70,6 +73,7 @@
     .it .ck { width: 38px; height: 38px; border-radius: 10px; border: 3px solid var(--line2); display: grid; place-items: center; font-size: 1.3rem; flex-shrink: 0; color: #fff; font-weight: 900; }
     .it.on .ck { background: #16a34a; border-color: #16a34a; }
     .it.off { opacity: .55; } .it.off .nm small::after { content: " · 这次不寄，留到下一单"; color: var(--amber-tx); }
+    html[lang=en] .it.off .nm small::after { content: " · not this time, keep for next order"; }
     .it.sent { opacity: .55; cursor: default; } .it.sent b { text-decoration: line-through; }
     .it.sent .ck { background: #64748b; border-color: #64748b; }
     .warn { background: var(--amber-bg); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: .86rem; color: var(--amber-tx); }
@@ -130,10 +134,19 @@
     .pg .ic { font-size: 1.5rem; }
     .pg .nm { flex: 1; color: var(--ink); font-weight: 700; }
     .pg .n { font-size: 1.45rem; font-weight: 900; color: #db2777; }
-    .pg ul { list-style: none; margin: 0; padding: 0 14px 10px 54px; font-size: .82rem; color: var(--text2); }
-    .pg li { padding: 4px 0; border-top: 1px dashed var(--line); display: flex; gap: 8px; }
-    .pg li span { margin-left: auto; font-size: .74rem; font-weight: 700; }
-    .pg li .t { color: #16a34a; } .pg li .w { color: var(--muted); }
+    .pg summary .arr { color: var(--muted); font-size: .8rem; transition: transform .15s; }
+    .pg[open] summary .arr { transform: rotate(90deg); }
+    .pg ul { list-style: none; margin: 0; padding: 0 12px 8px 14px; font-size: .82rem; color: var(--text2); }
+    .pg li { padding: 7px 0; border-top: 1px dashed var(--line); }
+    .pg li .w1 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .pg li .w1 b { color: var(--ink); font-size: .9rem; }
+    .pg li .acc { font-size: .72rem; background: var(--soft); border-radius: 5px; padding: 1px 6px; color: var(--text2); white-space: nowrap; }
+    .pg li .acc.S { background: #ffedd5; color: #9a3412; } .pg li .acc.T { background: #e2e8f0; color: #1e293b; }
+    [data-theme=dark] .pg li .acc.S { background: #431407; color: #fdba74; } [data-theme=dark] .pg li .acc.T { background: #334155; color: #e2e8f0; }
+    .pg li .mt { font-size: .7rem; font-weight: 700; padding: 0 5px; border-radius: 4px; background: var(--pink-bg); color: var(--pink-tx); }
+    .pg li .mt.non { background: var(--soft); color: var(--muted); }
+    .pg li .w2 { font-size: .74rem; color: var(--muted); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .pg li .t { color: #16a34a; font-weight: 700; } .pg li .w { color: var(--amber-tx); font-weight: 700; }
 
     /* 下方：大按钮 + 分页 */
     .act { flex-shrink: 0; padding: 8px 10px; background: var(--card); border-top: 1px solid var(--line); }
@@ -141,7 +154,7 @@
     .act .go { background: #16a34a; color: #fff; }
     .act .go.dis { background: var(--soft); color: var(--muted); }
     .act .next { background: var(--navy); color: #fff; }
-    .tabs { flex-shrink: 0; display: flex; background: #0f172a; padding-bottom: env(safe-area-inset-bottom); }
+    .tabs { flex-shrink: 0; display: flex; background: #0f172a; margin: 0; border: 0; border-radius: 0; gap: 0; padding: 0 0 env(safe-area-inset-bottom); }   /* admin.css 的 .tabs 有 margin-bottom → 底下会多一条空白 */
     .tabs button { flex: 1; background: none; border: 0; color: #94a3b8; padding: 9px 4px 8px; font-size: .78rem; cursor: pointer; position: relative; }
     .tabs button .i { display: block; font-size: 1.25rem; }
     .tabs button.on { color: #fff; }
@@ -163,6 +176,12 @@
     .opt b { color: var(--ink); } .opt small { display: block; color: var(--muted); margin-top: 3px; font-size: .8rem; }
     .opt input[type=date], .opt input[type=datetime-local] { margin-top: 8px; width: 100%; padding: 8px; border: 1.5px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); font-size: .9rem; }
     .opt .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .srow { border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; margin-top: 10px; }
+    .srow b { color: var(--ink); font-size: .95rem; } .srow small { display: block; color: var(--muted); font-size: .78rem; margin-top: 2px; }
+    .seg { display: flex; gap: 6px; margin-top: 8px; }
+    .seg button { flex: 1; border: 2px solid var(--line2); background: var(--card); color: var(--text2); border-radius: 10px; padding: 10px 6px; font-size: .92rem; font-weight: 700; cursor: pointer; }
+    .seg button.on { border-color: #db2777; background: var(--pink-bg); color: var(--pink-tx); }
+    .seg button:disabled { opacity: .45; }
     .modal2 .go { width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 12px; background: #db2777; color: #fff; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
 
     /* 📷 */
@@ -179,18 +198,17 @@
 </head>
 <body>
   <div class="bar">
-    <a href="../" title="回到控制台">←</a><h1>🧺 打包</h1>
+    <a href="../" data-tt="back">←</a><h1 data-t="title">🧺 打包</h1>
+    <button id="rangeBtn" class="range" data-tt="rangeTitle">📅 …</button>
     <div class="sp">
-      <button id="rangeBtn" class="range" title="今天要寄出的包裹：哪个时间段下的单">📅 …</button>
-      <button id="wakeBtn" title="屏幕常亮：进入后 1 小时内不会自动关屏（有操作会再延长），按一下可以关掉">🔆</button>
-      <button id="themeBtn" title="白色 / 暗黑模式">🌓</button>
-      <button id="reloadBtn" title="重新读取">🔄</button>
+      <button id="setBtn" class="ico" data-tt="setH">⚙️<span class="dot" id="wakeDot" hidden></span></button>
+      <button id="reloadBtn" class="ico big" data-tt="reload">🔄</button>
     </div>
   </div>
   <div class="scanbar">
-    <input id="q" placeholder="扫描订单号 / 追踪号" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
-    <button id="kbBtn" title="⌨️ 键盘：关掉后点输入框不会跳出键盘（PDA 扫描枪用）">⌨️</button>
-    <button id="camBtn" class="cam">📷 扫描</button>
+    <input id="q" data-tp="qPh" placeholder="扫描订单号 / 追踪号" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
+    <button id="kbBtn" data-tt="kbTitle">⌨️</button>
+    <button id="camBtn" class="cam" data-t="cam">📷 扫描</button>
   </div>
   <div class="scanhint" id="scanHint" hidden></div>
   <div class="stats" id="stats">读取中…</div>
@@ -208,8 +226,8 @@
     </section>
     <section id="tabPrep" class="tab">
       <div class="folders" id="folders">
-        <button data-fd="today" class="on">📦 今天要寄<span class="n" id="nToday" hidden></span></button>
-        <button data-fd="all">🗂️ 全部待寄<span class="n" id="nAll" hidden></span></button>
+        <button data-fd="today" class="on"><span data-t="fdToday">📦 今天要寄</span><span class="n" id="nToday" hidden></span></button>
+        <button data-fd="all"><span data-t="fdAll">🗂️ 全部待寄</span><span class="n" id="nAll" hidden></span></button>
       </div>
       <div id="prepSub" class="sub"></div>
       <div id="prep" class="prep"></div>
@@ -218,21 +236,35 @@
 
   <div class="act" id="act" hidden></div>
   <nav class="tabs">
-    <button data-tab="tabScan" class="on"><span class="i">📷</span>扫描</button>
-    <button data-tab="tabList"><span class="i">📋</span>清单<span class="n" id="nList" hidden></span></button>
-    <button data-tab="tabPrep"><span class="i">🎁</span>准备<span class="n" id="nPrep" hidden></span></button>
+    <button data-tab="tabScan" class="on"><span class="i">📷</span><span data-t="tabScan">扫描</span></button>
+    <button data-tab="tabList"><span class="i">📋</span><span data-t="tabList">清单</span><span class="n" id="nList" hidden></span></button>
+    <button data-tab="tabPrep"><span class="i">🎁</span><span data-t="tabPrep">准备</span><span class="n" id="nPrep" hidden></span></button>
   </nav>
 
   <!-- 📅 时间段：同一天只弹第一次 -->
   <div id="rangeModal" class="modal2" hidden>
     <div class="box">
-      <h2>📅 今天要寄出的包裹</h2>
-      <div class="sub" style="margin:0">选哪个时间段下的单。扫描不受影响：扫到任何一张单都会显示那位会员所有待寄的东西。</div>
-      <label class="opt" data-opt="live"><b>🎥 直播时段</b><small id="optLive"></small></label>
-      <label class="opt" data-opt="day"><b>📆 一天</b><small>00:00 – 23:59</small><input type="date" id="optDay"></label>
-      <label class="opt" data-opt="custom"><b>✏️ 自定义</b><small>自己选开始和结束</small>
+      <h2 data-t="rangeH">📅 今天要寄出的包裹</h2>
+      <div class="sub" style="margin:0" data-t="rangeSub">选哪个时间段下的单。扫描不受影响：扫到任何一张单都会显示那位会员所有待寄的东西。</div>
+      <label class="opt" data-opt="live"><b data-t="optLive">🎥 直播时段</b><small id="optLive"></small></label>
+      <label class="opt" data-opt="day"><b data-t="optDay">📆 一天</b><small>00:00 – 23:59</small><input type="date" id="optDay"></label>
+      <label class="opt" data-opt="custom"><b data-t="optCustom">✏️ 自定义</b><small data-t="optCustomS">自己选开始和结束</small>
         <div class="two"><input type="datetime-local" id="optFrom"><input type="datetime-local" id="optTo"></div></label>
-      <button class="go" id="rangeGo">确定</button>
+      <button class="go" id="rangeGo" data-t="ok">确定</button>
+    </div>
+  </div>
+
+  <!-- ⚙️ 设置：语言 / 屏幕常亮 / 主题（记在这台设备）-->
+  <div id="setModal" class="modal2" hidden>
+    <div class="box">
+      <h2 data-t="setH">⚙️ 设置</h2>
+      <div class="srow"><b>🌐 语言 / Language</b>
+        <div class="seg" data-seg="lang"><button data-v="zh">中文</button><button data-v="en">English</button></div></div>
+      <div class="srow"><b data-t="setWake">🔆 屏幕常亮</b><small id="wakeInfo"></small>
+        <div class="seg" data-seg="wake"><button data-v="on" data-t="on">开</button><button data-v="off" data-t="off">关</button></div></div>
+      <div class="srow"><b data-t="setTheme">🌓 主题</b>
+        <div class="seg" data-seg="theme"><button data-v="light" data-t="light">☀️ 白色</button><button data-v="dark" data-t="dark">🌙 黑色</button></div></div>
+      <button class="go" id="setClose" data-t="done">完成</button>
     </div>
   </div>
 
@@ -241,7 +273,7 @@
   <div id="cam" class="camv" hidden>
     <div class="frame"><video id="video" playsinline muted></video></div>
     <p id="camMsg">把条码对准框框</p>
-    <button id="camClose">关闭</button>
+    <button id="camClose" data-t="close">关闭</button>
   </div>
 
   <script type="module">
@@ -255,30 +287,136 @@
     const esc = x => String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const norm = s => String(s || "").replace(/\s/g, "").toUpperCase();
     const noOk = no => /^[A-Z0-9]{6,40}$/.test(no);
-    const errText = e => (e && e.message) || String(e);
     const PLAT = { shopee: "Shopee", tiktok: "TikTok" };
     const txId = () => "pk_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
     const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
     const pad = n => String(n).padStart(2, "0");
-    const fmtT = ms => { const d = new Date(ms); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const fmtD = ms => { const d = new Date(ms); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; };
+    const fmtH = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const fmtT = ms => `${fmtD(ms)} ${fmtH(ms)}`;
     const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const DAY = 86400000;
 
+    // ---------- 🌐 中文 / English（记在这台设备）----------
+    const T = {
+      zh: {
+        title: "🧺 打包", back: "回到控制台", rangeTitle: "今天要寄出的包裹：哪个时间段下的单", reload: "重新读取",
+        qPh: "扫描订单号 / 追踪号", kbTitle: "⌨️ 键盘：关掉后点输入框不会跳出键盘（PDA 扫描枪用）", cam: "📷 扫描", loading: "读取中…", close: "关闭",
+        tabScan: "扫描", tabList: "清单", tabPrep: "准备", fdToday: "📦 今天要寄", fdAll: "🗂️ 全部待寄",
+        rangeH: "📅 今天要寄出的包裹", rangeSub: "选哪个时间段下的单。扫描不受影响：扫到任何一张单都会显示那位会员所有待寄的东西。",
+        optLive: "🎥 直播时段", optDay: "📆 一天", optCustom: "✏️ 自定义", optCustomS: "自己选开始和结束", ok: "确定", liveHint: "（晚上 8 点到早上 8 点）",
+        pickRange: "📅 选时间段", pickDate: "请选日期", endAfter: "结束时间要在开始时间之后", max62: "最长 62 天",
+        setH: "⚙️ 设置", setWake: "🔆 屏幕常亮", setTheme: "🌓 主题", on: "开", off: "关", light: "☀️ 白色", dark: "🌙 黑色", done: "完成",
+        wakeOnInfo: m => `开着：还剩 ${m} 分钟（有操作会再延长到 1 小时）`, wakeWait: "开着（回到这一页时生效）", wakeOffInfo: "关着：手机照平常自动关屏",
+        wakeNo: "这台手机 / 浏览器不支持（iPhone 要 iOS 16.4 以上的 Safari；Android 用 Chrome）",
+        wakeOnToast: "🔆 屏幕常亮 1 小时", wakeOffToast: "🌙 屏幕常亮已关闭", wakeIdleToast: "🌙 1 小时没有操作，屏幕常亮已关闭",
+        camAim: "把条码对准框框", camOrder: "扫「订单号」条码", camTrk: "扫「追踪号」条码", camErr: e => `❌ 打不开相机：${e}（请允许使用相机，或直接输入）`,
+        loadFail: e => `❌ 读取失败：${e}`,
+        statToday: n => `今天 <b>${n}</b> 包`, statTodo: n => `要放东西 <b>${n}</b>`, statDone: n => `已放好 <b>${n}</b>`, statPrep: n => `准备 <b>${n}</b> 件`,
+        rangeInfo: (a, b) => `今天要寄出的包裹：${a} – ${b} 下的单（点上面 📅 可以换）`,
+        fAll: "全部", fTodo: "🎁 要放东西", fNone: "⭕ 不用放", fDone: "✅ 已放好",
+        noneHere: "没有", noOrders: "这个时间段没有订单", inOther: "↪ 东西在同会员的另一包", stTodo: n => `🎁 ${n} 样`, stDone: "✅ 已放好", stNone: "⭕ 不用放",
+        prepToday: "今天这些包裹要放的东西，打包前先拿齐", prepAll: "所有还存着、还没寄出的东西（含还没下单的会员）",
+        todayOrder: no => `📦 今天有单 …${no}`, waitOrder: "⏳ 等下单", member: "会员", nonMember: "非会员",
+        emptyToday: "今天没有要放的东西 🎉", emptyAll: "没有存着的东西 🎉",
+        bigFirst: "⚠️ 先处理", bigNone: "⭕ 不用放", noteNone: "这包没有要随单寄出的东西，直接打包。", bigPut: n => `🎁 要放 ${n} 样`, bigDone: "✅ 已放好",
+        secPut: "放进这一包（取消勾选 = 这次不寄，留到下一单）", secSent: "已放入", sentSmall: "✅ 已放入",
+        others: (n, l) => `💡 这位会员今天还有 ${n} 包（${l}）。这包没勾的，扫那一包时会再出现。`, sep: "、",
+        undoBtn: "↩️ 撤销这一包（订单取消 / 勾错了）",
+        needTrk: "🚚 需要运单号", trkOk: "✅ 已扫", trkMiss: "扫面单上的追踪号", carrier: "运输公司", pick: "— 选 —", trkNo: "运单号", trkPh: "扫追踪号条码",
+        url: "查询链接", urlPh: "https://…（选好公司会自动生成）", needPh: "📷 需要上传照片", phOk: "✅ 已拍", phMiss: "拍一张包裹照片", phDel: "✕ 删掉", phRe: "重拍", phShot: "📷 拍照",
+        mTick: "勾选要放的东西", mTrk: "扫追踪号", mCarrier: "选运输公司", mHttps: "链接要 https://", mPhoto: "拍照",
+        nextTrk: "👉 下一步：扫面单上的「追踪号」条码", still: m => `还要：${m}`, saveBtn: n => `💾 保存＝已放好（${n} 样）`,
+        idleB: "扫面单上的订单号条码", idleS: "扫描枪、📷 相机，或输入单号后几位 / 买家名",
+        histH: "刚刚扫过", hLeft: n => `🎁 ${n} 样没放`,
+        isTrk: "这是追踪号：请先扫「订单号」", tailMany: (q, n) => `单号后几位「${q}」有 ${n} 张单，选一张：`, userMany: (q, n) => `买家「${q}」有 ${n} 张单，选一张：`,
+        searching: "查找中…", notFound: "❌ 找不到", notFoundNote: "订单要先录入（订单录入页或表格提交），同步后才查得到。", errBig: "❌ 出错了",
+        trkWord: "运单号", phFail: e => `照片读取失败：${e}`, partFail: "有些没成功：", savedOk: "✅ 这一包放好了",
+        undoConfirm: (no, u) => `↩️ 撤销 ${no}（${u}）这一包？\n\n这一包用打包清单寄出的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n运单号、照片也会一起清掉。\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`,
+        undone: n => `↩️ 已撤销：退回 ${n} 样`, undoWelcome: n => `\n\n⚠️ 这一包有 ${n} 份迎新礼已寄出，要到「新会员奖励」处理`, undoKept: n => `\n\nℹ️ ${n} 样会员已确认收到 / 已完成，没有退回`,
+        claimHint: '🏆 非会员抽奖得主的奖品：<a href="../draw_tournament/claims.html" target="_blank">登录领奖追踪</a> 后重新整理这一页，也会一起列出。',
+        noClaimLogin: "没有登录领奖追踪", claimPrize: "奖品", claimTitle: r => `领奖追踪「${r}」`, claimSub: "非会员得主",
+      },
+      en: {
+        title: "🧺 Packing", back: "Back to console", rangeTitle: "Today's parcels: orders placed in which time range", reload: "Reload",
+        qPh: "Scan order no. / tracking no.", kbTitle: "⌨️ Keyboard: turn off so tapping the box won't open the keyboard (PDA scanner)", cam: "📷 Scan", loading: "Loading…", close: "Close",
+        tabScan: "Scan", tabList: "List", tabPrep: "Prepare", fdToday: "📦 Ship today", fdAll: "🗂️ All pending",
+        rangeH: "📅 Today's parcels", rangeSub: "Orders placed in which time range. Scanning isn't affected: any order you scan shows everything that member is still owed.",
+        optLive: "🎥 Live session", optDay: "📆 One day", optCustom: "✏️ Custom", optCustomS: "Pick your own start and end", ok: "OK", liveHint: " (8 pm to 8 am)",
+        pickRange: "📅 Pick a range", pickDate: "Please pick a date", endAfter: "End time must be after start time", max62: "62 days at most",
+        setH: "⚙️ Settings", setWake: "🔆 Keep screen on", setTheme: "🌓 Theme", on: "On", off: "Off", light: "☀️ Light", dark: "🌙 Dark", done: "Done",
+        wakeOnInfo: m => `On: ${m} min left (any activity extends it to 1 hour)`, wakeWait: "On (takes effect when you're back on this page)", wakeOffInfo: "Off: the phone sleeps as usual",
+        wakeNo: "Not supported on this phone / browser (iPhone needs Safari on iOS 16.4+; Android use Chrome)",
+        wakeOnToast: "🔆 Screen stays on for 1 hour", wakeOffToast: "🌙 Keep screen on is off", wakeIdleToast: "🌙 No activity for 1 hour, keep screen on turned off",
+        camAim: "Point the barcode at the frame", camOrder: "Scan the ORDER NO. barcode", camTrk: "Scan the TRACKING NO. barcode", camErr: e => `❌ Can't open camera: ${e} (allow camera access, or type it in)`,
+        loadFail: e => `❌ Failed to load: ${e}`,
+        statToday: n => `Today <b>${n}</b> parcels`, statTodo: n => `To add <b>${n}</b>`, statDone: n => `Packed <b>${n}</b>`, statPrep: n => `Prepare <b>${n}</b>`,
+        rangeInfo: (a, b) => `Today's parcels: orders placed ${a} – ${b} (tap 📅 above to change)`,
+        fAll: "All", fTodo: "🎁 Add items", fNone: "⭕ Nothing", fDone: "✅ Packed",
+        noneHere: "None", noOrders: "No orders in this time range", inOther: "↪ Items are in this member's other parcel", stTodo: n => `🎁 ${n}`, stDone: "✅ Packed", stNone: "⭕ Nothing",
+        prepToday: "Items for today's parcels — gather them before packing", prepAll: "Everything still stored and not shipped yet (incl. members with no order yet)",
+        todayOrder: no => `📦 Order today …${no}`, waitOrder: "⏳ Waiting for order", member: "Member", nonMember: "Non-member",
+        emptyToday: "Nothing to add today 🎉", emptyAll: "Nothing stored 🎉",
+        bigFirst: "⚠️ Action needed", bigNone: "⭕ Nothing to add", noteNone: "Nothing ships with this parcel. Just pack it.", bigPut: n => `🎁 Add ${n}`, bigDone: "✅ Packed",
+        secPut: "Put in this parcel (untick = not this time, keep for next order)", secSent: "Already added", sentSmall: "✅ Added",
+        others: (n, l) => `💡 This member has ${n} more parcel(s) today (${l}). Unticked items show up again when you scan that parcel.`, sep: ", ",
+        undoBtn: "↩️ Undo this parcel (order cancelled / ticked wrongly)",
+        needTrk: "🚚 Tracking no. required", trkOk: "✅ Scanned", trkMiss: "Scan the tracking no. on the label", carrier: "Courier", pick: "— Pick —", trkNo: "Tracking no.", trkPh: "Scan tracking barcode",
+        url: "Tracking link", urlPh: "https://… (auto-filled after picking courier)", needPh: "📷 Photo required", phOk: "✅ Taken", phMiss: "Take one parcel photo", phDel: "✕ Delete", phRe: "Retake", phShot: "📷 Take photo",
+        mTick: "tick items to add", mTrk: "scan tracking no.", mCarrier: "pick courier", mHttps: "link must start with https://", mPhoto: "take photo",
+        nextTrk: "👉 Next: scan the TRACKING NO. barcode on the label", still: m => `Still need: ${m}`, saveBtn: n => `💾 Save = packed (${n})`,
+        idleB: "Scan the order no. barcode on the label", idleS: "Scanner, 📷 camera, or type the last digits / buyer name",
+        histH: "Just scanned", hLeft: n => `🎁 ${n} not added`,
+        isTrk: "That's a tracking no. — scan the ORDER NO. first", tailMany: (q, n) => `${n} orders end with "${q}", pick one:`, userMany: (q, n) => `Buyer "${q}" has ${n} orders, pick one:`,
+        searching: "Searching…", notFound: "❌ Not found", notFoundNote: "The order must be entered first (order entry page or sheet submit); it shows up after syncing.", errBig: "❌ Something went wrong",
+        trkWord: "Tracking no.", phFail: e => `Couldn't read photo: ${e}`, partFail: "Some failed:", savedOk: "✅ Parcel packed",
+        undoConfirm: (no, u) => `↩️ Undo parcel ${no} (${u})?\n\nEverything shipped with this parcel via Packing goes back:\n• Small gifts → pending\n• Prizes, redemptions, check-in gifts → to ship\nTracking no. and photo are cleared too.\n\nItems the member already confirmed received stay as they are. Welcome gifts are handled in New member rewards.`,
+        undone: n => `↩️ Undone: ${n} item(s) returned`, undoWelcome: n => `\n\n⚠️ ${n} welcome gift(s) in this parcel were shipped — handle them in New member rewards`, undoKept: n => `\n\nℹ️ ${n} item(s) already received / completed, not returned`,
+        claimHint: '🏆 Prizes of non-member draw winners: <a href="../draw_tournament/claims.html" target="_blank">sign in to Claim tracking</a>, then reload this page to list them too.',
+        noClaimLogin: "Not signed in to Claim tracking", claimPrize: "Prize", claimTitle: r => `Claim "${r}"`, claimSub: "non-member winner",
+      },
+    };
+    // 后端错误讯息（中文）→ English
+    const ERR_EN = {
+      "请先登入": "Please sign in", "没有权限": "No permission", "没有「🧺 打包清单」权限": "No 🧺 Packing permission", "订单号不正确": "Invalid order no.",
+      "时间段不正确（最长 62 天）": "Invalid time range (62 days max)", "请输入单号或买家名": "Enter an order no. or buyer name", "没有订单": "No orders",
+      "运输公司不正确": "Invalid courier", "运输公司名称太长": "Courier name too long", "运单号不正确": "Invalid tracking no.", "查询链接要以 https:// 开头": "Tracking link must start with https://",
+      "照片格式不正确": "Invalid photo format", "照片太大": "Photo too large", "缺少事务 ID": "Missing transaction ID", "资料不正确": "Invalid data", "系统错误": "System error",
+      "系统错误，请稍后再试": "System error, please try again later", "不认识的种类": "Unknown item type",
+      "找不到这份小礼物": "Small gift not found", "找不到这个奖品": "Prize not found", "找不到这笔兑换": "Redemption not found", "找不到这份迎新礼": "Welcome gift not found",
+      "小礼物已作废": "Small gift was voided", "会员还没领取这个奖品": "Member hasn't claimed this prize", "这个奖品是单独寄出": "This prize ships separately",
+      "这笔兑换不能在这里处理": "This redemption can't be handled here", "这笔兑换是单独寄出": "This redemption ships separately", "要先到「兑换审核」批准": "Approve it in Redemptions first",
+      "这笔兑换不是待发货": "This redemption isn't waiting to ship", "迎新礼还没确认订单": "Welcome gift order not confirmed yet",
+    };
+    let lang = store.get("pkLang") === "en" ? "en" : "zh";
+    const t = (k, ...a) => { const v = (T[lang] && T[lang][k] !== undefined) ? T[lang][k] : T.zh[k]; return typeof v === "function" ? v(...a) : v; };
+    const tr = (it, f) => (lang === "en" && it.en && it.en[f] != null ? it.en[f] : it[f]);   // 东西的文字（后端给中英两份）
+    const errMsg = m => lang === "en" ? (ERR_EN[m] || m) : m;
+    const errText = e => errMsg((e && e.message) || String(e));
+    function applyStatic() {
+      document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
+      document.title = `${t("title")} - Mochiishop`;
+      document.querySelectorAll("[data-t]").forEach(el => { el.textContent = t(el.dataset.t); });
+      document.querySelectorAll("[data-tp]").forEach(el => { el.placeholder = t(el.dataset.tp); });
+      document.querySelectorAll("[data-tt]").forEach(el => { el.title = t(el.dataset.tt); });
+    }
+
     // 订单号格式：Shopee = 6 位日期 + 8 位英数；TikTok = 5 开头 18 位数字
-    const isOrderNo = t => /^\d{6}[A-Z0-9]{8}$/.test(t) || /^5\d{17}$/.test(t);
+    const isOrderNo = s => /^\d{6}[A-Z0-9]{8}$/.test(s) || /^5\d{17}$/.test(s);
     // 追踪号：至少 8 个数字（买家名不会这样）、或已知开头
-    const looksTracking = t => !isOrderNo(t) && /^[A-Z0-9-]{8,40}$/.test(t) && ((t.match(/\d/g) || []).length >= 8 || /^(SPX|NV|JNT|JT)/.test(t));
+    const looksTracking = s => !isOrderNo(s) && /^[A-Z0-9-]{8,40}$/.test(s) && ((s.match(/\d/g) || []).length >= 8 || /^(SPX|NV|JNT|JT)/.test(s));
     // 从追踪号认运输公司（认不出来 = 不改，手动选）
-    function guessCarrier(t) {
-      if (/^SPX/.test(t)) return "spx";
-      if (/^NV/.test(t)) return "ninjavan";
-      if (/^(EP|ER|EE|EM|EN|PL|CP|EA)\d/.test(t) || /^[A-Z]{2}\d{9}MY$/.test(t)) return "poslaju";
-      if (/^\d+$/.test(t)) return "jnt";
+    function guessCarrier(s) {
+      if (/^SPX/.test(s)) return "spx";
+      if (/^NV/.test(s)) return "ninjavan";
+      if (/^(EP|ER|EE|EM|EN|PL|CP|EA)\d/.test(s) || /^[A-Z]{2}\d{9}MY$/.test(s)) return "poslaju";
+      if (/^\d+$/.test(s)) return "jnt";
       return "";
     }
 
-    let all = [], pending = [], filter = "all", folder = "today", sel = null, busy = false, access = null, range = null;
+    let loaded = false, all = [], pending = [], filter = "all", folder = "today", sel = null, busy = false, access = null, range = null, curTab = "tabScan";
     const hist = [];
+    const closedG = new Set();   // 准备：收起来的组
     let claimItems = [], claimDb = null;
     const DRAW_CONFIG = { apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ", authDomain: "draw-tournament.firebaseapp.com", databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "draw-tournament", storageBucket: "draw-tournament.firebasestorage.app", messagingSenderId: "803720903757", appId: "1:803720903757:web:8b561daabc0d69af9e7004" };
     const sentLog = new Map();   // 这次打开页面已经放进去的东西（单号 → 东西）
@@ -303,20 +441,20 @@
     const carrierOf = id => CARRIERS.find(c => c.id === id);
     const linkOf = (id, no) => { const c = carrierOf(id); return c && c.tpl && no ? c.tpl.replace("{no}", encodeURIComponent(no)) : ""; };
 
-    function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
+    function toast(msg) { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 1800); }
     let actx = null;
     function beep(kind = "ok") {
       const pat = { ok: [[1040, .09]], items: [[1200, .08], [1500, .1]], bad: [[320, .25]] }[kind] || [[1040, .09]];
       try { if (navigator.vibrate) navigator.vibrate(kind === "bad" ? [80, 60, 80] : kind === "items" ? [60, 50, 60] : 50); } catch (e) {}
       try {
         actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-        let t = actx.currentTime;
+        let tm = actx.currentTime;
         pat.forEach(([f, d]) => { const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; g.gain.value = .09;
-          o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + d); t += d + .05; });
+          o.connect(g); g.connect(actx.destination); o.start(tm); o.stop(tm + d); tm += d + .05; });
       } catch (e) {}
     }
 
-    // ---------- 🔆 屏幕常亮：进入后至少 1 小时，有操作就再延长 1 小时；按按钮可以关掉 ----------
+    // ---------- 🔆 屏幕常亮：进入后至少 1 小时，有操作就再延长 1 小时（⚙️ 里开关）----------
     const WAKE_MS = 60 * 60000;
     let wake = null, wakeOn = store.get("pkWake") !== "off", wakeUntil = Date.now() + WAKE_MS;
     const wakeOk = "wakeLock" in navigator;
@@ -327,30 +465,63 @@
     }
     function wakeDrop() { try { wake && wake.release(); } catch (e) {} wake = null; paintWake(); }
     function wakeTouch() { if (wakeOn) { wakeUntil = Date.now() + WAKE_MS; if (!wake) wakeGet(); } }
+    function setWake(on) {
+      if (!wakeOk) return;
+      wakeOn = on; store.set("pkWake", on ? "on" : "off");
+      if (on) { wakeUntil = Date.now() + WAKE_MS; wakeGet(); toast(t("wakeOnToast")); } else { wakeDrop(); toast(t("wakeOffToast")); }
+      paintSet();
+    }
     function paintWake() {
-      const b = $("wakeBtn");
-      if (!wakeOk) { b.textContent = "🔆 ✕"; b.classList.remove("on"); b.title = "这台手机 / 浏览器不支持屏幕常亮（iPhone 要 iOS 16.4 以上的 Safari）"; return; }
-      const min = Math.max(0, Math.ceil((wakeUntil - Date.now()) / 60000));
-      b.textContent = wakeOn ? (wake ? `🔆 ${min}′` : "🔆 点一下") : "🌙";
-      b.classList.toggle("on", wakeOn && !!wake);
+      $("wakeDot").hidden = !(wakeOn && wake);
+      if (!$("setModal").hidden) paintSet();
     }
     setInterval(() => {
-      if (wakeOn && Date.now() > wakeUntil) { wakeOn = false; wakeDrop(); toast("🌙 1 小时没有操作，屏幕常亮已关闭"); }
+      if (wakeOn && Date.now() > wakeUntil) { wakeOn = false; wakeDrop(); toast(t("wakeIdleToast")); }
       paintWake();
     }, 20000);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wakeGet(); });
     document.addEventListener("pointerdown", () => wakeTouch(), { passive: true });
-    $("wakeBtn").onclick = () => {
-      if (!wakeOk) { alert("这台手机 / 浏览器不支持屏幕常亮。\niPhone：要 iOS 16.4 以上，用 Safari 打开。\nAndroid：用 Chrome 打开。"); return; }
-      wakeOn = !wakeOn; store.set("pkWake", wakeOn ? "on" : "off");
-      if (wakeOn) { wakeUntil = Date.now() + WAKE_MS; wakeGet(); toast("🔆 屏幕常亮 1 小时"); } else { wakeDrop(); toast("🌙 屏幕常亮已关闭"); }
-    };
+
+    // ---------- ⚙️ 设置：语言 / 屏幕常亮 / 主题 ----------
+    const theme = () => document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    function paintSet() {
+      const v = { lang, wake: wakeOn ? "on" : "off", theme: theme() };
+      document.querySelectorAll("#setModal .seg").forEach(sg => sg.querySelectorAll("button").forEach(b => {
+        b.classList.toggle("on", b.dataset.v === v[sg.dataset.seg]);
+        if (sg.dataset.seg === "wake") b.disabled = !wakeOk;
+      }));
+      const min = Math.max(0, Math.ceil((wakeUntil - Date.now()) / 60000));
+      $("wakeInfo").textContent = !wakeOk ? t("wakeNo") : !wakeOn ? t("wakeOffInfo") : wake ? t("wakeOnInfo", min) : t("wakeWait");
+    }
+    function openSet() { paintSet(); $("setModal").hidden = false; }
+    function closeSet() { $("setModal").hidden = true; focusQ(); }
+    $("setBtn").onclick = openSet;
+    $("setClose").onclick = closeSet;
+    $("setModal").addEventListener("click", e => {
+      if (e.target === $("setModal")) return closeSet();
+      const b = e.target.closest(".seg button"); if (!b || b.disabled) return;
+      const k = b.closest(".seg").dataset.seg, v = b.dataset.v;
+      if (k === "lang" && v !== lang) { lang = v; store.set("pkLang", v); repaintAll(); }
+      else if (k === "wake") setWake(v === "on");
+      else if (k === "theme") { document.documentElement.setAttribute("data-theme", v); store.set("msAdminTheme", v); }
+      paintSet();
+    });
+    function repaintAll() {
+      applyStatic(); paintRange(); paintKb();
+      if (loaded) render(); else { $("stats").textContent = t("loading"); $("list").innerHTML = `<div class="empty">${esc(t("loading"))}</div>`; }
+      if (sel) showSel(false); else idle();
+      if (!claimDb && $("claimHint").innerHTML) $("claimHint").innerHTML = t("claimHint");
+    }
 
     // ---------- ⌨️ 键盘开关（PDA 扫描枪）----------
     let kbOn = store.get("pkKb") !== "off";
     function paintKb() { $("q").inputMode = kbOn ? "text" : "none"; $("kbBtn").classList.toggle("off", !kbOn); }
     $("kbBtn").onclick = () => { kbOn = !kbOn; store.set("pkKb", kbOn ? "on" : "off"); paintKb(); $("q").blur(); setTimeout(focusQ, 50); };
-    function focusQ() { if (!$("cam").hidden || !$("rangeModal").hidden || busy) return; const a = document.activeElement; if (a && a !== $("q") && (a.tagName === "INPUT" || a.tagName === "SELECT")) return; $("q").focus({ preventScroll: true }); }
+    function focusQ() {
+      if (!$("cam").hidden || !$("rangeModal").hidden || !$("setModal").hidden || busy) return;
+      const a = document.activeElement; if (a && a !== $("q") && (a.tagName === "INPUT" || a.tagName === "SELECT")) return;
+      $("q").focus({ preventScroll: true });
+    }
 
     // ---------- 📅 时间段（同一天只弹第一次）----------
     function liveRange(now = new Date()) {
@@ -360,11 +531,11 @@
       return { from: a.getTime(), to: b.getTime() };
     }
     function dayRange(s) { const a = new Date(s + "T00:00:00"); return { from: a.getTime(), to: a.getTime() + DAY - 1 }; }
-    const rangeLabel = r => r.mode === "day" ? `📅 ${fmtT(r.from).slice(0, 5)} 一天` : `📅 ${fmtT(r.from)} – ${fmtT(r.to)}`;
+    const rangeLabel = r => r.mode === "day" ? `📆 ${fmtD(r.from)}` : r.mode === "live" ? `🎥 ${fmtD(r.from)} ${fmtH(r.from)}–${fmtH(r.to)}` : `✏️ ${fmtT(r.from)}–${fmtT(r.to)}`;
     let rOpt = "live";
     function openRange() {
       const lr = liveRange();
-      $("optLive").textContent = `${fmtT(lr.from)} – ${fmtT(lr.to)}（晚上 8 点到早上 8 点）`;
+      $("optLive").textContent = `${fmtT(lr.from)} – ${fmtT(lr.to)}${t("liveHint")}`;
       const y = new Date(Date.now() - DAY);
       if (!$("optDay").value) $("optDay").value = ymd(y);
       const loc = ms => { const d = new Date(ms); return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -378,18 +549,18 @@
     $("rangeGo").onclick = () => {
       let r;
       if (rOpt === "live") r = { mode: "live", ...liveRange() };
-      else if (rOpt === "day") { if (!$("optDay").value) return alert("请选日期"); r = { mode: "day", ...dayRange($("optDay").value) }; }
+      else if (rOpt === "day") { if (!$("optDay").value) return alert(t("pickDate")); r = { mode: "day", ...dayRange($("optDay").value) }; }
       else {
         const a = new Date($("optFrom").value).getTime(), b = new Date($("optTo").value).getTime();
-        if (!(a < b)) return alert("结束时间要在开始时间之后");
-        if (b - a > 62 * DAY) return alert("最长 62 天");
+        if (!(a < b)) return alert(t("endAfter"));
+        if (b - a > 62 * DAY) return alert(t("max62"));
         r = { mode: "custom", from: a, to: b };
       }
       range = r; store.set("pkRange", JSON.stringify({ ...r, day: ymd(new Date()) }));
       $("rangeModal").hidden = true; paintRange(); load(); focusQ();
     };
     $("rangeBtn").onclick = openRange;
-    function paintRange() { $("rangeBtn").textContent = range ? rangeLabel(range) : "📅 选时间段"; }
+    function paintRange() { $("rangeBtn").textContent = range ? rangeLabel(range) : t("pickRange"); }
     function initRange() {
       try {
         const s = JSON.parse(store.get("pkRange") || "null");
@@ -404,12 +575,12 @@
       try {
         const r = (await pkAdmin({ op: "batch", from: range.from, to: range.to })).data;
         all = r.parcels || [];
-        pending = r.pending || [];
+        pending = r.pending || []; loaded = true;
         all.forEach(p => { attachClaims(p); addSent(p); });
         render();
         if (sel) { const p = all.find(x => x.orderNo === sel.p.orderNo); if (p) { sel.p = p; showSel(false); } }
       } catch (e) {
-        $("stats").innerHTML = `<span class="pill am">❌ 读取失败：${esc(errText(e))}</span>`;
+        $("stats").innerHTML = `<span class="pill am">${esc(t("loadFail", errText(e)))}</span>`;
         $("list").innerHTML = "";
       }
     }
@@ -435,51 +606,76 @@
       });
       // 今天要准备：东西只算一次
       const seen = new Set(), todayItems = [];
-      rows.forEach(r => r.c.forEach(i => { if (!seen.has(i.id)) { seen.add(i.id); todayItems.push({ ...i, who: r.p.username, today: true }); } }));
+      rows.forEach(r => r.c.forEach(i => { if (!seen.has(i.id)) { seen.add(i.id); todayItems.push({ i, who: whoOfParcel(r.p) }); } }));
       const nTodo = rows.filter(r => r.st === "todo").length, nDone = rows.filter(r => r.st === "done").length, nWarn = rows.filter(r => warns(r.p).length && !r.p.done).length;
       $("nList").hidden = !all.length; $("nList").textContent = all.length;
       $("nPrep").hidden = !todayItems.length; $("nPrep").textContent = todayItems.length;
-      $("stats").innerHTML = `<span class="pill">今天 <b>${all.length}</b> 包</span>
-        <span class="pill pk">要放东西 <b>${nTodo}</b></span>
-        <span class="pill gn">已放好 <b>${nDone}</b></span>
+      $("stats").innerHTML = `<span class="pill">${t("statToday", all.length)}</span>
+        <span class="pill pk">${t("statTodo", nTodo)}</span>
+        <span class="pill gn">${t("statDone", nDone)}</span>
         ${nWarn ? `<span class="pill am">⚠️ <b>${nWarn}</b></span>` : ""}
-        <span class="pill">准备 <b>${todayItems.length}</b> 件</span>`;
-      $("rangeInfo").textContent = `今天要寄出的包裹：${fmtT(range.from)} – ${fmtT(range.to)} 下的单（点上面 📅 可以换）`;
+        <span class="pill">${t("statPrep", todayItems.length)}</span>`;
+      $("rangeInfo").textContent = t("rangeInfo", fmtT(range.from), fmtT(range.to));
       // 清单
-      const F = { all: ["全部", rows.length], todo: ["🎁 要放东西", nTodo], none: ["⭕ 不用放", rows.filter(r => r.st === "none" || r.st === "other").length], done: ["✅ 已放好", nDone] };
-      $("chips").innerHTML = Object.entries(F).map(([k, [t, n]]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}">${t} ${n}</button>`).join("");
+      const F = { all: [t("fAll"), rows.length], todo: [t("fTodo"), nTodo], none: [t("fNone"), rows.filter(r => r.st === "none" || r.st === "other").length], done: [t("fDone"), nDone] };
+      $("chips").innerHTML = Object.entries(F).map(([k, [tx, n]]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}">${esc(tx)} ${n}</button>`).join("");
       const list = rows.filter(r => filter === "all" || r.st === filter || (filter === "none" && r.st === "other"));
-      $("list").innerHTML = !list.length ? `<div class="empty">${all.length ? "没有" : "这个时间段没有订单"}</div>` : list.map(r => {
+      const chip = (i, w) => `<i${w ? ' class="w"' : ""}>${i.icon} ${esc(tr(i, "prep") || tr(i, "title"))}${w ? " ⚠️" : ""}</i>`;
+      $("list").innerHTML = !list.length ? `<div class="empty">${esc(all.length ? t("noneHere") : t("noOrders"))}</div>` : list.map(r => {
         const p = r.p, w = warns(p);
-        const what = r.st === "todo" ? r.c.map(i => `<i>${i.icon} ${esc(i.prep || i.title)}</i>`).join("") + w.map(i => `<i class="w">${i.icon} ${esc(i.prep || i.title)} ⚠️</i>`).join("")
-          : r.st === "other" ? `<i>↪ 东西在同会员的另一包</i>` : r.st === "done" ? p.items.filter(i => i.sent).map(i => `<i>${i.icon} ${esc(i.prep || i.title)}</i>`).join("") : w.map(i => `<i class="w">${i.icon} ${esc(i.prep || i.title)} ⚠️</i>`).join("");
-        const st = r.st === "todo" ? `🎁 ${r.c.length} 样` : r.st === "done" ? "✅ 已放好" : r.st === "warn" ? "⚠️" : "⭕ 不用放";
+        const what = r.st === "todo" ? r.c.map(i => chip(i)).join("") + w.map(i => chip(i, true)).join("")
+          : r.st === "other" ? `<i>${esc(t("inOther"))}</i>` : r.st === "done" ? p.items.filter(i => i.sent).map(i => chip(i)).join("") : w.map(i => chip(i, true)).join("");
+        const st = r.st === "todo" ? t("stTodo", r.c.length) : r.st === "done" ? t("stDone") : r.st === "warn" ? "⚠️" : t("stNone");
         return `<div class="row ${r.st === "done" ? "done" : r.st === "none" || r.st === "other" ? "none" : ""} ${sel && sel.p.orderNo === p.orderNo ? "sel" : ""}" data-no="${esc(p.orderNo)}">
           <div class="l"><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username || "-")}${p.uid ? " 🎫" : ""}</div>${what ? `<div class="what">${what}</div>` : ""}</div>
-          <span class="st">${st}</span></div>`;
+          <span class="st">${esc(st)}</span></div>`;
       }).join("");
       // 准备
       renderPrep(todayItems);
       renderHist();
     }
+
+    // 准备里每一行「是谁的」：名字 + 会员 / 非会员 + 平台账号 + 今天有没有单
+    function whoOfParcel(p) {
+      return { name: p.uid ? (p.member || p.username || t("member")) : (p.username || "-"), member: !!p.uid,
+        accts: p.username ? [{ platform: p.platform, username: p.username }] : [], order: p.orderNo };
+    }
+    function todayOrderOf(key) { const p = all.find(x => !x.done && buyerKey(x) === key); return p ? p.orderNo : ""; }
+    function whoOfPending(g) {
+      if (g.uid) return { name: g.member || t("member"), member: true, accts: g.accounts || [], order: todayOrderOf(g.key), wait: true };
+      return { name: g.username || "-", member: false, accts: g.platform || g.username ? [{ platform: g.platform, username: g.username }] : [], order: todayOrderOf(g.key), wait: true, plainName: true };
+    }
+    const acctHtml = a => { const P = PLAT[a.platform]; return `<span class="acc ${P ? P[0] : ""}">${P ? P + " " : ""}@${esc(a.username)}</span>`; };
+    function whoHtml(i, w, showWait) {
+      const accts = w.accts.length ? w.accts : w.plainName ? [{ platform: "", username: w.name }] : [];
+      const name = w.plainName ? "" : `<b>${esc(w.name)}</b>`;
+      const src = tr(i, "src");
+      const st = w.order ? `<span class="t">${esc(t("todayOrder", w.order.slice(-6)))}</span>` : showWait ? `<span class="w">${esc(t("waitOrder"))}</span>` : "";
+      return `<li><div class="w1">${name}<span class="mt ${w.member ? "" : "non"}">${w.member ? "🎫 " + esc(t("member")) : esc(t("nonMember"))}</span>${accts.map(acctHtml).join("")}</div>
+        <div class="w2">${src ? `<span>🗓 ${esc(src)}</span>` : ""}${st}</div></li>`;
+    }
     function renderPrep(todayItems) {
       // 全部待寄：每位顾客还没寄的（可以寄的；含今天没单的）
       const allItems = [];
-      const todayKeys = new Set(all.filter(p => canLeft(p).length).map(buyerKey));
-      pending.forEach(g => g.items.filter(i => i.can).forEach(i => allItems.push({ ...i, who: g.member || g.username || "-", today: todayKeys.has(g.key) })));
-      claimItems.forEach(c => allItems.push({ ...c, who: c.name, today: all.some(p => !p.uid && String(p.username || "").toLowerCase() === c.name) }));
+      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: w })); });
+      claimItems.forEach(c => {
+        const p = all.find(x => !x.uid && !x.done && String(x.username || "").toLowerCase() === c.name);
+        allItems.push({ i: c, who: { name: c.name, member: false, plainName: true, accts: [{ platform: platOfNo(c.orderNo), username: c.name }], order: p ? p.orderNo : "" } });
+      });
       $("nToday").hidden = !todayItems.length; $("nToday").textContent = todayItems.length;
       $("nAll").hidden = !allItems.length; $("nAll").textContent = allItems.length;
       document.querySelectorAll("[data-fd]").forEach(b => b.classList.toggle("on", b.dataset.fd === folder));
       const src = folder === "today" ? todayItems : allItems;
-      $("prepSub").textContent = folder === "today" ? "今天这些包裹要放的东西，打包前先拿齐（点开看是谁的）" : "所有还存着、还没寄出的东西（含还没下单的会员）";
+      $("prepSub").textContent = folder === "today" ? t("prepToday") : t("prepAll");
       const G = new Map();
-      src.forEach(i => { const k = i.icon + (i.prep || i.title); const g = G.get(k) || { icon: i.icon, k: i.prep || i.title, list: [] }; g.list.push(i); G.set(k, g); });
+      src.forEach(x => { const nm = tr(x.i, "prep") || tr(x.i, "title"); const k = x.i.icon + nm; const g = G.get(k) || { icon: x.i.icon, k, nm, list: [] }; g.list.push(x); G.set(k, g); });
       const P = [...G.values()].sort((a, b) => b.list.length - a.list.length);
-      $("prep").innerHTML = P.length ? P.map(g => `<details class="pg"><summary style="list-style:none"><div><span class="ic">${g.icon}</span><span class="nm">${esc(g.k)}</span><span class="n">×${g.list.length}</span></div></summary>
-        <ul>${g.list.map(i => `<li>${esc(i.who || "-")}${folder === "all" ? `<span class="${i.today ? "t" : "w"}">${i.today ? "今天有单" : "等下单"}</span>` : ""}</li>`).join("")}</ul></details>`).join("")
-        : `<div class="empty">${folder === "today" ? "今天没有要放的东西 🎉" : "没有存着的东西 🎉"}</div>`;
+      $("prep").innerHTML = P.length ? P.map(g => `<details class="pg" data-g="${esc(folder + "|" + g.k)}" ${closedG.has(folder + "|" + g.k) ? "" : "open"}>
+        <summary><div><span class="ic">${g.icon}</span><span class="nm">${esc(g.nm)}</span><span class="n">×${g.list.length}</span><span class="arr">▶</span></div></summary>
+        <ul>${g.list.map(x => whoHtml(x.i, x.who, folder === "all")).join("")}</ul></details>`).join("")
+        : `<div class="empty">${esc(folder === "today" ? t("emptyToday") : t("emptyAll"))}</div>`;
     }
+    $("prep").addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.g) d.open ? closedG.delete(d.dataset.g) : closedG.add(d.dataset.g); }, true);
 
     // ---------- 这一包：勾选 + 运单 + 照片 ----------
     function openParcel(p) {
@@ -489,26 +685,27 @@
     }
     function showSel(fresh) {
       const { p } = sel;
-      const l = left(p), c = canLeft(p), w = warns(p), sent = p.items.filter(i => i.sent);
+      const c = canLeft(p), w = warns(p), sent = p.items.filter(i => i.sent);
       // 只留还在的勾选
       sel.on = new Set([...sel.on].filter(id => c.some(i => i.id === id)));
       const others = all.filter(x => x !== p && !x.done && buyerKey(x) === buyerKey(p)).map(x => x.orderNo);
       const plat = PLAT[p.platform] ? `<span class="tag">${PLAT[p.platform]}</span>` : "";
-      const mem = p.uid ? `<span class="tag">🎫 ${esc(p.member || "会员")}</span>` : "";
-      const head = big => `<div class="res-head"><div class="big">${big}</div><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username || "-")} ${plat}${mem}</div></div>`;
+      const mem = p.uid ? `<span class="tag">🎫 ${esc(p.member || t("member"))}</span>` : "";
+      const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username || "-")} ${plat}${mem}</div></div>`;
+      const warnHtml = i => `<div class="warn">⚠️ ${i.icon} <b>${esc(tr(i, "title"))}</b>：${esc(tr(i, "warn") || tr(i, "sub"))}</div>`;
       let html;
       if (!c.length && !sent.length) {
-        html = `<div class="res ${w.length ? "warn" : "none"}">${head(w.length ? "⚠️ 先处理" : "⭕ 不用放")}<div class="res-body">
-          ${w.map(i => `<div class="warn">⚠️ ${i.icon} <b>${esc(i.title)}</b>：${esc(i.warn || i.sub)}</div>`).join("")}
-          ${w.length ? "" : `<div class="note" style="margin-top:10px">这包没有要随单寄出的东西，直接打包。</div>`}
+        html = `<div class="res ${w.length ? "warn" : "none"}">${head(w.length ? t("bigFirst") : t("bigNone"))}<div class="res-body">
+          ${w.map(warnHtml).join("")}
+          ${w.length ? "" : `<div class="note" style="margin-top:10px">${esc(t("noteNone"))}</div>`}
           ${p.done ? undoLink(p) : ""}</div></div>`;
       } else {
         const n = sel.on.size;
-        html = `<div class="res ${c.length ? "" : "ok"}">${head(c.length ? `🎁 要放 ${n} 样` : "✅ 已放好")}<div class="res-body">
-          ${c.length ? `<div class="sec-t">放进这一包（取消勾选 = 这次不寄，留到下一单）</div>` + c.map(i => item(i, sel.on.has(i.id) ? "on" : "off")).join("") : ""}
-          ${sent.length ? `<div class="sec-t">已放入</div>` + sent.map(i => item(i, "sent")).join("") : ""}
-          ${w.map(i => `<div class="warn">⚠️ ${i.icon} <b>${esc(i.title)}</b>：${esc(i.warn || i.sub)}</div>`).join("")}
-          ${others.length && c.length ? `<div class="note">💡 这位会员今天还有 ${others.length} 包（${others.map(o => "…" + o.slice(-6)).join("、")}）。这包没勾的，扫那一包时会再出现。</div>` : ""}
+        html = `<div class="res ${c.length ? "" : "ok"}">${head(c.length ? t("bigPut", n) : t("bigDone"))}<div class="res-body">
+          ${c.length ? `<div class="sec-t">${esc(t("secPut"))}</div>` + c.map(i => item(i, sel.on.has(i.id) ? "on" : "off")).join("") : ""}
+          ${sent.length ? `<div class="sec-t">${esc(t("secSent"))}</div>` + sent.map(i => item(i, "sent")).join("") : ""}
+          ${w.map(warnHtml).join("")}
+          ${others.length && c.length ? `<div class="note">${esc(t("others", others.length, others.map(o => "…" + o.slice(-6)).join(t("sep"))))}</div>` : ""}
           ${c.length ? shipForm() : ""}
           ${sent.length || p.done ? undoLink(p) : ""}</div></div>`;
       }
@@ -518,59 +715,60 @@
       document.querySelectorAll(".row").forEach(r => r.classList.toggle("sel", r.dataset.no === p.orderNo));
     }
     const item = (i, st) => `<div class="it ${st}" ${st === "sent" ? "" : `data-item="${esc(i.id)}"`}><span class="ic">${i.icon}</span>
-      <span class="nm"><b>${esc(i.title)}</b><small>${st === "sent" ? "✅ 已放入" : esc(i.sub || "")}</small></span><span class="ck">${st === "on" ? "✓" : st === "sent" ? "✓" : ""}</span></div>`;
-    const undoLink = p => `<button class="linkbtn" data-undo="${esc(p.orderNo)}">↩️ 撤销这一包（订单取消 / 勾错了）</button>`;
+      <span class="nm"><b>${esc(tr(i, "title"))}</b><small>${esc(st === "sent" ? t("sentSmall") : tr(i, "sub") || "")}</small></span><span class="ck">${st === "on" || st === "sent" ? "✓" : ""}</span></div>`;
+    const undoLink = p => `<button class="linkbtn" data-undo="${esc(p.orderNo)}">${esc(t("undoBtn"))}</button>`;
     function shipForm() {
       const s = sel.ship;
       const opts = CARRIERS.map(c => `<option value="${esc(c.id)}" ${s.carrier === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("");
       return `<div class="ship">
-        <label class="need"><input type="checkbox" data-need="trk" ${sel.needTrk ? "checked" : ""}>🚚 需要运单号${sel.needTrk ? (s.trackingNo ? '<span class="ok">✅ 已扫</span>' : '<span class="miss">扫面单上的追踪号</span>') : ""}</label>
-        ${sel.needTrk ? `<div class="row2"><div style="flex:0 0 42%"><label>运输公司</label><select data-sf="carrier"><option value="">— 选 —</option>${opts}</select></div>
-          <div style="flex:1"><label>运单号</label><input type="text" class="trk" data-sf="trackingNo" value="${esc(s.trackingNo)}" placeholder="扫追踪号条码" autocomplete="off" autocapitalize="characters"></div></div>
-          <label>查询链接</label><input type="url" data-sf="trackingUrl" value="${esc(s.trackingUrl)}" placeholder="https://…（选好公司会自动生成）">` : ""}
+        <label class="need"><input type="checkbox" data-need="trk" ${sel.needTrk ? "checked" : ""}>${esc(t("needTrk"))}${sel.needTrk ? (s.trackingNo ? `<span class="ok">${esc(t("trkOk"))}</span>` : `<span class="miss">${esc(t("trkMiss"))}</span>`) : ""}</label>
+        ${sel.needTrk ? `<div class="row2"><div style="flex:0 0 42%"><label>${esc(t("carrier"))}</label><select data-sf="carrier"><option value="">${esc(t("pick"))}</option>${opts}</select></div>
+          <div style="flex:1"><label>${esc(t("trkNo"))}</label><input type="text" class="trk" data-sf="trackingNo" value="${esc(s.trackingNo)}" placeholder="${esc(t("trkPh"))}" autocomplete="off" autocapitalize="characters"></div></div>
+          <label>${esc(t("url"))}</label><input type="url" data-sf="trackingUrl" value="${esc(s.trackingUrl)}" placeholder="${esc(t("urlPh"))}">` : ""}
         <hr>
-        <label class="need"><input type="checkbox" data-need="ph" ${sel.needPh ? "checked" : ""}>📷 需要上传照片${sel.needPh ? (s.photo ? '<span class="ok">✅ 已拍</span>' : '<span class="miss">拍一张包裹照片</span>') : ""}</label>
-        ${sel.needPh ? `<div class="photo">${s.photo ? `<img src="${esc(s.photo)}" alt=""><button class="del" data-ph="del">✕ 删掉</button><button class="shot" data-ph="shot" style="flex:0 0 auto;padding:10px">重拍</button>` : `<button class="shot" data-ph="shot">📷 拍照</button>`}</div>` : ""}
+        <label class="need"><input type="checkbox" data-need="ph" ${sel.needPh ? "checked" : ""}>${esc(t("needPh"))}${sel.needPh ? (s.photo ? `<span class="ok">${esc(t("phOk"))}</span>` : `<span class="miss">${esc(t("phMiss"))}</span>`) : ""}</label>
+        ${sel.needPh ? `<div class="photo">${s.photo ? `<img src="${esc(s.photo)}" alt=""><button class="del" data-ph="del">${esc(t("phDel"))}</button><button class="shot" data-ph="shot" style="flex:0 0 auto;padding:10px">${esc(t("phRe"))}</button>` : `<button class="shot" data-ph="shot">${esc(t("phShot"))}</button>`}</div>` : ""}
       </div>`;
     }
     // 还缺什么（缺了不能保存）
     function missing() {
       if (!sel || !canLeft(sel.p).length) return [];
       const m = [];
-      if (!sel.on.size) m.push("勾选要放的东西");
-      if (sel.needTrk && !sel.ship.trackingNo) m.push("扫追踪号");
-      if (sel.needTrk && sel.ship.trackingNo && !sel.ship.carrier) m.push("选运输公司");
-      if (sel.needTrk && sel.ship.trackingUrl && !/^https:\/\//i.test(sel.ship.trackingUrl)) m.push("链接要 https://");
-      if (sel.needPh && !sel.ship.photo) m.push("拍照");
+      if (!sel.on.size) m.push(t("mTick"));
+      if (sel.needTrk && !sel.ship.trackingNo) m.push(t("mTrk"));
+      if (sel.needTrk && sel.ship.trackingNo && !sel.ship.carrier) m.push(t("mCarrier"));
+      if (sel.needTrk && sel.ship.trackingUrl && !/^https:\/\//i.test(sel.ship.trackingUrl)) m.push(t("mHttps"));
+      if (sel.needPh && !sel.ship.photo) m.push(t("mPhoto"));
       return m;
     }
     function paintHint() {
       const h = $("scanHint");
-      if (sel && canLeft(sel.p).length && sel.needTrk && !sel.ship.trackingNo) { h.hidden = false; h.textContent = "👉 下一步：扫面单上的「追踪号」条码"; }
+      if (sel && canLeft(sel.p).length && sel.needTrk && !sel.ship.trackingNo) { h.hidden = false; h.textContent = t("nextTrk"); }
       else h.hidden = true;
     }
+    // 下方大按钮：只有「这一包有东西要放」而且正在看扫描页（或电脑并排）才出现；不用放的包直接扫下一张就好
     function paintAct() {
       const a = $("act");
-      if (!sel) { a.hidden = true; return; }
+      const show = sel && canLeft(sel.p).length && (curTab === "tabScan" || document.body.classList.contains("wide"));
+      if (!show) { a.hidden = true; a.innerHTML = ""; return; }
       a.hidden = false;
-      const c = canLeft(sel.p);
-      if (!c.length) { a.innerHTML = `<button class="next" data-next>▶ 扫下一包</button>`; return; }
       const m = missing();
-      a.innerHTML = m.length ? `<button class="go dis" data-save>还要：${esc(m.join("、"))}</button>`
-        : `<button class="go" data-save ${busy ? "disabled" : ""}>💾 保存＝已放好（${sel.on.size} 样）</button>`;
+      a.innerHTML = m.length ? `<button class="go dis" data-save>${esc(t("still", m.join(t("sep"))))}</button>`
+        : `<button class="go" data-save ${busy ? "disabled" : ""}>${esc(t("saveBtn", sel.on.size))}</button>`;
     }
     function idle() {
       sel = null;
-      $("result").innerHTML = `<div class="idle"><div class="big">📦</div><b>扫面单上的订单号条码</b>扫描枪、📷 相机，或输入单号后几位 / 买家名</div>`;
+      $("result").innerHTML = `<div class="idle"><div class="big">📦</div><b>${esc(t("idleB"))}</b>${esc(t("idleS"))}</div>`;
       paintHint(); paintAct();
+      document.querySelectorAll(".row.sel").forEach(r => r.classList.remove("sel"));
     }
     function addHist(p) { const i = hist.findIndex(h => h === p.orderNo); if (i >= 0) hist.splice(i, 1); hist.unshift(p.orderNo); if (hist.length > 30) hist.pop(); renderHist(); }
     function renderHist() {
-      $("hist").innerHTML = !hist.length ? "" : `<h3>刚刚扫过</h3>` + hist.slice(0, 10).map(no => {
+      $("hist").innerHTML = !hist.length ? "" : `<h3>${esc(t("histH"))}</h3>` + hist.slice(0, 10).map(no => {
         const p = all.find(x => x.orderNo === no) || (sel && sel.p.orderNo === no ? sel.p : null);
         if (!p) return "";
         const c = canLeft(p).length, s = p.items.filter(i => i.sent).length;
-        const st = c ? `<span class="st" style="color:#db2777">🎁 ${c} 样没放</span>` : s || p.done ? '<span class="st" style="color:var(--green-tx)">✅ 已放好</span>' : '<span class="st" style="color:var(--muted)">⭕ 不用放</span>';
+        const st = c ? `<span class="st" style="color:#db2777">${esc(t("hLeft", c))}</span>` : s || p.done ? `<span class="st" style="color:var(--green-tx)">${esc(t("stDone"))}</span>` : `<span class="st" style="color:var(--muted)">${esc(t("stNone"))}</span>`;
         return `<div class="hrow" data-no="${esc(p.orderNo)}"><span class="no">…${esc(p.orderNo.slice(-6))}</span><span class="who">${esc(p.username || "")}</span>${st}</div>`;
       }).join("");
     }
@@ -589,25 +787,26 @@
         // 打开的包裹还要放东西 → 这一下是追踪号
         if (sel && canLeft(sel.p).length && looksTracking(n)) { setTracking(n); return; }
         if (!sel && looksTracking(n) && /^(SPX|NV)|^\d{12,16}$|^[A-Z]{2}\d{9,12}[A-Z]{0,2}$/.test(n)) {
-          beep("bad"); toast("这是追踪号：请先扫「订单号」"); return;
+          beep("bad"); toast(t("isTrk")); return;
         }
       }
-      if (!p && n.length >= 4 && !isOrderNo(n)) { const m = all.filter(x => x.orderNo.endsWith(n)); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, `单号后几位「${q}」有 ${m.length} 张单`); }
-      if (!p && !isOrderNo(n)) { const m = all.filter(x => (x.username || "").toLowerCase() === q.toLowerCase()); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, `买家「${q}」有 ${m.length} 张单`); }
+      if (!p && n.length >= 4 && !isOrderNo(n)) { const m = all.filter(x => x.orderNo.endsWith(n)); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, t("tailMany", q, m.length)); }
+      if (!p && !isOrderNo(n)) { const m = all.filter(x => (x.username || "").toLowerCase() === q.toLowerCase()); if (m.length === 1) p = m[0]; else if (m.length > 1) return listPick(m, t("userMany", q, m.length)); }
       if (p) { beep(canLeft(p).length ? "items" : "ok"); openParcel(p); return; }
       // 不在今天的时间段：问后端（任何一天的单都可以扫）
-      $("result").innerHTML = '<div class="idle"><div class="big">🔎</div><b>查找中…</b></div>';
+      sel = null; paintAct(); paintHint();
+      $("result").innerHTML = `<div class="idle"><div class="big">🔎</div><b>${esc(t("searching"))}</b></div>`;
       try {
         const r = (await pkAdmin(noOk(n) ? { op: "lookup", orderNo: n } : { op: "lookup", username: q })).data;
-        if (!r.found) { beep("bad"); sel = null; paintAct(); paintHint();
-          $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">❌ 找不到</div><div class="no">${esc(q)}</div></div>
-            <div class="res-body"><div class="note" style="margin-top:10px">订单要先录入（订单录入页或表格提交），同步后才查得到。</div></div></div>`; return; }
+        if (!r.found) { beep("bad");
+          $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">${esc(t("notFound"))}</div><div class="no">${esc(q)}</div></div>
+            <div class="res-body"><div class="note" style="margin-top:10px">${esc(t("notFoundNote"))}</div></div></div>`; return; }
         const x = r.parcel;
         attachClaims(x); addSent(x);
         if (!all.some(y => y.orderNo === x.orderNo)) all.push(x);
         beep(canLeft(x).length ? "items" : "ok");
         openParcel(x); render();
-      } catch (e) { beep("bad"); $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">❌ 出错了</div></div><div class="res-body"><div class="note" style="margin-top:10px">${esc(errText(e))}</div></div></div>`; }
+      } catch (e) { beep("bad"); $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">${esc(t("errBig"))}</div></div><div class="res-body"><div class="note" style="margin-top:10px">${esc(errText(e))}</div></div></div>`; }
     }
     function setTracking(no) {
       const s = sel.ship;
@@ -616,14 +815,14 @@
       if (g && carrierOf(g)) s.carrier = g;
       s.trackingUrl = linkOf(s.carrier, no) || s.trackingUrl;
       sel.needTrk = true;
-      beep("ok"); toast(`🚚 ${carrierOf(s.carrier) ? carrierOf(s.carrier).name : "运单号"} ${no}`);
+      beep("ok"); toast(`🚚 ${carrierOf(s.carrier) ? carrierOf(s.carrier).name : t("trkWord")} ${no}`);
       showSel(false);
     }
     function listPick(m, title) {
       beep("ok"); sel = null; paintAct(); paintHint();
-      $("result").innerHTML = `<div class="note">${esc(title)}，选一张：</div>` +
+      $("result").innerHTML = `<div class="note">${esc(title)}</div>` +
         m.map(p => `<div class="row" data-no="${esc(p.orderNo)}" style="margin-top:6px"><div class="l"><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username)}</div></div>
-          <span class="st">${canLeft(p).length ? canLeft(p).length + " 样" : "—"}</span></div>`).join("");
+          <span class="st">${canLeft(p).length ? esc(t("stTodo", canLeft(p).length)) : "—"}</span></div>`).join("");
     }
 
     // ---------- 📷 照片（压缩到大约 100KB 内）----------
@@ -649,7 +848,7 @@
     $("photoIn").addEventListener("change", async e => {
       const f = e.target.files && e.target.files[0]; e.target.value = "";
       if (!f || !sel) return;
-      try { sel.ship.photo = await compress(f); beep("ok"); } catch (err) { alert("照片读取失败：" + errText(err)); }
+      try { sel.ship.photo = await compress(f); beep("ok"); } catch (err) { alert(t("phFail", errText(err))); }
       showSel(false);
     });
 
@@ -657,7 +856,7 @@
     async function save() {
       if (busy || !sel) return;
       const m = missing();
-      if (m.length) { beep("bad"); toast("还要：" + m.join("、")); return; }
+      if (m.length) { beep("bad"); toast(t("still", m.join(t("sep")))); return; }
       const p = sel.p, items = canLeft(p).filter(i => sel.on.has(i.id));
       const s = sel.ship, ship = {};
       if (sel.needTrk && s.trackingNo) { const c = carrierOf(s.carrier); Object.assign(ship, { carrier: s.carrier, carrierName: c ? c.name : "", trackingNo: s.trackingNo, trackingUrl: s.trackingUrl }); }
@@ -670,24 +869,24 @@
         const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id })), txId: txId(), done: true, ship })).data;
         (r.results || []).forEach(x => {
           const it = svr.find(i => i.id === x.id);
-          if (!x.ok) failed.push(`${(it || {}).title || x.id}：${x.error}`);
+          if (!x.ok) failed.push(`${it ? tr(it, "title") : x.id}：${errMsg(x.error)}`);
           else if (it) sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([it]));
         });
         for (const i of cl) {
           try { await shipClaim(i, p.orderNo, ship); sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([i])); }
-          catch (e) { failed.push(`${i.title}：${errText(e)}`); }
+          catch (e) { failed.push(`${tr(i, "title")}：${errText(e)}`); }
         }
       } catch (e) { failed.push(errText(e)); }
       busy = false;
-      if (failed.length) { beep("bad"); alert("有些没成功：\n\n" + failed.join("\n")); }
-      else { beep("ok"); toast("✅ 这一包放好了"); }
+      if (failed.length) { beep("bad"); alert(t("partFail") + "\n\n" + failed.join("\n")); }
+      else { beep("ok"); toast(t("savedOk")); }
       await load();
       focusQ();
     }
 
     // ---------- ↩️ 撤销这一包 ----------
     async function undo(p) {
-      if (!confirm(`↩️ 撤销 ${p.orderNo}（${p.username || ""}）这一包？\n\n这一包用打包清单寄出的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n运单号、照片也会一起清掉。\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`)) return;
+      if (!confirm(t("undoConfirm", p.orderNo, p.username || ""))) return;
       busy = true; paintAct();
       try {
         const r = (await pkAdmin({ op: "undo", orderNo: p.orderNo })).data;
@@ -697,7 +896,7 @@
         }
         sentLog.delete(p.orderNo);
         const n = r.smallGifts + r.prizes + r.redemptions + cl;
-        alert(`↩️ 已撤销：退回 ${n} 样` + (r.welcome ? `\n\n⚠️ 这一包有 ${r.welcome} 份迎新礼已寄出，要到「新会员奖励」处理` : "") + (r.kept ? `\n\nℹ️ ${r.kept} 样会员已确认收到 / 已完成，没有退回` : ""));
+        alert(t("undone", n) + (r.welcome ? t("undoWelcome", r.welcome) : "") + (r.kept ? t("undoKept", r.kept) : ""));
       } catch (e) { alert("❌ " + errText(e)); }
       busy = false;
       await load();
@@ -713,17 +912,19 @@
         const fb = window.firebase;
         if (!fb.apps.length) fb.initializeApp(DRAW_CONFIG);   // 和领奖追踪同一组设定 → 同一个网站登录过就直接是登录状态
         fb.auth().onAuthStateChanged(async u => {
-          if (!u) { $("claimHint").hidden = false; $("claimHint").innerHTML = '🏆 非会员抽奖得主的奖品：<a href="../draw_tournament/claims.html" target="_blank">登录领奖追踪</a> 后重新整理这一页，也会一起列出。'; return; }
+          if (!u) { $("claimHint").hidden = false; $("claimHint").innerHTML = t("claimHint"); return; }
           claimDb = fb.database();
           const v = (await claimDb.ref("draw_private/claimBatches").once("value")).val() || {};
           claimItems = [];
           Object.entries(v).forEach(([bid, b]) => Object.entries((b && b.items) || {}).forEach(([k, x]) => {
             if (!x || x.removed || x.voided || x.shipped) return;
-            claimItems.push({ kind: "claim", id: `${bid}|${k}`, bid, key: k, icon: "🏆", title: `领奖追踪「${x.rank || "奖品"}」`,
-              prep: `${b.label || ""} ${x.rank || "奖品"}`.trim(), sub: `${b.label || ""}${b.title ? " · " + b.title : ""} · 非会员得主`, can: true,
+            const label = (b && b.label) || "", rank = x.rank || "";
+            claimItems.push({ kind: "claim", id: `${bid}|${k}`, bid, key: k, icon: "🏆", can: true,
+              title: T.zh.claimTitle(rank || T.zh.claimPrize), prep: `${label} ${rank || T.zh.claimPrize}`.trim(), sub: `${label}${b.title ? " · " + b.title : ""} · ${T.zh.claimSub}`, src: label,
+              en: { title: T.en.claimTitle(rank || T.en.claimPrize), prep: `${label} ${rank || T.en.claimPrize}`.trim(), sub: `${label}${b.title ? " · " + b.title : ""} · ${T.en.claimSub}`, src: label },
               name: String(x.name || "").toLowerCase(), orderNo: x.orderNo || "" });
           }));
-          $("claimHint").hidden = true;
+          $("claimHint").hidden = true; $("claimHint").innerHTML = "";
           all.forEach(attachClaims); render(); if (sel) showSel(false);
         });
       } catch (e) { console.warn("claims", e); }
@@ -739,11 +940,11 @@
         .forEach(c => { if (!p.items.some(i => i.id === c.id)) p.items.push({ ...c }); });
     }
     async function shipClaim(i, orderNo, ship) {
-      if (!claimDb) throw new Error("没有登录领奖追踪");
+      if (!claimDb) throw new Error(t("noClaimLogin"));
       const ref = claimDb.ref(`draw_private/claimBatches/${i.bid}/items/${i.key}`);
       const cur = (await ref.once("value")).val() || {};
       const trk = ship.trackingNo ? ` · ${ship.carrierName || ""} ${ship.trackingNo}` : "";
-      const note = [cur.note, `随 ${orderNo} 寄出${trk}（打包清单）`].filter(Boolean).join(" · ").slice(0, 200);
+      const note = [cur.note, `随 ${orderNo} 寄出${trk}（打包清单）`].filter(Boolean).join(" · ").slice(0, 200);   // 记录一律中文
       await ref.update({ shipped: true, note, ts: window.firebase.database.ServerValue.TIMESTAMP });
       claimItems = claimItems.filter(c => c.id !== i.id);
     }
@@ -753,7 +954,7 @@
     async function openCam() {
       wakeTouch();
       $("cam").hidden = false;
-      $("camMsg").textContent = sel && canLeft(sel.p).length && !sel.ship.trackingNo ? "扫「追踪号」条码" : "扫「订单号」条码";
+      $("camMsg").textContent = sel && canLeft(sel.p).length && !sel.ship.trackingNo ? t("camTrk") : t("camOrder");
       const video = $("video");
       const done = text => { closeCam(); find(text); };
       try {
@@ -764,7 +965,7 @@
           let alive = true; stopScan = () => { alive = false; };
           const tick = async () => {
             if (!alive) return;
-            try { const r = await det.detect(video); const hit = r.map(x => norm(x.rawValue)).find(t => noOk(t) || /^[A-Z0-9-]{8,40}$/.test(t)); if (hit) return done(hit); } catch (e) {}
+            try { const r = await det.detect(video); const hit = r.map(x => norm(x.rawValue)).find(s => noOk(s) || /^[A-Z0-9-]{8,40}$/.test(s)); if (hit) return done(hit); } catch (e) {}
             setTimeout(tick, 120);
           };
           tick();
@@ -772,26 +973,28 @@
           await loadScript("https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js");
           const reader = new ZXingBrowser.BrowserMultiFormatReader();
           const ctl = await reader.decodeFromConstraints({ video: { facingMode: "environment" } }, video, res => {
-            if (!res) return; const t = norm(res.getText()); if (/^HTTPS?:/.test(t)) return; if (noOk(t) || /^[A-Z0-9-]{8,40}$/.test(t)) done(t);
+            if (!res) return; const s = norm(res.getText()); if (/^HTTPS?:/.test(s)) return; if (noOk(s) || /^[A-Z0-9-]{8,40}$/.test(s)) done(s);
           });
           stopScan = () => ctl.stop();
         }
-      } catch (e) { $("camMsg").textContent = "❌ 打不开相机：" + errText(e) + "（请允许使用相机，或直接输入）"; }
+      } catch (e) { $("camMsg").textContent = t("camErr", errText(e)); }
     }
     function closeCam() {
       try { stopScan && stopScan(); } catch (e) {}
       stopScan = null;
-      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      if (stream) { stream.getTracks().forEach(tk => tk.stop()); stream = null; }
       $("video").srcObject = null; $("cam").hidden = true; focusQ();
     }
 
     // ---------- 分页（手机）/ 并排（电脑）----------
     function tab(id) {
-      document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.id === id));
+      curTab = id;
+      document.querySelectorAll(".tab").forEach(s => s.classList.toggle("on", s.id === id));
       document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
+      paintAct();
     }
     const wideQ = matchMedia("(min-width: 1000px)");
-    const paintWide = () => document.body.classList.toggle("wide", wideQ.matches);
+    const paintWide = () => { document.body.classList.toggle("wide", wideQ.matches); paintAct(); };
     wideQ.addEventListener ? wideQ.addEventListener("change", paintWide) : wideQ.addListener(paintWide);
     paintWide();
 
@@ -801,40 +1004,38 @@
     });
     $("camBtn").onclick = openCam;
     $("camClose").onclick = closeCam;
-    $("reloadBtn").onclick = () => load();
-    $("themeBtn").onclick = () => {
-      const t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", t); store.set("msAdminTheme", t);
-    };
+    $("reloadBtn").onclick = () => { toast("🔄 " + t("loading")); load(); };
     document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { tab(b.dataset.tab); if (b.dataset.tab === "tabScan") focusQ(); });
     $("chips").addEventListener("click", e => { const b = e.target.closest("button[data-f]"); if (b) { filter = b.dataset.f; render(); } });
     $("folders").addEventListener("click", e => { const b = e.target.closest("button[data-fd]"); if (b) { folder = b.dataset.fd; render(); } });
     // 运单表单
     $("result").addEventListener("change", e => {
-      const t = e.target;
+      const el = e.target;
       if (!sel) return;
-      if (t.dataset.need === "trk") { sel.needTrk = t.checked; showSel(false); }
-      else if (t.dataset.need === "ph") { sel.needPh = t.checked; showSel(false); }
-      else if (t.dataset.sf === "carrier") { sel.ship.carrier = t.value; sel.ship.trackingUrl = linkOf(t.value, sel.ship.trackingNo); showSel(false); }
-      else if (t.dataset.sf === "trackingNo") { const n = norm(t.value); sel.ship.trackingNo = n; if (n) { const g = guessCarrier(n); if (g && carrierOf(g) && !sel.ship.carrier) sel.ship.carrier = g; sel.ship.trackingUrl = linkOf(sel.ship.carrier, n) || sel.ship.trackingUrl; } showSel(false); }
-      else if (t.dataset.sf === "trackingUrl") { sel.ship.trackingUrl = t.value.trim(); paintAct(); }
+      if (el.dataset.need === "trk") { sel.needTrk = el.checked; showSel(false); }
+      else if (el.dataset.need === "ph") { sel.needPh = el.checked; showSel(false); }
+      else if (el.dataset.sf === "carrier") { sel.ship.carrier = el.value; sel.ship.trackingUrl = linkOf(el.value, sel.ship.trackingNo); showSel(false); }
+      else if (el.dataset.sf === "trackingNo") { const n = norm(el.value); sel.ship.trackingNo = n; if (n) { const g = guessCarrier(n); if (g && carrierOf(g) && !sel.ship.carrier) sel.ship.carrier = g; sel.ship.trackingUrl = linkOf(sel.ship.carrier, n) || sel.ship.trackingUrl; } showSel(false); }
+      else if (el.dataset.sf === "trackingUrl") { sel.ship.trackingUrl = el.value.trim(); paintAct(); }
     });
     $("result").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset && e.target.dataset.sf) { e.preventDefault(); e.target.blur(); } });
     document.addEventListener("click", e => {
-      const t = e.target;
-      const it = t.closest("[data-item]");
+      const el = e.target;
+      if (el.closest("#setModal")) return;
+      const it = el.closest("[data-item]");
       if (it && sel && !busy) { const id = it.dataset.item; sel.on.has(id) ? sel.on.delete(id) : sel.on.add(id); showSel(false); return; }
-      const ph = t.closest("[data-ph]");
+      const ph = el.closest("[data-ph]");
       if (ph && sel) { if (ph.dataset.ph === "del") { sel.ship.photo = ""; showSel(false); } else $("photoIn").click(); return; }
-      if (t.closest("[data-save]")) { save(); return; }
-      if (t.closest("[data-next]")) { idle(); focusQ(); return; }
-      if (t.closest("[data-undo]") && sel && !busy) { undo(sel.p); return; }
-      const row = t.closest(".row[data-no], .hrow[data-no]");
-      if (row) { const p = all.find(x => x.orderNo === row.dataset.no); if (p) { tab("tabScan"); openParcel(p); } return; }
-      if (!t.closest("input, button, a, select, textarea, label, summary, details")) setTimeout(focusQ, 0);
+      if (el.closest("[data-save]")) { save(); return; }
+      if (el.closest("[data-undo]") && sel && !busy) { undo(sel.p); return; }
+      const row = el.closest(".row[data-no], .hrow[data-no]");
+      if (row) { const p = all.find(x => x.orderNo === row.dataset.no); if (p) { tab("tabScan"); openParcel(p); setTimeout(focusQ, 0); } return; }
+      if (!el.closest("input, button, a, select, textarea, label, summary, details")) setTimeout(focusQ, 0);
     });
 
-    paintKb(); paintWake(); idle();
+    applyStatic(); paintKb(); paintWake(); idle();
+    if (location.hash === "#all") { folder = "all"; tab("tabPrep"); }   // 会员系统总览「🧺 待随单寄出」点进来
+    $("stats").textContent = t("loading"); $("list").innerHTML = `<div class="empty">${esc(t("loading"))}</div>`;
     const haveRange = initRange();
     window.__access.then(async a => {
       access = a;
