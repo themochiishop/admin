@@ -386,6 +386,16 @@ async function pkShip(db, ctx, data = {}) {
   return { ok: results.every(r => r.ok), results };
 }
 
+// ---------- 📷 一包的打包照片（清单不回传照片；查看时才读这一张）----------
+async function pkPhoto(db, ctx, data = {}) {
+  await requirePack(db, ctx);
+  const orderNo = normNo(data.orderNo);
+  if (!noOk(orderNo)) fail("pk/bad-order", "订单号不正确", "invalid-argument");
+  const d = await db.collection("packDone").doc(orderNo).get();
+  const ph = d.exists && d.data().ship && d.data().ship.photo;
+  return { ok: true, photo: typeof ph === "string" && ph.startsWith("data:image/") ? ph : null };
+}
+
 // ---------- 标记打包完成（这一包 / 这一批）：之后不再出现在「这一批」----------
 //   data: { orderNos: [...], undo?, finish? }   finish = 「这批打包完成」：记下时间，之后下的单才算下一批
 async function pkDone(db, ctx, data = {}) {
@@ -429,4 +439,4 @@ async function pkUndo(db, ctx, data = {}) {
   return { ok: true, ...r };
 }
 
-module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkClaims, pkShip, pkDone, pkUndo };
+module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo };
