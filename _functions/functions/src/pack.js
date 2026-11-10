@@ -190,6 +190,42 @@ async function pkBatch(db, ctx, data = {}) {
   return { ok: true, now, from, to, parcels: out, pending };
 }
 
+// ---------- 🏆 领奖追踪（每月抽奖得主，资料在另一个 RTDB）：哪些其实是会员 / 已经在会员系统处理 ----------
+//   data: { items: [{ id, orderNo, username }] }（最多 300）
+//   回传 res[id] = { club: 会员系统「中奖奖品」的状态（用订单号对，和领奖追踪页一样）或 null, uid, member }
+//   会员系统有这笔奖品 → 打包清单改用会员那一笔（已寄出就不再出现）；没有但买家账号绑定了会员 → 标成会员
+async function pkClaims(db, ctx, data = {}) {
+  await requirePack(db, ctx);
+  const items = Array.isArray(data.items) ? data.items.slice(0, 300) : [];
+  const RANK = { completed: 6, shipped: 5, approved: 4, claimed: 3, unclaimed: 2, cancelled: 1 };
+  const club = new Map();
+  (await db.collection("prizeWins").get()).docs.forEach(d => {
+    const w = d.data() || {}, no = normNo(w.orderNo);
+    if (no && (!club.has(no) || (RANK[w.status] || 0) > (RANK[club.get(no)] || 0))) club.set(no, w.status || "");
+  });
+  const cache = new Map(), res = {}, uids = new Set();
+  for (const it of items) {
+    if (!it || typeof it.id !== "string" || it.id.length > 200) continue;
+    const no = normNo(it.orderNo), u = String(it.username || "").trim().slice(0, 60);
+    const platform = platformOf(no);
+    let uid = null;
+    if (platform && u) {
+      for (const name of [...new Set([u, u.toLowerCase()])]) {
+        const bk = `${platform}_${name}`;
+        if (!cache.has(bk)) { const b = await db.collection("bindings").doc(bk).get(); cache.set(bk, b.exists ? b.data().uid || null : null); }
+        if (cache.get(bk)) { uid = cache.get(bk); break; }
+      }
+    }
+    if (!uid && no && noOk(no)) { const o = await db.collection("orders").doc(no).get(); if (o.exists && o.data().uid) uid = o.data().uid; }
+    if (uid) uids.add(uid);
+    res[it.id] = { club: (no && club.get(no)) || null, uid };
+  }
+  const names = new Map();
+  await memberNames(db, [...uids], names);
+  Object.values(res).forEach(r => { if (r.uid) r.member = names.get(r.uid) || "会员"; });
+  return { ok: true, res };
+}
+
 // ---------- 找一张单（不在这一批里，例如比较早的单）或一个买家 ----------
 //   data: { orderNo } 或 { username, platform? }
 async function pkLookup(db, ctx, data = {}) {
@@ -378,4 +414,4 @@ async function pkUndo(db, ctx, data = {}) {
   return { ok: true, ...r };
 }
 
-module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkShip, pkDone, pkUndo };
+module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkClaims, pkShip, pkDone, pkUndo };
