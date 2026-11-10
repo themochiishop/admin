@@ -335,7 +335,8 @@
         undoConfirm: (no, u) => `↩️ 撤销 ${no}（${u}）这一包？\n\n这一包用打包清单寄出的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n运单号、照片也会一起清掉。\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`,
         undone: n => `↩️ 已撤销：退回 ${n} 样`, undoWelcome: n => `\n\n⚠️ 这一包有 ${n} 份迎新礼已寄出，要到「新会员奖励」处理`, undoKept: n => `\n\nℹ️ ${n} 样会员已确认收到 / 已完成，没有退回`,
         claimHint: '🏆 非会员抽奖得主的奖品：<a href="../draw_tournament/claims.html" target="_blank">登录领奖追踪</a> 后重新整理这一页，也会一起列出。',
-        noClaimLogin: "没有登录领奖追踪", claimPrize: "奖品", claimTitle: r => `领奖追踪「${r}」`, claimSub: "非会员得主",
+        noClaimLogin: "没有登录领奖追踪", claimPrize: "奖品", claimTitle: r => `领奖追踪「${r}」`, claimSub: "非会员得主", claimMemSub: "会员得主",
+        claimMemWarn: "会员得奖：先到会员系统「🏆 中奖奖品」添加 / 发奖，才会出现在这里", claimMemTag: "⚠️ 先到中奖奖品发奖",
       },
       en: {
         title: "🧺 Packing", back: "Back to console", rangeTitle: "Today's parcels: orders placed in which time range", reload: "Reload",
@@ -373,7 +374,8 @@
         undoConfirm: (no, u) => `↩️ Undo parcel ${no} (${u})?\n\nEverything shipped with this parcel via Packing goes back:\n• Small gifts → pending\n• Prizes, redemptions, check-in gifts → to ship\nTracking no. and photo are cleared too.\n\nItems the member already confirmed received stay as they are. Welcome gifts are handled in New member rewards.`,
         undone: n => `↩️ Undone: ${n} item(s) returned`, undoWelcome: n => `\n\n⚠️ ${n} welcome gift(s) in this parcel were shipped — handle them in New member rewards`, undoKept: n => `\n\nℹ️ ${n} item(s) already received / completed, not returned`,
         claimHint: '🏆 Prizes of non-member draw winners: <a href="../draw_tournament/claims.html" target="_blank">sign in to Claim tracking</a>, then reload this page to list them too.',
-        noClaimLogin: "Not signed in to Claim tracking", claimPrize: "Prize", claimTitle: r => `Claim "${r}"`, claimSub: "non-member winner",
+        noClaimLogin: "Not signed in to Claim tracking", claimPrize: "Prize", claimTitle: r => `Claim "${r}"`, claimSub: "non-member winner", claimMemSub: "member winner",
+        claimMemWarn: "Member winner: add / award it in Member system › 🏆 Prizes first, then it shows up here", claimMemTag: "⚠️ Award it in Prizes first",
       },
     };
     // 后端错误讯息（中文）→ English
@@ -650,7 +652,8 @@
       const accts = w.accts.length ? w.accts : w.plainName ? [{ platform: "", username: w.name }] : [];
       const name = w.plainName ? "" : `<b>${esc(w.name)}</b>`;
       const src = tr(i, "src");
-      const st = w.order ? `<span class="t">${esc(t("todayOrder", w.order.slice(-6)))}</span>` : showWait ? `<span class="w">${esc(t("waitOrder"))}</span>` : "";
+      const st = (w.warn ? `<span class="w">${esc(w.warn)}</span>` : "") +
+        (w.order ? `<span class="t">${esc(t("todayOrder", w.order.slice(-6)))}</span>` : showWait && !w.warn ? `<span class="w">${esc(t("waitOrder"))}</span>` : "");
       return `<li><div class="w1">${name}<span class="mt ${w.member ? "" : "non"}">${w.member ? "🎫 " + esc(t("member")) : esc(t("nonMember"))}</span>${accts.map(acctHtml).join("")}</div>
         <div class="w2">${src ? `<span>🗓 ${esc(src)}</span>` : ""}${st}</div></li>`;
     }
@@ -659,8 +662,14 @@
       const allItems = [];
       pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: w })); });
       claimItems.forEach(c => {
+        if (c.uid) {   // 会员得主（会员系统还没有这笔奖品）
+          const g = pending.find(x => x.uid === c.uid);
+          allItems.push({ i: c, who: { name: c.member || t("member"), member: true, accts: g && g.accounts && g.accounts.length ? g.accounts : [{ platform: platOfNo(c.orderNo), username: c.uname }],
+            order: todayOrderOf("u:" + c.uid), warn: t("claimMemTag") } });
+          return;
+        }
         const p = all.find(x => !x.uid && !x.done && String(x.username || "").toLowerCase() === c.name);
-        allItems.push({ i: c, who: { name: c.name, member: false, plainName: true, accts: [{ platform: platOfNo(c.orderNo), username: c.name }], order: p ? p.orderNo : "" } });
+        allItems.push({ i: c, who: { name: c.name, member: false, plainName: true, accts: [{ platform: platOfNo(c.orderNo), username: c.uname || c.name }], order: p ? p.orderNo : "" } });
       });
       $("nToday").hidden = !todayItems.length; $("nToday").textContent = todayItems.length;
       $("nAll").hidden = !allItems.length; $("nAll").textContent = allItems.length;
@@ -922,12 +931,31 @@
             claimItems.push({ kind: "claim", id: `${bid}|${k}`, bid, key: k, icon: "🏆", can: true,
               title: T.zh.claimTitle(rank || T.zh.claimPrize), prep: `${label} ${rank || T.zh.claimPrize}`.trim(), sub: `${label}${b.title ? " · " + b.title : ""} · ${T.zh.claimSub}`, src: label,
               en: { title: T.en.claimTitle(rank || T.en.claimPrize), prep: `${label} ${rank || T.en.claimPrize}`.trim(), sub: `${label}${b.title ? " · " + b.title : ""} · ${T.en.claimSub}`, src: label },
-              name: String(x.name || "").toLowerCase(), orderNo: x.orderNo || "" });
+              name: String(x.name || "").toLowerCase(), uname: String(x.name || ""), orderNo: x.orderNo || "" });
           }));
+          await checkClaims();
           $("claimHint").hidden = true; $("claimHint").innerHTML = "";
           all.forEach(attachClaims); render(); if (sel) showSel(false);
         });
       } catch (e) { console.warn("claims", e); }
+    }
+    // 用订单号对会员系统「🏆 中奖奖品」（和领奖追踪页一样）：
+    //   会员系统有这笔 → 交给会员那一笔（已寄出就不再出现；待寄的会以 🏆 中奖奖品出现）
+    //   没有，但买家账号绑定了会员 → 标成会员，要先到中奖奖品发奖
+    async function checkClaims() {
+      if (!claimItems.length) return;
+      try {
+        const r = (await pkAdmin({ op: "claims", items: claimItems.map(c => ({ id: c.id, orderNo: c.orderNo, username: c.uname })) })).data;
+        const res = (r && r.res) || {};
+        claimItems = claimItems.filter(c => { const x = res[c.id]; return !(x && x.club && x.club !== "cancelled"); });
+        claimItems.forEach(c => {
+          const x = res[c.id];
+          if (!x || !x.uid) return;
+          Object.assign(c, { uid: x.uid, member: x.member || "", can: false, warn: T.zh.claimMemWarn,
+            sub: c.sub.replace(T.zh.claimSub, T.zh.claimMemSub) });
+          c.en = { ...c.en, warn: T.en.claimMemWarn, sub: c.en.sub.replace(T.en.claimSub, T.en.claimMemSub) };
+        });
+      } catch (e) { console.warn("claims check", e); }
     }
     function loadScript(src) {
       return new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok();
@@ -935,8 +963,9 @@
     }
     const platOfNo = no => { const c = norm(no).charAt(0); return c === "5" ? "tiktok" : c === "2" ? "shopee" : ""; };
     function attachClaims(p) {
-      if (p.uid || !claimItems.length) return;
-      claimItems.filter(c => c.name && c.name === String(p.username || "").toLowerCase() && (!platOfNo(c.orderNo) || platOfNo(c.orderNo) === p.platform))
+      if (!claimItems.length) return;
+      claimItems.filter(c => c.uid ? c.uid === p.uid
+        : !p.uid && c.name && c.name === String(p.username || "").toLowerCase() && (!platOfNo(c.orderNo) || platOfNo(c.orderNo) === p.platform))
         .forEach(c => { if (!p.items.some(i => i.id === c.id)) p.items.push({ ...c }); });
     }
     async function shipClaim(i, orderNo, ship) {
