@@ -103,7 +103,7 @@ const SG_OPS = { create: smallgift.sgCreate, void: smallgift.sgVoid, restore: sm
 exports.sgAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5, timeoutSeconds: 300 },
   req => run(pick(SG_OPS, req), req));
 
-// 🧺 打包清单（后台）：{ op: "batch" } / { op: "lookup", orderNo | username } / { op: "ship", orderNo, items, txId, done? } / { op: "done", orderNos, undo? } / { op: "undo", orderNo }
+// 🧺 打包清单（后台）：{ op: "batch", from, to } / { op: "lookup", orderNo | username } / { op: "ship", orderNo, items, txId, done?, ship? } / { op: "done", orderNos, undo? } / { op: "undo", orderNo }
 //    店主或「🧺 打包清单」权限；只回传打包需要的资料
 const PK_OPS = { batch: pack.pkBatch, lookup: pack.pkLookup, ship: pack.pkShip, done: pack.pkDone, undo: pack.pkUndo };
 exports.pkAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5, timeoutSeconds: 120 },
