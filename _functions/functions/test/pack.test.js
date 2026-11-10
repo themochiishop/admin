@@ -35,6 +35,7 @@ function fakeDb(seed = {}) {
     doc: id => ref(col + "/" + (id || "auto" + (++autoId))),
     async add(d) { const r = ref(col + "/auto" + (++autoId)); data.set(r.path, d); return r; },
     where(f, op, v) { const q = { kind: "query", col, conds: [[f, op, v]], where(f2, o2, v2) { q.conds.push([f2, o2, v2]); return q; }, async get() { return runQuery(q); } }; return q; },
+    async get() { return runQuery({ kind: "query", col, conds: [] }); },
   });
   function ref(path) {
     const r = { kind: "doc", path, id: path.split("/").pop(),
@@ -290,4 +291,20 @@ test("运单资料不对会挡（整包都不寄）", async () => {
   const r = await go(undefined);
   assert.equal(r.ok, true);
   assert.deepEqual(db.data.get("smallGifts/b__1").shipping, { withOrder: true, orderNo: "2611190000001", by: "pack@x.com", via: "pack" });
+});
+
+test("领奖追踪：用订单号对会员系统的中奖奖品；绑定的账号认成会员", async () => {
+  const db = fakeDb(SEED());
+  db.data.set("prizeWins/wx", { uid: "u1", orderNo: "2610218GX7FUH5", status: "shipped" });
+  db.data.set("bindings/shopee_nurfatinnr", { uid: "u9" });
+  db.data.set("members/u9", { name: "Fatin" });
+  const r = await pk.pkClaims(db, PACKER, { items: [
+    { id: "a", orderNo: "2610218gx7fuh5", username: "walinungsari" },   // 会员系统已寄出
+    { id: "b", orderNo: "2611050000009", username: "NurFatinnr" },      // 没有中奖记录，但账号绑定了会员（大小写不同）
+    { id: "c", orderNo: "2611050000010", username: "stranger" },        // 真的非会员
+  ] });
+  assert.equal(r.res.a.club, "shipped");
+  assert.equal(r.res.b.club, null); assert.equal(r.res.b.uid, "u9"); assert.equal(r.res.b.member, "Fatin");
+  assert.deepEqual(r.res.c, { club: null, uid: null });
+  await rejects(pk.pkClaims(db, { uid: "x", email: "a@b.c", emailVerified: true }, { items: [] }), "pk/no-perm");
 });
