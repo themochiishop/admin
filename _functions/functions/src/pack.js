@@ -146,13 +146,19 @@ async function memberAccounts(db, uids) {
   }
   return out;
 }
+// 打包记录（packDone）→ 回传给页面的摘要（照片不回传，只说有没有）
+function packedOf(d) {
+  if (!d) return null;
+  const s = d.ship || {};
+  return { at: toMs(d.at), by: d.by || "", carrierName: s.carrierName || "", trackingNo: s.trackingNo || "", trackingUrl: s.trackingUrl || "", photo: !!s.photo };
+}
 function parcel(o, buyer, pend, names, done) {
   const keys = [buyer.uid ? "u:" + buyer.uid : null, userKey(buyer.platform, buyer.username)].filter(Boolean);
   const items = [], seen = new Set();
   keys.forEach(k => (pend.by.get(k) || []).forEach(it => { if (!seen.has(it.id)) { seen.add(it.id); items.push(it); } }));
   return {
     orderNo: o.no, platform: buyer.platform, username: buyer.username, uid: buyer.uid || null,
-    member: buyer.uid ? (names.get(buyer.uid) || "会员") : null, orderTime: toMs(o.orderTime), done: !!done, items,
+    member: buyer.uid ? (names.get(buyer.uid) || "会员") : null, orderTime: toMs(o.orderTime), done: !!done, packed: packedOf(done), items,
   };
 }
 
@@ -170,12 +176,12 @@ async function pkBatch(db, ctx, data = {}) {
   const orders = snap.docs.map(d => ({ no: d.id, ...d.data() }))
     .filter(o => o.status !== "refunded" && (toMs(o.orderTime) || 0) <= to);
   const doneSnap = await db.collection("packDone").where("at", ">=", tsOf(from - 7 * DAY)).get();
-  const done = new Set(doneSnap.docs.map(d => d.id));
+  const done = new Map(doneSnap.docs.map(d => [d.id, d.data() || {}]));
   const cache = new Map(), out = [];
   const buyers = [];
   for (const o of orders) { const b = await buyerOf(db, o, cache); buyers.push([o, b]); }
   await memberNames(db, [...new Set(buyers.map(([, b]) => b.uid).filter(Boolean))], pend.names);
-  for (const [o, b] of buyers) out.push(parcel(o, b, pend, pend.names, done.has(o.no)));
+  for (const [o, b] of buyers) out.push(parcel(o, b, pend, pend.names, done.get(o.no) || null));
   out.sort((a, b) => (a.orderTime || 0) - (b.orderTime || 0));
   // 🗂️ 全部待寄：每位顾客还没寄的东西（含还没下单的会员）
   const uids = [...pend.by.keys()].filter(k => k.startsWith("u:")).map(k => k.slice(2));
@@ -250,7 +256,8 @@ async function pkLookup(db, ctx, data = {}) {
   const pend = await loadPending(db);
   const b = await buyerOf(db, o, new Map());
   if (b.uid) await memberNames(db, [b.uid], pend.names);
-  const done = (await db.collection("packDone").doc(o.no).get()).exists;
+  const ds = await db.collection("packDone").doc(o.no).get();
+  const done = ds.exists ? (ds.data() || {}) : null;
   return { ok: true, found: true, parcel: parcel(o, b, pend, pend.names, done) };
 }
 
@@ -367,7 +374,15 @@ async function pkShip(db, ctx, data = {}) {
     try { results.push({ kind: it.kind, id: it.id, ok: true, result: await shipOne(db, ctx, who, orderNo, it, txBase, ship) }); }
     catch (e) { results.push({ kind: it.kind, id: it.id, ok: false, error: e instanceof NmError ? e.message : "系统错误" }); }
   }
-  if (data.done === true) await db.collection("packDone").doc(orderNo).set({ at: tsOf(nowMs(ctx)), by: who.email });
+  // 打包完成：连「不用放」的包裹也记下运单号、照片（打包的证据）
+  if (data.done === true) {
+    const rec = { at: tsOf(nowMs(ctx)), by: who.email };
+    const s = {};
+    if (ship.trackingNo) Object.assign(s, { carrier: ship.carrier || "", carrierName: ship.carrierName || "", trackingNo: ship.trackingNo, trackingUrl: ship.trackingUrl || "" });
+    if (ship.photos && ship.photos[0]) s.photo = ship.photos[0];
+    if (Object.keys(s).length) rec.ship = s;
+    await db.collection("packDone").doc(orderNo).set(rec);
+  }
   return { ok: results.every(r => r.ok), results };
 }
 
