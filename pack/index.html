@@ -54,17 +54,19 @@
     .idle .big { font-size: 3.4rem; }
     .idle b { display: block; color: var(--ink); font-size: 1.1rem; margin: 6px 0 4px; }
     .res { border-radius: 14px; overflow: hidden; border: 3px solid #db2777; background: var(--card); }
-    .res-head { background: #db2777; color: #fff; padding: 12px 14px; }
+    .res-head { background: #db2777; color: #fff; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+    .res-head .hr { margin-left: auto; text-align: right; min-width: 0; }
     .res.ok, .res.none { border-color: #16a34a; } .res.ok .res-head, .res.none .res-head { background: #16a34a; }
     .res.warn { border-color: #d97706; } .res.warn .res-head { background: #d97706; }
     .res.err { border-color: #dc2626; } .res.err .res-head { background: #dc2626; }
-    .res-head .big { font-size: 1.6rem; font-weight: 900; line-height: 1.15; }
-    .res-head .no { font-family: ui-monospace, Menlo, monospace; font-size: .86rem; opacity: .92; margin-top: 4px; word-break: break-all; }
-    .res-head .who { font-size: 1rem; font-weight: 700; margin-top: 2px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .res-head .big { font-size: 1.45rem; font-weight: 900; line-height: 1.15; white-space: nowrap; flex-shrink: 0; }
+    .res-head .no { font-family: ui-monospace, Menlo, monospace; font-size: .82rem; opacity: .92; word-break: break-all; }
+    .res-head .who { font-size: .86rem; font-weight: 700; margin-top: 1px; overflow-wrap: anywhere; }
     .tag { font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.22); color: #fff; }
     .res-body { padding: 4px 10px 10px; }
     .sec-t { font-size: .78rem; font-weight: 800; color: var(--muted); margin: 12px 2px 2px; }
-    .it { display: flex; align-items: center; gap: 10px; padding: 12px 4px; border-bottom: 1px dashed var(--line); min-height: 60px; cursor: pointer; }
+    .it { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px dashed var(--line); min-height: 54px; cursor: pointer; }
+    .it.ro { cursor: default; min-height: 0; }
     .it:last-of-type { border-bottom: 0; }
     .it .ic { font-size: 1.6rem; width: 36px; text-align: center; flex-shrink: 0; }
     .it .nm { flex: 1; min-width: 0; }
@@ -81,12 +83,28 @@
     .linkbtn { display: block; width: 100%; margin-top: 10px; background: none; border: 1px dashed var(--line2); color: var(--text2); border-radius: 10px; padding: 10px; font-size: .84rem; cursor: pointer; }
 
     /* 🚚 运单 + 📷 照片 */
-    .ship { margin-top: 12px; border: 2px solid var(--line2); border-radius: 12px; padding: 10px; background: var(--soft2); }
-    .ship .row2 { display: flex; gap: 8px; }
+    .ship { margin-top: 8px; border: 2px solid var(--line2); border-radius: 12px; padding: 8px 10px; background: var(--soft2); }
+    .ship .row2 { display: flex; gap: 6px; margin-top: 6px; }
+    .ship .row2 select { flex: 0 0 40%; min-width: 0; } .ship .row2 .trk { flex: 1; min-width: 0; }
+    .ship .sline { display: flex; align-items: center; gap: 8px; min-height: 34px; }
+    .ship .sline.ph { border-top: 1px dashed var(--line2); margin-top: 8px; padding-top: 8px; }
+    .ship .sline .shot { margin-left: auto; flex: 0 0 auto; padding: 9px 16px; }
+    .ship .lnk { display: flex; align-items: center; gap: 6px; font-size: .76rem; color: var(--muted); margin-top: 5px; min-width: 0; }
+    .ship .lnk span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ship .lnk button { background: none; border: 0; font-size: .9rem; cursor: pointer; padding: 2px 4px; }
+    .ship .urlin { margin-top: 5px; }
+    .ship .mini { background: var(--card); border: 1px solid var(--line2); color: var(--text2); border-radius: 8px; padding: 7px 10px; font-size: .8rem; cursor: pointer; }
+    .pthumb { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 2px solid #16a34a; cursor: zoom-in; margin-left: auto; }
+    .pthumb.big { width: 120px; height: 120px; display: block; margin: 6px 0 0; }
+    .packed { font-size: .84rem; color: var(--blue-tx); background: var(--blue-bg); border-radius: 10px; padding: 9px 11px; margin-top: 8px; line-height: 1.6; }
+    .packed a { text-decoration: none; }
+    .editbtn { display: block; width: 100%; margin-top: 10px; border: 2px solid #db2777; background: var(--card); color: #db2777; border-radius: 10px; padding: 11px; font-weight: 800; font-size: .95rem; cursor: pointer; }
+    .zoom { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.88); display: grid; place-items: center; padding: 16px; cursor: zoom-out; }
+    .zoom img { max-width: 100%; max-height: 100%; border-radius: 10px; }
     .ship label { display: block; font-size: .74rem; color: var(--muted); margin: 6px 0 3px; font-weight: 700; }
     .ship select, .ship input[type=text], .ship input[type=url] { width: 100%; font-size: .95rem; padding: 9px 10px; border: 1.5px solid var(--line2); border-radius: 9px; background: var(--card); color: var(--ink); }
     .ship .trk { font-family: ui-monospace, Menlo, monospace; }
-    .ship .need { display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 700; color: var(--ink); margin: 2px 0 0; cursor: pointer; }
+    .ship .need { display: flex; align-items: center; gap: 8px; font-size: .88rem; font-weight: 700; color: var(--ink); margin: 0; cursor: pointer; }
     .ship .need input { width: 22px; height: 22px; accent-color: #db2777; }
     .ship .miss { color: #db2777; font-size: .78rem; font-weight: 700; margin-left: auto; }
     .ship .ok { color: var(--green-tx); font-size: .78rem; font-weight: 700; margin-left: auto; }
@@ -321,14 +339,14 @@
         todayOrder: no => `📦 今天有单 …${no}`, waitOrder: "⏳ 等下单", member: "会员", nonMember: "非会员",
         emptyToday: "今天没有要放的东西 🎉", emptyAll: "没有存着的东西 🎉",
         bigFirst: "⚠️ 先处理", bigNone: "⭕ 不用放", noteNone: "这包没有要随单寄出的东西：打包好后扫追踪号、拍照，再按「已打包好」。", bigPut: n => `🎁 要放 ${n} 样`, bigDone: "✅ 已打包",
-        packedBy: (b, tm) => `✅ ${b} · ${tm} 打包好`, packedPh: "📷 有照片", saveEmpty: "📦 保存＝已打包好",
+        packedBy: (b, tm) => `✅ ${b} · ${tm} 打包好`, editPack: "✏️ 打包这一包", secTodo: "这包要放的东西", editRedo: "✏️ 修改运单号 / 照片", urlAuto: "选好运输公司会自动生成", packedPh: "📷 有照片", saveEmpty: "📦 保存＝已打包好",
         trkHeld: no => `🚚 已记下追踪号 ${no}`, trkHeldS: "现在扫「订单号」条码，会自动填进那一包", isOrderAgain: "这是订单号：请扫「追踪号」条码",
         trkDup: "这个追踪号已经填好了",
         secPut: "放进这一包（取消勾选 = 这次不寄，留到下一单）", secSent: "已放入", sentSmall: "✅ 已放入",
         others: (n, l) => `💡 这位会员今天还有 ${n} 包（${l}）。这包没勾的，扫那一包时会再出现。`, sep: "、",
         undoBtn: "↩️ 撤销这一包（订单取消 / 勾错了）",
-        needTrk: "🚚 需要运单号", trkOk: "✅ 已扫", trkMiss: "扫面单上的追踪号", carrier: "运输公司", pick: "— 选 —", trkNo: "运单号", trkPh: "扫追踪号条码",
-        url: "查询链接", urlPh: "https://…（选好公司会自动生成）", needPh: "📷 需要上传照片", phOk: "✅ 已拍", phMiss: "拍一张包裹照片", phDel: "✕ 删掉", phRe: "重拍", phShot: "📷 拍照",
+        needTrk: "🚚 运单号", trkOk: "✅ 已扫", trkMiss: "扫追踪号", carrier: "运输公司", pick: "— 选 —", trkNo: "运单号", trkPh: "扫追踪号条码",
+        url: "查询链接", urlPh: "https://…（选好公司会自动生成）", needPh: "📷 照片", phOk: "✅ 已拍", phMiss: "拍一张包裹照片", phDel: "✕ 删掉", phRe: "重拍", phShot: "📷 拍照",
         mTick: "勾选要放的东西", mTrk: "扫追踪号", mCarrier: "选运输公司", mHttps: "链接要 https://", mPhoto: "拍照",
         nextTrk: "👉 下一步：扫面单上的「追踪号」条码", still: m => `还要：${m}`, saveBtn: n => `💾 保存＝已打包好（放了 ${n} 样）`,
         idleB: "扫面单上的订单号条码", idleS: "扫描枪、📷 相机，或输入单号后几位 / 买家名",
@@ -364,14 +382,14 @@
         todayOrder: no => `📦 Order today …${no}`, waitOrder: "⏳ Waiting for order", member: "Member", nonMember: "Non-member",
         emptyToday: "Nothing to add today 🎉", emptyAll: "Nothing stored 🎉",
         bigFirst: "⚠️ Action needed", bigNone: "⭕ Nothing to add", noteNone: "Nothing ships with this parcel: after packing, scan the tracking no., take a photo, then tap Packed.", bigPut: n => `🎁 Add ${n}`, bigDone: "✅ Packed",
-        packedBy: (b, tm) => `✅ Packed by ${b} · ${tm}`, packedPh: "📷 photo saved", saveEmpty: "📦 Save = packed",
+        packedBy: (b, tm) => `✅ Packed by ${b} · ${tm}`, editPack: "✏️ Pack this parcel", secTodo: "To add to this parcel", editRedo: "✏️ Edit tracking no. / photo", urlAuto: "auto-filled after picking a courier", packedPh: "📷 photo saved", saveEmpty: "📦 Save = packed",
         trkHeld: no => `🚚 Tracking no. noted: ${no}`, trkHeldS: "Now scan the ORDER NO. barcode — it'll be filled into that parcel", isOrderAgain: "That's the order no. — scan the TRACKING NO. barcode",
         trkDup: "This tracking no. is already filled in",
         secPut: "Put in this parcel (untick = not this time, keep for next order)", secSent: "Already added", sentSmall: "✅ Added",
         others: (n, l) => `💡 This member has ${n} more parcel(s) today (${l}). Unticked items show up again when you scan that parcel.`, sep: ", ",
         undoBtn: "↩️ Undo this parcel (order cancelled / ticked wrongly)",
-        needTrk: "🚚 Tracking no. required", trkOk: "✅ Scanned", trkMiss: "Scan the tracking no. on the label", carrier: "Courier", pick: "— Pick —", trkNo: "Tracking no.", trkPh: "Scan tracking barcode",
-        url: "Tracking link", urlPh: "https://… (auto-filled after picking courier)", needPh: "📷 Photo required", phOk: "✅ Taken", phMiss: "Take one parcel photo", phDel: "✕ Delete", phRe: "Retake", phShot: "📷 Take photo",
+        needTrk: "🚚 Tracking no.", trkOk: "✅ Scanned", trkMiss: "Scan tracking", carrier: "Courier", pick: "— Pick —", trkNo: "Tracking no.", trkPh: "Scan tracking barcode",
+        url: "Tracking link", urlPh: "https://… (auto-filled after picking courier)", needPh: "📷 Photo", phOk: "✅ Taken", phMiss: "Take one parcel photo", phDel: "✕ Delete", phRe: "Retake", phShot: "📷 Take photo",
         mTick: "tick items to add", mTrk: "scan tracking no.", mCarrier: "pick courier", mHttps: "link must start with https://", mPhoto: "take photo",
         nextTrk: "👉 Next: scan the TRACKING NO. barcode on the label", still: m => `Still need: ${m}`, saveBtn: n => `💾 Save = packed (${n} added)`,
         idleB: "Scan the order no. barcode on the label", idleS: "Scanner, 📷 camera, or type the last digits / buyer name",
@@ -696,70 +714,109 @@
     }
     $("prep").addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.g) d.open ? closedG.delete(d.dataset.g) : closedG.add(d.dataset.g); }, true);
 
-    // ---------- 这一包：勾选 + 运单 + 照片 ----------
-    // 这一包现在要做什么：items = 有东西要放；pack = 没东西放，但还没打包；view = 已打包
+    // ---------- 这一包：查看 / 勾选 + 运单 + 照片 ----------
+    // 这一包要做什么：items = 有东西要放；pack = 没东西放，但还没打包；view = 已打包
     const modeOf = p => canLeft(p).length ? "items" : !p.done ? "pack" : "view";
+    // 现在画面的模式：点清单 = 查看（sel.view）；扫描 = 打包；已打包的按「✏️ 修改」= 重新填运单号 / 照片（sel.redo）
+    function mode() {
+      if (!sel) return null;
+      if (sel.view) return "view";
+      const m = modeOf(sel.p);
+      return m === "view" && sel.redo ? "pack" : m;
+    }
     let heldTrk = "";   // 先扫到的追踪号（还没开包裹）：扫订单号后自动填进去
-    function openParcel(p) {
+    const photoCache = new Map(), photoLoading = new Set();
+    function openParcel(p, view = false) {
       const c = canLeft(p);
-      sel = { p, on: new Set(c.map(i => i.id)), ship: { carrier: "", trackingNo: "", trackingUrl: "", photo: "" }, needTrk: true, needPh: true };
-      if (heldTrk && modeOf(p) !== "view") { const h = heldTrk; heldTrk = ""; fillTracking(h); }
+      sel = { p, on: new Set(c.map(i => i.id)), ship: { carrier: "", trackingNo: "", trackingUrl: "", photo: "" }, needTrk: true, needPh: true, view, redo: false, urlEdit: false };
+      if (!view && heldTrk && modeOf(p) !== "view") { const h = heldTrk; heldTrk = ""; fillTracking(h); }
       showSel(true);
+    }
+    function startEdit() {
+      if (!sel) return;
+      const p = sel.p;
+      sel.view = false;
+      if (modeOf(p) === "view") {   // 已打包：带入之前的运单号、照片，改好再保存
+        sel.redo = true;
+        const pk = p.packed || {};
+        if (pk.trackingNo) {
+          const c = CARRIERS.find(x => x.name === pk.carrierName);
+          Object.assign(sel.ship, { carrier: c ? c.id : "", trackingNo: pk.trackingNo, trackingUrl: pk.trackingUrl || "" });
+        } else sel.needTrk = false;
+        if (photoCache.get(p.orderNo)) sel.ship.photo = photoCache.get(p.orderNo); else if (!pk.photo) sel.needPh = false;
+      }
+      showSel(false); focusQ();
+    }
+    async function loadPhoto(p) {
+      const no = p.orderNo;
+      if (!p.packed || !p.packed.photo || photoCache.has(no) || photoLoading.has(no)) return;
+      photoLoading.add(no);
+      try { const r = (await pkAdmin({ op: "photo", orderNo: no })).data; photoCache.set(no, (r && r.photo) || ""); }
+      catch (e) { photoCache.set(no, ""); }
+      photoLoading.delete(no);
+      if (sel && sel.p.orderNo === no) showSel(false);
     }
     function showSel(fresh) {
       const { p } = sel;
       const c = canLeft(p), w = warns(p), sent = p.items.filter(i => i.sent);
+      const m = mode();
       // 只留还在的勾选
       sel.on = new Set([...sel.on].filter(id => c.some(i => i.id === id)));
       const others = all.filter(x => x !== p && !x.done && buyerKey(x) === buyerKey(p)).map(x => x.orderNo);
-      const plat = PLAT[p.platform] ? `<span class="tag">${PLAT[p.platform]}</span>` : "";
-      const mem = p.uid ? `<span class="tag">🎫 ${esc(p.member || t("member"))}</span>` : "";
-      const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="no">${esc(p.orderNo)}</div><div class="who">${esc(p.username || "-")} ${plat}${mem}</div></div>`;
+      const who = [esc(p.username || "-"), PLAT[p.platform] || "", p.uid ? "🎫 " + esc(p.member || t("member")) : ""].filter(Boolean).join(" · ");
+      const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="hr"><div class="no">${esc(p.orderNo)}</div><div class="who">${who}</div></div></div>`;
       const warnHtml = i => `<div class="warn">⚠️ ${i.icon} <b>${esc(tr(i, "title"))}</b>：${esc(tr(i, "warn") || tr(i, "sub"))}</div>`;
-      let html;
-      const pk = p.packed;
-      const packedHtml = p.done && pk ? `<div class="note" style="margin-top:10px">${esc(t("packedBy", pk.by ? pk.by.split("@")[0] : "", pk.at ? fmtT(pk.at) : ""))}
-          ${pk.trackingNo ? `<br>🚚 ${esc(pk.carrierName || "")} <b>${esc(pk.trackingNo)}</b>` : ""}${pk.photo ? `<br>${esc(t("packedPh"))}` : ""}</div>` : "";
-      if (!c.length && !sent.length) {
-        const m = modeOf(p);
-        html = `<div class="res ${m === "view" ? "ok" : w.length ? "warn" : "none"}">${head(m === "view" ? t("bigDone") : w.length ? t("bigFirst") : t("bigNone"))}<div class="res-body">
-          ${w.map(warnHtml).join("")}
-          ${m === "pack" ? `<div class="note" style="margin-top:10px">${esc(t("noteNone"))}</div>` + shipForm() : packedHtml}
-          ${p.done ? undoLink(p) : ""}</div></div>`;
-      } else {
-        const n = sel.on.size;
-        html = `<div class="res ${c.length ? "" : "ok"}">${head(c.length ? t("bigPut", n) : t("bigDone"))}<div class="res-body">
-          ${c.length ? `<div class="sec-t">${esc(t("secPut"))}</div>` + c.map(i => item(i, sel.on.has(i.id) ? "on" : "off")).join("") : ""}
-          ${sent.length ? `<div class="sec-t">${esc(t("secSent"))}</div>` + sent.map(i => item(i, "sent")).join("") : ""}
-          ${w.map(warnHtml).join("")}
-          ${others.length && c.length ? `<div class="note">${esc(t("others", others.length, others.map(o => "…" + o.slice(-6)).join(t("sep"))))}</div>` : ""}
-          ${c.length ? shipForm() : packedHtml}
-          ${sent.length || p.done ? undoLink(p) : ""}</div></div>`;
+      const big = p.done && !c.length ? t("bigDone") : c.length ? t("bigPut", m === "view" ? c.length : sel.on.size) : w.length ? t("bigFirst") : t("bigNone");
+      const cls = p.done && !c.length ? "ok" : c.length ? "" : w.length ? "warn" : "none";
+      let body;
+      if (m === "view") {
+        if (p.done) loadPhoto(p);
+        const pk = p.packed, ph = photoCache.get(p.orderNo);
+        const packedHtml = p.done ? `<div class="packed">${esc(t("packedBy", pk && pk.by ? pk.by.split("@")[0] : "", pk && pk.at ? fmtT(pk.at) : ""))}
+            ${pk && pk.trackingNo ? `<div>🚚 ${esc(pk.carrierName || "")} <b>${esc(pk.trackingNo)}</b>${pk.trackingUrl ? ` <a href="${esc(pk.trackingUrl)}" target="_blank" rel="noopener">🔗</a>` : ""}</div>` : ""}
+            ${pk && pk.photo ? (ph ? `<img class="pthumb big" src="${esc(ph)}" data-zoom alt="">` : ph === "" ? "" : `<div>📷 …</div>`) : ""}</div>` : "";
+        body = (c.length ? `<div class="sec-t">${esc(t("secTodo"))}</div>` + c.map(i => item(i, "ro")).join("") : "")
+          + (sent.length ? `<div class="sec-t">${esc(t("secSent"))}</div>` + sent.map(i => item(i, "sent")).join("") : "")
+          + w.map(warnHtml).join("") + packedHtml
+          + `<button class="editbtn" data-edit>${esc(modeOf(p) === "view" ? t("editRedo") : t("editPack"))}</button>`
+          + (p.done || sent.length ? undoLink(p) : "");
+      } else if (m === "items") {
+        body = `<div class="sec-t">${esc(t("secPut"))}</div>` + c.map(i => item(i, sel.on.has(i.id) ? "on" : "off")).join("")
+          + (sent.length ? `<div class="sec-t">${esc(t("secSent"))}</div>` + sent.map(i => item(i, "sent")).join("") : "")
+          + w.map(warnHtml).join("")
+          + (others.length ? `<div class="note">${esc(t("others", others.length, others.map(o => "…" + o.slice(-6)).join(t("sep"))))}</div>` : "")
+          + shipForm();
+      } else {   // pack：没东西放（或已打包后修改）
+        body = w.map(warnHtml).join("") + shipForm();
       }
-      $("result").innerHTML = html;
+      $("result").innerHTML = `<div class="res ${cls}">${head(big)}<div class="res-body">${body}</div></div>`;
       if (fresh) { $("result").firstElementChild.classList.add("flash"); addHist(p); }
       paintHint(); paintAct();
       document.querySelectorAll(".row").forEach(r => r.classList.toggle("sel", r.dataset.no === p.orderNo));
     }
-    const item = (i, st) => `<div class="it ${st}" ${st === "sent" ? "" : `data-item="${esc(i.id)}"`}><span class="ic">${i.icon}</span>
-      <span class="nm"><b>${esc(tr(i, "title"))}</b><small>${esc(st === "sent" ? t("sentSmall") : tr(i, "sub") || "")}</small></span><span class="ck">${st === "on" || st === "sent" ? "✓" : ""}</span></div>`;
+    const item = (i, st) => `<div class="it ${st}" ${st === "sent" || st === "ro" ? "" : `data-item="${esc(i.id)}"`}><span class="ic">${i.icon}</span>
+      <span class="nm"><b>${esc(tr(i, "title"))}</b><small>${esc(st === "sent" ? t("sentSmall") : tr(i, "sub") || "")}</small></span>${st === "ro" ? "" : `<span class="ck">${st === "on" || st === "sent" ? "✓" : ""}</span>`}</div>`;
     const undoLink = p => `<button class="linkbtn" data-undo="${esc(p.orderNo)}">${esc(t("undoBtn"))}</button>`;
+    // 运单 + 照片（紧凑：公司和单号一行；链接一行小字，要改才按 ✏️；照片和勾选同一行）
     function shipForm() {
       const s = sel.ship;
       const opts = CARRIERS.map(c => `<option value="${esc(c.id)}" ${s.carrier === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+      const st = (ok, okTx, missTx) => ok ? `<span class="ok">${esc(okTx)}</span>` : `<span class="miss">${esc(missTx)}</span>`;
+      const link = sel.urlEdit || (s.trackingUrl && !/^https:\/\//i.test(s.trackingUrl))
+        ? `<input type="url" class="urlin" data-sf="trackingUrl" value="${esc(s.trackingUrl)}" placeholder="${esc(t("urlPh"))}">`
+        : `<div class="lnk">🔗 <span>${s.trackingUrl ? esc(s.trackingUrl.replace(/^https:\/\/(www\.)?/i, "")) : esc(t("urlAuto"))}</span><button type="button" data-urledit title="${esc(t("url"))}">✏️</button></div>`;
       return `<div class="ship">
-        <label class="need"><input type="checkbox" data-need="trk" ${sel.needTrk ? "checked" : ""}>${esc(t("needTrk"))}${sel.needTrk ? (s.trackingNo ? `<span class="ok">${esc(t("trkOk"))}</span>` : `<span class="miss">${esc(t("trkMiss"))}</span>`) : ""}</label>
-        ${sel.needTrk ? `<div class="row2"><div style="flex:0 0 42%"><label>${esc(t("carrier"))}</label><select data-sf="carrier"><option value="">${esc(t("pick"))}</option>${opts}</select></div>
-          <div style="flex:1"><label>${esc(t("trkNo"))}</label><input type="text" class="trk" data-sf="trackingNo" value="${esc(s.trackingNo)}" placeholder="${esc(t("trkPh"))}" autocomplete="off" autocapitalize="characters"></div></div>
-          <label>${esc(t("url"))}</label><input type="url" data-sf="trackingUrl" value="${esc(s.trackingUrl)}" placeholder="${esc(t("urlPh"))}">` : ""}
-        <hr>
-        <label class="need"><input type="checkbox" data-need="ph" ${sel.needPh ? "checked" : ""}>${esc(t("needPh"))}${sel.needPh ? (s.photo ? `<span class="ok">${esc(t("phOk"))}</span>` : `<span class="miss">${esc(t("phMiss"))}</span>`) : ""}</label>
-        ${sel.needPh ? `<div class="photo">${s.photo ? `<img src="${esc(s.photo)}" alt=""><button class="del" data-ph="del">${esc(t("phDel"))}</button><button class="shot" data-ph="shot" style="flex:0 0 auto;padding:10px">${esc(t("phRe"))}</button>` : `<button class="shot" data-ph="shot">${esc(t("phShot"))}</button>`}</div>` : ""}
+        <div class="sline"><label class="need"><input type="checkbox" data-need="trk" ${sel.needTrk ? "checked" : ""}>${esc(t("needTrk"))}</label>${sel.needTrk ? st(s.trackingNo, t("trkOk"), t("trkMiss")) : ""}</div>
+        ${sel.needTrk ? `<div class="row2"><select data-sf="carrier" aria-label="${esc(t("carrier"))}"><option value="">${esc(t("pick"))}</option>${opts}</select>
+          <input type="text" class="trk" data-sf="trackingNo" value="${esc(s.trackingNo)}" placeholder="${esc(t("trkPh"))}" aria-label="${esc(t("trkNo"))}" autocomplete="off" autocapitalize="characters"></div>${link}` : ""}
+        <div class="sline ph"><label class="need"><input type="checkbox" data-need="ph" ${sel.needPh ? "checked" : ""}>${esc(t("needPh"))}</label>
+          ${sel.needPh ? (s.photo ? `<img class="pthumb" src="${esc(s.photo)}" data-zoom alt=""><button class="mini" data-ph="shot">${esc(t("phRe"))}</button><button class="mini" data-ph="del">✕</button>`
+            : `<button class="shot" data-ph="shot">${esc(t("phShot"))}</button>`) : ""}</div>
       </div>`;
     }
     // 还缺什么（缺了不能保存）
     function missing() {
-      if (!sel || modeOf(sel.p) === "view") return [];
+      if (!sel || mode() === "view") return [];
       const m = [];
       if (sel.needTrk && !sel.ship.trackingNo) m.push(t("mTrk"));
       if (sel.needTrk && sel.ship.trackingNo && !sel.ship.carrier) m.push(t("mCarrier"));
@@ -769,13 +826,13 @@
     }
     function paintHint() {
       const h = $("scanHint");
-      if (sel && modeOf(sel.p) !== "view" && sel.needTrk && !sel.ship.trackingNo) { h.hidden = false; h.textContent = t("nextTrk"); }
+      if (sel && mode() !== "view" && sel.needTrk && !sel.ship.trackingNo) { h.hidden = false; h.textContent = t("nextTrk"); }
       else h.hidden = true;
     }
     // 下方大按钮：这一包还没打包（有没有东西要放都一样），而且正在看扫描页（或电脑并排）才出现
     function paintAct() {
       const a = $("act");
-      const show = sel && modeOf(sel.p) !== "view" && (curTab === "tabScan" || document.body.classList.contains("wide"));
+      const show = sel && mode() !== "view" && (curTab === "tabScan" || document.body.classList.contains("wide"));
       if (!show) { a.hidden = true; a.innerHTML = ""; return; }
       a.hidden = false;
       const m = missing();
@@ -809,7 +866,7 @@
       tab("tabScan");
       // 先比对今天的订单：是订单号就打开那一包
       let p = all.find(x => x.orderNo === n);
-      const open = sel && modeOf(sel.p) !== "view";
+      const open = sel && mode() !== "view";
       // 同一包的订单号又扫到一次（条码太近）：不重开、不清掉已扫的追踪号
       if (open && sel.p.orderNo === n) {
         if (sel.needTrk && !sel.ship.trackingNo) { beep("bad"); toast(t("isOrderAgain")); } else beep("ok");
@@ -913,6 +970,8 @@
       busy = false;
       if (failed.length) { beep("bad"); alert(t("partFail") + "\n\n" + failed.join("\n")); }
       else { beep("ok"); toast(t("savedOk")); }
+      if (ship.photo) photoCache.set(p.orderNo, ship.photo); else photoCache.delete(p.orderNo);
+      if (sel && sel.p.orderNo === p.orderNo) sel.redo = false;
       await load();
       focusQ();
     }
@@ -1026,7 +1085,7 @@
       wakeTouch();
       $("cam").hidden = false;
       // 面单上订单号、追踪号两个条码很近：先挑现在要的那一个（1.5 秒内没看到要的，才接受另一个）
-      const wantTrk = !!(sel && modeOf(sel.p) !== "view" && sel.needTrk && !sel.ship.trackingNo);
+      const wantTrk = !!(sel && mode() !== "view" && sel.needTrk && !sel.ship.trackingNo);
       $("camMsg").textContent = wantTrk ? t("camTrk") : t("camOrder");
       const video = $("video");
       const done = text => { closeCam(); find(text); };
@@ -1111,9 +1170,13 @@
       const ph = el.closest("[data-ph]");
       if (ph && sel) { if (ph.dataset.ph === "del") { sel.ship.photo = ""; showSel(false); } else $("photoIn").click(); return; }
       if (el.closest("[data-save]")) { save(); return; }
+      if (el.closest("[data-edit]")) { startEdit(); return; }
+      if (el.closest("[data-urledit]") && sel) { sel.urlEdit = true; showSel(false); const u = document.querySelector(".urlin"); if (u) u.focus(); return; }
+      const z = el.closest("[data-zoom]");
+      if (z) { const d = document.createElement("div"); d.className = "zoom"; d.innerHTML = `<img src="${esc(z.getAttribute("src"))}" alt="">`; d.onclick = () => d.remove(); document.body.appendChild(d); return; }
       if (el.closest("[data-undo]") && sel && !busy) { undo(sel.p); return; }
       const row = el.closest(".row[data-no], .hrow[data-no]");
-      if (row) { const p = all.find(x => x.orderNo === row.dataset.no); if (p) { tab("tabScan"); openParcel(p); setTimeout(focusQ, 0); } return; }
+      if (row) { const p = all.find(x => x.orderNo === row.dataset.no); if (p) { tab("tabScan"); openParcel(p, true); setTimeout(focusQ, 0); } return; }   // 点 = 查看
       if (!el.closest("input, button, a, select, textarea, label, summary, details")) setTimeout(focusQ, 0);
     });
 
