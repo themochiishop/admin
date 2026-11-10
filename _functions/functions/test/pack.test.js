@@ -244,7 +244,14 @@ test("时间段：只列这段时间下的单；全部待寄列出每位顾客�
   assert.equal(ali.member, "Ali"); assert.deepEqual(ali.items.map(i => i.id), ["w7"]);
   const b2 = r.pending.find(x => x.key.startsWith("p:"));
   assert.equal(b2.username, "buyer2"); assert.equal(b2.platform, "shopee");
-  assert.ok(r.pending.find(x => x.uid === "u1").items.length >= 5);
+  const u1 = r.pending.find(x => x.uid === "u1");
+  assert.ok(u1.items.length >= 5);
+  assert.deepEqual(u1.accounts, [{ platform: "tiktok", username: "aqmar77" }]);   // 绑定的平台账号（没有 platform 栏位 → 从 doc id 拿）
+  assert.deepEqual(ali.accounts, []);
+  const sg = u1.items.find(i => i.kind === "sg");
+  assert.equal(sg.en.title, 'Small gift "贴纸"'); assert.match(sg.en.sub, /2026年11月 draw · not won · until/);
+  assert.equal(sg.src, "2026年11月抽奖");
+  assert.equal(u1.items.find(i => i.id === "r2").en.warn, "Approve it in Redemptions first");
   await rejects(pk.pkBatch(db, PACKER, { from: T0, to: T0 - 1 }), "pk/bad-range");
   await rejects(pk.pkBatch(db, PACKER, { from: T0 - 70 * DAY, to: T0 }), "pk/bad-range");
 });
