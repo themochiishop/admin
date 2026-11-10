@@ -419,7 +419,7 @@
     let loaded = false, all = [], pending = [], filter = "all", folder = "today", sel = null, busy = false, access = null, range = null, curTab = "tabScan";
     const hist = [];
     const closedG = new Set();   // 准备：收起来的组
-    let claimItems = [], claimDb = null;
+    let claimItems = [], claimDb = null, claimWarn = "";
     const DRAW_CONFIG = { apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ", authDomain: "draw-tournament.firebaseapp.com", databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "draw-tournament", storageBucket: "draw-tournament.firebasestorage.app", messagingSenderId: "803720903757", appId: "1:803720903757:web:8b561daabc0d69af9e7004" };
     const sentLog = new Map();   // 这次打开页面已经放进去的东西（单号 → 东西）
 
@@ -675,7 +675,8 @@
       $("nAll").hidden = !allItems.length; $("nAll").textContent = allItems.length;
       document.querySelectorAll("[data-fd]").forEach(b => b.classList.toggle("on", b.dataset.fd === folder));
       const src = folder === "today" ? todayItems : allItems;
-      $("prepSub").textContent = folder === "today" ? t("prepToday") : t("prepAll");
+      $("prepSub").textContent = (folder === "today" ? t("prepToday") : t("prepAll")) + (claimWarn ? "\n" + claimWarn : "");
+      $("prepSub").style.whiteSpace = "pre-line";
       const G = new Map();
       src.forEach(x => { const nm = tr(x.i, "prep") || tr(x.i, "title"); const k = x.i.icon + nm; const g = G.get(k) || { icon: x.i.icon, k, nm, list: [] }; g.list.push(x); G.set(k, g); });
       const P = [...G.values()].sort((a, b) => b.list.length - a.list.length);
@@ -933,8 +934,8 @@
               en: { title: T.en.claimTitle(rank || T.en.claimPrize), prep: `${label} ${rank || T.en.claimPrize}`.trim(), sub: `${label}${b.title ? " · " + b.title : ""} · ${T.en.claimSub}`, src: label },
               name: String(x.name || "").toLowerCase(), uname: String(x.name || ""), orderNo: x.orderNo || "" });
           }));
-          await checkClaims();
-          $("claimHint").hidden = true; $("claimHint").innerHTML = "";
+          claimWarn = ""; await checkClaims();
+          $("claimHint").hidden = !claimWarn; $("claimHint").textContent = claimWarn;
           all.forEach(attachClaims); render(); if (sel) showSel(false);
         });
       } catch (e) { console.warn("claims", e); }
@@ -955,7 +956,10 @@
             sub: c.sub.replace(T.zh.claimSub, T.zh.claimMemSub) });
           c.en = { ...c.en, warn: T.en.claimMemWarn, sub: c.en.sub.replace(T.en.claimSub, T.en.claimMemSub) };
         });
-      } catch (e) { console.warn("claims check", e); }
+      } catch (e) {
+        console.warn("claims check", e);
+        claimWarn = (lang === "en" ? "⚠️ Couldn't check 🏆 Claim tracking against the member system (backend pkAdmin not updated?): " : "⚠️ 领奖追踪的 🏆 没办法对照会员系统（后端 pkAdmin 还没更新？）：") + errText(e);
+      }
     }
     function loadScript(src) {
       return new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok();
