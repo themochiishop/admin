@@ -501,7 +501,7 @@
       const cand = (r.candidates || []).map(x => `
         <div class="cand">
           ${platformTag(x.platform)} <b>${esc(x.orderNo)}</b> · ${esc(x.username)}
-          <div class="meta">下单时间：${fmt(x.orderTime)}${x.amount != null ? ` · RM${esc(x.amount)}` : ""} · ${x.source === "manual" ? "手动加入" + (x.by ? "（" + esc(x.by) + "）" : "") : "系统自动找到"}${x.ignoreDeadline ? " · ⚠️ 已忽略期限" : ""}</div>
+          <div class="meta">下单时间：${fmt(x.orderTime)}${x.amount != null ? ` · RM${esc(x.amount)}` : ""} · ${x.source === "manual" ? "手动加入" + (x.by ? "（" + esc(x.by) + "）" : "") : "系统自动找到"}${x.ignoreDeadline ? " · ⚠️ 已忽略期限" : ""}${x.allowEarly ? " · ⚠️ 兑换前的订单" : ""}</div>
           ${st === "order_review" ? `<div class="actions">
             <button class="btn btn-ok" data-act="confirmOrder" data-order="${esc(x.orderNo)}">✅ 确认这张订单</button>
             <button class="btn btn-ghost" data-act="rejectCandidate" data-order="${esc(x.orderNo)}">否决</button></div>` : ""}
@@ -515,7 +515,7 @@
         return `<div class="ord">
           <div class="tx">${platformTag(o.platform)} <b>${esc(o.no)}</b> · ${esc(o.username)}
             <div class="meta">下单 ${fmt(o.orderTime)} · RM${esc(o.amount ?? "-")}${o.status === "refunded" ? ' · <span style="color:var(--red-tx)">已取消/退货</span>' : ""}${before ? " · 兑换前" : ""}${late ? " · 截止后" : ""}</div></div>
-          ${canLink && !used.has(o.no) && !before && o.status !== "refunded" ? `<button class="btn btn-ghost" data-act="linkOrder" data-order="${esc(o.no)}" data-late="${late ? 1 : ""}">＋ 加为候选</button>` : used.has(o.no) ? '<span class="tag tag-pink">已在候选 / 已关联</span>' : ""}
+          ${canLink && !used.has(o.no) && (!before || ot >= reqMs - 7 * 864e5) && o.status !== "refunded" ? `<button class="btn btn-ghost" data-act="linkOrder" data-order="${esc(o.no)}" data-late="${late ? 1 : ""}" data-early="${before ? 1 : ""}">＋ 加为候选</button>` : used.has(o.no) ? '<span class="tag tag-pink">已在候选 / 已关联</span>' : ""}
         </div>`;
       }).join("") : `<p class="meta">这位会员目前没有订单</p>`;
 
@@ -607,6 +607,8 @@
     }
 
     // ---------- 操作 ----------
+    // 批准前会员已经下的单（兑换前 7 天内）：确认还没寄出，才手动关联
+    const EARLY_Q = no => `订单 ${no} 是会员兑换前就下的单。\n请先确认这张单还没寄出、可以把礼品放进同一个包裹。\n要手动关联吗？`;
     function ask(text, required = true) {
       const v = prompt(text);
       if (v == null) return null;
@@ -645,6 +647,11 @@
           if (!confirm(`订单 ${data.orderNo} 是截止后才下的单。要忽略期限、仍然加为候选吗？`)) return;
           const why = ask("忽略期限的原因（必填）"); if (why == null) return;
           data.ignoreDeadline = true; data.reason = why;
+        }
+        if (b.dataset.early) {
+          if (!confirm(EARLY_Q(data.orderNo))) return;
+          const why = ask("关联兑换前订单的原因（必填）"); if (why == null) return;
+          data.allowEarly = true; data.reason = why;
         }
       } else if (act === "unlinkOrder") {
         const why = ask("换订单的原因"); if (why == null) return; data.reason = why;
@@ -695,13 +702,22 @@
           await call(op, data);
         } catch (err) {
           // 手动输入的单号是截止后才下的：问要不要忽略期限，再送一次（新的事务 ID）
+          // 兑换前才下的单：确认后用「兑换前订单」再送一次
           const key = err && err.details && err.details.key;
+          if (op === "linkOrder" && !data.allowEarly && key === "nm/order-before-redeem") {
+            if (!confirm(EARLY_Q(data.orderNo))) throw err;
+            const why = ask("关联兑换前订单的原因（必填）");
+            if (why == null) throw err;
+            Object.assign(data, { allowEarly: true, reason: why, txId: newTxId() });
+            await call(op, data);
+          } else {
           if (op !== "linkOrder" || data.ignoreDeadline || key !== "nm/order-after-deadline") throw err;
           if (!confirm(`订单 ${data.orderNo} 是截止后才下的单。要忽略期限、仍然加为候选吗？`)) throw err;
           const why = ask("忽略期限的原因（必填）");
           if (why == null) throw err;
           Object.assign(data, { ignoreDeadline: true, reason: why, txId: newTxId() });
           await call(op, data);
+          }
         }
         const label = op === "cancel" && data.refund ? "取消并退分" : LOG[op] || op;
         logAdmin("redeem", `新会员奖励 · ${label}：${who}`, "newmember.html");
