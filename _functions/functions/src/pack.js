@@ -155,7 +155,11 @@ function packedOf(d) {
 function parcel(o, buyer, pend, names, done) {
   const keys = [buyer.uid ? "u:" + buyer.uid : null, userKey(buyer.platform, buyer.username)].filter(Boolean);
   const items = [], seen = new Set();
-  keys.forEach(k => (pend.by.get(k) || []).forEach(it => { if (!seen.has(it.id)) { seen.add(it.id); items.push(it); } }));
+  keys.forEach(k => (pend.by.get(k) || []).forEach(it => {
+    // 迎新礼已确认关联订单：只出现在那一包，扫这位会员的其他包裹不会出现
+    if (it.kind === "nm" && it.linkedOrder && it.linkedOrder !== o.no) return;
+    if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
+  }));
   return {
     orderNo: o.no, platform: buyer.platform, username: buyer.username, uid: buyer.uid || null,
     member: buyer.uid ? (names.get(buyer.uid) || "会员") : null, orderTime: toMs(o.orderTime), done: !!done, packed: packedOf(done), items,
@@ -322,6 +326,8 @@ async function shipOne(db, ctx, who, orderNo, it, txBase, ship = {}) {
     if (!snap.exists) fail("pk/not-found", "找不到这份迎新礼", "not-found");
     const n = snap.data();
     if (n.status === "shipped" || n.status === "completed") return "already";
+    const lo = n.linkedOrder && n.linkedOrder.orderNo;
+    if (lo && normNo(lo) !== orderNo) fail("pk/other-order", `迎新礼要放进订单 ${lo} 的包裹`);
     const tid = s => `${txBase.slice(0, 24)}_${s}_${it.id}`.slice(0, 64);   // 每一步一个事务 ID（防重复）
     if (n.status === core.S.READY) await core.nmPacked(db, ctx, { rid: it.id, txId: tid("p") });
     else if (n.status !== core.S.PACKED) fail("pk/state", "迎新礼还没确认订单");

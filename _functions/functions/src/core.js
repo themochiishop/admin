@@ -118,7 +118,8 @@ function isOwnerCtx(ctx) {
     && ctx.email.toLowerCase() === OWNER_EMAIL);
 }
 // 和 Firestore 规则的 club('newMember') 一样：店主，或 staff 名单里启用中、有 Member Club 全部或「新会员奖励」子权限的人
-async function requireStaff(db, ctx, { ownerOnly = false } = {}) {
+//   pack: true → 有「🧺 打包清单」权限也可以（只用在迎新礼的「已打包 / 已寄出」）
+async function requireStaff(db, ctx, { ownerOnly = false, pack = false } = {}) {
   requireSignedIn(ctx);
   if (isOwnerCtx(ctx)) return { owner: true, email: OWNER_EMAIL };
   if (ownerOnly) fail("nm/owner-only", "只有店主可以执行", "permission-denied");
@@ -128,7 +129,8 @@ async function requireStaff(db, ctx, { ownerOnly = false } = {}) {
   const d = snap.exists ? snap.data() : null;
   const m = d && d.perms ? d.perms.member : undefined;
   const ok = d && d.active !== false
-    && (m === true || (m && typeof m === "object" && m.newMember === true));
+    && (m === true || (m && typeof m === "object" && m.newMember === true)
+      || (pack && d.perms && d.perms.pack === true));
   if (!ok) fail("nm/no-perm", "没有「新会员奖励」权限", "permission-denied");
   return { owner: false, email };
 }
@@ -612,8 +614,8 @@ async function nmUnlinkOrder(db, ctx, data = {}) {
 }
 
 // 打包 / 拆包 / 寄出（一定由管理员按）
-function simpleMove(name, from, to, { needReason = false, field } = {}) {
-  return async (db, ctx, data = {}) => adminAction(db, ctx, name, data, {}, async (tx, staff) => {
+function simpleMove(name, from, to, { needReason = false, field, pack = false } = {}) {
+  return async (db, ctx, data = {}) => adminAction(db, ctx, name, data, { pack }, async (tx, staff) => {
     const reason = cleanReason(data.reason, needReason);
     const { ref, reward, red } = await loadReward(tx, db, data.rid);
     if (reward.status !== from) fail("nm/bad-move", `这笔不是「${from}」状态`);
@@ -633,9 +635,9 @@ function simpleMove(name, from, to, { needReason = false, field } = {}) {
     return { rid: data.rid, status: to };
   });
 }
-const nmPacked = simpleMove("packed", S.READY, S.PACKED, { field: "packed" });
+const nmPacked = simpleMove("packed", S.READY, S.PACKED, { field: "packed", pack: true });
 const nmUnpack = simpleMove("unpack", S.PACKED, S.READY, { needReason: true });
-const nmShipped = simpleMove("shipped", S.PACKED, S.SHIPPED, { field: "shipped" });
+const nmShipped = simpleMove("shipped", S.PACKED, S.SHIPPED, { field: "shipped", pack: true });
 
 // 延期：7 / 14 天，或自订日期；原因必填
 async function nmExtend(db, ctx, data = {}) {
