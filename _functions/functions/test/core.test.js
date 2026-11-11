@@ -354,6 +354,24 @@ test("手动关联：超过期限要勾选「忽略期限」并填原因", async
   assert.equal((await reward(rid)).status, "ready_to_pack");
 });
 
+test("手动关联兑换前的订单：要确认并填原因，只接受兑换前 7 天内", async () => {
+  const { m, rid, t } = await approved();
+  const early = await addOrder(m, m.accounts[0], t - DAY);
+  const old = await addOrder(m, m.accounts[0], t - 9 * DAY);
+  // 系统不会自动把兑换前的单加进候选
+  assert.equal((await core.onOrderWritten(db, early.no, null, early.data, { now: t })).added, undefined);
+  await rejects(admin("nmLinkOrder", at(OWNER, t + DAY), { rid, orderNo: early.no }), "nm/order-before-redeem");
+  await rejects(admin("nmLinkOrder", at(OWNER, t + DAY), { rid, orderNo: early.no, allowEarly: true }), "nm/reason-required");
+  await rejects(admin("nmLinkOrder", at(OWNER, t + DAY), { rid, orderNo: old.no, allowEarly: true, reason: "x" }), "nm/order-too-early");
+  await admin("nmLinkOrder", at(OWNER, t + DAY), { rid, orderNo: early.no, allowEarly: true, reason: "批准前已下单，还没寄出" });
+  let rw = await reward(rid);
+  assert.equal(rw.candidates[0].allowEarly, true);
+  await admin("nmConfirmOrder", at(OWNER, t + DAY), { rid, orderNo: early.no });
+  rw = await reward(rid);
+  assert.equal(rw.status, "ready_to_pack");
+  assert.equal(rw.linkedOrder.allowEarly, true);
+});
+
 // ---------------------------------------------------------------- 权限、设定
 test("权限：会员、没有权限的管理员都不能操作；有「新会员奖励」子权限可以；异常处理只有店主", async () => {
   const { m, rid, t } = await approved();
