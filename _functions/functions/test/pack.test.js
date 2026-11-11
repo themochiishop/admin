@@ -132,7 +132,8 @@ test("这一批：最近 14 天、没取消的订单；会员的东西合在一�
   assert.equal(it.w3.can, false); assert.equal(it.r2.can, false);           // 还没领 / 待审核：只提醒
   assert.equal(it.w1.can, true); assert.equal(it.ci_u1_20261119.can, true); assert.equal(it.uAqmar01_1.can, true);
   assert.equal(by["587000000000000002"].uid, "u1");                        // TikTok 单靠绑定认出同一位会员
-  assert.equal(by["587000000000000002"].items.length, 7);
+  assert.equal(by["587000000000000002"].items.length, 6);                 // 迎新礼只在它关联的那一包
+  assert.ok(!by["587000000000000002"].items.some(i => i.kind === "nm"));
   assert.deepEqual(by["2611190000003"].items.map(i => i.id), ["b__2"]);    // 非会员：平台 + 用户名
   assert.equal(by["2611190000003"].member, null);
   assert.deepEqual(by["2611190000004"].items, []);                         // 作废的小礼物不算
@@ -190,6 +191,14 @@ test("勾选：待审核 / 还没领的不能勾，其他照样成功", async ()
   assert.equal(db.data.get("packDone/2611190000001"), undefined);          // 没有 done:true 就不标记
   await rejects(pk.pkShip(db, PACKER, { orderNo: "2611190000001", items: [] }), "pk/bad-txid");
   await rejects(pk.pkShip(db, NOBODY, { orderNo: "2611190000001", items: [], txId: "tx_abcdefgh" }), "pk/no-perm");
+});
+
+test("迎新礼放错包裹：拒绝，状态不变", async () => {
+  const db = fakeDb(SEED());
+  const r = await pk.pkShip(db, PACKER, { orderNo: "587000000000000002", items: [{ kind: "nm", id: "uAqmar01_1" }], txId: "tx_nmwrong1" });
+  assert.equal(r.ok, false);
+  assert.match(r.results[0].error, /2611190000001/);
+  assert.equal(db.data.get("newMemberRewards/uAqmar01_1").status, "ready_to_pack");
 });
 
 test("勾选迎新礼：走新会员奖励流程（已打包 → 已寄出），兑换和会员资料同步", async () => {
