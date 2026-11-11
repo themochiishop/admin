@@ -118,8 +118,7 @@ function isOwnerCtx(ctx) {
     && ctx.email.toLowerCase() === OWNER_EMAIL);
 }
 // 和 Firestore 规则的 club('newMember') 一样：店主，或 staff 名单里启用中、有 Member Club 全部或「新会员奖励」子权限的人
-//   pack: true → 有「🧺 打包清单」权限也可以（只用在迎新礼的「已打包 / 已寄出」）
-async function requireStaff(db, ctx, { ownerOnly = false, pack = false } = {}) {
+async function requireStaff(db, ctx, { ownerOnly = false } = {}) {
   requireSignedIn(ctx);
   if (isOwnerCtx(ctx)) return { owner: true, email: OWNER_EMAIL };
   if (ownerOnly) fail("nm/owner-only", "只有店主可以执行", "permission-denied");
@@ -129,8 +128,7 @@ async function requireStaff(db, ctx, { ownerOnly = false, pack = false } = {}) {
   const d = snap.exists ? snap.data() : null;
   const m = d && d.perms ? d.perms.member : undefined;
   const ok = d && d.active !== false
-    && (m === true || (m && typeof m === "object" && m.newMember === true)
-      || (pack && d.perms && d.perms.pack === true));
+    && (m === true || (m && typeof m === "object" && m.newMember === true));
   if (!ok) fail("nm/no-perm", "没有「新会员奖励」权限", "permission-denied");
   return { owner: false, email };
 }
@@ -216,7 +214,8 @@ async function readBalance(tx, db, uid, at, excludeRedemptionId) {
 
 // ---------- 订单是否符合 ----------
 // 回传 { ok, reason, info }；reason 只在 ok = false 时有
-async function checkOrder(tx, db, reward, rid, orderSnap, { ignoreDeadline = false } = {}) {
+const EARLY_MS = 7 * 86400000; // 管理员手动关联时，最多接受兑换前 7 天内下的单
+async function checkOrder(tx, db, reward, rid, orderSnap, { ignoreDeadline = false, allowEarly = false } = {}) {
   if (!orderSnap || !orderSnap.exists) return { ok: false, reason: "not-found" };
   const o = orderSnap.data();
   const info = {
@@ -231,7 +230,8 @@ async function checkOrder(tx, db, reward, rid, orderSnap, { ignoreDeadline = fal
   const ot = toMs(o.orderTime);
   if (!ot) return { ok: false, reason: "no-time", info };
   // 起点：会员按兑换的时间（批准前下的单也算）；终点：目前截止时间（用平台下单时间，不用同步时间）
-  if (ot < toMs(reward.requestedAt)) return { ok: false, reason: "before-redeem", info };
+  const req = toMs(reward.requestedAt);
+  if (ot < req && !(allowEarly && ot >= req - EARLY_MS)) return { ok: false, reason: allowEarly ? "too-early" : "before-redeem", info };
   if (!ignoreDeadline && reward.deadline && ot > toMs(reward.deadline)) return { ok: false, reason: "after-deadline", info };
   // 订单的购买账号必须仍绑定在这位会员名下
   const bSnap = await tx.get(db.collection("bindings").doc(`${o.platform}_${o.username}`));
@@ -526,15 +526,17 @@ async function nmLinkOrder(db, ctx, data = {}) {
   return adminAction(db, ctx, "linkOrder", data, {}, async (tx, staff) => {
     if (!orderNoOk(data.orderNo)) fail("nm/bad-order", "订单编号格式不对", "invalid-argument");
     const ignoreDeadline = data.ignoreDeadline === true;
-    const reason = cleanReason(data.reason, ignoreDeadline);
+    const allowEarly = data.allowEarly === true;
+    const reason = cleanReason(data.reason, ignoreDeadline || allowEarly);
     const { ref, reward, red } = await loadReward(tx, db, data.rid);
     if (![S.ORDER, S.REVIEW, S.EXPIRED].includes(reward.status)) fail("nm/bad-move", "这个状态不能关联订单");
     const oSnap = await tx.get(db.collection("orders").doc(data.orderNo));
-    const c = await checkOrder(tx, db, reward, data.rid, oSnap, { ignoreDeadline });
+    const c = await checkOrder(tx, db, reward, data.rid, oSnap, { ignoreDeadline, allowEarly });
     if (!c.ok) fail("nm/order-" + c.reason, orderReasonText(c.reason));
     const at = ts(nowMs(ctx));
+    const early = toMs(c.info.orderTime) < toMs(reward.requestedAt);
     const list = (reward.candidates || []).filter(x => x.orderNo !== data.orderNo);
-    list.push({ ...c.info, source: "manual", ignoreDeadline, foundAt: at, by: staff.email });
+    list.push({ ...c.info, source: "manual", ignoreDeadline, allowEarly: early, foundAt: at, by: staff.email });
     const status = S.REVIEW;
     tx.update(ref, { candidates: list, status, updatedAt: at });
     if (reward.status !== status) {
@@ -542,7 +544,7 @@ async function nmLinkOrder(db, ctx, data = {}) {
       syncMember(tx, db, reward.uid, { rid: data.rid, status, deadline: reward.deadline, updatedAt: at });
     }
     addHistory(tx, db, data.rid, { action: "linkOrder", from: reward.status, to: status, by: staff.email, reason,
-      detail: { orderNo: data.orderNo, ignoreDeadline }, txId: data.txId }, ctx);
+      detail: { orderNo: data.orderNo, ignoreDeadline, allowEarly: early }, txId: data.txId }, ctx);
     return { rid: data.rid, status };
   });
 }
@@ -576,11 +578,12 @@ async function nmConfirmOrder(db, ctx, data = {}) {
     const cand = (reward.candidates || []).find(x => x.orderNo === data.orderNo);
     if (!cand) fail("nm/not-candidate", "请先把这张单加进候选");
     const oSnap = await tx.get(db.collection("orders").doc(data.orderNo));
-    const c = await checkOrder(tx, db, reward, data.rid, oSnap, { ignoreDeadline: cand.ignoreDeadline === true });
+    const c = await checkOrder(tx, db, reward, data.rid, oSnap,
+      { ignoreDeadline: cand.ignoreDeadline === true, allowEarly: cand.allowEarly === true });
     if (!c.ok) fail("nm/order-" + c.reason, orderReasonText(c.reason));
     const at = ts(nowMs(ctx));
     tx.set(db.collection(COL.locks).doc(data.orderNo), { rid: data.rid, uid: reward.uid, at });
-    const linkedOrder = { ...c.info, by: staff.email, at, ignoreDeadline: cand.ignoreDeadline === true };
+    const linkedOrder = { ...c.info, by: staff.email, at, ignoreDeadline: cand.ignoreDeadline === true, allowEarly: cand.allowEarly === true };
     tx.update(ref, { status: S.READY, linkedOrder, orderIssue: null, reviewedBy: staff.email, reviewedAt: at, updatedAt: at });
     syncRedemption(tx, red, S.READY);
     syncMember(tx, db, reward.uid, { rid: data.rid, status: S.READY, deadline: reward.deadline, updatedAt: at });
@@ -609,8 +612,8 @@ async function nmUnlinkOrder(db, ctx, data = {}) {
 }
 
 // 打包 / 拆包 / 寄出（一定由管理员按）
-function simpleMove(name, from, to, { needReason = false, field, pack = false } = {}) {
-  return async (db, ctx, data = {}) => adminAction(db, ctx, name, data, { pack }, async (tx, staff) => {
+function simpleMove(name, from, to, { needReason = false, field } = {}) {
+  return async (db, ctx, data = {}) => adminAction(db, ctx, name, data, {}, async (tx, staff) => {
     const reason = cleanReason(data.reason, needReason);
     const { ref, reward, red } = await loadReward(tx, db, data.rid);
     if (reward.status !== from) fail("nm/bad-move", `这笔不是「${from}」状态`);
@@ -630,9 +633,9 @@ function simpleMove(name, from, to, { needReason = false, field, pack = false } 
     return { rid: data.rid, status: to };
   });
 }
-const nmPacked = simpleMove("packed", S.READY, S.PACKED, { field: "packed", pack: true });
+const nmPacked = simpleMove("packed", S.READY, S.PACKED, { field: "packed" });
 const nmUnpack = simpleMove("unpack", S.PACKED, S.READY, { needReason: true });
-const nmShipped = simpleMove("shipped", S.PACKED, S.SHIPPED, { field: "shipped", pack: true });
+const nmShipped = simpleMove("shipped", S.PACKED, S.SHIPPED, { field: "shipped" });
 
 // 延期：7 / 14 天，或自订日期；原因必填
 async function nmExtend(db, ctx, data = {}) {
@@ -1004,7 +1007,8 @@ function orderReasonText(reason) {
     "other-member": "这张订单不属于这位会员",
     "refunded": "这张订单已取消 / 退货",
     "no-time": "这张订单没有下单时间",
-    "before-redeem": "下单时间早于兑换时间",
+    "before-redeem": "下单时间早于兑换时间（可确认后手动关联）",
+    "too-early": "只能关联兑换前 7 天内下的订单",
     "after-deadline": "下单时间晚于截止时间（可勾选忽略期限）",
     "not-bound": "这个购买账号目前没有绑定在这位会员名下",
     "locked": "这张订单已被另一笔迎新礼使用",
