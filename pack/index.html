@@ -351,6 +351,7 @@
         trkDup: "这个追踪号已经填好了",
         secPut: "放进这一包（取消勾选 = 这次不寄，留到下一单）", secSent: "已放入", sentSmall: "✅ 已放入",
         others: (n, l) => `💡 这位会员今天还有 ${n} 包（${l}）。这包没勾的，扫那一包时会再出现。`, sep: "、",
+        nmElse: (g, no) => `🎉 ${g}不放这包，要放进订单 …${no} 的包裹（会员看到的是这张单）。`, nmOrder: no => `📦 放进订单 …${no}`,
         undoBtn: "↩️ 撤销这一包（订单取消 / 勾错了）",
         needTrk: "🚚 运单号", trkOk: "✅ 已扫", trkMiss: "扫追踪号", carrier: "运输公司", pick: "— 选 —", trkNo: "运单号", trkPh: "扫追踪号条码",
         url: "查询链接", urlPh: "https://…（选好公司会自动生成）", needPh: "📷 照片", phOk: "✅ 已拍", phMiss: "拍一张包裹照片", phDel: "✕ 删掉", phRe: "重拍", phShot: "📷 拍照",
@@ -394,6 +395,7 @@
         trkDup: "This tracking no. is already filled in",
         secPut: "Put in this parcel (untick = not this time, keep for next order)", secSent: "Already added", sentSmall: "✅ Added",
         others: (n, l) => `💡 This member has ${n} more parcel(s) today (${l}). Unticked items show up again when you scan that parcel.`, sep: ", ",
+        nmElse: (g, no) => `🎉 ${g} does NOT go in this parcel. Put it in order …${no} (that's the order the member sees).`, nmOrder: no => `📦 Goes in order …${no}`,
         undoBtn: "↩️ Undo this parcel (order cancelled / ticked wrongly)",
         needTrk: "🚚 Tracking no.", trkOk: "✅ Scanned", trkMiss: "Scan tracking", carrier: "Courier", pick: "— Pick —", trkNo: "Tracking no.", trkPh: "Scan tracking barcode",
         url: "Tracking link", urlPh: "https://… (auto-filled after picking courier)", needPh: "📷 Photo", phOk: "✅ Taken", phMiss: "Take one parcel photo", phDel: "✕ Delete", phRe: "Retake", phShot: "📷 Take photo",
@@ -634,12 +636,16 @@
     const left = p => p.items.filter(i => !i.sent);
     function addSent(p) { (sentLog.get(p.orderNo) || []).forEach(i => { if (!p.items.some(j => j.id === i.id)) p.items.push({ ...i, sent: true }); }); }
     const canLeft = p => left(p).filter(i => i.can);
+    // 迎新礼已关联订单：固定在那一包（不跟「同会员第一包」走）
+    const pinned = i => i.kind === "nm" && !!i.linkedOrder;
+    const freeLeft = p => canLeft(p).filter(i => !pinned(i));
+    const pinLeft = p => canLeft(p).filter(pinned);
     const warns = p => left(p).filter(i => !i.can);
     const buyerKey = p => p.uid ? "u:" + p.uid : `p:${p.platform}:${String(p.username || "").toLowerCase()}`;
     // 同一位会员今天有几包：东西显示在第一包（还没放好的、下单最早的）
     function owners() {
       const m = new Map();
-      all.filter(p => !p.done).forEach(p => { const k = buyerKey(p); if (canLeft(p).length && !m.has(k)) m.set(k, p.orderNo); });
+      all.filter(p => !p.done).forEach(p => { const k = buyerKey(p); if (freeLeft(p).length && !m.has(k)) m.set(k, p.orderNo); });
       return m;
     }
 
@@ -647,7 +653,7 @@
       const own = owners();
       const rows = all.map(p => {
         const k = buyerKey(p), isOwner = own.get(k) === p.orderNo;
-        const c = isOwner ? canLeft(p) : [];
+        const c = [...(isOwner ? freeLeft(p) : []), ...pinLeft(p)];
         const st = p.done && !c.length ? "done" : c.length ? "todo" : own.has(k) ? "other" : warns(p).length ? "warn" : "none";
         return { p, c, st };
       });
@@ -705,7 +711,7 @@
     function renderPrep(todayItems) {
       // 全部待寄：每位顾客还没寄的（可以寄的；含今天没单的）
       const allItems = [];
-      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: w })); });
+      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: pinned(i) ? { ...w, order: "", warn: t("nmOrder", i.linkedOrder.slice(-6)) } : w })); });
       claimItems.forEach(c => {
         if (c.uid) {   // 会员得主（会员系统还没有这笔奖品）
           const g = pending.find(x => x.uid === c.uid);
@@ -781,6 +787,10 @@
       // 只留还在的勾选
       sel.on = new Set([...sel.on].filter(id => c.some(i => i.id === id)));
       const others = all.filter(x => x !== p && !x.done && buyerKey(x) === buyerKey(p)).map(x => x.orderNo);
+      // 这位会员的迎新礼固定在别的单：提醒不要放这包
+      const pg = pending.find(g => g.key === buyerKey(p));
+      const nmElse = ((pg && pg.items) || []).filter(i => pinned(i) && i.can && i.linkedOrder !== p.orderNo && !c.some(j => j.id === i.id))
+        .map(i => `<div class="note">${esc(t("nmElse", tr(i, "title"), i.linkedOrder.slice(-6)))}</div>`).join("");
       const who = [esc(p.username || "-"), PLAT[p.platform] || "", p.uid ? "🎫 " + esc(p.member || t("member")) : ""].filter(Boolean).join(" · ");
       const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="hr"><div class="no">${esc(p.orderNo)}</div><div class="who">${who}</div></div></div>`;
       const warnHtml = i => `<div class="warn">⚠️ ${i.icon} <b>${esc(tr(i, "title"))}</b>：${esc(tr(i, "warn") || tr(i, "sub"))}</div>`;
@@ -803,9 +813,9 @@
           + (sent.length ? `<div class="sec-t">${esc(t("secSent"))}</div>` + sent.map(i => item(i, "sent")).join("") : "")
           + w.map(warnHtml).join("")
           + (others.length ? `<div class="note">${esc(t("others", others.length, others.map(o => "…" + o.slice(-6)).join(t("sep"))))}</div>` : "")
-          + shipForm();
+          + nmElse + shipForm();
       } else {   // pack：没东西放（或已打包后修改）
-        body = w.map(warnHtml).join("") + shipForm();
+        body = w.map(warnHtml).join("") + nmElse + shipForm();
       }
       $("result").innerHTML = `<div class="res ${cls}">${head(big)}<div class="res-body">${body}</div></div>`;
       if (fresh) { $("result").firstElementChild.classList.add("flash"); addHist(p); }
