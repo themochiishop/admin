@@ -134,19 +134,44 @@ const LIVE_Q = {
 };
 export const live = {};          // key → [{ id, ...data }]；还没读到 = undefined
 const liveSubs = new Set();
+const liveCache = {};            // key → true = 现在显示的是暂存（还没连上 / 断线）
+let liveBroken = false;          // 监听出错（不是没有权限）
 function liveStart(key) {
   if (key in live || !LIVE_Q[key]) return;
   live[key] = undefined;
-  onSnapshot(LIVE_Q[key](), snap => {
+  liveCache[key] = true;
+  // includeMetadataChanges：断线 / 连回来时也会通知（只是状态，不会多算读取）
+  onSnapshot(LIVE_Q[key](), { includeMetadataChanges: true }, snap => {
+    liveCache[key] = snap.metadata.fromCache;
     live[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     liveEmit();
   }, e => {   // 没有权限 / 还没加规则：当作 0
     console.warn("live " + key, e);
+    if (e && e.code !== "permission-denied") liveBroken = true;
+    delete liveCache[key];
     live[key] = [];
     liveEmit();
   });
+  paintLivePill();
 }
+// 🟢 侧边栏「实时」小标：连上 = 绿点闪；断网 = 灰「离线」；出错 = 红「中断」
+function paintLivePill() {
+  const el = document.getElementById("livePill");
+  if (!el) return;
+  const keys = Object.keys(liveCache);
+  if (!keys.length && !liveBroken) { el.hidden = true; return; }
+  const offline = !navigator.onLine || keys.some(k => liveCache[k]);
+  const st = liveBroken ? "err" : offline ? "off" : "on";
+  el.hidden = false;
+  el.className = "live-pill " + st;
+  el.querySelector("b").textContent = st === "on" ? "实时" : st === "off" ? "连线中…" : "中断";
+  el.title = st === "on" ? "实时更新中：会员那边有变动，红点和待处理会自动更新，不用重新整理"
+    : st === "off" ? "还没连上 / 网络断了：恢复后会自动更新" : "实时连线中断，请重新整理页面";
+}
+window.addEventListener("online", () => paintLivePill());
+window.addEventListener("offline", () => paintLivePill());
 function liveEmit() {
+  paintLivePill();
   paintBadges();
   liveSubs.forEach(fn => { try { fn(live); } catch (e) { console.warn("live sub", e); } });
 }
@@ -508,6 +533,7 @@ export function renderAdminNav(active) {
     <div class="side-top">
       <button class="side-burger" id="sideBurger" type="button" aria-label="打开菜单">☰<span class="side-dot" id="sideDot" hidden></span></button>
       <a class="side-brand" href="index.html">Mochiishop/admin<small>会员系统</small></a>
+      <span class="live-pill" id="livePill" hidden><i></i><b>实时</b></span>
     </div>
     <nav class="side-scroll">
       ${NAV_GROUPS.map(g => `
