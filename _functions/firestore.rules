@@ -82,11 +82,25 @@ service cloud.firestore {
         && fdRank() >= fdCfg().get('replyRank', 0);
     }
     function fdCanPost() {
-      return fdIsMem() && (fdPerm() != 'none'
-        || ((fdInternal() || fdBound()) && fdRank() >= fdCfg().get('postRank', 1)));
+      // 🏷️ 内部会员：发帖不看等级（2026-11-12）
+      return fdIsMem() && (fdPerm() != 'none' || fdInternal()
+        || (fdBound() && fdRank() >= fdCfg().get('postRank', 1)));
     }
-    function fdAutoPublish() { return fdPerm() != 'none' || fdRank() >= fdCfg().get('autoRank', 2); }
+    function fdAutoPublish() { return fdPerm() != 'none' || fdInternal() || fdRank() >= fdCfg().get('autoRank', 2); }   // 🏷️ 内部会员：直接公开
     function fdPost(pid) { return get(fdPath('feedPosts', pid)).data; }
+    // 🏅 签到分享帖（2026-11-09）：签到达人达标后可以发一篇（tag = 'checkin'、ciMs = 达标日期），
+    //    就算等级还不能发帖也可以（要绑定订单或内部会员）；分享资格只由后端写在 checkins/{uid}.share
+    function fdCiShareOk(d) {
+      return d.get('tag', '') == 'checkin' && d.get('ciMs', '') is string
+        && exists(fdPath('checkins', request.auth.uid))
+        && get(fdPath('checkins', request.auth.uid)).data.get('share', {}).get('ms', '') == d.ciMs
+        && get(fdPath('checkins', request.auth.uid)).data.get('share', {}).get('claimed', true) == false
+        && fdIsMem() && (fdInternal() || fdBound() || fdPerm() != 'none');
+    }
+    // 📵 不可以有电话号码（要和前台 js/phone-filter.js 一致）：马来西亚手机 / 市话、连续 9 位以上数字
+    function fdNoPhone(s) {
+      return !s.matches('[\\s\\S]*((\\+?60[\\s.-]?|0)(1[0-9]|[3-9])[\\s.-]?[0-9]{3,4}[\\s.-]?[0-9]{4}|[0-9]{9,})[\\s\\S]*');
+    }
     function fdCanSee(p) { return p.status == 'published' && fdRank() >= p.minRank; }
     function fdAuthorOk(d) {
       return d.authorUid == request.auth.uid
@@ -116,9 +130,11 @@ service cloud.firestore {
         || fdAdminRead()
         || (fdIn() && resource.data.authorUid == request.auth.uid);
       allow create: if fdAdmin() || (
-        fdCanPost() && fdAuthorOk(request.resource.data)
+        (fdCanPost() || fdCiShareOk(request.resource.data)) && fdAuthorOk(request.resource.data)
         && request.resource.data.keys().hasOnly(['type', 'status', 'minRank', 'authorUid', 'authorName',
-             'authorTier', 'authorTitle', 'thumb', 'imageCount', 'pinned', 'createdAt'])
+             'authorTier', 'authorTitle', 'thumb', 'imageCount', 'pinned', 'createdAt', 'tag', 'ciMs'])
+        // 带了签到标签就一定要有分享资格（不能随便标成签到帖）
+        && (!('tag' in request.resource.data) || fdCiShareOk(request.resource.data))
         && request.resource.data.type == 'normal'
         && request.resource.data.minRank == 0
         && request.resource.data.pinned == false
@@ -143,12 +159,14 @@ service cloud.firestore {
           && getAfter(fdPath('feedPosts', pid)).data.authorUid == request.auth.uid
           && request.resource.data.keys().hasOnly(['text', 'images'])
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+          && fdNoPhone(request.resource.data.text)
           && request.resource.data.images is list && request.resource.data.images.size() <= 3);
         // ✏️ 作者改文字：要和帖子的 editedAt 一起送出（上面帖子的规则会检查审核状态）
         allow update: if fdAdmin() || (fdIn() && doc == 'main'
           && fdPost(pid).authorUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text'])
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000
+          && fdNoPhone(request.resource.data.text)
           && getAfter(fdPath('feedPosts', pid)).data.get('editedAt', null) == request.time);
         allow delete: if fdMod() || (fdIn() && fdPost(pid).authorUid == request.auth.uid);
       }
@@ -164,6 +182,7 @@ service cloud.firestore {
               || request.resource.data.replyToUid == request.resource.data.replyTo.uid)
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+          && fdNoPhone(request.resource.data.text)
           && request.resource.data.createdAt == request.time
         );
         // ✏️ 作者编辑自己的回复（只能改文字，要附上 editedAt = 现在）
@@ -172,6 +191,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+          && fdNoPhone(request.resource.data.text)
           && request.resource.data.editedAt == request.time);
         allow delete: if fdMod() || (fdIn() && resource.data.authorUid == request.auth.uid);
       }
@@ -192,13 +212,16 @@ service cloud.firestore {
     match /memberFeed/{uid} {
       allow read: if true;
       allow create, update: if fdAdmin() || club('members') || (fdIn() && request.auth.uid == uid && fdIsMem()
-                && request.resource.data.keys().hasOnly(['name', 'tier', 'title', 'avatar', 'bio', 'code', 'best', 'updatedAt'])
+                && request.resource.data.keys().hasOnly(['name', 'tier', 'title', 'avatar', 'bio', 'code', 'best', 'updatedAt', 'ciBadge'])
+        // 🏅 签到达人次数只有后端能写：会员保存资料时要原样带着，不能改
+        && request.resource.data.get('ciBadge', 0) == (resource == null ? 0 : resource.data.get('ciBadge', 0))
         && request.resource.data.get('code', uid[0:8]) == uid[0:8]
         && request.resource.data.name == fdMem().get('name', '')
         && request.resource.data.tier == fdMem().get('tier', 'mochii')
         && request.resource.data.title == fdTitle()
         && request.resource.data.get('best', '') == fdMem().get('bestTier', '')
         && request.resource.data.bio is string && request.resource.data.bio.size() <= 60
+        && fdNoPhone(request.resource.data.bio)
         && fdAvatarOk(request.resource.data.avatar)
         && (!request.resource.data.avatar.matches('^data:.*')
             || fdInternal() || fdBound() || fdPerm() != 'none'));
@@ -231,6 +254,23 @@ service cloud.firestore {
         && request.resource.data.status == 'open'
         && request.resource.data.createdAt == request.time;
       allow update, delete: if fdAdmin();
+    }
+    // 📵 屏蔽记录：会员的文字被换成 *** 时，前台写一笔（原文只有后台 Feed 权限看得到；会员只能新增，不能读、改）
+    match /filterLogs/{id} {
+      allow read: if fdAdmin();
+      allow create: if fdIsMem()
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'kind', 'postId', 'commentId', 'original', 'masked', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() <= 60
+        && request.resource.data.kind in ['post', 'comment', 'editPost', 'editComment', 'bio']
+        && request.resource.data.postId is string && request.resource.data.postId.size() <= 40
+        && request.resource.data.commentId is string && request.resource.data.commentId.size() <= 40
+        && request.resource.data.original is string && request.resource.data.original.size() <= 2000
+        && request.resource.data.masked is string && request.resource.data.masked.size() <= 2000
+        && fdNoPhone(request.resource.data.masked)
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if ownerOk();
     }
     // ===================== Mochii Feed 结束 =====================
 
@@ -445,6 +485,12 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 📅 每日签到状态（2026-11-09）：会员只能看自己的；只有后端（Cloud Function ciMember）能写，积分流水也由后端写
+    match /checkins/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || clubAny();
+      allow write: if false;
+    }
+
     // 俱乐部设定（开放 / 维修中）：所有人可读，只有管理员能改
     match /settings/{id} {
       allow read: if true;
@@ -628,34 +674,8 @@ service cloud.firestore {
       allow create: if ownerOk() && request.resource.data.get('gift', false) == true
         && request.resource.data.cost == 0 && request.resource.data.status == 'approved'
         && request.resource.data.uid is string;
-      // 会员提交：奖品必须上架中，积分和名称必须与奖品目录一致
-      allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['uid', 'rewardId', 'rewardName', 'cost', 'status', 'createdAt', 'kind', 'address', 'delivery', 'variantId', 'variantName'])
-        // 📦 会员只能选随单寄送（单独寄出由管理员在审核时改）
-        && request.resource.data.get('delivery', 'withOrder') == 'withOrder'
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.status == 'pending'
-        && request.resource.data.createdAt == request.time
-        && rewardDoc(request.resource.data.rewardId).data.active == true
-        && rewardDoc(request.resource.data.rewardId).data.cost == request.resource.data.cost
-        && rewardDoc(request.resource.data.rewardId).data.name == request.resource.data.rewardName
-        // ⏰ 设定了下架时间的奖品，时间过了就不能再兑换
-        && (rewardDoc(request.resource.data.rewardId).data.get('endAt', null) == null
-            || rewardDoc(request.resource.data.rewardId).data.endAt > request.time)
-        // 🔒 未开放的奖品不能兑换；有开放时间的，时间到了才可以（用伺服器时间，改手机时间也没用）
-        && (rewardDoc(request.resource.data.rewardId).data.get('comingSoon', false) != true
-            || (rewardDoc(request.resource.data.rewardId).data.get('openAt', null) != null
-                && rewardDoc(request.resource.data.rewardId).data.openAt <= request.time))
-        // 🎨 有款式的奖品（2026-11-08）：一定要选一个存在的款式（名称要一致）；没有款式的奖品不能带款式
-        && ((rewardDoc(request.resource.data.rewardId).data.get('variants', {}).size() == 0
-              && !('variantId' in request.resource.data))
-            || (request.resource.data.get('variantId', '') in rewardDoc(request.resource.data.rewardId).data.get('variants', {})
-              && rewardDoc(request.resource.data.rewardId).data.variants[request.resource.data.variantId].name == request.resource.data.get('variantName', '')))
-        // 📦 实体奖品：随单寄送（不用地址），或旧版网页送来的有地址
-        && (rewardDoc(request.resource.data.rewardId).data.type == 'coupon'
-            || (request.resource.data.get('kind', '') == 'gift'
-                && (request.resource.data.get('delivery', '') == 'withOrder'
-                    || validAddr(request.resource.data.get('address', null)))));
+      // 🛍️ 会员兑换（2026-11-09 起）：只能经过后端 Cloud Function rdMember（检查库存 / 款式 / 限兑 / 积分，并马上扣库存），会员网页不能直接建立
+      // （原本的会员建立规则已移除；旧版规则在 Git 记录和项目备份里）
       // 管理员审核、发货；会员可以：取消「审核中」的申请、发货前修改地址、确认收货
       // 🎉 迎新礼（newMember == true）的兑换由后端处理：兑换审核不能改，会员也不能直接取消（要经后端）
       allow update: if (club('redeem') && resource.data.get('newMember', false) != true) || (
@@ -663,6 +683,8 @@ service cloud.firestore {
           // 取消审核中的申请
           (resource.data.status == 'pending'
             && resource.data.get('newMember', false) != true
+            && resource.data.get('ciGift', false) != true   // 🏅 签到达人礼物：会员不能自己取消（库存由后台 / 后端处理）
+            && resource.data.get('reserved', false) != true   // 🛍️ 已保留库存的兑换要经过后端取消（才会加回库存）
             && request.resource.data.status == 'cancelled'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
           // 单独寄出：发货前（或配送异常时）填写 / 修改这笔的收货地址；填好后 addrPending 改回 false
