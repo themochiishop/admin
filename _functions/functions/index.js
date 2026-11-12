@@ -15,6 +15,7 @@ const checkin = require("./src/checkin");   // 📅 每日签到
 const redeem = require("./src/redeem");     // 🛍️ 商城兑换（扣库存）
 const smallgift = require("./src/smallgift"); // 🎁 小礼物（抽奖没得奖 → 随下一单寄出）
 const pack = require("./src/pack");           // 🧺 打包清单（扫单看要放什么）
+const points = require("./src/points");       // 💰 积分与会员等级（从 Apps Script 搬过来；pointsMeta/engine.on 打开才会动）
 
 initializeApp();
 const db = getFirestore();
@@ -169,3 +170,50 @@ exports.nmDaily = onSchedule({ schedule: "5 9 * * *", timeZone: "Asia/Kuala_Lump
     const r = await core.daily(db);
     logger.info("nmDaily", r);
   });
+
+// ======================================================================
+// 💰 积分与会员等级（2026-11-12 从 Apps Script 搬过来，见 src/points.js）
+//    pointsMeta/engine.on 打开才会动（预设关）；Apps Script 的积分计算要先停掉，不然会重复给分
+// ======================================================================
+const before_ = e => (e.data && e.data.before && e.data.before.exists ? e.data.before.data() : null);
+const after_ = e => (e.data && e.data.after && e.data.after.exists ? e.data.after.data() : null);
+
+// 订单写入：只算这一张单（属于谁、积分、等级）
+exports.ptOnOrder = onDocumentWritten({ document: "orders/{orderNo}", region: DB_REGION },
+  async event => {
+    try { await points.onOrder(db, event.params.orderNo, before_(event), after_(event)); }
+    catch (e) { logger.error("ptOnOrder", event.params.orderNo, e); }   // 每日检查 / 全量核对会补上
+  });
+// 绑定建立 / 删除：只把这个平台账号的订单重新归属
+exports.ptOnBinding = onDocumentWritten({ document: "bindings/{id}", region: DB_REGION },
+  async event => {
+    try { await points.onBinding(db, event.params.id, before_(event), after_(event)); }
+    catch (e) { logger.error("ptOnBinding", event.params.id, e); }
+  });
+// 会员资料：Black Elite 开关 → 重算等级；生日 / 内部会员 → 当月生日马上补发
+exports.ptOnMember = onDocumentWritten({ document: "members/{uid}", region: DB_REGION },
+  async event => {
+    try { await points.onMember(db, event.params.uid, before_(event), after_(event)); }
+    catch (e) { logger.error("ptOnMember", event.params.uid, e); }
+  });
+// 积分记录 / 兑换变动：重算这位会员的余额（members.bal）
+exports.ptOnLedger = onDocumentWritten({ document: "pointsLedger/{id}", region: DB_REGION },
+  async event => {
+    try { await points.onLedger(db, before_(event), after_(event)); }
+    catch (e) { logger.error("ptOnLedger", event.params.id, e); }
+  });
+exports.ptOnRedemption = onDocumentWritten({ document: "redemptions/{id}", region: DB_REGION },
+  async event => {
+    try { await points.onRedemption(db, before_(event), after_(event)); }
+    catch (e) { logger.error("ptOnRedemption", event.params.id, e); }
+  });
+// 每天凌晨 3:10（马来西亚）：等级到期、消费滑出 365 天、生日（每月一次）、积分过期、兑换 / 中奖自动完成、中奖过期
+exports.ptDaily = onSchedule({ schedule: "10 3 * * *", timeZone: "Asia/Kuala_Lumpur", region: CALL_REGION, timeoutSeconds: 540 },
+  async () => {
+    const r = await points.daily(db);
+    logger.info("ptDaily", r);
+  });
+// 后台（只有店主）：{ op: "status" | "compare" | "enable", confirm } | "disable" | "fullCheck" }
+const PT_OPS = { status: points.ptStatus, compare: points.ptCompare, enable: points.ptEnable, disable: points.ptDisable, fullCheck: points.ptFullCheck };
+exports.ptAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 2, timeoutSeconds: 540, memory: "512MiB" },
+  req => run(pick(PT_OPS, req), req));
