@@ -194,6 +194,16 @@
           <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>买家</th><th style="width:150px">放卡</th><th style="width:80px">类型</th><th style="width:170px">加入会员</th><th style="width:170px">标记</th><th style="width:90px">再下单</th></tr></thead>
             <tbody id="cbody"><tr><td colspan="6" class="empty">载入中…</td></tr></tbody></table></div>
         </div>
+        <!-- 📥 补登：已加入、但没有放卡记录 -->
+        <div class="card2" id="cExtraBox" hidden>
+          <div class="tool2" style="justify-content:space-between">
+            <h3 style="margin:0" id="cExtraH">📥 已加入，但没有放卡记录</h3>
+            <button id="cAddAll" class="btn btn-primary" style="padding:6px 14px">🆕 全部补登为新人卡</button>
+          </div>
+          <div class="meta" style="color:var(--muted);font-size:.78rem;margin:4px 0 8px">这段时间绑定成会员、但打包时没有勾「新人卡」的人（打包清单上线前放的卡、或打包时忘了勾）。按「🆕 补登」= 当作放了卡、因新人卡加入，会移到上面的统计（类型「📥 补登」，放卡时间 = 加入前最后一张单的打包时间）；按「👥 不是」= 不算新人卡，从这里拿掉（之后可以在上面改回来）。</div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>买家</th><th style="width:170px">加入会员</th><th style="width:170px">加入前最后一张单</th><th style="width:200px"></th></tr></thead>
+            <tbody id="cxbody"></tbody></table></div>
+        </div>
       </section>
 
       <!-- ⚠️ 需要处理 -->
@@ -503,8 +513,8 @@
     $("ilist").addEventListener("click", e => { if (e.target.closest("a")) return; const r = e.target.closest("[data-no]"); if (!r) return; const p = parcels.find(x => x.orderNo === r.dataset.no); if (p) { setTab("parcels"); openParcel(p); } });
 
     // ---------- 🆕 新人卡效果 ----------
-    let cardRows = [], cardSum = null, cardLoaded = false, cfilter = "all";
-    const LV = { must: "第一次买", suggest: "买过", none: "未分类" };
+    let cardRows = [], cardSum = null, cardLoaded = false, cfilter = "all", cardExtra = [];
+    const LV = { must: "第一次买", suggest: "买过", none: "未分类", added: "📥 补登" };
     const MK = { card: "🆕 因新人卡", unsure: "❓ 未确认", other: "👥 旧顾客 / 其他渠道" };
     function cardRange() {
       const v = $("cRange").value, n = new Date();
@@ -530,9 +540,9 @@
       const r = cardRange();
       $("cInfo").textContent = `放卡日期：${fmtD(r.from)} – ${fmtD(r.to)}`;
       $("cbody").innerHTML = `<tr><td colspan="6" class="empty">计算中…</td></tr>`;
-      try { const d = await call("cardStats", r); cardRows = d.rows || []; cardSum = d.summary; }
+      try { const d = await call("cardStats", r); cardRows = d.rows || []; cardSum = d.summary; cardExtra = d.extra || []; }
       catch (e) { $("cbody").innerHTML = `<tr><td colspan="6" class="empty">载入失败：${esc(errText(e))}</td></tr>`; return; }
-      paintCard();
+      paintCard(); paintExtra();
     }
     const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
     // 改了标记：数字在画面上重算（不用再读一次）
@@ -540,7 +550,7 @@
       const s = cardSum; if (!s) return;
       ["card", "unsure", "other"].forEach(k => s[k] = cardRows.filter(r => r.mark === k).length);
       s.rate = pct(s.card, s.cards);
-      ["must", "suggest", "none"].forEach(l => { s.byLevel[l].card = cardRows.filter(r => (r.level || "none") === l && r.mark === "card").length; });
+      ["must", "suggest", "none", "added"].forEach(l => { if (s.byLevel[l]) s.byLevel[l].card = cardRows.filter(r => (r.level || "none") === l && r.mark === "card").length; });
     }
     const CF = { all: "全部", joined: "已加入", no: "还没加入", card: "🆕", unsure: "❓ 待确认", other: "👥", reorder: "有再下单" };
     const cmatch = (r, f) => f === "all" || (f === "joined" && r.joined) || (f === "no" && !r.joined) || (f === "reorder" && r.reorders > 0) || r.mark === f;
@@ -552,7 +562,7 @@
         + box(s.joined, `加入会员（${s.joinRate}%）`) + box(s.unsure, "❓ 待确认") + box(s.other, "👥 旧顾客 / 其他渠道")
         + box(s.avgDays == null ? "–" : s.avgDays, "平均几天加入（🆕）") + box(s.reordered, `再下单（${s.reorderRate}%）`);
       const lv = l => { const x = s.byLevel[l]; return x.cards ? `${LV[l]}：放 ${x.cards} 张 → 🆕 ${x.card}（${pct(x.card, x.cards)}%）· 加入 ${x.joined}` : ""; };
-      $("cLevel").innerHTML = ["must", "suggest", "none"].map(lv).filter(Boolean).join("　｜　")
+      $("cLevel").innerHTML = ["must", "suggest", "none", "added"].filter(l => s.byLevel[l]).map(lv).filter(Boolean).join("　｜　")
         + (s.byLevel.none.cards ? `<br>「未分类」= 11/12 统计上线前放的卡，没有记下是第一次买还是买过` : "")
         + (s.skippedMembers ? `<br>另有 ${s.skippedMembers} 位放卡时已经是会员，不算进统计` : "");
       $("cChips").innerHTML = Object.entries(CF).map(([k, v]) => `<button data-cf="${k}" class="${cfilter === k ? "on" : ""}">${v} ${cardRows.filter(r => !r.before && cmatch(r, k)).length}</button>`).join("");
@@ -569,6 +579,38 @@
           <td>${r.reorders ? `<b>${r.reorders}</b> 次<br><span class="meta" style="color:var(--muted)">最近 ${fmtD(r.lastReorder)}</span>` : "–"}</td></tr>`).join("")
         : `<tr><td colspan="6" class="empty">${cardRows.length ? "没有符合的买家" : "这段时间没有放新人卡"}</td></tr>`;
     }
+    // 📥 补登
+    function paintExtra() {
+      $("cExtraBox").hidden = !cardExtra.length;
+      $("cExtraH").textContent = `📥 已加入，但没有放卡记录（${cardExtra.length} 位）`;
+      $("cxbody").innerHTML = cardExtra.map(x => `<tr>
+          <td><b>${esc(PLAT[x.platform] || x.platform)} @${esc(x.username)}</b>${x.auto === "card" ? `<br><span class="c-auto">📱 系统认出：从新人卡 QR 码进来</span>` : ""}</td>
+          <td>✅ ${esc(x.member)}<br><span class="meta" style="color:var(--muted)">${fmtD(x.joinedAt)}</span></td>
+          <td>${x.lastOrder ? `${noHtml(x.lastOrder.orderNo)}<br><span class="meta" style="color:var(--muted)">${fmtT(x.lastOrder.at)}</span>` : `<span style="color:var(--muted)">找不到订单</span>`}</td>
+          <td><button class="btn btn-primary" data-cadd="${esc(x.key)}" style="padding:5px 10px">🆕 补登</button>
+            <button class="btn btn-ghost" data-cno="${esc(x.key)}" style="padding:5px 10px">👥 不是</button></td></tr>`).join("");
+    }
+    async function addCards(keys) {
+      const fail = [];
+      for (const k of keys) { try { await call("cardAdd", { key: k }); } catch (e) { fail.push(`${k}：${errText(e)}`); } }
+      if (fail.length) alert("有些补登失败：\n" + fail.join("\n"));
+      await loadCard();
+    }
+    $("cxbody").addEventListener("click", async e => {
+      const a = e.target.closest("[data-cadd]"), n = e.target.closest("[data-cno]");
+      if (!a && !n) return;
+      e.target.closest("tr").querySelectorAll("button").forEach(b => b.disabled = true);
+      if (a) return addCards([a.dataset.cadd]);
+      try { await call("cardMark", { key: n.dataset.cno, mark: "other" }); cardExtra = cardExtra.filter(x => x.key !== n.dataset.cno); paintExtra(); }
+      catch (err) { alert("保存失败：" + errText(err)); paintExtra(); }
+    });
+    $("cAddAll").onclick = async () => {
+      if (!cardExtra.length || !confirm(`把这 ${cardExtra.length} 位都补登为「🆕 因新人卡加入」？\n\n之后还可以在上面的表格一位一位改标记。`)) return;
+      $("cAddAll").disabled = true;
+      await addCards(cardExtra.map(x => x.key));
+      $("cAddAll").disabled = false;
+    };
+
     $("cChips").addEventListener("click", e => { const b = e.target.closest("[data-cf]"); if (b) { cfilter = b.dataset.cf; paintCard(); } });
     $("cq").addEventListener("input", paintCard);
     $("cbody").addEventListener("change", async e => {
