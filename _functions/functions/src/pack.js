@@ -13,6 +13,7 @@
 // 寄出时一起存运输公司、运单号、查询链接、一张照片（五种都存）
 // 权限：店主，或有「🧺 打包清单」权限的人（只在后端检查；这些人不需要能直接读会员资料）
 // 回传给页面的只有打包需要的资料：单号、平台、用户名、会员名字、要放什么；没有地址、电话
+// 🆕 新人卡（2026-11-12）：非会员的包裹提醒放新人卡（见 newCardOf）；放了就记在 packDone.newCard
 "use strict";
 
 const { Timestamp, FieldValue } = require("firebase-admin/firestore");
@@ -65,7 +66,7 @@ function logOut(id, d) {
   return { id, action: d.action || "", orderNo: d.orderNo || "", username: d.username || "", by: d.by || "", byName: d.byName || "", at: toMs(d.at),
     sent: d.sent || [], skipped: d.skipped || [], trackingNo: d.trackingNo || "", carrierName: d.carrierName || "", photo: !!d.photo,
     reason: d.reason || "", returned: d.returned ?? null, welcome: d.welcome ?? null, total: d.total ?? null, packed: d.packed ?? null,
-    remaining: d.remaining || [], label: d.label || "", note: d.note || "", redo: d.redo === true };
+    remaining: d.remaining || [], label: d.label || "", note: d.note || "", redo: d.redo === true, newCard: d.newCard === true };
 }
 
 async function byStatus(db, col, statuses) {
@@ -180,12 +181,49 @@ async function memberAccounts(db, uids) {
   }
   return out;
 }
+// ---------- 🆕 新人卡：这一包要不要放 ----------
+//   只看非会员（会员 = 订单有 uid 或平台账号已绑定 → 不用放）
+//   must    第一次买（这位买家最早一单之后 24 小时内的单都算，同一场直播多单）
+//   suggest 买过，但还不是会员（建议放，页面默认不勾）
+//   placed  30 天内另一包已经放了 → 不再提醒，告诉打包员放在哪一包
+//   here: true = 这一包已经放了
+//   注意：订单记录从 2026 年 9 月开始，9 月前买过、之后没再买的老顾客会被当成第一次买
+//   nc = { buyers: Map, done: Map（单号 → packDone 资料或 null）} 一次读取共用，减少读取次数
+const NEWCARD_FIRST = DAY;
+const NEWCARD_EVERY = 30 * DAY;
+const newCardCache = (done = new Map()) => ({ buyers: new Map(), done: new Map(done) });
+async function newCardOf(db, ctx, o, buyer, nc) {
+  if (buyer.uid || !buyer.platform || !buyer.username) return null;
+  const key = buyer.platform + "_" + buyer.username;
+  let b = nc.buyers.get(key);
+  if (!b) {
+    const orders = (await db.collection("orders").where("username", "==", buyer.username).get()).docs
+      .map(d => ({ no: d.id, ...d.data() }))
+      .filter(x => (x.platform || platformOf(x.no)) === buyer.platform && x.status !== "refunded");
+    const placed = [];
+    for (const x of orders) {
+      let d = nc.done.get(x.no);
+      if (d === undefined) { const s = await db.collection("packDone").doc(x.no).get(); d = s.exists ? (s.data() || {}) : null; nc.done.set(x.no, d); }
+      if (d && d.newCard === true) placed.push({ no: x.no, at: toMs(d.at) || 0 });
+    }
+    const times = orders.map(x => toMs(x.orderTime)).filter(Number.isFinite);
+    b = { first: times.length ? Math.min(...times) : null, placed };
+    nc.buyers.set(key, b);
+  }
+  const t = toMs(o.orderTime);
+  const level = b.first == null || t == null || t - b.first <= NEWCARD_FIRST ? "must" : "suggest";
+  if (b.placed.some(x => x.no === o.no)) return { level, here: true };
+  const now = nowMs(ctx);
+  const other = b.placed.filter(x => now - x.at < NEWCARD_EVERY).sort((x, y) => y.at - x.at)[0];
+  if (other) return { level: "placed", inOrder: other.no, at: other.at };
+  return { level };
+}
 // 打包记录（packDone）→ 回传给页面的摘要（照片不回传，只说有没有）
 function packedOf(d) {
   if (!d) return null;
   const s = d.ship || {};
   return { at: toMs(d.at), by: d.by || "", byName: d.byName || "", carrierName: s.carrierName || "", trackingNo: s.trackingNo || "", trackingUrl: s.trackingUrl || "", photo: !!s.photo,
-    sent: Array.isArray(d.sent) ? d.sent : [], skipped: Array.isArray(d.skipped) ? d.skipped : [] };
+    sent: Array.isArray(d.sent) ? d.sent : [], skipped: Array.isArray(d.skipped) ? d.skipped : [], newCard: d.newCard === true };
 }
 // 撤销记录（packUndone）→ 回传给页面的摘要
 function undoneOf(d) { return d ? { at: toMs(d.at), by: d.by || "", byName: d.byName || "", returned: d.returned || 0 } : null; }
@@ -224,7 +262,12 @@ async function pkBatch(db, ctx, data = {}) {
   const buyers = [];
   for (const o of orders) { const b = await buyerOf(db, o, cache); buyers.push([o, b]); }
   await memberNames(db, [...new Set(buyers.map(([, b]) => b.uid).filter(Boolean))], pend.names);
-  for (const [o, b] of buyers) out.push(parcel(o, b, pend, pend.names, done.get(o.no) || null, undone.get(o.no) || null));
+  const nc = newCardCache(done);
+  for (const [o, b] of buyers) {
+    const pc = parcel(o, b, pend, pend.names, done.get(o.no) || null, undone.get(o.no) || null);
+    pc.newCard = await newCardOf(db, ctx, o, b, nc);
+    out.push(pc);
+  }
   out.sort((a, b) => (a.orderTime || 0) - (b.orderTime || 0));
   // 🗂️ 全部待寄：每位顾客还没寄的东西（含还没下单的会员）
   const uids = [...pend.by.keys()].filter(k => k.startsWith("u:")).map(k => k.slice(2));
@@ -303,7 +346,9 @@ async function pkLookup(db, ctx, data = {}) {
   const ds = await db.collection("packDone").doc(o.no).get();
   const done = ds.exists ? (ds.data() || {}) : null;
   const us = await db.collection("packUndone").doc(o.no).get();
-  return { ok: true, found: true, parcel: parcel(o, b, pend, pend.names, done, us.exists ? us.data() : null) };
+  const pc = parcel(o, b, pend, pend.names, done, us.exists ? us.data() : null);
+  pc.newCard = await newCardOf(db, ctx, o, b, newCardCache([[o.no, done]]));
+  return { ok: true, found: true, parcel: pc };
 }
 
 // ---------- ✅ 勾选：放进这一包 ----------
@@ -453,10 +498,12 @@ async function pkShip(db, ctx, data = {}) {
     if (ship.trackingNo) Object.assign(s, { carrier: ship.carrier || "", carrierName: ship.carrierName || "", trackingNo: ship.trackingNo, trackingUrl: ship.trackingUrl || "" });
     if (ship.photos && ship.photos[0]) s.photo = ship.photos[0];
     if (Object.keys(s).length) rec.ship = s;
+    // 🆕 新人卡：这一包放了（重新保存时保留之前的记录）
+    if (data.newCard === true || (pd && pd.newCard === true)) rec.newCard = true;
     await db.collection("packDone").doc(orderNo).set(rec);
     const os = await db.collection("orders").doc(orderNo).get();
     await writeLog(db, ctx, who, byName, { action: "pack", redo: !!pd, orderNo, username: os.exists ? String(os.data().username || "") : "",
-      sent, skipped, trackingNo: s.trackingNo || "", carrierName: s.carrierName || "", photo: !!s.photo });
+      sent, skipped, trackingNo: s.trackingNo || "", carrierName: s.carrierName || "", photo: !!s.photo, newCard: rec.newCard === true });
   }
   return { ok: results.every(r => r.ok), results };
 }
@@ -574,4 +621,4 @@ async function pkLog(db, ctx, data = {}) {
   return { ok: true, list, shifts };
 }
 
-module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog };
+module.exports = { BATCH_DAYS, platformOf, newCardOf, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog };
