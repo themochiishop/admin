@@ -372,6 +372,44 @@ test("手动关联兑换前的订单：要确认并填原因，只接受兑换�
   assert.equal(rw.linkedOrder.allowEarly, true);
 });
 
+test("打包员放不了迎新礼：标记问题，清除要原因；换订单也会清掉", async () => {
+  const { m, rid, t } = await approved();
+  const o = await addOrder(m, m.accounts[0], t + DAY);
+  await core.onOrderWritten(db, o.no, null, o.data, { now: t + DAY });
+  await admin("nmConfirmOrder", at(OWNER, t + 2 * DAY), { rid, orderNo: o.no });
+  await rejects(admin("nmPackSkip", at(OWNER, t + 2 * DAY), { rid, orderNo: "OTHER123", reason: "x" }), "nm/other-order");
+  await rejects(admin("nmPackSkip", at(OWNER, t + 2 * DAY), { rid, orderNo: o.no }), "nm/reason-required");
+  await admin("nmPackSkip", at(OWNER, t + 2 * DAY), { rid, orderNo: o.no, reason: "缺货" });
+  let rw = await reward(rid);
+  assert.equal(rw.status, "ready_to_pack"); assert.equal(rw.orderIssue.type, "not-packed");
+  await rejects(admin("nmClearIssue", at(OWNER, t + 2 * DAY), { rid }), "nm/reason-required");
+  await admin("nmClearIssue", at(OWNER, t + 2 * DAY), { rid, reason: "已补货" });
+  assert.equal((await reward(rid)).orderIssue, null);
+  await admin("nmPackSkip", at(OWNER, t + 3 * DAY), { rid, orderNo: o.no, reason: "放不下" });
+  await admin("nmUnlinkOrder", at(OWNER, t + 3 * DAY), { rid, reason: "换下一单" });
+  rw = await reward(rid);
+  assert.equal(rw.orderIssue, null); assert.equal(rw.status, "order_review");
+});
+
+test("会员读得到的迎新礼 / 兑换 / 设定都不含员工 email；旧资料由每日检查清掉", async () => {
+  const { m, rid, t } = await approved();
+  const o = await addOrder(m, m.accounts[0], t + DAY);
+  await core.onOrderWritten(db, o.no, null, o.data, { now: t + DAY });
+  await admin("nmConfirmOrder", at(OWNER, t + 2 * DAY), { rid, orderNo: o.no });
+  await admin("nmPacked", at(OWNER, t + 2 * DAY), { rid });
+  let rw = await reward(rid);
+  assert.ok(!JSON.stringify(rw).includes("@"), JSON.stringify(rw));
+  const red = (await db.collection("redemptions").doc("nm_" + rid).get()).data();
+  assert.ok(!JSON.stringify(red).includes("@"));
+  // 旧资料：模拟以前写进去的 email
+  await db.collection("newMemberRewards").doc(rid).update({ packedBy: "old@staff.test", "linkedOrder.by": "old@staff.test",
+    candidates: [{ orderNo: o.no, by: "old@staff.test", source: "manual" }] });
+  const n = await core.scrubEmails(db);
+  assert.ok(n >= 1);
+  rw = await reward(rid);
+  assert.ok(!JSON.stringify(rw).includes("@")); assert.equal(rw.candidates[0].orderNo, o.no); assert.equal(rw.linkedOrder.orderNo, o.no);
+});
+
 // ---------------------------------------------------------------- 权限、设定
 test("权限：会员、没有权限的管理员都不能操作；有「新会员奖励」子权限可以；异常处理只有店主", async () => {
   const { m, rid, t } = await approved();

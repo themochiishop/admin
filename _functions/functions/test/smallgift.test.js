@@ -153,7 +153,7 @@ test("权限：建立要「领奖追踪」；打包清单的人只能寄出 / �
   await create(db, STAFF_CLAIMS);                                  // email 大小写不影响
   const id = gifts(db)[0].id;
   await sg.sgShip(db, { ...STAFF_PACK, now: T0 }, { id, orderNo: "261099AAAAAA" });
-  assert.equal(db.data.get("smallGifts/" + id).sentBy, "pack@x.com");
+  assert.equal(db.data.get("smallGifts/" + id).sentBy, "staff");   // 会员读得到：不放员工 email
   await rejects(sg.sgShip(db, STAFF_NONE, { id }), "sg/no-perm");
   db.data.set("staff/pack@x.com", { active: false, perms: { pack: true } });   // 停用
   await rejects(sg.sgUnship(db, STAFF_PACK, { id }), "sg/no-perm");

@@ -161,7 +161,7 @@ test("勾选：各种东西都改成已寄出，写上随哪张单；签到达�
   assert.equal(db.data.get("smallGifts/b__1").status, "sent");
   assert.equal(db.data.get("smallGifts/b__1").sentOrder, "2611190000001");
   const w = db.data.get("prizeWins/w1");
-  assert.equal(w.status, "shipped"); assert.deepEqual(w.shipping, { withOrder: true, orderNo: "2611190000001", by: "pack@x.com", via: "pack" });
+  assert.equal(w.status, "shipped"); assert.deepEqual(w.shipping, { withOrder: true, orderNo: "2611190000001", via: "pack" });
   assert.equal(db.data.get("redemptions/r1").status, "shipped");
   const ci = db.data.get("redemptions/ci_u1_20261119");
   assert.equal(ci.status, "shipped"); assert.equal(ci.backorder, false); assert.ok(ci.decidedAt);
@@ -206,11 +206,58 @@ test("勾选迎新礼：走新会员奖励流程（已打包 → 已寄出），
   const r = await pk.pkShip(db, PACKER, { orderNo: "2611190000001", items: [{ kind: "nm", id: "uAqmar01_1" }], txId: "tx_nm123456" });
   assert.equal(r.ok, true, JSON.stringify(r.results));
   const n = db.data.get("newMemberRewards/uAqmar01_1");
-  assert.equal(n.status, "shipped"); assert.equal(n.packedBy, "pack@x.com"); assert.equal(n.shippedBy, "pack@x.com");
+  assert.equal(n.status, "shipped"); assert.equal(n.packedBy, undefined); assert.ok(n.packedAt && n.shippedAt);
+  // 员工 email 只在后台读得到的地方（操作历史）；会员读得到的迎新礼、兑换都没有
+  const hist = [...db.data.entries()].filter(([k]) => k.startsWith("newMemberRewards/uAqmar01_1/history/")).map(([, v]) => v);
+  assert.ok(hist.some(h => h.action === "packed" && h.by === "pack@x.com")); assert.ok(hist.some(h => h.action === "shipped" && h.by === "pack@x.com"));
+  assert.ok(!JSON.stringify(n).includes("@")); assert.ok(!JSON.stringify(db.data.get("redemptions/nm_u1_1")).includes("@"));
   const red = db.data.get("redemptions/nm_u1_1");
   assert.equal(red.status, "shipped"); assert.equal(red.shipping.orderNo, "2611190000001");
   assert.equal(db.data.get("members/u1").nmr.status, "shipped");
   assert.ok([...db.data.keys()].some(k => k.startsWith("newMemberRewards/uAqmar01_1/history/")));
+});
+
+test("迎新礼放不了：要原因；标记给管理员，其他包裹只提醒；打包记录写下没放的东西", async () => {
+  const db = fakeDb(SEED());
+  const ship = { carrier: "spx", carrierName: "SPX Express", trackingNo: "SPXMY0001" };
+  // 没给原因：整包拒绝
+  await rejects(pk.pkShip(db, PACKER, { orderNo: "2611190000001", items: [], skipped: [{ kind: "nm", id: "uAqmar01_1", title: "迎新礼" }], txId: "tx_skip0001", done: true, ship }), "pk/reason");
+  assert.equal(db.data.get("packDone/2611190000001"), undefined);
+  const r = await pk.pkShip(db, PACKER, { orderNo: "2611190000001", items: [{ kind: "sg", id: "b__1", title: "小礼物「贴纸」" }],
+    skipped: [{ kind: "prize", id: "w1", title: "中奖奖品「手链」" }], nmSkip: { id: "uAqmar01_1", reason: "缺货", title: "迎新礼「小香包」" },
+    txId: "tx_skip0002", done: true, ship });
+  assert.equal(r.ok, true, JSON.stringify(r.results));
+  const n = db.data.get("newMemberRewards/uAqmar01_1");
+  assert.equal(n.status, "ready_to_pack");
+  assert.equal(n.orderIssue.type, "not-packed"); assert.equal(n.orderIssue.reason, "缺货"); assert.ok(!JSON.stringify(n).includes("@"));
+  const pd = db.data.get("packDone/2611190000001");
+  assert.deepEqual(pd.sent.map(x => x.id), ["b__1"]);
+  assert.deepEqual(pd.skipped.map(x => [x.id, x.reason || ""]), [["w1", ""], ["uAqmar01_1", "缺货"]]);
+  // 打包记录
+  const lg = await pk.pkLog(db, PACKER, { from: T0 - DAY, to: T0 + DAY });
+  assert.equal(lg.list.length, 1); assert.equal(lg.list[0].action, "pack"); assert.equal(lg.list[0].trackingNo, "SPXMY0001");
+  assert.equal(lg.list[0].skipped.length, 2);
+  assert.ok(db.data.get(`packLog/${lg.list[0].id}`).expireAt.toMillis() > T0 + 89 * DAY);
+  assert.equal((await pk.pkLog(db, PACKER, { orderNo: "2611190000001" })).list.length, 1);
+  // 她的另一包：迎新礼只提醒，不能勾
+  const b = await pk.pkBatch(db, PACKER);
+  const other = b.parcels.find(p => p.orderNo === "587000000000000002");
+  const it = other.items.find(i => i.kind === "nm");
+  assert.equal(it.can, false); assert.equal(it.issueOrder, "2611190000001");
+  assert.equal(b.parcels.find(p => p.orderNo === "2611190000001").packed.skipped.length, 2);
+});
+
+test("收工：没打包的每一包都要原因；记下这一场", async () => {
+  const db = fakeDb(SEED());
+  const from = T0 - 14 * DAY, to = T0 + DAY;
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000003", items: [], txId: "tx_fin00001", done: true });
+  await rejects(pk.pkFinish(db, PACKER, { from, to, reasons: { "2611190000001": "等管理员" } }), "pk/finish-reason");
+  const r = await pk.pkFinish(db, PACKER, { from, to, label: "测试场", reasons: { "2611190000001": "等管理员", "587000000000000002": "缺货", "2611190000004": "订单还没到" } });
+  assert.equal(r.shift.total, 4); assert.equal(r.shift.packed, 1); assert.equal(r.shift.remaining.length, 3);
+  const b = await pk.pkBatch(db, PACKER, { from, to });
+  assert.equal(b.shift.byName, ""); assert.equal(b.shift.packed, 1);
+  const lg = await pk.pkLog(db, PACKER, { from: T0 - DAY, to: T0 + DAY });
+  assert.ok(lg.list.some(x => x.action === "finish")); assert.equal(lg.shifts.length, 1);
 });
 
 test("打包完成 / 取消打包完成", async () => {
@@ -281,7 +328,7 @@ test("寄出时存运输公司、运单号、链接、照片（五种都存）",
   const items = ["sg:b__1", "prize:w1", "red:r1", "red:ci_u1_20261119", "nm:uAqmar01_1"].map(s => ({ kind: s.split(":")[0], id: s.split(":")[1] }));
   const r = await pk.pkShip(db, PACKER, { orderNo: "2611190000001", items, txId: "tx_ship1234", done: true, ship: SHIP });
   assert.equal(r.ok, true, JSON.stringify(r.results));
-  const want = { withOrder: true, orderNo: "2611190000001", by: "pack@x.com", via: "pack", carrier: "spx", carrierName: "SPX Express",
+  const want = { withOrder: true, orderNo: "2611190000001", via: "pack", carrier: "spx", carrierName: "SPX Express",
     trackingNo: "SPXMY06345716061A", trackingUrl: "https://spx.com.my/track?SPXMY06345716061A", photos: [PHOTO] };
   assert.deepEqual(db.data.get("smallGifts/b__1").shipping, want);
   assert.deepEqual(db.data.get("prizeWins/w1").shipping, want);
@@ -307,7 +354,7 @@ test("运单资料不对会挡（整包都不寄）", async () => {
   // 没有运单资料也可以（页面取消「需要运单号 / 照片」时）
   const r = await go(undefined);
   assert.equal(r.ok, true);
-  assert.deepEqual(db.data.get("smallGifts/b__1").shipping, { withOrder: true, orderNo: "2611190000001", by: "pack@x.com", via: "pack" });
+  assert.deepEqual(db.data.get("smallGifts/b__1").shipping, { withOrder: true, orderNo: "2611190000001", via: "pack" });
 });
 
 test("领奖追踪：用订单号对会员系统的中奖奖品；绑定的账号认成会员", async () => {
