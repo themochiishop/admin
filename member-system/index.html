@@ -77,15 +77,16 @@
     .t-todo.clear { background: linear-gradient(160deg, var(--green-bg2) 0%, var(--card) 60%); border-color: #86efac; }
     :root[data-theme="dark"] .t-todo.busy { border-color: rgba(244,114,182,.5); }
     :root[data-theme="dark"] .t-todo.clear { border-color: rgba(74,222,128,.4); }
-    .todo-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-shrink: 0; }
-    .todo-top .big { font-size: 2.2rem; }
+    .todo-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-shrink: 0; }
+    .todo-top .tt { font-size: .76rem; font-weight: 700; color: var(--muted); margin-right: 2px; }
+    .todo-top .big { font-size: 1.6rem; }
     .t-todo.busy .todo-top .big { color: #db2777; }
     .t-todo.clear .todo-top .big { color: #16a34a; }
     .todo-top .lbl { font-size: .86rem; color: var(--text2); font-weight: 600; }
     .todo-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
     @media (max-width: 559px) { .todo-list { grid-template-columns: 1fr; } }
     .todo-row {
-      display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 10px;
+      display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 10px;
       background: var(--card); border: 1px solid var(--line); color: var(--ink); font-size: .84rem;
     }
     .todo-row:hover { border-color: #db2777; }
@@ -167,8 +168,7 @@
       <div class="bento">
         <!-- 🔔 待处理 -->
         <section class="tile t-todo" id="tTodo">
-          <div class="tile-h"><span>🔔 待处理</span></div>
-          <div class="todo-top"><span class="big" id="todoTotal">–</span><span class="lbl" id="todoLbl">件事要处理</span></div>
+          <div class="todo-top"><span class="tt">🔔 待处理</span><span class="big" id="todoTotal">–</span><span class="lbl" id="todoLbl">件事要处理</span></div>
           <div class="todo-list scroll" id="todoList"></div>
         </section>
 
