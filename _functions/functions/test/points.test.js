@@ -5,7 +5,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { Timestamp } = require("firebase-admin/firestore");
+const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const pt = require("../src/points");
 
 // ---------- 假资料库：doc get/set(merge)/update/create/delete、where（== > >= < <= in）+ limit、transaction ----------
@@ -37,7 +37,8 @@ function fakeDb(seed = {}) {
     const r = { kind: "doc", path, id: path.split("/").pop(),
       get: async () => snapOf(r),
       set: async (d, o) => { data.set(path, o && o.merge ? { ...(data.get(path) || {}), ...d } : d); },
-      update: async d => { if (!data.has(path)) throw new Error("NOT_FOUND " + path); data.set(path, { ...data.get(path), ...d }); },
+      update: async d => { if (!data.has(path)) throw new Error("NOT_FOUND " + path);
+        const n = { ...data.get(path), ...d }; Object.keys(d).forEach(k => { if (FieldValue.delete().isEqual(d[k])) delete n[k]; }); data.set(path, n); },
       create: async d => { if (data.has(path)) throw new Error("ALREADY_EXISTS " + path); data.set(path, d); },
       delete: async () => { data.delete(path); } };
     return r;
@@ -279,6 +280,7 @@ test("后台：只有店主；比对列出不一样的；打开要先确认 Apps
   assert.equal(f.orders, 1); assert.equal(db.data.get("members/u1").bal.sum, 125);
   const c2 = await pt.ptCompare(db, OWNER);
   assert.deepEqual(c2.total, { orders: 0, tiers: 0, bal: 0 });
-  await pt.ptDisable(db, OWNER);
+  const off = await pt.ptDisable(db, OWNER);
   assert.equal((await pt.ptStatus(db, OWNER)).on, false);
+  assert.equal(off.cleared, 1); assert.equal("bal" in db.data.get("members/u1"), false);   // 关掉 → 余额删掉，网页改回读积分记录
 });
