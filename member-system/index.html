@@ -263,7 +263,7 @@
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
     import { ciStockState, ciStockBannerHTML, bindCiStockBanner, refreshCiStockBadge } from "./js/ci-stock.js";   // 🏅 签到达人礼物库存提醒
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners, openReportCount, NM_ACTIONABLE
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, balOf, TIER_LABELS, readyWinners, openReportCount, NM_ACTIONABLE
     } from "./js/admin-common.js";
     import {
       collection, getDocs, getDoc, doc, query, where, onSnapshot, orderBy, limit, getCountFromServer
@@ -346,10 +346,9 @@
     // ---------- 主要资料 ----------
     async function load() {
       $("errBox").classList.add("hidden");
-      const [mS, bS, lS, rS, wS, fS, rwS, cS, sS, nS] = await Promise.all([
+      const [mS, bS, rS, wS, fS, rwS, cS, sS, nS] = await Promise.all([
         getDocs(collection(db, "members")),
         getDocs(collection(db, "bindings")),
-        getDocs(collection(db, "pointsLedger")),
         getDocs(collection(db, "redemptions")),
         getDocs(collection(db, "prizeWins")),
         getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending"))),
@@ -392,13 +391,15 @@
       $("memSub").innerHTML = `本月新增 <b>+${newThis}</b>${newLast ? `（上月 ${newLast}）` : ""}<br>
         已绑定 <b>${real.length ? Math.round(bound / real.length * 100) : 0}%</b>（${bound} 人）${nInternal ? ` · 内部 ${nInternal}` : ""}`;
 
-      // 积分
+      // 积分：💰 积分引擎存好的余额（members.bal）；有会员还没有才读全部积分记录
       const ledgers = {}, redByUid = {};
-      lS.docs.forEach(d => { const x = d.data(); (ledgers[x.uid] = ledgers[x.uid] || []).push(x); });
+      if (real.some(m => !balOf(m))) {
+        (await getDocs(collection(db, "pointsLedger"))).docs.forEach(d => { const x = d.data(); (ledgers[x.uid] = ledgers[x.uid] || []).push(x); });
+      }
       redemptions.forEach(r => (redByUid[r.uid] = redByUid[r.uid] || []).push(r));
       let spendable = 0, pending = 0, negative = 0;
       real.forEach(m => {
-        const b = computeBalance(ledgers[m.uid] || [], redByUid[m.uid] || []);
+        const b = balOf(m) || computeBalance(ledgers[m.uid] || [], redByUid[m.uid] || []);
         spendable += b.spendable; pending += b.pending;
         if (b.spendable < 0) negative++;
       });

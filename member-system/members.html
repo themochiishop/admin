@@ -99,7 +99,7 @@
     import { db } from "./js/firebase-config.js";
     import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, platformTag,
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, balOf, platformTag,
       TIER_LABELS, TIER_ORDER, fmtPhone, waLink, tierHTML
   } from "./js/admin-common.js";
 
@@ -110,16 +110,18 @@
     let sortKey = "createdAt", sortDir = -1;
 
     async function load() {
-      const [mS, bS, lS, rS] = await Promise.all([
+      const [mS, bS] = await Promise.all([
         getDocs(collection(db, "members")),
         getDocs(collection(db, "bindings")),
-        getDocs(collection(db, "pointsLedger")),
-        getDocs(collection(db, "redemptions")),
       ]);
+      // 💰 积分引擎存好的余额（members.bal）；有会员还没有才读全部积分记录、兑换
+      const [lS, rS] = mS.docs.some(d => !balOf(d.data()))
+        ? await Promise.all([getDocs(collection(db, "pointsLedger")), getDocs(collection(db, "redemptions"))])
+        : [null, null];
 
       const byUid = (snap, withId) => {
         const m = {};
-        snap.docs.forEach(d => {
+        if (snap) snap.docs.forEach(d => {
           const x = withId ? { id: d.id, ...d.data() } : d.data();
           (m[x.uid] = m[x.uid] || []).push(x);
         });
@@ -129,7 +131,7 @@
 
       rows = mS.docs.map(d => {
         const m = d.data();
-        const bal = computeBalance(ledgers[d.id] || [], redemptions[d.id] || []);
+        const bal = balOf(m) || computeBalance(ledgers[d.id] || [], redemptions[d.id] || []);
         return {
           uid: d.id,
           name: m.name || "",
