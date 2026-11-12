@@ -77,7 +77,8 @@ export const MEMBER_PAGE_PERM = {
   "pack.html": "pack",            // 🧺 打包管理：要「打包清单」权限（也要能进会员系统）
   "feed.html": "feed",
   "faq.html": "member",           // 📖 客服 FAQ：有任何一项 Member Club 权限就能看
-  "changelog.html": "_owner",     // 🕒 更新记录：只有店主（_owner 不会出现在权限勾选里）
+  "changelog.html": "_owner",
+  "points.html": "_owner",        // 💰 积分引擎（Cloud Functions 积分计算的开关、比对）：只有店主     // 🕒 更新记录：只有店主（_owner 不会出现在权限勾选里）
 };
 // 这个人进会员系统时，第一个能打开的页面（都没有就回传 null）
 const MEMBER_FIRST = ["index.html", "redeem.html", "prizes.html", "members.html", "newmember.html", "rewards.html", "home.html", "notify.html", "feed.html"];
