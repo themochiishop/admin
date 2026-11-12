@@ -510,8 +510,12 @@ async function pkShip(db, ctx, data = {}) {
     if (ship.trackingNo) Object.assign(s, { carrier: ship.carrier || "", carrierName: ship.carrierName || "", trackingNo: ship.trackingNo, trackingUrl: ship.trackingUrl || "" });
     if (ship.photos && ship.photos[0]) s.photo = ship.photos[0];
     if (Object.keys(s).length) rec.ship = s;
-    // 🆕 新人卡：这一包放了（重新保存时保留之前的记录）
-    if (data.newCard === true || (pd && pd.newCard === true)) rec.newCard = true;
+    // 🆕 新人卡：这一包放了（重新保存时保留之前的记录）；newCardLevel = 第一次买（must）/ 买过（suggest），统计用
+    if (data.newCard === true || (pd && pd.newCard === true)) {
+      rec.newCard = true;
+      const lv = data.newCard === true && ["must", "suggest"].includes(data.newCardLevel) ? data.newCardLevel : pd && pd.newCardLevel;
+      if (lv) rec.newCardLevel = lv;
+    }
     await db.collection("packDone").doc(orderNo).set(rec);
     const os = await db.collection("orders").doc(orderNo).get();
     await writeLog(db, ctx, who, byName, { action: "pack", redo: !!pd, orderNo, username: os.exists ? String(os.data().username || "") : "",
@@ -633,4 +637,85 @@ async function pkLog(db, ctx, data = {}) {
   return { ok: true, list, shifts };
 }
 
-module.exports = { BATCH_DAYS, platformOf, newCardOf, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog };
+// ---------- 📊 新人卡效果统计（后台「打包管理 › 🆕 新人卡」、总览）----------
+//   data: { from, to }（放卡的时间，毫秒；最长 400 天）
+//   每位买家只算一次（这段时间第一次放卡的那一包）：
+//     加入 = 放卡之后这个平台账号绑定了会员（bindings.createdAt ≥ 放卡前 1 天）
+//     标记 = 店主手动标（cardMarks/{平台_用户名}：card 因新人卡 / other 旧顾客·其他渠道 / unsure 未确认）
+//            没手动标：会员资料 joinSource.type = "card"（从 Welcome Hub 扫码进来，绑定前看过）→ card；否则 unsure
+//     再下单 = 放卡（打包）之后，同一个账号又下的单（没取消）
+const CARD_RANGE = 400 * DAY;
+const cardKeyOk = k => typeof k === "string" && /^(shopee|tiktok)_[^/]{1,60}$/.test(k);
+async function pkCardStats(db, ctx, data = {}) {
+  await requirePack(db, ctx);
+  const from = Number(data.from), to = Number(data.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !(to > from) || to - from > CARD_RANGE) fail("pk/bad-range", "时间段不正确（最长 400 天）", "invalid-argument");
+  const snap = await db.collection("packDone").where("at", ">=", tsOf(from)).get();
+  const cards = snap.docs.map(d => ({ no: d.id, ...d.data() }))
+    .filter(d => d.newCard === true && (toMs(d.at) || 0) <= to)
+    .sort((a, b) => (toMs(a.at) || 0) - (toMs(b.at) || 0));
+  const byBuyer = new Map();
+  for (const c of cards) {
+    const os = await db.collection("orders").doc(c.no).get();
+    const o = os.exists ? (os.data() || {}) : {};
+    const platform = o.platform || platformOf(c.no), username = String(o.username || "");
+    if (!platform || !username) continue;
+    const key = `${platform}_${username}`;
+    if (byBuyer.has(key)) { byBuyer.get(key).cards++; continue; }
+    byBuyer.set(key, { key, platform, username, orderNo: c.no, orderTime: toMs(o.orderTime), at: toMs(c.at) || 0, level: c.newCardLevel || null, cards: 1 });
+  }
+  const rows = [];
+  for (const b of byBuyer.values()) {
+    const row = { ...b, joined: false, joinedAt: null, member: null, uid: null, mark: null, auto: null, manual: null, reorders: 0, lastReorder: null };
+    const bs = await db.collection("bindings").doc(b.key).get();
+    if (bs.exists && bs.data().uid) {
+      const x = bs.data(), jt = toMs(x.createdAt);
+      if (jt == null || jt >= b.at - DAY) {
+        Object.assign(row, { joined: true, joinedAt: jt, uid: x.uid });
+        const ms = await db.collection("members").doc(x.uid).get();
+        const m = ms.exists ? (ms.data() || {}) : {};
+        row.member = String(m.name || "").slice(0, 60) || "会员";
+        const js = m.joinSource;
+        if (js && js.type === "card" && (jt == null || (toMs(js.seenAt) || 0) <= jt + DAY)) row.auto = "card";
+      } else row.before = true;   // 放卡时已经是会员（不该放卡）：不算进统计
+    }
+    const mk = await db.collection("cardMarks").doc(b.key).get();
+    if (mk.exists && ["card", "other", "unsure"].includes(mk.data().mark)) row.manual = mk.data().mark;
+    row.mark = row.joined ? (row.manual || row.auto || "unsure") : null;
+    const later = (await db.collection("orders").where("username", "==", b.username).get()).docs
+      .map(d => ({ no: d.id, ...d.data() }))
+      .filter(x => (x.platform || platformOf(x.no)) === b.platform && x.status !== "refunded" && x.no !== b.orderNo
+        && (toMs(x.orderTime) || 0) > b.at);   // 放卡（打包）之后才下的单，同一场直播的其他单不算
+    row.reorders = later.length;
+    row.lastReorder = later.length ? Math.max(...later.map(x => toMs(x.orderTime) || 0)) : null;
+    rows.push(row);
+  }
+  const R = rows.filter(r => !r.before);
+  const cnt = f => R.filter(f).length;
+  const pct = (a, b) => (b ? Math.round(a / b * 1000) / 10 : 0);
+  const cardJoin = R.filter(r => r.mark === "card");
+  const days = cardJoin.filter(r => r.joinedAt).map(r => (r.joinedAt - r.at) / DAY);
+  const lv = l => { const g = R.filter(r => (r.level || "none") === l); return { cards: g.length, card: g.filter(r => r.mark === "card").length, joined: g.filter(r => r.joined).length }; };
+  const summary = {
+    cards: R.length, joined: cnt(r => r.joined), card: cardJoin.length, unsure: cnt(r => r.mark === "unsure"), other: cnt(r => r.mark === "other"),
+    rate: pct(cardJoin.length, R.length), joinRate: pct(cnt(r => r.joined), R.length),
+    avgDays: days.length ? Math.round(days.reduce((a, b) => a + Math.max(0, b), 0) / days.length * 10) / 10 : null,
+    reordered: cnt(r => r.reorders > 0), reorderRate: pct(cnt(r => r.reorders > 0), R.length),
+    byLevel: { must: lv("must"), suggest: lv("suggest"), none: lv("none") }, skippedMembers: rows.length - R.length,
+  };
+  rows.sort((a, b) => b.at - a.at);
+  return { ok: true, from, to, summary, rows: data.summary === true ? [] : rows };
+}
+// 店主手动标记：data { key: "shopee_用户名", mark: "card" | "other" | "unsure" | "" }（"" = 清掉，回到系统判断）
+async function pkCardMark(db, ctx, data = {}) {
+  const who = await requirePack(db, ctx);
+  if (!cardKeyOk(data.key)) fail("pk/bad-key", "买家不正确", "invalid-argument");
+  const mark = data.mark || "";
+  if (!["card", "other", "unsure", ""].includes(mark)) fail("pk/bad-mark", "标记不正确", "invalid-argument");
+  const ref = db.collection("cardMarks").doc(data.key);
+  if (!mark) { await ref.delete(); return { ok: true }; }
+  await ref.set({ mark, by: who.email, byName: await staffName(db, who), at: tsOf(nowMs(ctx)) });
+  return { ok: true };
+}
+
+module.exports = { BATCH_DAYS, platformOf, newCardOf, pkCardStats, pkCardMark, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog };

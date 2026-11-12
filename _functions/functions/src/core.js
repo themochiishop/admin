@@ -302,6 +302,23 @@ async function nmDismissPopup(db, ctx, data = {}) {
   });
 }
 
+// 📦 新人卡来源：会员从 Welcome Hub（包裹里新人卡的 QR 码）进来 → 会员资料记下 joinSource（只记一次，新人卡统计用）
+//   data: { source: "card", seenAt }（seenAt = 那台手机看到 Hub 的时间；最多 15 天前）
+async function nmSource(db, ctx, data = {}) {
+  requireSignedIn(ctx);
+  if (data.source !== "card") fail("nm/bad-source", "来源不正确", "invalid-argument");
+  const now = nowMs(ctx), seen = Number(data.seenAt);
+  const seenAt = Number.isFinite(seen) && seen <= now && now - seen <= 15 * DAY ? seen : now;
+  const ref = db.collection("members").doc(ctx.uid);
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) fail("nm/no-member", "找不到会员资料", "not-found");
+    if (snap.data().joinSource) return { ok: true, already: true };
+    tx.update(ref, { joinSource: { type: "card", seenAt: ts(seenAt), at: ts(now) } });
+    return { ok: true };
+  });
+}
+
 // 兑换迎新礼
 async function nmRedeem(db, ctx, data = {}) {
   requireSignedIn(ctx);
@@ -1083,7 +1100,7 @@ module.exports = {
   NmError, S, MOVES, DEFAULTS, OWNER_EMAIL, COL, DAY,
   mergeSettings, validateSettings, eligibleBySettings, toMs,
   ensureEligibility,
-  nmEnsure, nmDismissPopup, nmRedeem, nmMemberCancel,
+  nmEnsure, nmDismissPopup, nmSource, nmRedeem, nmMemberCancel,
   nmApprove, nmReject, nmLinkOrder, nmRejectCandidate, nmConfirmOrder, nmUnlinkOrder,
   nmPacked, nmUnpack, nmShipped, nmPackSkip, nmClearIssue, nmExtend, nmCancelReward, nmRefund, nmNote, nmException,
   nmSaveSettings,
