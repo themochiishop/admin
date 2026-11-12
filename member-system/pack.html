@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>打包管理 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    .pk-wrap { max-width: 1400px; margin: 14px auto 0; padding: 0 16px 24px; }
+    .pk-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .pk-head h2 { margin: 0; font-size: 1.2rem; color: var(--ink); margin-right: auto; }
+    .pk-head select, .pk-head input { margin: 0; width: auto; padding: 6px 8px; font-size: .86rem; }
+    .pk-head .btn { padding: 6px 12px; font-size: .84rem; }
+    .pk-range { font-size: .8rem; color: var(--muted); margin: -4px 0 10px; }
+    .pk-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .pk-stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; cursor: pointer; text-align: left; color: var(--ink); font: inherit; }
+    .pk-stat:hover { border-color: #f9a8d4; }
+    .pk-stat .n { font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+    .pk-stat .l { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+    .pk-stat.warn { background: var(--amber-bg); border-color: var(--amber-bg2); } .pk-stat.warn .n, .pk-stat.warn .l { color: var(--amber-tx); }
+    .pk-shift { border-radius: 12px; padding: 9px 12px; font-size: .86rem; margin-bottom: 10px; }
+    .pk-shift.ok { background: var(--green-bg); color: var(--green-tx); } .pk-shift.no { background: var(--amber-bg); color: var(--amber-tx); }
+    .pk-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .pk-tabs button { border: 1px solid var(--line2); background: var(--card); color: var(--ink); border-radius: 10px; padding: 7px 14px; font-weight: 700; font-size: .88rem; cursor: pointer; }
+    .pk-tabs button.active { background: #db2777; border-color: #db2777; color: #fff; }
+    .pk-tabs .cnt { background: #dc2626; color: #fff; border-radius: 999px; padding: 0 7px; font-size: .72rem; margin-left: 4px; }
+    .pk-tabs button.active .cnt { background: #fff; color: #db2777; }
+    .pane { display: none; } .pane.on { display: block; }
+    .pk-wrap [hidden] { display: none !important; }
+
+    .lay { display: grid; grid-template-columns: minmax(330px, 5fr) 7fr; gap: 14px; height: calc(100vh - 290px); min-height: 460px; }
+    .box { min-height: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .tool { padding: 10px 12px 8px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+    .tool input, .tool select { margin: 0; padding: 7px 10px; font-size: .86rem; }
+    .chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .chips button { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: .76rem; font-weight: 600; cursor: pointer; }
+    .chips button.on { background: #db2777; border-color: #db2777; color: #fff; }
+    .scroll { flex: 1; overflow-y: auto; padding: 6px; }
+    .prow { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px; align-items: center; padding: 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+    .prow:hover { background: var(--soft2); } .prow.sel { background: var(--pink-bg); border-color: #f9a8d4; }
+    .no { font-family: ui-monospace, Menlo, monospace; font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+    .no b { font-size: 1.12rem; color: var(--ink); letter-spacing: .03em; }
+    .prow .who { font-size: .86rem; font-weight: 700; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prow .sb { font-size: .74rem; color: var(--muted); font-weight: 400; }
+    .prow .tag { font-size: .7rem; white-space: nowrap; }
+    .empty { margin: auto; text-align: center; color: var(--muted); font-size: .9rem; padding: 30px; }
+    .det { padding: 14px 16px; overflow-y: auto; }
+    .det h3 { margin: 0 0 2px; font-size: 1.05rem; color: var(--ink); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .det .meta { font-size: .82rem; color: var(--muted); }
+    .sec { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; font-size: .86rem; color: var(--text); }
+    .sec h4 { margin: 0 0 6px; font-size: .86rem; color: var(--ink); }
+    .sec ul { margin: 0; padding-left: 18px; } .sec li { margin: 2px 0; }
+    .sec.warn { background: var(--amber-bg); border-color: var(--amber-bg2); color: var(--amber-tx); }
+    .sec.undo { background: var(--amber-bg); border-color: var(--amber-bg2); color: var(--amber-tx); }
+    .pthumb { max-width: 220px; max-height: 220px; border-radius: 10px; margin-top: 6px; cursor: zoom-in; display: block; }
+    .tl { border-left: 2px solid var(--line2); margin: 4px 0 0 4px; padding-left: 12px; }
+    .tl div { margin-bottom: 8px; font-size: .84rem; } .tl .t { font-weight: 700; color: var(--ink); margin-right: 6px; }
+    .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .acts .btn { padding: 6px 12px; font-size: .84rem; }
+
+    .tbl { width: 100%; border-collapse: collapse; font-size: .84rem; }
+    .tbl th { text-align: left; font-size: .76rem; color: var(--muted); font-weight: 700; padding: 8px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--card); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--text); }
+    .tbl tr.go { cursor: pointer; } .tbl tr.go:hover td { background: var(--soft2); }
+    .card2 { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; }
+    .card2 h3 { margin: 0 0 8px; font-size: 1rem; color: var(--ink); display: flex; gap: 8px; align-items: center; }
+    .card2 .tool2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    .card2 .tool2 select, .card2 .tool2 input { margin: 0; width: auto; padding: 6px 8px; font-size: .84rem; }
+    .grp { margin-top: 8px; } .grp > summary { cursor: pointer; font-weight: 800; color: var(--ink); padding: 6px 0; }
+    .act-tag { font-size: .72rem; padding: 1px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+    .a-pack { background: var(--green-bg); color: var(--green-tx); } .a-undo { background: var(--amber-bg); color: var(--amber-tx); }
+    .a-finish { background: var(--blue-bg); color: var(--blue-tx); } .a-redo { background: var(--soft); color: var(--text2); }
+    .issue { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 8px; font-size: .86rem; }
+    .issue .i { font-size: 1.2rem; } .issue .tx { flex: 1; min-width: 0; color: var(--text); } .issue .tx b { color: var(--ink); }
+    .issue.hi { background: var(--amber-bg); border-color: var(--amber-bg2); }
+    .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; z-index: 200; cursor: zoom-out; }
+    .zoom img { max-width: 94vw; max-height: 94vh; border-radius: 10px; }
+    @media (max-width: 900px) {
+      .lay { grid-template-columns: 1fr; height: auto; }
+      .box { max-height: 70vh; }
+      .prow { grid-template-columns: 120px 1fr auto; }
+    }
+    @media print {
+      body * { visibility: hidden; } #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="pk-wrap">
+      <div class="pk-head">
+        <h2>🧺 打包管理</h2>
+        <select id="rangeSel" title="时间段">
+          <option value="live">🎥 最近一场直播（20:00–08:00）</option>
+          <option value="prev">🎥 上一场直播</option>
+          <option value="day">📆 某一天</option>
+          <option value="custom">✏️ 自定义</option>
+        </select>
+        <input type="date" id="rDay" hidden>
+        <input type="datetime-local" id="rFrom" hidden><input type="datetime-local" id="rTo" hidden>
+        <button id="reloadBtn" class="btn btn-ghost">🔄 重新整理</button>
+        <a class="btn btn-ghost" href="../pack/" target="_blank" rel="noopener">📱 打开扫描页</a>
+      </div>
+      <div class="pk-range" id="rangeInfo"></div>
+      <div class="pk-stats" id="stats"></div>
+      <div id="shiftBox"></div>
+      <div class="pk-tabs" id="tabs">
+        <button data-tab="parcels" class="active">📦 包裹</button>
+        <button data-tab="log">📒 打包记录</button>
+        <button data-tab="pending">🎁 待寄礼物</button>
+        <button data-tab="issues">⚠️ 需要处理<span class="cnt" id="issueCnt" hidden></span></button>
+      </div>
+
+      <!-- 📦 包裹 -->
+      <section class="pane on" id="pane-parcels">
+        <div class="lay">
+          <div class="box">
+            <div class="tool">
+              <input type="search" id="pq" placeholder="🔍 单号、后四位、买家、会员">
+              <div class="chips" id="pchips"></div>
+            </div>
+            <div class="scroll" id="plist"><div class="empty">载入中…</div></div>
+          </div>
+          <div class="box" id="pdet"><div class="empty">点左边一个包裹看详细</div></div>
+        </div>
+      </section>
+
+      <!-- 📒 打包记录 -->
+      <section class="pane" id="pane-log">
+        <div class="card2" id="shiftList"></div>
+        <div class="card2">
+          <div class="tool2">
+            <select id="lWho"><option value="">全部人</option></select>
+            <select id="lAct">
+              <option value="">全部动作</option><option value="pack">✅ 打包</option><option value="redo">✏️ 修改 / 重新打包</option>
+              <option value="undo">↩️ 撤销</option><option value="skip">❌ 有东西没放</option><option value="finish">🏁 收工</option>
+            </select>
+            <input type="search" id="lq" placeholder="🔍 单号 / 买家">
+            <span class="meta" id="lCount" style="color:var(--muted);font-size:.8rem"></span>
+          </div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="width:110px">时间</th><th style="width:110px">谁</th><th style="width:110px">动作</th><th style="width:170px">包裹</th><th>详细</th></tr></thead>
+            <tbody id="ltbody"><tr><td colspan="5" class="empty">载入中…</td></tr></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- 🎁 待寄礼物 -->
+      <section class="pane" id="pane-pending">
+        <div class="card2">
+          <div class="tool2">
+            <select id="gKind"><option value="">全部种类</option></select>
+            <select id="gToday"><option value="">全部</option><option value="1">这一场有单</option><option value="0">这一场没单</option><option value="w">只看要先处理的</option></select>
+            <input type="search" id="gq" placeholder="🔍 会员 / 买家 / 礼物">
+            <button id="printBtn" class="btn btn-ghost" style="padding:6px 12px">🖨️ 印备货单</button>
+            <span id="gCount" style="color:var(--muted);font-size:.8rem"></span>
+          </div>
+          <div id="glist"><div class="empty">载入中…</div></div>
+        </div>
+      </section>
+
+      <!-- ⚠️ 需要处理 -->
+      <section class="pane" id="pane-issues">
+        <div class="card2"><div id="ilist"><div class="empty">载入中…</div></div></div>
+      </section>
+    </div>
+  </div>
+  <div id="printArea" hidden></div>
+
+  <script type="module">
+    import { app } from "./js/firebase-config.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
+    import { requireAdmin, renderAdminNav, esc } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("pack");
+    const pkAdmin = httpsCallable(getFunctions(app, "asia-southeast1"), "pkAdmin");
+    const call = async (op, data = {}) => (await pkAdmin({ op, ...data })).data || {};
+    const errText = e => (e && e.message ? e.message.replace(/^FirebaseError:\s*/, "") : String(e));
+    const DAY = 86400000;
+    const pad = n => String(n).padStart(2, "0");
+    const fmtD = ms => { const d = new Date(ms); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; };
+    const fmtH = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const fmtT = ms => ms ? `${fmtD(ms)} ${fmtH(ms)}` : "-";
+    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const noHtml = no => { const s = String(no || ""); return `<span class="no">${esc(s.slice(0, -4))}<b>${esc(s.slice(-4))}</b></span>`; };
+    const PLAT = { shopee: "Shopee", tiktok: "TikTok" };
+    const nameOf = (email, byName) => byName || (email === "mail@themochiishop.com" ? "店主" : String(email || "").split("@")[0] || "-");
+    const daysAgo = ms => ms ? Math.max(0, Math.floor((Date.now() - ms) / DAY)) : null;
+
+    // ---------- 时间段 ----------
+    function liveRange(now = new Date(), back = 0) {
+      const a = new Date(now), b = new Date(now);
+      if (now.getHours() >= 20) { a.setHours(20, 0, 0, 0); b.setDate(b.getDate() + 1); b.setHours(8, 0, 0, 0); }
+      else { a.setDate(a.getDate() - 1); a.setHours(20, 0, 0, 0); b.setHours(8, 0, 0, 0); }
+      return { from: a.getTime() - back * DAY, to: b.getTime() - back * DAY };
+    }
+    function curRange() {
+      const v = $("rangeSel").value;
+      if (v === "prev") return liveRange(new Date(), 1);
+      if (v === "day") { const s = $("rDay").value || ymd(new Date()); const a = new Date(s + "T00:00:00").getTime(); return { from: a, to: a + DAY - 1 }; }
+      if (v === "custom") { const a = new Date($("rFrom").value).getTime(), b = new Date($("rTo").value).getTime(); if (a < b && b - a <= 62 * DAY) return { from: a, to: b }; }
+      return liveRange();
+    }
+    $("rangeSel").onchange = () => {
+      const v = $("rangeSel").value;
+      $("rDay").hidden = v !== "day"; $("rFrom").hidden = $("rTo").hidden = v !== "custom";
+      if (v === "day" && !$("rDay").value) $("rDay").value = ymd(new Date());
+      if (v === "custom" && !$("rFrom").value) { const r = liveRange(); const loc = ms => { const d = new Date(ms); return `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }; $("rFrom").value = loc(r.from); $("rTo").value = loc(r.to); }
+      load();
+    };
+    ["rDay", "rFrom", "rTo"].forEach(id => $(id).onchange = load);
+    $("reloadBtn").onclick = load;
+
+    // ---------- 资料 ----------
+    let range = null, parcels = [], pending = [], shift = null, logs = [], shifts = [], sel = null, pfilter = "all";
+    const photoCache = new Map();
+    const left = p => p.items.filter(i => i.can);
+    const warnsOf = p => p.items.filter(i => !i.can);
+    const buyerKey = p => p.uid ? "u:" + p.uid : `p:${p.platform}:${String(p.username || "").toLowerCase()}`;
+    const whoOf = p => p.uid ? (p.member || p.username || "会员") : (p.username || "-");
+    function stOf(p) {
+      if (p.done) return (p.packed && p.packed.skipped && p.packed.skipped.length) ? ["tag-warn", `已打包 · ${p.packed.skipped.length} 样没放`] : ["tag-ok", "已打包"];
+      if (left(p).length) return ["tag-pink", `要放 ${left(p).length} 样`];
+      if (warnsOf(p).length) return ["tag-warn", "⚠️ 先处理"];
+      return ["", "未打包"];
+    }
+
+    async function load() {
+      range = curRange();
+      $("rangeInfo").textContent = `时间段：${fmtT(range.from)} – ${fmtT(range.to)}（这段时间下的单）`;
+      $("plist").innerHTML = `<div class="empty">载入中…</div>`;
+      try {
+        // 打包记录：从时间段开始，到结束后 2 天（或现在），最长 62 天
+        const logTo = Math.min(range.from + 62 * DAY, Math.max(range.to + 2 * DAY, Date.now()));
+        const [b, l] = await Promise.all([call("batch", { from: range.from, to: range.to }), call("log", { from: range.from, to: logTo })]);
+        parcels = b.parcels || []; pending = b.pending || []; shift = b.shift || null;
+        logs = l.list || []; shifts = l.shifts || [];
+      } catch (e) {
+        $("plist").innerHTML = `<div class="empty">载入失败：${esc(errText(e))}<br>（后端 pkAdmin 部署了吗？有「🧺 打包清单」权限吗？）</div>`;
+        return;
+      }
+      paintAll();
+      if (sel) { const p = parcels.find(x => x.orderNo === sel); if (p) openParcel(p); }
+    }
+    function paintAll() { paintStats(); paintParcels(); paintLog(); paintPending(); paintIssues(); }
+
+    // ---------- 统计 + 收工 ----------
+    function paintStats() {
+      const done = parcels.filter(p => p.done).length, todo = parcels.filter(p => !p.done && left(p).length).length;
+      const iss = issues().filter(x => x.hi).length;
+      const cards = [["parcels", "all", parcels.length, "📦 包裹"], ["parcels", "done", done, "✅ 已打包"], ["parcels", "notdone", parcels.length - done, "⏳ 未打包"],
+        ["parcels", "todo", todo, "🎁 要放东西"], ["issues", "", iss, "⚠️ 需要处理", iss ? "warn" : ""]];
+      $("stats").innerHTML = cards.map(([tab, f, n, l, c]) => `<button class="pk-stat ${c || ""}" data-go="${tab}" data-f="${f}"><div class="n">${n}</div><div class="l">${l}</div></button>`).join("");
+      const ended = range.to < Date.now();
+      $("shiftBox").innerHTML = shift
+        ? `<div class="pk-shift ok">🏁 <b>${esc(nameOf(shift.by, shift.byName))}</b> ${fmtT(shift.finishedAt)} 收工 · 已打包 ${shift.packed}/${shift.total}${shift.remaining.length ? ` · 剩 ${shift.remaining.length} 包（${esc(shift.remaining.map(x => "#" + x.orderNo.slice(-4) + " " + x.reason).join("、"))}）` : " · 全部完成 ✅"}${shift.note ? ` · 备注：${esc(shift.note)}` : ""}</div>`
+        : parcels.length ? `<div class="pk-shift no">${ended ? "⚠️ 这一场还没有人按「🏁 收工」" : "⏳ 这一场还在进行（打包员做完会按「🏁 收工」）"}</div>` : "";
+      const n = issues().filter(x => x.hi).length;
+      $("issueCnt").textContent = n; $("issueCnt").hidden = !n;
+    }
+    $("stats").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (!b) return; setTab(b.dataset.go); if (b.dataset.f) { pfilter = b.dataset.f; paintParcels(); } });
+
+    // ---------- 📦 包裹 ----------
+    const PF = { all: "全部", notdone: "未打包", todo: "要放东西", done: "已打包", skipped: "有东西没放", undone: "撤销过" };
+    const pmatch = (p, f) => f === "all" || (f === "notdone" && !p.done) || (f === "todo" && !p.done && left(p).length) || (f === "done" && p.done)
+      || (f === "skipped" && p.done && p.packed && p.packed.skipped && p.packed.skipped.length) || (f === "undone" && p.undone);
+    function paintParcels() {
+      $("pchips").innerHTML = Object.entries(PF).map(([k, v]) => `<button data-pf="${k}" class="${pfilter === k ? "on" : ""}">${v} ${parcels.filter(p => pmatch(p, k)).length}</button>`).join("");
+      const q = $("pq").value.trim().toLowerCase();
+      const list = parcels.filter(p => pmatch(p, pfilter)).filter(p => !q || p.orderNo.toLowerCase().includes(q) || String(p.username || "").toLowerCase().includes(q) || String(p.member || "").toLowerCase().includes(q))
+        .sort((a, b) => (a.done - b.done) || ((b.packed && b.packed.at || 0) - (a.packed && a.packed.at || 0)) || (a.orderTime || 0) - (b.orderTime || 0));
+      $("plist").innerHTML = list.length ? list.map(p => {
+        const [c, tx] = stOf(p), pk = p.packed;
+        const sb = p.done ? `${esc(nameOf(pk && pk.by, pk && pk.byName))} · ${fmtT(pk && pk.at)}` : p.undone ? `↩️ ${esc(nameOf(p.undone.by, p.undone.byName))} 撤销过` : `下单 ${fmtT(p.orderTime)}`;
+        return `<div class="prow ${sel === p.orderNo ? "sel" : ""}" data-no="${esc(p.orderNo)}">${noHtml(p.orderNo)}
+          <div class="who">${esc(whoOf(p))}${p.uid ? " 🎫" : ""}<div class="sb">${sb}${p.undone && p.done ? " · ↩️ 撤销过" : ""}</div></div>
+          <span class="tag ${c}">${esc(tx)}</span></div>`;
+      }).join("") : `<div class="empty">没有符合的包裹</div>`;
+    }
+    $("pchips").addEventListener("click", e => { const b = e.target.closest("[data-pf]"); if (b) { pfilter = b.dataset.pf; paintParcels(); } });
+    $("pq").addEventListener("input", paintParcels);
+    $("plist").addEventListener("click", e => { const r = e.target.closest("[data-no]"); if (!r) return; const p = parcels.find(x => x.orderNo === r.dataset.no); if (p) openParcel(p); });
+
+    const ACT = { pack: ["a-pack", "✅ 打包"], redo: ["a-redo", "✏️ 修改"], undo: ["a-undo", "↩️ 撤销"], finish: ["a-finish", "🏁 收工"] };
+    const actOf = l => l.action === "pack" && l.redo ? "redo" : l.action;
+    const itemsTxt = arr => (arr || []).map(x => esc(x.title || x.id) + (x.reason ? `（${esc(x.reason)}）` : "")).join("、");
+    function logLine(l) {
+      if (l.action === "pack") return [l.sent.length ? `放了：${itemsTxt(l.sent)}` : "没有东西要放", l.skipped.length ? `<span style="color:var(--amber-tx)">没放：${itemsTxt(l.skipped)}</span>` : "",
+        l.trackingNo ? `🚚 ${esc(l.carrierName)} ${esc(l.trackingNo)}` : "", l.photo ? "📷 有照片" : ""].filter(Boolean).join(" · ");
+      if (l.action === "undo") return `退回 ${l.returned ?? 0} 样${l.welcome ? `；迎新礼 ${l.welcome} 份要到「新会员奖励」处理` : ""}${l.trackingNo ? ` · 原运单 ${esc(l.trackingNo)}` : ""}`;
+      if (l.action === "finish") return `${esc(l.label)} · 已打包 ${l.packed}/${l.total}${l.remaining.length ? ` · 剩：${l.remaining.map(x => "#" + esc(x.orderNo.slice(-4)) + " " + esc(x.reason)).join("、")}` : ""}${l.note ? ` · 备注：${esc(l.note)}` : ""}`;
+      return "";
+    }
+    async function openParcel(p) {
+      sel = p.orderNo;
+      document.querySelectorAll(".prow").forEach(r => r.classList.toggle("sel", r.dataset.no === sel));
+      const [c, tx] = stOf(p), pk = p.packed;
+      const items = left(p), w = warnsOf(p);
+      const pg = pending.find(g => g.key === buyerKey(p));
+      const nmElse = ((pg && pg.items) || []).filter(i => i.kind === "nm" && i.linkedOrder && i.linkedOrder !== p.orderNo);
+      $("pdet").innerHTML = `<div class="det">
+        <h3>${noHtml(p.orderNo)} <span class="tag ${c}">${esc(tx)}</span></h3>
+        <div class="meta">${esc(p.username || "-")} · ${PLAT[p.platform] || ""}${p.uid ? ` · 🎫 会员 ${esc(p.member || "")}` : " · 非会员"} · 下单 ${fmtT(p.orderTime)}</div>
+        ${p.done ? `<div class="sec"><h4>✅ ${esc(nameOf(pk.by, pk.byName))} · ${fmtT(pk.at)} 打包好</h4>
+          ${pk.trackingNo ? `<div>🚚 ${esc(pk.carrierName)} <b>${esc(pk.trackingNo)}</b>${pk.trackingUrl ? ` <a href="${esc(pk.trackingUrl)}" target="_blank" rel="noopener">🔗 查询</a>` : ""}</div>` : "<div>没有运单号</div>"}
+          ${pk.sent && pk.sent.length ? `<div>放了：${itemsTxt(pk.sent)}</div>` : ""}
+          ${pk.photo ? `<div id="phBox">📷 读取照片…</div>` : "<div>没有照片</div>"}</div>` : ""}
+        ${p.done && pk.skipped && pk.skipped.length ? `<div class="sec warn"><h4>❌ 这包没放</h4>${itemsTxt(pk.skipped)}</div>` : ""}
+        ${!p.done && items.length ? `<div class="sec"><h4>🎁 要放进这一包</h4><ul>${items.map(i => `<li>${i.icon} ${esc(i.title)} <span class="meta">${esc(i.sub || "")}</span></li>`).join("")}</ul></div>` : ""}
+        ${w.length ? `<div class="sec warn"><h4>⚠️ 要先处理</h4><ul>${w.map(i => `<li>${i.icon} ${esc(i.title)}：${esc(i.warn || i.sub || "")}</li>`).join("")}</ul></div>` : ""}
+        ${nmElse.length ? `<div class="sec">${nmElse.map(i => `🎉 这位会员有 ${esc(i.title)}，要放进 ${noHtml(i.linkedOrder)} 的包裹`).join("<br>")}</div>` : ""}
+        ${p.undone ? `<div class="sec undo">↩️ ${esc(nameOf(p.undone.by, p.undone.byName))} · ${fmtT(p.undone.at)} 撤销过打包（退回 ${p.undone.returned || 0} 样）</div>` : ""}
+        <div class="sec"><h4>🕒 时间轴</h4><div id="tlBox" class="meta">读取中…</div></div>
+        <div class="acts">
+          ${p.done ? `<button class="btn btn-ghost" data-undo>↩️ 撤销打包</button>` : ""}
+          ${[...p.items, ...nmElse].some(i => i.kind === "nm") ? `<a class="btn btn-ghost" href="newmember.html#records">🎉 去新会员奖励</a>` : ""}
+          <button class="btn btn-ghost" data-copy="${esc(p.orderNo)}">📋 复制单号</button>
+        </div></div>`;
+      if (p.done && pk.photo) {
+        let ph = photoCache.get(p.orderNo);
+        if (ph === undefined) { try { ph = (await call("photo", { orderNo: p.orderNo })).photo || ""; } catch (e) { ph = ""; } photoCache.set(p.orderNo, ph); }
+        if (sel === p.orderNo && $("phBox")) $("phBox").innerHTML = ph ? `<img class="pthumb" src="${esc(ph)}" data-zoom alt="">` : "📷 照片读取失败";
+      }
+      try {
+        const r = await call("log", { orderNo: p.orderNo });
+        if (sel !== p.orderNo || !$("tlBox")) return;
+        const L = r.list || [];
+        $("tlBox").outerHTML = L.length ? `<div class="tl">${L.map(l => { const [, t] = ACT[actOf(l)] || ["", l.action]; return `<div><span class="t">${fmtT(l.at)}</span>${esc(nameOf(l.by, l.byName))} ${t}<div class="meta">${logLine(l)}</div></div>`; }).join("")}</div>`
+          : `<div class="meta">还没有打包记录（这个功能上线前的打包不会出现在这里）</div>`;
+      } catch (e) { if ($("tlBox")) $("tlBox").textContent = "读取失败：" + errText(e); }
+    }
+    $("pdet").addEventListener("click", async e => {
+      const z = e.target.closest("[data-zoom]");
+      if (z) { const d = document.createElement("div"); d.className = "zoom"; d.innerHTML = `<img src="${esc(z.getAttribute("src"))}" alt="">`; d.onclick = () => d.remove(); document.body.appendChild(d); return; }
+      const cp = e.target.closest("[data-copy]");
+      if (cp) { try { await navigator.clipboard.writeText(cp.dataset.copy); cp.textContent = "已复制 ✓"; } catch (x) { prompt("复制：", cp.dataset.copy); } return; }
+      if (e.target.closest("[data-undo]")) {
+        const p = parcels.find(x => x.orderNo === sel); if (!p) return;
+        if (!confirm(`↩️ 撤销 ${p.orderNo}（${p.username || ""}）这一包？\n\n用打包清单寄出的东西会全部退回待寄，运单号、照片也会清掉。\n迎新礼要到「新会员奖励」处理。`)) return;
+        try {
+          const r = await call("undo", { orderNo: p.orderNo });
+          alert(`↩️ 已撤销：退回 ${r.smallGifts + r.prizes + r.redemptions} 样${r.welcome ? `\n⚠️ 有 ${r.welcome} 份迎新礼已寄出，要到「新会员奖励」处理` : ""}`);
+          photoCache.delete(p.orderNo);
+          await load();
+        } catch (x) { alert("❌ " + errText(x)); }
+      }
+    });
+
+    // ---------- 📒 打包记录 ----------
+    function paintLog() {
+      $("shiftList").innerHTML = `<h3>🏁 收工记录</h3>` + (shifts.length ? `<table class="tbl"><thead><tr><th>场次</th><th>谁</th><th>收工时间</th><th>已打包</th><th>剩下的</th></tr></thead><tbody>${shifts.map(s =>
+        `<tr><td>${esc(s.label || fmtT(s.from) + " – " + fmtT(s.to))}</td><td>${esc(nameOf(s.by, s.byName))}</td><td>${fmtT(s.finishedAt)}</td><td>${s.packed}/${s.total}</td>
+          <td>${s.remaining.length ? s.remaining.map(x => `#${esc(x.orderNo.slice(-4))} ${esc(x.reason)}`).join("<br>") : "✅ 全部完成"}${s.note ? `<div class="meta">备注：${esc(s.note)}</div>` : ""}</td></tr>`).join("")}</tbody></table>`
+        : `<div class="meta" style="color:var(--muted)">这段时间还没有收工记录</div>`);
+      const who = [...new Map(logs.map(l => [l.by, nameOf(l.by, l.byName)])).entries()];
+      const cur = $("lWho").value;
+      $("lWho").innerHTML = `<option value="">全部人</option>` + who.map(([e, n]) => `<option value="${esc(e)}">${esc(n)}</option>`).join("");
+      $("lWho").value = who.some(([e]) => e === cur) ? cur : "";
+      const fw = $("lWho").value, fa = $("lAct").value, q = $("lq").value.trim().toLowerCase();
+      const list = logs.filter(l => (!fw || l.by === fw) && (!fa || (fa === "skip" ? l.skipped.length : actOf(l) === fa))
+        && (!q || l.orderNo.toLowerCase().includes(q) || String(l.username || "").toLowerCase().includes(q)));
+      $("lCount").textContent = `${list.length} 笔`;
+      $("ltbody").innerHTML = list.length ? list.map(l => { const [c, t] = ACT[actOf(l)] || ["", l.action];
+        return `<tr class="${l.orderNo ? "go" : ""}" data-no="${esc(l.orderNo)}"><td>${fmtT(l.at)}</td><td>${esc(nameOf(l.by, l.byName))}</td><td><span class="act-tag ${c}">${t}</span>${l.skipped.length ? ' <span class="act-tag a-undo">❌</span>' : ""}</td>
+          <td>${l.orderNo ? noHtml(l.orderNo) + `<div class="meta" style="color:var(--muted);font-size:.76rem">${esc(l.username)}</div>` : "-"}</td><td>${logLine(l)}</td></tr>`; }).join("")
+        : `<tr><td colspan="5" class="empty">这段时间没有记录${logs.length ? "" : "（这个功能上线后才开始记录）"}</td></tr>`;
+    }
+    ["lWho", "lAct"].forEach(id => $(id).onchange = paintLog); $("lq").addEventListener("input", paintLog);
+    $("ltbody").addEventListener("click", e => { const r = e.target.closest("tr[data-no]"); if (!r || !r.dataset.no) return; const p = parcels.find(x => x.orderNo === r.dataset.no); if (p) { setTab("parcels"); openParcel(p); } });
+
+    // ---------- 🎁 待寄礼物 ----------
+    const KIND = { nm: "🎉 迎新礼", prize: "🏆 中奖奖品", red: "🛍️ 兑换 / 🏅 签到达人", sg: "🎁 小礼物" };
+    function pendItems() {
+      const out = [];
+      pending.forEach(g => g.items.forEach(i => {
+        const today = i.kind === "nm" && i.linkedOrder ? parcels.find(p => p.orderNo === i.linkedOrder && !p.done) : parcels.find(p => !p.done && buyerKey(p) === g.key);
+        out.push({ i, g, today });
+      }));
+      return out;
+    }
+    function paintPending() {
+      const kinds = [...new Set(pending.flatMap(g => g.items.map(i => i.kind)))];
+      const cur = $("gKind").value;
+      $("gKind").innerHTML = `<option value="">全部种类</option>` + kinds.map(k => `<option value="${k}">${KIND[k] || k}</option>`).join("");
+      $("gKind").value = kinds.includes(cur) ? cur : "";
+      const fk = $("gKind").value, ft = $("gToday").value, q = $("gq").value.trim().toLowerCase();
+      const list = pendItems().filter(x => (!fk || x.i.kind === fk) && (ft === "" || (ft === "w" ? !x.i.can : ft === "1" ? !!x.today : !x.today))
+        && (!q || [x.g.member, x.g.username, x.i.title, ...(x.g.accounts || []).map(a => a.username)].some(s => String(s || "").toLowerCase().includes(q))));
+      $("gCount").textContent = `${list.length} 样`;
+      const G = new Map();
+      list.forEach(x => { const k = x.i.kind; if (!G.has(k)) G.set(k, []); G.get(k).push(x); });
+      $("glist").innerHTML = list.length ? [...G.entries()].map(([k, arr]) => `<details class="grp" open><summary>${KIND[k] || k} × ${arr.length}</summary>
+        <table class="tbl"><thead><tr><th>东西</th><th>谁的</th><th>平台账号</th><th style="width:90px">等了</th><th>这一场</th></tr></thead><tbody>${arr.sort((a, b) => (a.i.since || 0) - (b.i.since || 0)).map(x => {
+          const d = daysAgo(x.i.since);
+          return `<tr class="${x.today ? "go" : ""}" data-no="${esc(x.today ? x.today.orderNo : "")}"><td>${x.i.icon} ${esc(x.i.title)}<div class="meta" style="color:var(--muted);font-size:.76rem">${esc(x.i.sub || "")}</div>${!x.i.can ? `<div style="color:var(--amber-tx);font-size:.78rem">⚠️ ${esc(x.i.warn || "要先处理")}</div>` : ""}</td>
+            <td>${x.g.uid ? "🎫 " + esc(x.g.member || "会员") : esc(x.g.username || "-") + ' <span class="meta" style="color:var(--muted)">非会员</span>'}</td>
+            <td style="font-size:.78rem">${(x.g.accounts && x.g.accounts.length ? x.g.accounts : x.g.username ? [{ platform: x.g.platform, username: x.g.username }] : []).map(a => `${PLAT[a.platform] || ""} @${esc(a.username)}`).join("<br>")}</td>
+            <td>${d == null ? "-" : d === 0 ? "今天" : d + " 天"}${d != null && d >= 14 ? " ⏰" : ""}</td>
+            <td>${x.i.kind === "nm" && x.i.linkedOrder ? `放进 ${noHtml(x.i.linkedOrder)}${x.today ? "" : '<div class="meta" style="color:var(--muted);font-size:.74rem">（不在这一场）</div>'}` : x.today ? `📦 ${noHtml(x.today.orderNo)}` : '<span style="color:var(--muted)">⏳ 等下单</span>'}</td></tr>`;
+        }).join("")}</tbody></table></details>`).join("") : `<div class="empty">没有待寄的东西 🎉</div>`;
+    }
+    ["gKind", "gToday"].forEach(id => $(id).onchange = paintPending); $("gq").addEventListener("input", paintPending);
+    $("glist").addEventListener("click", e => { const r = e.target.closest("tr[data-no]"); if (!r || !r.dataset.no) return; const p = parcels.find(x => x.orderNo === r.dataset.no); if (p) { setTab("parcels"); openParcel(p); } });
+    // 🖨️ 备货单：这一场有单、可以放的东西（按礼物名称合计）
+    $("printBtn").onclick = () => {
+      const G = new Map();
+      pendItems().filter(x => x.today && x.i.can).forEach(x => { const k = x.i.icon + " " + (x.i.prep || x.i.title); if (!G.has(k)) G.set(k, []); G.get(k).push(x); });
+      const rows = [...G.entries()].sort((a, b) => b[1].length - a[1].length).map(([k, arr]) =>
+        `<tr><td style="width:24px;font-size:18px">☐</td><td><b>${esc(k)}</b><div style="color:#555;font-size:12px">${arr.map(x => esc(x.g.member || x.g.username || "") + " #" + esc(x.today.orderNo.slice(-4))).join("、")}</div></td><td style="text-align:right;font-weight:800;font-size:16px">× ${arr.length}</td></tr>`).join("");
+      $("printArea").hidden = false;
+      $("printArea").innerHTML = `<h2 style="margin:0 0 4px">🖨️ 备货单</h2><div style="font-size:12px;color:#555;margin-bottom:10px">${fmtT(range.from)} – ${fmtT(range.to)} · 印于 ${fmtT(Date.now())} · 只用来拿货，放不放、放哪包以扫描为准</div>
+        ${rows ? `<table style="width:100%;border-collapse:collapse" border="0">${rows.replace(/<td/g, '<td style="border-bottom:1px solid #ccc;padding:8px 6px;vertical-align:top"')}</table>` : "<p>这一场没有要准备的东西</p>"}`;
+      window.print();
+      setTimeout(() => { $("printArea").hidden = true; }, 500);
+    };
+
+    // ---------- ⚠️ 需要处理 ----------
+    function issues() {
+      const out = [];
+      const seen = new Set();
+      pending.forEach(g => g.items.forEach(i => {
+        if (i.kind === "nm" && i.issueOrder && !seen.has(i.id)) { seen.add(i.id);
+          out.push({ hi: true, icon: "🎉", html: `<b>迎新礼没放入</b>：${esc(g.member || "会员")} 的 ${esc(i.title)}：${esc(i.sub || "")}`,
+            act: `<a class="btn btn-ghost" href="newmember.html#records" style="padding:5px 10px;font-size:.8rem">去处理</a>`, no: i.issueOrder }); }
+      }));
+      pending.forEach(g => g.items.forEach(i => {
+        const lp = i.kind === "nm" && i.linkedOrder && i.can ? parcels.find(p => p.orderNo === i.linkedOrder && p.done) : null;
+        if (lp) out.push({ hi: true, icon: "🎉", no: lp.orderNo, html: `<b>迎新礼那包已打包，但迎新礼还没寄出</b>：${esc(g.member || "会员")} 的 ${esc(i.title)} 要放 ${noHtml(lp.orderNo)}。请确认有没有放进去，再到新会员奖励处理。`,
+          act: `<a class="btn btn-ghost" href="newmember.html#records" style="padding:5px 10px;font-size:.8rem">去处理</a>` });
+      }));
+      parcels.filter(p => p.undone && !p.done).forEach(p => out.push({ hi: true, icon: "↩️", no: p.orderNo,
+        html: `<b>撤销后还没重新打包</b>：${noHtml(p.orderNo)} ${esc(whoOf(p))} · ${esc(nameOf(p.undone.by, p.undone.byName))} ${fmtT(p.undone.at)} 撤销` }));
+      if (shift) shift.remaining.forEach(x => { const p = parcels.find(y => y.orderNo === x.orderNo); if (p && !p.done) out.push({ hi: true, icon: "🏁", no: x.orderNo,
+        html: `<b>收工时没打包</b>：${noHtml(x.orderNo)} ${esc(x.username || "")} · 原因：${esc(x.reason)}` }); });
+      else if (parcels.length && range.to < Date.now() && parcels.some(p => !p.done)) out.push({ hi: true, icon: "🏁", html: `<b>这一场还没收工</b>：还有 ${parcels.filter(p => !p.done).length} 包没打包，也没有人按「🏁 收工」` });
+      parcels.filter(p => !p.done && warnsOf(p).length).forEach(p => warnsOf(p).filter(i => !i.issueOrder).forEach(i => out.push({ hi: false, icon: i.icon, no: p.orderNo,
+        html: `<b>要先处理才能放</b>：${noHtml(p.orderNo)} ${esc(whoOf(p))} · ${esc(i.title)}：${esc(i.warn || i.sub || "")}` })));
+      parcels.filter(p => p.done && p.packed && p.packed.skipped && p.packed.skipped.some(x => x.kind !== "nm")).forEach(p => out.push({ hi: false, icon: "❌", no: p.orderNo,
+        html: `<b>这包有东西没放</b>（留到下一单）：${noHtml(p.orderNo)} ${esc(whoOf(p))} · ${itemsTxt(p.packed.skipped.filter(x => x.kind !== "nm"))}` }));
+      return out;
+    }
+    function paintIssues() {
+      const L = issues();
+      $("ilist").innerHTML = L.length ? `<div class="meta" style="color:var(--muted);font-size:.8rem">⚠️ 黄色 = 要处理；白色 = 提醒</div>` + L.map(x => `<div class="issue ${x.hi ? "hi" : ""}" ${x.no ? `data-no="${esc(x.no)}"` : ""}><span class="i">${x.icon}</span><div class="tx">${x.html}</div>${x.act || ""}</div>`).join("")
+        : `<div class="empty">没有需要处理的事 ✅</div>`;
+    }
+    $("ilist").addEventListener("click", e => { if (e.target.closest("a")) return; const r = e.target.closest("[data-no]"); if (!r) return; const p = parcels.find(x => x.orderNo === r.dataset.no); if (p) { setTab("parcels"); openParcel(p); } });
+
+    // ---------- 分页 ----------
+    function setTab(t) {
+      document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
+      document.querySelectorAll(".pane").forEach(s => s.classList.toggle("on", s.id === "pane-" + t));
+      history.replaceState(null, "", "#" + t);
+    }
+    $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
+
+    requireAdmin(async () => {
+      const h = location.hash.slice(1);
+      if (["parcels", "log", "pending", "issues"].includes(h)) setTab(h);
+      await load();
+    });
+  </script>
+</body>
+</html>

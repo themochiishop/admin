@@ -266,7 +266,7 @@
       candidateFound: "系统找到候选订单", candidateRemoved: "候选订单失效，已移除", linkOrder: "手动关联订单",
       rejectCandidate: "否决候选订单", confirmOrder: "确认订单", unlinkOrder: "换订单", packed: "确认打包",
       unpack: "拆包（改回待打包）", shipped: "确认寄出", extend: "延期", cancel: "取消", cancelRefund: "取消并退分",
-      refund: "补退分", note: "备注", exception: "异常处理", expire: "超过期限，转为待处理", orderIssue: "关联订单被取消 / 退货",
+      refund: "补退分", note: "备注", exception: "异常处理", expire: "超过期限，转为待处理", orderIssue: "关联订单被取消 / 退货", packSkip: "打包时没放入", clearIssue: "清除标记",
       received: "已签收（完成）",
     };
 
@@ -419,7 +419,8 @@
         .map(([k, l, n]) => `<button data-s="${k}" class="${chip === k ? "on" : ""}">${esc(l)}<span class="n">${n}</span></button>`).join("");
       let list = chip ? base.filter(r => r.status === chip) : base;
       // 审核管理：最急的在上面（截止时间最早 / 等最久）
-      if (tab === "review") list = list.slice().sort((a, b) => (msOf(a.deadline) || msOf(a.requestedAt) || 0) - (msOf(b.deadline) || msOf(b.requestedAt) || 0));
+      // 有问题标记的（订单取消 / 打包时没放入）排最前面
+      if (tab === "review") list = list.slice().sort((a, b) => (!!b.orderIssue - !!a.orderIssue) || (msOf(a.deadline) || msOf(a.requestedAt) || 0) - (msOf(b.deadline) || msOf(b.requestedAt) || 0));
       const pages = Math.max(1, Math.ceil(list.length / PAGE));
       if (page >= pages) page = pages - 1;
       const shown = list.slice(page * PAGE, page * PAGE + PAGE);
@@ -434,7 +435,7 @@
             <div class="sb">${stTag(r.status)} ${platformsOf(r).map(platformTag).join("")}
               <span>${fmt(r.requestedAt, false)}</span>${r.deadline && ["pending_order", "order_review", "expired_review"].includes(r.status) ? `<span>· ${daysLeft(r)}</span>` : ""}</div>
           </div>
-          ${r.orderIssue ? '<span class="wa" title="关联订单被取消 / 退货">⚠️</span>' : ""}
+          ${r.orderIssue ? `<span class="wa" title="${r.orderIssue.type === "not-packed" ? "打包时没放入" : "关联订单被取消 / 退货"}">⚠️</span>` : ""}
           ${(r.candidates || []).length && r.status === "order_review" ? `<span class="wa" title="候选订单">🧾${r.candidates.length}</span>` : ""}
         </div>`).join("") : `<p class="empty">${tab === "review" ? "目前没有要处理的纪录 🎉" : "没有纪录"}</p>`;
     }
@@ -491,9 +492,13 @@
       const reqMs = msOf(r.requestedAt) || 0;
       const orders = c ? c.orders.filter(o => (msOf(o.orderTime) || 0) >= reqMs - 7 * 86400000).slice(0, 20) : null;
       const notes = c ? c.history.filter(h => h.action === "note") : [];
+      // 谁做的：从操作历史找（会员读得到的资料里不放员工 email）；旧纪录还有栏位的照旧显示
+      const byAct = (...acts) => { const h = c ? c.history.find(x => acts.includes(x.action)) : null; return h ? (h.by === r.uid ? "会员本人" : h.by || "") : ""; };
+      const who = (old, ...acts) => (typeof old === "string" && old.includes("@") ? old : byAct(...acts)) || "-";
 
       let alerts = "";
-      if (r.orderIssue) alerts += `<div class="alert alert-bad">⚠️ 关联订单 <b>${esc(r.orderIssue.orderNo)}</b> 已被取消 / 退货（${fmt(r.orderIssue.at)}）。请「换订单」或取消。</div>`;
+      if (r.orderIssue && r.orderIssue.type === "not-packed") alerts += `<div class="alert alert-bad">⚠️ 打包员 <b>${esc(String(r.orderIssue.by || byAct("packSkip") || "-").split("@")[0])}</b> 在 ${fmt(r.orderIssue.at)} 打包订单 <b>${esc(r.orderIssue.orderNo)}</b> 时<b>没放入迎新礼</b>：${esc(r.orderIssue.reason || "")}。<br>请「换订单」（会员会看到新单号），或安排好后按「清除标记」。<button type="button" class="btn btn-ghost" data-act="clearIssue" style="margin-left:6px;padding:3px 10px;font-size:.8rem">清除标记</button></div>`;
+      else if (r.orderIssue) alerts += `<div class="alert alert-bad">⚠️ 关联订单 <b>${esc(r.orderIssue.orderNo)}</b> 已被取消 / 退货（${fmt(r.orderIssue.at)}）。请「换订单」或取消。</div>`;
       if (st === "expired_review") alerts += `<div class="alert alert-warn">⏰ 已超过下单期限。可以延期、手动关联订单、取消或取消并退分。系统不会自动没收积分。</div>`;
       if (st === "ready_to_pack" || st === "packed") alerts += `<div class="alert alert-warn">📦 请确认订单 <b>${esc(r.linkedOrder ? r.linkedOrder.orderNo : "")}</b> 的包裹还没寄出，再把 ${esc(r.gift && r.gift.name)} 放进去。</div>`;
       if (r.test) alerts += `<div class="alert alert-ok">🧪 内部会员测试兑换：不扣库存、不算进总览数字。</div>`;
@@ -501,7 +506,7 @@
       const cand = (r.candidates || []).map(x => `
         <div class="cand">
           ${platformTag(x.platform)} <b>${esc(x.orderNo)}</b> · ${esc(x.username)}
-          <div class="meta">下单时间：${fmt(x.orderTime)}${x.amount != null ? ` · RM${esc(x.amount)}` : ""} · ${x.source === "manual" ? "手动加入" + (x.by ? "（" + esc(x.by) + "）" : "") : "系统自动找到"}${x.ignoreDeadline ? " · ⚠️ 已忽略期限" : ""}${x.allowEarly ? " · ⚠️ 兑换前的订单" : ""}</div>
+          <div class="meta">下单时间：${fmt(x.orderTime)}${x.amount != null ? ` · RM${esc(x.amount)}` : ""} · ${x.source === "manual" ? "手动加入" + ((x.by || byAct("linkOrder")) ? "（" + esc(x.by || byAct("linkOrder")) + "）" : "") : "系统自动找到"}${x.ignoreDeadline ? " · ⚠️ 已忽略期限" : ""}${x.allowEarly ? " · ⚠️ 兑换前的订单" : ""}</div>
           ${st === "order_review" ? `<div class="actions">
             <button class="btn btn-ok" data-act="confirmOrder" data-order="${esc(x.orderNo)}">✅ 确认这张订单</button>
             <button class="btn btn-ghost" data-act="rejectCandidate" data-order="${esc(x.orderNo)}">否决</button></div>` : ""}
@@ -576,7 +581,7 @@
               ["关联平台", platformTag(r.linkedOrder.platform)],
               ["订单编号", `<b>${esc(r.linkedOrder.orderNo)}</b> · ${esc(r.linkedOrder.username)}`],
               ["实际下单时间", fmt(r.linkedOrder.orderTime)],
-              ["确认人员", `${esc(r.linkedOrder.by || "-")} · ${fmt(r.linkedOrder.at)}`],
+              ["确认人员", `${esc(who(r.linkedOrder.by, "confirmOrder"))} · ${fmt(r.linkedOrder.at)}`],
             ]) : `<p class="meta">还没有关联订单</p>`}
             ${cand ? `<div style="margin-top:8px"><b style="font-size:.86rem">候选订单</b>${cand}</div>` : ""}
           </details>
@@ -587,11 +592,11 @@
           </details>
           <details class="rw-sec" open><summary>👤 审核与寄送</summary>
             ${kv([
-              ["审核人员", r.reviewedBy ? `${esc(r.reviewedBy)} · ${fmt(r.reviewedAt)}` : "-"],
-              ["打包确认", r.packedBy ? `${esc(r.packedBy)} · ${fmt(r.packedAt)}` : "-"],
-              ["寄送确认", r.shippedBy ? `${esc(r.shippedBy)} · ${fmt(r.shippedAt)}` : "-"],
+              ["审核人员", r.reviewedAt ? `${esc(who(r.reviewedBy, "approve"))} · ${fmt(r.reviewedAt)}` : "-"],
+              ["打包确认", r.packedAt ? `${esc(who(r.packedBy, "packed"))} · ${fmt(r.packedAt)}` : "-"],
+              ["寄送确认", r.shippedAt ? `${esc(who(r.shippedBy, "shipped"))} · ${fmt(r.shippedAt)}` : "-"],
               ["签收", r.completedAt ? `${fmt(r.completedAt)} · ${r.receivedBy === "auto" ? "寄出 14 天后自动完成" : r.receivedBy === "member" ? "会员确认收货" : esc(r.receivedBy || "")}` : "-"],
-              ["取消", r.cancelledAt ? `${esc(r.cancelledBy || "")} · ${fmt(r.cancelledAt)}${r.cancelReason ? " · " + esc(r.cancelReason) : ""}` : "-"],
+              ["取消", r.cancelledAt ? `${esc(who(r.cancelledBy, "cancel", "cancelRefund", "reject", "memberCancel"))} · ${fmt(r.cancelledAt)}${r.cancelReason ? " · " + esc(r.cancelReason) : ""}` : "-"],
             ])}
           </details>
           <details class="rw-sec" ${notes.length ? "open" : ""}><summary>📝 管理员备注（${notes.length}）</summary>
@@ -618,7 +623,7 @@
     const LOG = {
       approve: "批准", reject: "拒绝", confirmOrder: "确认订单", rejectCandidate: "否决候选订单", linkOrder: "关联订单",
       unlinkOrder: "换订单", packed: "确认打包", unpack: "拆包", shipped: "确认寄出", extend: "延期",
-      cancel: "取消", refund: "补退分", note: "加备注", exception: "异常处理",
+      cancel: "取消", refund: "补退分", note: "加备注", exception: "异常处理", clearIssue: "清除标记",
     };
 
     $("detail").addEventListener("click", async e => {
@@ -653,6 +658,8 @@
           const why = ask("关联兑换前订单的原因（必填）"); if (why == null) return;
           data.allowEarly = true; data.reason = why;
         }
+      } else if (act === "clearIssue") {
+        const why = ask("清除标记的原因（例如：已补放进同一包、另外寄出）"); if (why == null) return; data.reason = why;
       } else if (act === "unlinkOrder") {
         const why = ask("换订单的原因"); if (why == null) return; data.reason = why;
       } else if (act === "packed") {
@@ -807,7 +814,7 @@
         COPY_KEYS.forEach(([k]) => { $(`c_${l}_${k}`).value = ((s.copy || {})[l] || {})[k] || ""; });
       });
       $("startInfo").innerHTML = s.startAt
-        ? `活动开始时间：<b>${fmt(s.startAt)}</b>（这个时间之后注册的才算新会员，之后不会再改）· 设定版本 v${esc(s.version || 0)}${s.updatedBy ? ` · 最后修改：${esc(s.updatedBy)} ${fmt(s.updatedAt)}` : ""}`
+        ? `活动开始时间：<b>${fmt(s.startAt)}</b>（这个时间之后注册的才算新会员，之后不会再改）· 设定版本 v${esc(s.version || 0)}${s.updatedAt ? ` · 最后修改：${fmt(s.updatedAt)}（谁改的看总览「最近动态 › 管理员」）` : ""}`
         : `活动还没启用过。第一次勾「活动启用」并保存时，会记下当下时间作为活动开始时间。`;
       document.querySelectorAll("#stForm input, #stForm textarea, #stForm button").forEach(x => { x.disabled = !owner; });
       // 提醒：额外福利的欢迎礼分数
