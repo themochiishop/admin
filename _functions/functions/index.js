@@ -100,7 +100,9 @@ exports.rdMember = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 10
 // 🎁 小礼物（后台）：{ op: "create", batchId, giftName, mode, days, list } / { op: "void" | "restore" | "ship" | "unship", id, ... }
 //    建立：「领奖追踪」权限；作废 / 恢复 / 寄出：「领奖追踪」或「📦 打包清单」权限（检查在 smallgift.js）
 const SG_OPS = { create: smallgift.sgCreate, void: smallgift.sgVoid, restore: smallgift.sgRestore,
-  ship: smallgift.sgShip, unship: smallgift.sgUnship };
+  ship: smallgift.sgShip, unship: smallgift.sgUnship,
+  // ✋ 手动指定（会员系统后台「🎁 指定小礼物」）：店主 /「领奖追踪」/「中奖奖品」权限
+  manualCreate: smallgift.sgManualCreate, manualUpdate: smallgift.sgManualUpdate, manualShip: smallgift.sgManualShip };
 exports.sgAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5, timeoutSeconds: 300 },
   req => run(pick(SG_OPS, req), req));
 
