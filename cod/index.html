@@ -53,7 +53,21 @@
     }
 
     /* 左侧面单录入区域调宽至 360px */
-    .left-panel { width: 360px; flex-shrink: 0; }
+    .left-col { width: 360px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+    .left-panel { width: 100%; }
+
+    /* 🕘 最近打印记录（只存本机浏览器） */
+    .history-panel { width: 100%; max-height: 300px; }
+    .history-empty { font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px 0; }
+    .history-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 5px; cursor: pointer; transition: all 0.2s; }
+    .history-item:hover { background: #eff6ff; border-color: var(--primary); }
+    .history-main { flex: 1; min-width: 0; }
+    .history-order { font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-main); }
+    .history-sub { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-count { font-size: 10px; font-weight: 700; color: #b45309; background: #fef3c7; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+    .history-qty { font-size: 11px; font-weight: 700; color: #059669; white-space: nowrap; }
+    .btn-history-clear { font-size: 10.5px; color: #ef4444; background: none; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 7px; cursor: pointer; }
+    .btn-history-clear:hover { background: #fef2f2; }
     
     /* 中间商品清单区域适度缩窄最小宽度 */
     .middle-panel { flex: 1; min-width: 300px; }
@@ -346,7 +360,7 @@
 
     @media print {
       html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; top: 0px !important; }
-      .left-panel, .middle-panel, .modal-overlay, .goog-te-banner-frame { display: none !important; }
+      .left-col, .left-panel, .history-panel, .middle-panel, .modal-overlay, .goog-te-banner-frame { display: none !important; }
       .app-container { display: block !important; margin: 0 !important; width: 100% !important; height: 100% !important; }
       .preview-panel { width: 100% !important; background: white !important; border: none !important; padding: 0 !important; display: block !important; min-height: 100vh !important; }
       
@@ -375,6 +389,7 @@
 
   <div class="app-container">
     <!-- 1. 左侧：基本订单信息面板 -->
+    <div class="left-col">
     <div class="panel-card left-panel">
       <div class="panel-header">
         <div class="panel-title">
@@ -440,6 +455,16 @@
         <button class="btn-print" id="btnPrint" onclick="triggerPrint()">🖨️ 打印面单 AWB</button>
         <button class="btn-settings" onclick="openSettingsModal()">⚙️ 设置</button>
       </div>
+    </div>
+
+    <!-- 🕘 最近打印记录（录入框下方） -->
+    <div class="panel-card history-panel">
+      <div class="panel-header">
+        <div class="panel-title"><span>🕘 最近打印记录</span></div>
+        <button class="btn-history-clear" onclick="clearPrintHistory()">清空</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
     </div>
 
     <!-- 2. 中间：商品清单 Product List -->
@@ -658,6 +683,110 @@
         return;
       }
       window.print();
+      savePrintRecord();   /* 打印窗口关闭后记一笔 */
+    }
+
+    /* ===== 🕘 最近打印记录（localStorage，只存本机） ===== */
+    const PRINT_HISTORY_KEY = 'cod_print_history';
+    const PRINT_HISTORY_MAX = 10;
+
+    function loadPrintHistory() {
+      try { return JSON.parse(localStorage.getItem(PRINT_HISTORY_KEY)) || []; }
+      catch (e) { return []; }
+    }
+    function storePrintHistory(list) {
+      try { localStorage.setItem(PRINT_HISTORY_KEY, JSON.stringify(list)); } catch (e) {}
+    }
+
+    function savePrintRecord() {
+      const order = document.getElementById('orderInput').value.trim();
+      if (!order) return;
+      const products = [];
+      document.querySelectorAll('.product-row').forEach(row => {
+        const title = row.querySelector('.prod-title').value.trim();
+        if (!title) return;
+        const sel = row.querySelector('.prod-qty-select').value;
+        const qty = (sel === 'CUSTOM' ? row.querySelector('.prod-qty-custom').value.trim() : sel) || 'x1';
+        products.push({
+          title: title,
+          variation: row.querySelector('.prod-var').value.trim(),
+          qty: qty,
+          dashed: row.querySelector('.prod-dashed-check').checked
+        });
+      });
+      const trackingOpen = document.getElementById('trackingGroup').style.display !== 'none';
+      let list = loadPrintHistory();
+      const old = list.find(r => r.order === order);
+      list = list.filter(r => r.order !== order);
+      list.unshift({
+        order: order,
+        buyer: document.getElementById('buyerInput').value.trim(),
+        tracking: trackingOpen ? document.getElementById('trackingInput').value.trim() : '',
+        channel: document.getElementById('channelInput').value,
+        store: document.getElementById('storeInput').value,
+        msg: document.getElementById('msgInput').value,
+        note: document.getElementById('noteInput').value,
+        products: products,
+        totalQty: document.getElementById('awbTotalQty').innerText,
+        time: Date.now(),
+        count: old ? (old.count || 1) + 1 : 1
+      });
+      storePrintHistory(list.slice(0, PRINT_HISTORY_MAX));
+      renderPrintHistory();
+    }
+
+    function escHtml(str) {
+      return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
+    function formatHistoryTime(ts) {
+      const d = new Date(ts);
+      const p = n => String(n).padStart(2, '0');
+      return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    function renderPrintHistory() {
+      const box = document.getElementById('historyList');
+      const list = loadPrintHistory();
+      if (list.length === 0) {
+        box.innerHTML = '<div class="history-empty">还没有打印记录</div>';
+        return;
+      }
+      box.innerHTML = list.map((r, i) => `
+        <div class="history-item" onclick="restorePrintRecord(${i})" title="点击重新填入这单（可补印）">
+          <div class="history-main">
+            <div class="history-order">${escHtml(r.order)}${r.count > 1 ? `<span class="history-count">×${r.count}</span>` : ''}</div>
+            <div class="history-sub">${escHtml(r.buyer)} · ${formatHistoryTime(r.time)}</div>
+          </div>
+          <div class="history-qty">${escHtml(r.totalQty)} 件</div>
+        </div>`).join('');
+    }
+
+    function restorePrintRecord(index) {
+      const r = loadPrintHistory()[index];
+      if (!r) return;
+      if (!confirm(`重新填入订单 ${r.order} 的资料？\n（目前表格内容会被覆盖）`)) return;
+      document.getElementById('buyerInput').value = r.buyer || '';
+      document.getElementById('orderInput').value = r.order || '';
+      document.getElementById('channelInput').value = r.channel || 'COD';
+      document.getElementById('storeInput').value = r.store || '';
+      document.getElementById('msgInput').value = r.msg || '';
+      document.getElementById('noteInput').value = r.note || '';
+      document.getElementById('trackingInput').value = r.tracking || '';
+      const trackingGroup = document.getElementById('trackingGroup');
+      const showTracking = !!r.tracking;
+      trackingGroup.style.display = showTracking ? 'block' : 'none';
+      document.getElementById('toggleTrackingBtn').innerText = showTracking ? '−' : '+';
+      document.getElementById('productContainer').innerHTML = '';
+      (r.products || []).forEach(p => addProductRow(escHtml(p.title), escHtml(p.variation), escHtml(p.qty), p.dashed));
+      document.getElementById('checkMsgBox').checked = false;   /* 补印前仍要重新核对留言 */
+      renderAWB();
+    }
+
+    function clearPrintHistory() {
+      if (!confirm('确定清空这台电脑上的打印记录？')) return;
+      storePrintHistory([]);
+      renderPrintHistory();
     }
 
     function fetchLiveCatalog() {
@@ -794,8 +923,9 @@
           margin: 10,            /* 左边留白，扫描器需要 */
           marginRight: 0,        /* 右边留白由面单边距提供，条码右缘对齐分隔线 */
           displayValue: true,    
-          fontSize: 11,          
-          textMargin: 1,         
+          fontSize: 15,          /* 条码下订单号放大 */
+          fontOptions: "bold",
+          textMargin: 2,         
           font: "monospace"      
         });
       } catch(e) { console.log(e); }
@@ -1020,8 +1150,16 @@
       document.getElementById('awbTimestamp').innerText = `${day}/${month}/${year} ${hours}:${mins}`;
     }
 
-    function openPasteModal() { document.getElementById('pasteModal').style.display = 'flex'; }
-    function closePasteModal() { document.getElementById('pasteModal').style.display = 'none'; }
+    function openPasteModal() {
+      const ta = document.getElementById('pasteTextarea');
+      ta.value = '';
+      document.getElementById('pasteModal').style.display = 'flex';
+      setTimeout(() => ta.focus(), 50);
+    }
+    function closePasteModal() {
+      document.getElementById('pasteTextarea').value = '';   /* 关闭即清空，下次打开是空白 */
+      document.getElementById('pasteModal').style.display = 'none';
+    }
     function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
     function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
@@ -1106,6 +1244,7 @@
 
     window.onload = function() {
       fetchLiveCatalog();
+      renderPrintHistory();
       addProductRow('[Live Play] Handmade Gelang Tangan', 'Premium-10', 'x1', false);
       addProductRow('[NOT FOR SALE] Free Gift Zone', 'Premium Pro-Max', 'x1', false);
       renderAWB();
