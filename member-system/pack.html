@@ -68,6 +68,12 @@
     .card2 h3 { margin: 0 0 8px; font-size: 1rem; color: var(--ink); display: flex; gap: 8px; align-items: center; }
     .card2 .tool2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
     .card2 .tool2 select, .card2 .tool2 input { margin: 0; width: auto; padding: 6px 8px; font-size: .84rem; }
+    /* 🆕 新人卡统计 */
+    .c-stat { cursor: default; } .c-stat.hl { background: var(--pink-bg); border-color: #f9a8d4; } .c-stat.hl .n { color: #db2777; }
+    .c-lv { font-size: .8rem; color: var(--muted); margin: -2px 0 10px; line-height: 1.6; }
+    .c-mark { margin: 0; width: auto; padding: 4px 6px; font-size: .8rem; }
+    .c-mark.card { border-color: #db2777; } .c-mark.other { border-color: var(--line2); color: var(--muted); } .c-mark.unsure { border-color: #f59e0b; }
+    .c-auto { font-size: .7rem; color: #db2777; display: block; margin-top: 2px; }
     .grp { margin-top: 8px; } .grp > summary { cursor: pointer; font-weight: 800; color: var(--ink); padding: 6px 0; }
     .act-tag { font-size: .72rem; padding: 1px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
     .a-pack { background: var(--green-bg); color: var(--green-tx); } .a-undo { background: var(--amber-bg); color: var(--amber-tx); }
@@ -116,6 +122,7 @@
         <button data-tab="log">📒 打包记录</button>
         <button data-tab="pending">🎁 待寄礼物</button>
         <button data-tab="issues">⚠️ 需要处理<span class="cnt" id="issueCnt" hidden></span></button>
+        <button data-tab="card">🆕 新人卡</button>
       </div>
 
       <!-- 📦 包裹 -->
@@ -161,6 +168,30 @@
             <span id="gCount" style="color:var(--muted);font-size:.8rem"></span>
           </div>
           <div id="glist"><div class="empty">载入中…</div></div>
+        </div>
+      </section>
+
+      <!-- 🆕 新人卡效果（自己的时间段：放卡的日期；打开这一页才读取）-->
+      <section class="pane" id="pane-card">
+        <div class="card2">
+          <div class="tool2">
+            <select id="cRange" title="放卡的日期">
+              <option value="m0">本月</option><option value="m1">上个月</option><option value="d30">最近 30 天</option><option value="d90">最近 90 天</option><option value="custom">✏️ 自订日期</option>
+            </select>
+            <input type="date" id="cFrom" hidden><input type="date" id="cTo" hidden>
+            <button id="cReload" class="btn btn-ghost" style="padding:6px 12px">🔄 重新计算</button>
+            <button id="cCsv" class="btn btn-ghost" style="padding:6px 12px">⬇️ 导出 CSV</button>
+            <span id="cInfo" style="color:var(--muted);font-size:.8rem"></span>
+          </div>
+          <div class="pk-stats" id="cStats"></div>
+          <div class="c-lv" id="cLevel"></div>
+          <div class="tool2">
+            <div class="chips" id="cChips"></div>
+            <input type="search" id="cq" placeholder="🔍 买家 / 会员 / 单号">
+          </div>
+          <div class="meta" style="color:var(--muted);font-size:.78rem;margin-bottom:6px">已加入的会员可以改标记：🆕 因新人卡（扫码加入的系统会自动标）· ❓ 未确认 · 👥 旧顾客 / 其他渠道（口头介绍、WhatsApp 群…，不算新人卡成绩）。转化率 = 🆕 ÷ 放卡人数。</div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>买家</th><th style="width:150px">放卡</th><th style="width:80px">类型</th><th style="width:170px">加入会员</th><th style="width:170px">标记</th><th style="width:90px">再下单</th></tr></thead>
+            <tbody id="cbody"><tr><td colspan="6" class="empty">载入中…</td></tr></tbody></table></div>
         </div>
       </section>
 
@@ -452,17 +483,111 @@
     }
     $("ilist").addEventListener("click", e => { if (e.target.closest("a")) return; const r = e.target.closest("[data-no]"); if (!r) return; const p = parcels.find(x => x.orderNo === r.dataset.no); if (p) { setTab("parcels"); openParcel(p); } });
 
+    // ---------- 🆕 新人卡效果 ----------
+    let cardRows = [], cardSum = null, cardLoaded = false, cfilter = "all";
+    const LV = { must: "第一次买", suggest: "买过", none: "未分类" };
+    const MK = { card: "🆕 因新人卡", unsure: "❓ 未确认", other: "👥 旧顾客 / 其他渠道" };
+    function cardRange() {
+      const v = $("cRange").value, n = new Date();
+      if (v === "m1") return { from: new Date(n.getFullYear(), n.getMonth() - 1, 1).getTime(), to: new Date(n.getFullYear(), n.getMonth(), 1).getTime() - 1 };
+      if (v === "d30") return { from: Date.now() - 30 * DAY, to: Date.now() };
+      if (v === "d90") return { from: Date.now() - 90 * DAY, to: Date.now() };
+      if (v === "custom") {
+        const a = $("cFrom").value ? new Date($("cFrom").value + "T00:00:00").getTime() : NaN, b = $("cTo").value ? new Date($("cTo").value + "T23:59:59").getTime() : NaN;
+        if (a < b && b - a <= 400 * DAY) return { from: a, to: b };
+      }
+      return { from: new Date(n.getFullYear(), n.getMonth(), 1).getTime(), to: Date.now() };
+    }
+    $("cRange").onchange = () => {
+      const c = $("cRange").value === "custom";
+      $("cFrom").hidden = $("cTo").hidden = !c;
+      if (c && !$("cFrom").value) { $("cFrom").value = ymd(new Date(Date.now() - 30 * DAY)); $("cTo").value = ymd(new Date()); }
+      loadCard();
+    };
+    $("cFrom").onchange = $("cTo").onchange = loadCard;
+    $("cReload").onclick = loadCard;
+    async function loadCard() {
+      cardLoaded = true;
+      const r = cardRange();
+      $("cInfo").textContent = `放卡日期：${fmtD(r.from)} – ${fmtD(r.to)}`;
+      $("cbody").innerHTML = `<tr><td colspan="6" class="empty">计算中…</td></tr>`;
+      try { const d = await call("cardStats", r); cardRows = d.rows || []; cardSum = d.summary; }
+      catch (e) { $("cbody").innerHTML = `<tr><td colspan="6" class="empty">载入失败：${esc(errText(e))}</td></tr>`; return; }
+      paintCard();
+    }
+    const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
+    // 改了标记：数字在画面上重算（不用再读一次）
+    function recount() {
+      const s = cardSum; if (!s) return;
+      ["card", "unsure", "other"].forEach(k => s[k] = cardRows.filter(r => r.mark === k).length);
+      s.rate = pct(s.card, s.cards);
+      ["must", "suggest", "none"].forEach(l => { s.byLevel[l].card = cardRows.filter(r => (r.level || "none") === l && r.mark === "card").length; });
+    }
+    const CF = { all: "全部", joined: "已加入", no: "还没加入", card: "🆕", unsure: "❓ 待确认", other: "👥", reorder: "有再下单" };
+    const cmatch = (r, f) => f === "all" || (f === "joined" && r.joined) || (f === "no" && !r.joined) || (f === "reorder" && r.reorders > 0) || r.mark === f;
+    function paintCard() {
+      const s = cardSum;
+      if (!s) return;
+      const box = (n, l, hl) => `<div class="pk-stat c-stat ${hl ? "hl" : ""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+      $("cStats").innerHTML = box(s.cards, "🆕 放了几张卡（人）") + box(`${s.rate}%`, `新人卡转化率（🆕 ${s.card} 位）`, true)
+        + box(s.joined, `加入会员（${s.joinRate}%）`) + box(s.unsure, "❓ 待确认") + box(s.other, "👥 旧顾客 / 其他渠道")
+        + box(s.avgDays == null ? "–" : s.avgDays, "平均几天加入（🆕）") + box(s.reordered, `再下单（${s.reorderRate}%）`);
+      const lv = l => { const x = s.byLevel[l]; return x.cards ? `${LV[l]}：放 ${x.cards} 张 → 🆕 ${x.card}（${pct(x.card, x.cards)}%）· 加入 ${x.joined}` : ""; };
+      $("cLevel").innerHTML = ["must", "suggest", "none"].map(lv).filter(Boolean).join("　｜　")
+        + (s.byLevel.none.cards ? `<br>「未分类」= 11/12 统计上线前放的卡，没有记下是第一次买还是买过` : "")
+        + (s.skippedMembers ? `<br>另有 ${s.skippedMembers} 位放卡时已经是会员，不算进统计` : "");
+      $("cChips").innerHTML = Object.entries(CF).map(([k, v]) => `<button data-cf="${k}" class="${cfilter === k ? "on" : ""}">${v} ${cardRows.filter(r => !r.before && cmatch(r, k)).length}</button>`).join("");
+      const q = $("cq").value.trim().toLowerCase();
+      const list = cardRows.filter(r => !r.before && cmatch(r, cfilter))
+        .filter(r => !q || [r.username, r.member, r.orderNo].some(x => String(x || "").toLowerCase().includes(q)));
+      $("cbody").innerHTML = list.length ? list.map(r => `<tr>
+          <td><b>${esc(PLAT[r.platform] || r.platform)} @${esc(r.username)}</b>${r.cards > 1 ? `<span class="meta" style="color:var(--muted)"> · 放过 ${r.cards} 次</span>` : ""}</td>
+          <td>${fmtT(r.at)}<br>${noHtml(r.orderNo)}</td>
+          <td>${LV[r.level || "none"]}</td>
+          <td>${r.joined ? `✅ ${esc(r.member || "会员")}<br><span class="meta" style="color:var(--muted)">${r.joinedAt ? fmtD(r.joinedAt) + "（放卡后 " + Math.max(0, Math.round((r.joinedAt - r.at) / DAY)) + " 天）" : ""}</span>` : `<span style="color:var(--muted)">⏳ 还没加入</span>`}</td>
+          <td>${r.joined ? `<select class="c-mark ${r.mark}" data-key="${esc(r.key)}">${Object.entries(MK).map(([k, v]) => `<option value="${k}" ${r.mark === k ? "selected" : ""}>${v}</option>`).join("")}</select>
+            ${r.auto === "card" ? `<span class="c-auto">📱 系统认出：从新人卡 QR 码进来</span>` : ""}` : "–"}</td>
+          <td>${r.reorders ? `<b>${r.reorders}</b> 次<br><span class="meta" style="color:var(--muted)">最近 ${fmtD(r.lastReorder)}</span>` : "–"}</td></tr>`).join("")
+        : `<tr><td colspan="6" class="empty">${cardRows.length ? "没有符合的买家" : "这段时间没有放新人卡"}</td></tr>`;
+    }
+    $("cChips").addEventListener("click", e => { const b = e.target.closest("[data-cf]"); if (b) { cfilter = b.dataset.cf; paintCard(); } });
+    $("cq").addEventListener("input", paintCard);
+    $("cbody").addEventListener("change", async e => {
+      const sl = e.target.closest("select[data-key]"); if (!sl) return;
+      const r = cardRows.find(x => x.key === sl.dataset.key); if (!r) return;
+      const prev = r.mark, v = sl.value;
+      sl.disabled = true;
+      try {
+        // 选回系统认出的标记 = 清掉手动标记
+        await call("cardMark", { key: r.key, mark: v === (r.auto || "unsure") ? "" : v });
+        r.manual = v === (r.auto || "unsure") ? null : v; r.mark = v;
+        recount(); paintCard();
+      } catch (err) { alert("保存失败：" + errText(err)); sl.value = prev; sl.disabled = false; }
+    });
+    $("cCsv").onclick = () => {
+      if (!cardRows.length) { alert("没有资料"); return; }
+      const cell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const d = ms => ms ? new Date(ms).toLocaleString("en-GB", { hour12: false }) : "";
+      const head = ["平台", "买家", "放卡时间", "随哪张单", "类型", "放过几次", "加入会员", "会员名字", "加入时间", "标记", "系统认出", "再下单次数", "最近再下单"];
+      const lines = cardRows.filter(r => !r.before).map(r => [PLAT[r.platform] || r.platform, r.username, d(r.at), r.orderNo, LV[r.level || "none"], r.cards,
+        r.joined ? "是" : "否", r.member || "", d(r.joinedAt), r.mark ? MK[r.mark] : "", r.auto === "card" ? "是" : "", r.reorders, d(r.lastReorder)].map(cell).join(","));
+      const blob = new Blob(["\ufeff" + [head.map(cell).join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `新人卡统计_${ymd(new Date())}.csv`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    };
+
     // ---------- 分页 ----------
     function setTab(t) {
       document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
       document.querySelectorAll(".pane").forEach(s => s.classList.toggle("on", s.id === "pane-" + t));
       history.replaceState(null, "", "#" + t);
+      if (t === "card" && !cardLoaded) loadCard();   // 🆕 新人卡：打开这一页才计算（省读取）
     }
     $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
 
     requireAdmin(async () => {
       const h = location.hash.slice(1);
-      if (["parcels", "log", "pending", "issues"].includes(h)) setTab(h);
+      if (["parcels", "log", "pending", "issues", "card"].includes(h)) setTab(h);
       await load();
     });
   </script>

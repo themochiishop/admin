@@ -24,12 +24,19 @@
       display: grid; gap: 12px;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-areas:
-        "todo  todo  mem    pts"
+        "todo  todo  card   side"
         "todo  todo  tier   tier"
         "month stock recent recent"
         "bday  sys   recent recent";
     }
     .t-todo { grid-area: todo; } .t-mem { grid-area: mem; } .t-pts { grid-area: pts; }
+    /* 🆕 新人卡（会员左边）；👥 会员 + 💰 积分缩小、上下叠在同一格 */
+    .t-card { grid-area: card; } .t-side { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+    .t-side .tile { flex: 1; padding: 8px 12px; min-height: 0; }
+    .t-side .tile-h { margin-bottom: 2px; }
+    .t-side .big { font-size: 1.25rem; }
+    .t-side .sub { font-size: .72rem; margin-top: 2px; line-height: 1.4; }
+    .t-card .big small { font-size: .74rem; }
     .t-tier { grid-area: tier; } .t-month { grid-area: month; } .t-stock { grid-area: stock; }
     .t-recent { grid-area: recent; } .t-bday { grid-area: bday; } .t-sys { grid-area: sys; }
 
@@ -44,12 +51,12 @@
     @media (max-width: 1179px) {
       .bento {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-areas: "todo todo" "mem pts" "tier tier" "month stock" "recent recent" "bday sys";
+        grid-template-areas: "todo todo" "card side" "tier tier" "month stock" "recent recent" "bday sys";
       }
     }
     @media (max-width: 559px) {
       .bento { grid-template-columns: minmax(0, 1fr); gap: 10px;
-        grid-template-areas: "todo" "mem" "pts" "tier" "month" "stock" "recent" "bday" "sys"; }
+        grid-template-areas: "todo" "card" "side" "tier" "month" "stock" "recent" "bday" "sys"; }
       .ov-head .right { width: 100%; }
     }
 
@@ -172,6 +179,14 @@
           <div class="todo-list scroll" id="todoList"></div>
         </section>
 
+        <!-- 🆕 新人卡（本月效果；要「🧺 打包清单」权限）-->
+        <a class="tile t-card" href="pack.html#card">
+          <div class="tile-h"><span>🆕 新人卡 · 本月</span><span class="go">统计 →</span></div>
+          <div class="big" id="cardBig">–</div>
+          <div class="sub" id="cardSub"><span class="loading">载入中…</span></div>
+        </a>
+
+        <div class="t-side">
         <!-- 👥 会员 -->
         <a class="tile t-mem" href="members.html">
           <div class="tile-h"><span>👥 会员</span><span class="go">会员列表 →</span></div>
@@ -185,6 +200,7 @@
           <div class="big" id="ptsTotal">–</div>
           <div class="sub" id="ptsSub"><span class="loading">载入中…</span></div>
         </a>
+        </div>
 
         <!-- 🏅 等级分布 -->
         <a class="tile t-tier" href="members.html">
@@ -242,8 +258,9 @@
   </div>
 
   <script type="module">
-    import { db } from "./js/firebase-config.js";
+    import { app, db } from "./js/firebase-config.js";
     import { can } from "/js/admin-guard.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
     import { ciStockState, ciStockBannerHTML, bindCiStockBanner, refreshCiStockBadge } from "./js/ci-stock.js";   // 🏅 签到达人礼物库存提醒
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, TIER_LABELS, readyWinners, openReportCount, NM_ACTIONABLE
@@ -592,8 +609,22 @@
       $("ciStockBox").innerHTML = ciStockBannerHTML(st);
       bindCiStockBanner($("ciStockBox"), st, () => { loadCiStock(); refreshCiStockBadge(); });
     }
+    // ---------- 🆕 新人卡（本月）：后端 pkAdmin 算好（要「🧺 打包清单」权限）----------
+    async function loadCardStats() {
+      if (!can(window.msAccess, "pack")) { $("cardBig").textContent = "–"; $("cardSub").textContent = "需要「🧺 打包清单」权限才看得到"; return; }
+      try {
+        const pk = httpsCallable(getFunctions(app, "asia-southeast1"), "pkAdmin");
+        const s = ((await pk({ op: "cardStats", from: monthStart(0).getTime(), to: Date.now(), summary: true })).data || {}).summary;
+        if (!s || !s.cards) { $("cardBig").innerHTML = `0<small>张</small>`; $("cardSub").textContent = "本月还没有放新人卡"; return; }
+        $("cardBig").innerHTML = `${s.rate}%<small>因新人卡加入</small>`;
+        $("cardSub").innerHTML = `放了 <b>${s.cards}</b> 张 · 加入 <b>${s.joined}</b>（🆕 ${s.card} · ❓ ${s.unsure} · 👥 ${s.other}）<br>
+          再下单 <b>${s.reordered}</b> 位（${s.reorderRate}%）${s.unsure ? ` · <span class="down">${s.unsure} 位待确认</span>` : ""}`;
+      } catch (e) { $("cardBig").textContent = "–"; $("cardSub").textContent = "读取失败：" + (e.message || e); }
+    }
+
     function run() {
       loadCiStock();
+      loadCardStats();
       $("reloadBtn").disabled = true;
       load().catch(e => {
         $("errBox").textContent = "载入失败：" + e.message;
