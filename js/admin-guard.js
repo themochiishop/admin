@@ -73,6 +73,7 @@ export const MEMBER_PAGE_PERM = {
   "notify.html": "member.settings", "tiers.html": "member.settings",
   "coupon-check.html": "member.shop",
   "shipping.html": ["member.redeem", "member.prizes"],   // 其中一项就可以
+  "pack.html": "pack",            // 🧺 打包管理：要「打包清单」权限（也要能进会员系统）
   "feed.html": "feed",
   "faq.html": "member",           // 📖 客服 FAQ：有任何一项 Member Club 权限就能看
   "changelog.html": "_owner",     // 🕒 更新记录：只有店主（_owner 不会出现在权限勾选里）
