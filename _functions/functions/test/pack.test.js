@@ -241,6 +241,14 @@ test("撤销这一包：打包清单寄出的全部退回，打包完成取消�
   // 退回后这一批又看得到
   const b = await pk.pkBatch(db, PACKER);
   assert.ok(b.parcels.find(p => p.orderNo === "2611190000001").items.some(i => i.id === "w1"));
+  // 撤销戳记：这一包 + 管理员操作记录
+  const pb = b.parcels.find(p => p.orderNo === "2611190000001");
+  assert.equal(pb.done, false); assert.equal(pb.undone.by, "pack@x.com"); assert.equal(pb.undone.returned, 4);
+  const logs = [...db.data.entries()].filter(([k]) => k.startsWith("adminLog/")).map(([, v]) => v);
+  assert.equal(logs.length, 1); assert.equal(logs[0].type, "pack"); assert.equal(logs[0].by, "pack@x.com");
+  assert.match(logs[0].text, /撤销了打包 2611190000001.*退回 4 样.*迎新礼 1 份/);
+  const lk = await pk.pkLookup(db, PACKER, { orderNo: "2611190000001" });
+  assert.equal(lk.parcel.undone.by, "pack@x.com");
   await rejects(pk.pkUndo(db, NOBODY, { orderNo: "2611190000001" }), "pk/no-perm");
 });
 
