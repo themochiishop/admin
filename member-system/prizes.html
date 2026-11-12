@@ -256,7 +256,7 @@
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, fmtPhone, waLink, platformTag, normalizePhone, isValidPhone,
-      normalizeUsername, readyWinners, dismissedWinners, CARRIERS, DEFAULT_TRACK_TPL, loadCarriers, carrierOptions, redeemCode, refreshPrizeBadge, logAdmin, compressImage
+      normalizeUsername, readyWinners, dismissedWinners, CARRIERS, DEFAULT_TRACK_TPL, loadCarriers, carrierOptions, redeemCode, refreshPrizeBadge, logAdmin, compressImage, autoReload, liveSigOf
     } from "./js/admin-common.js";
     import { noteBoxHTML, readNoteBox, setNoteBox, noteFields, noteBadge, normNote, noteFromDoc, setSet, setManager,
       bindNoteBoxes, rowHTML, readRow, bindRowList } from "./js/note-i18n.js";
@@ -1256,6 +1256,12 @@
         $("fDeadline").value = ymd(plusDays(new Date(), PRIZE_CLAIM_DAYS));
         await Promise.all([loadMembers(), loadPeriods(), loadNotes()]);
         await loadWins();
+        // 🔴 实时（2026-11-12）：会员领取 / 改地址、别的管理员处理了 → 自动更新（正在填就先提示）
+        const PW_F = ["status", "delivery", "address", "bundleId"];
+        autoReload(["prize"],
+          L => L.prize && liveSigOf(L.prize, PW_F),
+          () => liveSigOf(wins.filter(w => w.status === "claimed" || w.status === "approved"), PW_F),
+          () => loadWins(), "#panel");
         const uid = new URLSearchParams(location.search).get("uid");   // 从会员详情页过来
         if (uid && members[uid]) { chooseMember(uid); openAdd(true); }
         if (periods.length) selectPeriod(periods[0].id);

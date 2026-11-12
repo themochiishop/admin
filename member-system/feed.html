@@ -206,7 +206,7 @@
       collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit,
       serverTimestamp, writeBatch, getCountFromServer, deleteField
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { requireAdmin, renderAdminNav, refreshFeedBadge, logAdmin, esc, toDate, fmtDate, compressImage, TIER_LABELS } from "./js/admin-common.js";
+    import { requireAdmin, renderAdminNav, refreshFeedBadge, logAdmin, esc, toDate, fmtDate, compressImage, TIER_LABELS, autoReload, liveSigOf } from "./js/admin-common.js";
 
     const $ = id => document.getElementById(id);
     renderAdminNav("feed");
@@ -512,9 +512,11 @@
     }
 
     // ---------- 待审核 ----------
+    let pendingSig = null, reportSig = null;   // 🔴 画面上的待审核 / 检举（和实时监听比对用）
     async function loadPending() {
       try {
         const snap = await getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending")));
+        pendingSig = liveSigOf(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (toDate(a.createdAt) || 0) - (toDate(b.createdAt) || 0));
         const rows = await withContent(list);
@@ -540,6 +542,7 @@
           return Object.values(m).map(list => ({ key: list[0].targetKey, kind: list[0].kind, postId: list[0].postId,
             commentId: list[0].commentId, list, at: Math.max(...list.map(r => +(toDate(r.decidedAt) || toDate(r.createdAt) || 0))) }));
         };
+        reportSig = liveSigOf(openS.docs.map(d => ({ id: d.id, ...d.data() })));
         reportGroups = group(openS.docs).sort((a, b) => b.list.length - a.list.length || b.at - a.at);
         $("reportBadge").hidden = !reportGroups.length; $("reportBadge").textContent = reportGroups.length;
         refreshFeedBadge();
@@ -801,6 +804,9 @@
         loadPending();
         loadReports();
         openFromHash();
+        // 🔴 实时（2026-11-12）：会员投稿 / 检举、别的管理员处理了 → 自动更新（正在填就先提示）
+        autoReload(["feed"], L => L.feed && liveSigOf(L.feed), () => pendingSig, loadPending, "#pendingList");
+        autoReload(["reports"], L => L.reports && liveSigOf(L.reports), () => reportSig, loadReports, "#reportList");
       } catch (err) {
         setMsg("pMsg", "载入设定失败：" + err.message, "err");
       }

@@ -263,7 +263,7 @@
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
     import { ciStockState, ciStockBannerHTML, bindCiStockBanner, refreshCiStockBadge } from "./js/ci-stock.js";   // 🏅 签到达人礼物库存提醒
     import {
-      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, balOf, TIER_LABELS, readyWinners, openReportCount, NM_ACTIONABLE
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, balOf, TIER_LABELS, readyWinners, onLive, liveCount
     } from "./js/admin-common.js";
     import {
       collection, getDocs, getDoc, doc, query, where, onSnapshot, orderBy, limit, getCountFromServer
@@ -328,30 +328,33 @@
           <span class="ic">🧺</span><span class="tx">待随单寄出（打包清单）</span><span class="n">${packN}</span></a>` : "");
     }
     let packN = null;   // null = 没有「🧺 打包清单」权限 → 不显示
-    async function loadPackCount(redemptions, wins) {
-      if (!can(window.msAccess, "pack")) return;
-      const red = redemptions.filter(r => r.uid && r.kind === "gift" && r.newMember !== true && r.status === "approved"
-        && (r.delivery || (r.address ? "separate" : "withOrder")) === "withOrder").length;
-      const ci = redemptions.filter(r => r.uid && r.ciGift === true && r.status === "pending" && (r.delivery || "withOrder") === "withOrder").length;
-      const pw = wins.filter(w => w.uid && w.delivery !== "separate" && (w.status === "claimed" || w.status === "approved")).length;
-      const cnt = q => getCountFromServer(q).then(x => x.data().count).catch(() => 0);
-      const [sg, nm] = await Promise.all([
-        cnt(query(collection(db, "smallGifts"), where("status", "==", "pending"))),
-        cnt(query(collection(db, "newMemberRewards"), where("status", "in", ["ready_to_pack", "packed"]))),
-      ]);
-      packN = red + ci + pw + sg + nm;
-      renderTodo();
+    // 🔴 待处理：实时（2026-11-12）— 和侧边栏红点共用同一组监听，有变动马上更新，不用按重新整理
+    function startLiveTodo() {
+      onLive(["redeem", "prize", "feed", "reports", "nm", "sg"], L => {
+        ["rPending", "rShip", "pClaimed", "pShip", "feed", "reports", "nm"].forEach(k => {
+          const n = liveCount[k]();
+          if (n != null) todo[k].n = n;
+        });
+        if (can(window.msAccess, "pack") && L.redeem && L.prize && L.nm && L.sg) {
+          const red = L.redeem.filter(r => r.uid && r.kind === "gift" && r.newMember !== true && r.status === "approved"
+            && (r.delivery || (r.address ? "separate" : "withOrder")) === "withOrder").length;
+          const ci = L.redeem.filter(r => r.uid && r.ciGift === true && r.status === "pending" && (r.delivery || "withOrder") === "withOrder").length;
+          const pw = L.prize.filter(w => w.uid && w.delivery !== "separate").length;   // claimed / approved
+          const nm = L.nm.filter(x => x.status === "ready_to_pack" || x.status === "packed").length;
+          packN = red + ci + pw + L.sg.length + nm;
+        }
+        renderTodo();
+      });
     }
 
     // ---------- 主要资料 ----------
     async function load() {
       $("errBox").classList.add("hidden");
-      const [mS, bS, rS, wS, fS, rwS, cS, sS, nS] = await Promise.all([
+      const [mS, bS, rS, wS, rwS, cS, sS, nS] = await Promise.all([
         getDocs(collection(db, "members")),
         getDocs(collection(db, "bindings")),
         getDocs(collection(db, "redemptions")),
         getDocs(collection(db, "prizeWins")),
-        getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending"))),
         getDocs(collection(db, "rewards")),
         getDocs(collection(db, "coupons")),
         getDocs(collection(db, "rewardSecrets")),
@@ -365,19 +368,7 @@
       const redemptions = rS.docs.map(d => ({ id: d.id, ...d.data() }));
       const wins = wS.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // 待处理
-      // 🎉 迎新礼的兑换在「新会员奖励」处理，不算在兑换审核
-      todo.rPending.n = redemptions.filter(r => r.newMember !== true && r.status === "pending").length;
-      todo.rShip.n = redemptions.filter(r => r.newMember !== true && r.kind === "gift" && (r.status === "approved" || r.status === "problem")).length;
-      todo.pClaimed.n = wins.filter(w => w.status === "claimed").length;
-      todo.pShip.n = wins.filter(w => w.status === "approved").length;
-      todo.feed.n = fS.size;
-      todo.reports.n = await openReportCount();
-      // 没有「新会员奖励」权限、或还没更新规则时当作 0
-      todo.nm.n = await getCountFromServer(query(collection(db, "newMemberRewards"), where("status", "in", NM_ACTIONABLE)))
-        .then(s => s.data().count).catch(() => 0);
-      renderTodo();
-      loadPackCount(redemptions, wins);   // 🧺 不等它
+      // 待处理：改成实时（startLiveTodo），这里不再算
 
       // 会员（统计不算内部会员）
       const real = Object.values(members).filter(m => !isInternal(m.uid));
@@ -640,6 +631,7 @@
       const hi = h < 5 ? "夜深了" : h < 12 ? "早安" : h < 18 ? "午安" : "晚上好";
       $("hello").textContent = `📊 总览 · ${hi}${user.displayName ? "，" + user.displayName : ""}`;
       watchClub();
+      startLiveTodo();
       run();
     });
   </script>

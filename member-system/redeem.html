@@ -91,7 +91,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       requireAdmin, renderAdminNav, esc, toDate, fmtDate, computeBalance, compressImage,
-      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, loadCarriers, carrierOptions, refreshRedeemBadge, redeemCode, logAdmin, readyWinners,
+      fmtPhone, waLink, CARRIERS, DEFAULT_TRACK_TPL, loadCarriers, carrierOptions, refreshRedeemBadge, redeemCode, logAdmin, readyWinners, autoReload, liveSigOf,
       normalizePhone, isValidPhone
     } from "./js/admin-common.js";
     import { noteBoxHTML, readNoteBox, setNoteBox, noteFields, noteFromDoc, noteBadge, loadNoteSets, bindNoteBoxes } from "./js/note-i18n.js";
@@ -158,9 +158,10 @@
       } catch (e) { console.warn("prize alert", e); }
     }
 
-    async function load() {
+    let loadedOnce = false;
+    async function load(quiet) {
       loadPrizeAlert();
-      $("panel").innerHTML = `<p class="empty">载入中…</p>`;
+      if (!quiet) $("panel").innerHTML = `<p class="empty">载入中…</p>`;
       const [snap, secS] = await Promise.all([
         getDocs(collection(db, "redemptions")),
         getDocs(collection(db, "rewardSecrets")).catch(() => ({ docs: [] })),
@@ -208,6 +209,7 @@
       }));
       render();
       refreshRedeemBadge();
+      loadedOnce = true;
     }
 
     // ---------- 共用显示 ----------
@@ -859,6 +861,12 @@
       bindNoteBoxes();
       await loadNoteSets();
       load().catch(e => { $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`; });
+      // 🔴 实时（2026-11-12）：会员提交 / 取消 / 改地址、别的管理员处理了 → 自动更新（正在填就先提示）
+      const RD_F = ["status", "delivery", "address", "addrPending"];
+      autoReload(["redeem"],
+        L => L.redeem && liveSigOf(L.redeem, RD_F),
+        () => loadedOnce ? liveSigOf(all.filter(r => ["pending", "approved", "problem"].includes(r.status)), RD_F) : null,
+        () => load(true), "#panel");
     });
   </script>
 </body>
