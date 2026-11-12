@@ -380,6 +380,8 @@
         secPut: "放进这一包（取消勾选 = 这次不寄，留到下一单）", secSent: "已放入", sentSmall: "✅ 已放入",
         others: (n, l) => `💡 这位会员今天还有 ${n} 包（${l}）。这包没勾的，扫那一包时会再出现。`, sep: "、",
         nmElse: (g, no) => `🎁 这位会员有 ${g}，得放进 #${no} 的包裹。`, nmOrder: no => `📦 放进 #${no}`,
+        cardT: "新人卡", cardMust: "第一次买 · 还不是会员", cardSug: "买过 · 还不是会员（建议放，要放就勾选）", cardSrc: "新人卡",
+        cardPlaced: (d, no) => `🆕 新人卡 ${d} 已放在 #${no}（30 天内不用再放）`,
         nmCant: "放不了", nmCantQ: "迎新礼放不了的原因：", nmR: ["缺货", "包裹放不下", "其他"], nmOtherQ: "写下原因", nmSkipped: r => `❌ 这次放不了：${r}（会通知管理员处理）`, nmUndoSkip: "撤回",
         nmLock: "迎新礼要放进这一包（会员看到的是这张单）", nmLateDone: (g, no) => `${g}原本要放 #${no}，但那包已经打包了，迎新礼还没寄出。不要放进这包，请通知管理员。`, skippedL: "没放：",
         finBtn: "🏁 收工", finH: "🏁 收工", finSub: (a, b) => `这一场：已打包 ${a} / ${b} 包`, finAll: "全部打包好了 ✅", finLeft: n => `还有 ${n} 包没打包，每一包选一个原因：`,
@@ -430,6 +432,8 @@
         secPut: "Put in this parcel (untick = not this time, keep for next order)", secSent: "Already added", sentSmall: "✅ Added",
         others: (n, l) => `💡 This member has ${n} more parcel(s) today (${l}). Unticked items show up again when you scan that parcel.`, sep: ", ",
         nmElse: (g, no) => `🎁 This member has ${g}. It goes in parcel #${no}.`, nmOrder: no => `📦 Goes in #${no}`,
+        cardT: "New member card", cardMust: "First order · not a member yet", cardSug: "Bought before · not a member yet (optional — tick to add)", cardSrc: "New member card",
+        cardPlaced: (d, no) => `🆕 New member card already went in #${no} on ${d} (not needed again within 30 days)`,
         nmCant: "Can't add", nmCantQ: "Why can't the welcome gift go in?", nmR: ["Out of stock", "Doesn't fit", "Other"], nmOtherQ: "Write the reason", nmSkipped: r => `❌ Not added this time: ${r} (admin will be notified)`, nmUndoSkip: "Undo",
         nmLock: "The welcome gift must go in this parcel (the member sees this order)", nmLateDone: (g, no) => `${g} was for #${no}, but that parcel is already packed without it. Don't add it here — tell the admin.`, skippedL: "Not added: ",
         finBtn: "🏁 Finish", finH: "🏁 Finish shift", finSub: (a, b) => `This session: packed ${a} / ${b}`, finAll: "All parcels packed ✅", finLeft: n => `${n} parcel(s) not packed — pick a reason for each:`,
@@ -668,7 +672,7 @@
         const extra = all.filter(x => x.outside && !(r.parcels || []).some(y => y.orderNo === x.orderNo));
         all = (r.parcels || []).concat(extra);
         pending = r.pending || []; loaded = true; shift = r.shift || null;
-        all.forEach(p => { attachClaims(p); addSent(p); });
+        all.forEach(p => { attachClaims(p); attachCard(p); addSent(p); });
         render();
         if (sel) { const p = all.find(x => x.orderNo === sel.p.orderNo); if (p) { sel.p = p; showSel(false); } }
       } catch (e) {
@@ -682,7 +686,7 @@
         const r = (await pkAdmin({ op: "lookup", orderNo: no })).data;
         if (!r || !r.found) return;
         const x = r.parcel; x.outside = true;
-        attachClaims(x); addSent(x);
+        attachClaims(x); attachCard(x); addSent(x);
         const i = all.findIndex(y => y.orderNo === no);
         if (i >= 0) all[i] = x; else all.push(x);
       } catch (e) { console.warn("refresh", e); }
@@ -809,7 +813,7 @@
     const photoCache = new Map(), photoLoading = new Set();
     function openParcel(p, view = false) {
       const c = canLeft(p);
-      sel = { p, on: new Set(c.map(i => i.id)), ship: { carrier: "", trackingNo: "", trackingUrl: "", photo: "" }, needTrk: true, needPh: true, view, redo: false, urlEdit: false, nmSkip: null, nmAsk: null };
+      sel = { p, on: new Set(c.filter(i => !(i.kind === "card" && i.level !== "must")).map(i => i.id)), ship: { carrier: "", trackingNo: "", trackingUrl: "", photo: "" }, needTrk: true, needPh: true, view, redo: false, urlEdit: false, nmSkip: null, nmAsk: null };
       if (!view && heldTrk && modeOf(p) !== "view") { const h = heldTrk; heldTrk = ""; fillTracking(h); }
       showSel(true);
     }
@@ -875,9 +879,9 @@
           + (sent.length ? `<div class="sec-t">${esc(t("secSent"))}</div>` + sent.map(i => item(i, "sent")).join("") : "")
           + w.map(warnHtml).join("")
           + (others.length ? `<div class="note">${esc(t("others", others.length, others.map(o => "…" + o.slice(-6)).join(t("sep"))))}</div>` : "")
-          + nmElse + shipForm();
+          + nmElse + cardElse(p) + shipForm();
       } else {   // pack：没东西放（或已打包后修改）
-        body = w.map(warnHtml).join("") + nmElse + shipForm();
+        body = w.map(warnHtml).join("") + nmElse + cardElse(p) + shipForm();
       }
       const ud = p.undone;
       if (ud && ud.at) body += `<div class="undone">${esc(t("undoneBy", ud.byName || (ud.by || "").split("@")[0], fmtT(ud.at), ud.returned || 0))}</div>`;
@@ -993,7 +997,7 @@
           $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">${esc(t("notFound"))}</div><div class="no">${esc(q)}</div></div>
             <div class="res-body"><div class="note" style="margin-top:10px">${esc(t("notFoundNote"))}</div></div></div>`; return; }
         const x = r.parcel; x.outside = true;   // 不在这个时间段（重新读取清单时要保留、另外更新）
-        attachClaims(x); addSent(x);
+        attachClaims(x); attachCard(x); addSent(x);
         if (!all.some(y => y.orderNo === x.orderNo)) all.push(x);
         beep(canLeft(x).length ? "items" : "ok");
         openParcel(x); render();
@@ -1053,13 +1057,15 @@
       if (sel.needTrk && s.trackingNo) { const c = carrierOf(s.carrier); Object.assign(ship, { carrier: s.carrier, carrierName: c ? c.name : "", trackingNo: s.trackingNo, trackingUrl: s.trackingUrl }); }
       if (sel.needPh && s.photo) ship.photo = s.photo;
       wakeTouch();
-      const svr = items.filter(i => i.kind !== "claim"), cl = items.filter(i => i.kind === "claim");
+      const svr = items.filter(i => i.kind !== "claim" && i.kind !== "card"), cl = items.filter(i => i.kind === "claim");
+      const card = items.find(i => i.kind === "card");   // 🆕 新人卡：只记在这一包（packDone.newCard）
       busy = true; paintAct();
       const failed = [];
       try {
         const nmSkip = sel.nmSkip && sel.nmSkip.id ? { ...sel.nmSkip } : null;
-        const skipped = canLeft(p).filter(i => !sel.on.has(i.id) && !(nmSkip && nmSkip.id === i.id)).map(i => ({ kind: i.kind, id: i.id, title: i.title }));
-        const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id, title: i.title })), skipped, nmSkip, txId: txId(), done: true, ship })).data;
+        const skipped = canLeft(p).filter(i => i.kind !== "card" && !sel.on.has(i.id) && !(nmSkip && nmSkip.id === i.id)).map(i => ({ kind: i.kind, id: i.id, title: i.title }));
+        const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id, title: i.title })), skipped, nmSkip, txId: txId(), done: true, ship, newCard: !!card })).data;
+        if (card) sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([card]));
         (r.results || []).forEach(x => {
           const it = svr.find(i => i.id === x.id);
           if (!x.ok) failed.push(`${it ? tr(it, "title") : x.id}：${errMsg(x.error)}`);
@@ -1232,6 +1238,21 @@
         : !p.uid && c.name && c.name === String(p.username || "").toLowerCase() && (!platOfNo(c.orderNo) || platOfNo(c.orderNo) === p.platform))
         .forEach(c => { if (!p.items.some(i => i.id === c.id)) p.items.push({ ...c }); });
     }
+    // 🆕 新人卡（非会员）：后端给 p.newCard，这里变成一样「东西」，跟其他东西一起勾、一起准备
+    //   同一位买家每一包用同一个 id → 只出现在他第一包，准备只算一张；不送到后端寄出，只在保存时带 newCard: true
+    function attachCard(p) {
+      const nc = p.newCard;
+      if (!nc || nc.level === "placed" || p.items.some(i => i.kind === "card")) return;
+      const must = nc.level === "must";
+      const it = { kind: "card", id: "card_" + buyerKey(p), icon: "🆕", level: nc.level, can: true,
+        title: T.zh.cardT, prep: T.zh.cardT, sub: must ? T.zh.cardMust : T.zh.cardSug, src: T.zh.cardSrc,
+        en: { title: T.en.cardT, prep: T.en.cardT, sub: must ? T.en.cardMust : T.en.cardSug, src: T.en.cardSrc } };
+      if (nc.here) it.sent = true;
+      p.items.push(it);
+    }
+    // 30 天内另一包已经放了新人卡：提醒不用再放
+    const cardElse = p => p.newCard && p.newCard.level === "placed"
+      ? `<div class="note">${esc(t("cardPlaced", fmtD(p.newCard.at), "\u0000")).replace("\u0000", noHtml(p.newCard.inOrder))}</div>` : "";
     async function shipClaim(i, orderNo, ship) {
       if (!claimDb) throw new Error(t("noClaimLogin"));
       const ref = claimDb.ref(`draw_private/claimBatches/${i.bid}/items/${i.key}`);
