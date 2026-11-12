@@ -141,13 +141,14 @@
 
       <!-- 📒 打包记录 -->
       <section class="pane" id="pane-log">
+        <div class="card2" id="sessList"></div>
         <div class="card2" id="shiftList"></div>
         <div class="card2">
           <div class="tool2">
             <select id="lWho"><option value="">全部人</option></select>
             <select id="lAct">
               <option value="">全部动作</option><option value="pack">✅ 打包</option><option value="redo">✏️ 修改 / 重新打包</option>
-              <option value="undo">↩️ 撤销</option><option value="skip">❌ 有东西没放</option><option value="finish">🏁 收工</option>
+              <option value="undo">↩️ 撤销</option><option value="skip">❌ 有东西没放</option><option value="start">▶ 开工</option><option value="finish">🏁 收工</option>
             </select>
             <input type="search" id="lq" placeholder="🔍 单号 / 买家">
             <span class="meta" id="lCount" style="color:var(--muted);font-size:.8rem"></span>
@@ -249,7 +250,7 @@
     $("reloadBtn").onclick = load;
 
     // ---------- 资料 ----------
-    let range = null, parcels = [], pending = [], shift = null, logs = [], shifts = [], sel = null, pfilter = "all";
+    let range = null, parcels = [], pending = [], shift = null, logs = [], shifts = [], sessions = [], sel = null, pfilter = "all";
     const photoCache = new Map();
     const left = p => p.items.filter(i => i.can);
     const warnsOf = p => p.items.filter(i => !i.can);
@@ -271,7 +272,7 @@
         const logTo = Math.min(range.from + 62 * DAY, Math.max(range.to + 2 * DAY, Date.now()));
         const [b, l] = await Promise.all([call("batch", { from: range.from, to: range.to }), call("log", { from: range.from, to: logTo })]);
         parcels = b.parcels || []; pending = b.pending || []; shift = b.shift || null;
-        logs = l.list || []; shifts = l.shifts || [];
+        logs = l.list || []; shifts = l.shifts || []; sessions = l.sessions || [];
       } catch (e) {
         $("plist").innerHTML = `<div class="empty">载入失败：${esc(errText(e))}<br>（后端 pkAdmin 部署了吗？有「🧺 打包清单」权限吗？）</div>`;
         return;
@@ -318,13 +319,15 @@
     $("pq").addEventListener("input", paintParcels);
     $("plist").addEventListener("click", e => { const r = e.target.closest("[data-no]"); if (!r) return; const p = parcels.find(x => x.orderNo === r.dataset.no); if (p) openParcel(p); });
 
-    const ACT = { pack: ["a-pack", "✅ 打包"], redo: ["a-redo", "✏️ 修改"], undo: ["a-undo", "↩️ 撤销"], finish: ["a-finish", "🏁 收工"] };
+    const ACT = { pack: ["a-pack", "✅ 打包"], redo: ["a-redo", "✏️ 修改"], undo: ["a-undo", "↩️ 撤销"], start: ["a-finish", "▶ 开工"], finish: ["a-finish", "🏁 收工"] };
     const actOf = l => l.action === "pack" && l.redo ? "redo" : l.action;
     const itemsTxt = arr => (arr || []).map(x => esc(x.title || x.id) + (x.reason ? `（${esc(x.reason)}）` : "")).join("、");
     function logLine(l) {
       if (l.action === "pack") return [l.sent.length ? `放了：${itemsTxt(l.sent)}` : "没有东西要放", l.skipped.length ? `<span style="color:var(--amber-tx)">没放：${itemsTxt(l.skipped)}</span>` : "",
         l.trackingNo ? `🚚 ${esc(l.carrierName)} ${esc(l.trackingNo)}` : "", l.photo ? "📷 有照片" : ""].filter(Boolean).join(" · ");
       if (l.action === "undo") return `退回 ${l.returned ?? 0} 样${l.welcome ? `；迎新礼 ${l.welcome} 份要到「新会员奖励」处理` : ""}${l.trackingNo ? ` · 原运单 ${esc(l.trackingNo)}` : ""}`;
+      if (l.action === "start") return `${esc(l.label)} · 开工时 ${l.total ?? "-"} 包`;
+      if (l.action === "finish" && l.total == null) return `${esc(l.label)} · 结束自己这一段（还有人在打包）${l.packed != null ? ` · 这一段打包 ${l.packed} 包` : ""}${l.note ? ` · 备注：${esc(l.note)}` : ""}`;
       if (l.action === "finish") return `${esc(l.label)} · 已打包 ${l.packed}/${l.total}${l.remaining.length ? ` · 剩：${l.remaining.map(x => "#" + esc(x.orderNo.slice(-4)) + " " + esc(x.reason)).join("、")}` : ""}${l.note ? ` · 备注：${esc(l.note)}` : ""}`;
       return "";
     }
@@ -384,7 +387,23 @@
     });
 
     // ---------- 📒 打包记录 ----------
+    // ⏱ 开工 / 收工（2026-11-12）：每个人每一段
+    const durOf = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} 小时 ${m % 60} 分` : `${m} 分钟`; };
+    function paintSessions() {
+      const row = x => {
+        const st = x.active ? `<span class="tag tag-ok">⏱ 开工中</span>` : x.endKind === "auto" ? `<span class="tag tag-bad" title="下次开工时自动结束">⚠️ 没按收工</span>` : "🏁 " + fmtT(x.endedAt);
+        const dur = x.active ? durOf(Date.now() - x.startedAt) + "（进行中）" : x.endedAt ? durOf(x.endedAt - x.startedAt) : "-";
+        const st0 = x.start || {};
+        return `<tr><td>${esc(nameOf(x.by, x.byName))}</td><td>${fmtT(x.startedAt)}<div class="meta">${esc(x.label || "")}</div></td><td>${st}</td><td>${dur}</td>
+          <td>${x.packed != null ? `${x.packed} 包` : "-"}${x.items ? ` · 放了 ${x.items} 样` : ""}</td>
+          <td class="meta">开工时：今天 ${st0.parcels ?? "-"} 包 · 要放 ${st0.need ?? "-"} · 准备 ${st0.prep ?? "-"} 件</td></tr>`;
+      };
+      $("sessList").innerHTML = `<h3>⏱ 开工 / 收工记录</h3>` + (sessions.length
+        ? `<table class="tbl"><thead><tr><th>谁</th><th>开工</th><th>收工</th><th>时长</th><th>这一段打包</th><th>开工时的情况</th></tr></thead><tbody>${sessions.map(row).join("")}</tbody></table>`
+        : `<div class="meta" style="color:var(--muted)">这段时间还没有开工记录（打包页按「▶ 开工」才会记）</div>`);
+    }
     function paintLog() {
+      paintSessions();
       $("shiftList").innerHTML = `<h3>🏁 收工记录</h3>` + (shifts.length ? `<table class="tbl"><thead><tr><th>场次</th><th>谁</th><th>收工时间</th><th>已打包</th><th>剩下的</th></tr></thead><tbody>${shifts.map(s =>
         `<tr><td>${esc(s.label || fmtT(s.from) + " – " + fmtT(s.to))}</td><td>${esc(nameOf(s.by, s.byName))}</td><td>${fmtT(s.finishedAt)}</td><td>${s.packed}/${s.total}</td>
           <td>${s.remaining.length ? s.remaining.map(x => `#${esc(x.orderNo.slice(-4))} ${esc(x.reason)}`).join("<br>") : "✅ 全部完成"}${s.note ? `<div class="meta">备注：${esc(s.note)}</div>` : ""}</td></tr>`).join("")}</tbody></table>`
