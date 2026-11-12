@@ -61,6 +61,10 @@
     .res.err { border-color: #dc2626; } .res.err .res-head { background: #dc2626; }
     .res-head .big { font-size: 1.45rem; font-weight: 900; line-height: 1.15; white-space: nowrap; flex-shrink: 0; }
     .res-head .no { font-family: ui-monospace, Menlo, monospace; font-size: .82rem; opacity: .92; word-break: break-all; }
+    .res-head .no .t4, .note .t4 { font-size: 1.55em; font-weight: 900; letter-spacing: .04em; opacity: 1; }
+    .scanbar #kbBtn { position: relative; }
+    .scanbar #kbBtn::after { content: "🔒"; position: absolute; right: 2px; bottom: 1px; font-size: .62rem; line-height: 1; }
+    .scanbar #kbBtn.on::after { content: "🔓"; }
     .res-head .who { font-size: .86rem; font-weight: 700; margin-top: 1px; overflow-wrap: anywhere; }
     .tag { font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.22); color: #fff; }
     .res-body { padding: 4px 10px 10px; }
@@ -327,7 +331,7 @@
     const T = {
       zh: {
         title: "🧺 打包", back: "回到控制台", rangeTitle: "今天要寄出的包裹：哪个时间段下的单", reload: "重新读取",
-        qPh: "扫描订单号 / 追踪号", kbTitle: "⌨️ 键盘：关掉后点输入框不会跳出键盘（PDA 扫描枪用）", cam: "📷 扫描", loading: "读取中…", close: "关闭",
+        qPh: "扫描订单号 / 追踪号", kbTitle: "⌨️ 键盘：🔒 锁定时点输入框不会跳出键盘（PDA 扫描枪用）；按一下 🔓 解锁才会跳出", cam: "📷 扫描", loading: "读取中…", close: "关闭",
         tabScan: "扫描", tabList: "清单", tabPrep: "准备", fdToday: "📦 今天要寄", fdAll: "🗂️ 全部待寄",
         rangeH: "📅 今天要寄出的包裹", rangeSub: "选哪个时间段下的单。扫描不受影响：扫到任何一张单都会显示那位会员所有待寄的东西。",
         optLive: "🎥 直播时段", optDay: "📆 一天", optCustom: "✏️ 自定义", optCustomS: "自己选开始和结束", ok: "确定", liveHint: "（晚上 8 点到早上 8 点）",
@@ -351,7 +355,7 @@
         trkDup: "这个追踪号已经填好了",
         secPut: "放进这一包（取消勾选 = 这次不寄，留到下一单）", secSent: "已放入", sentSmall: "✅ 已放入",
         others: (n, l) => `💡 这位会员今天还有 ${n} 包（${l}）。这包没勾的，扫那一包时会再出现。`, sep: "、",
-        nmElse: (g, no) => `🎉 ${g}不放这包，要放进订单 …${no} 的包裹（会员看到的是这张单）。`, nmOrder: no => `📦 放进订单 …${no}`,
+        nmElse: (g, no) => `🎁 这位会员有 ${g}，得放进 #${no} 的包裹。`, nmOrder: no => `📦 放进 #${no}`,
         undoBtn: "↩️ 撤销这一包（订单取消 / 勾错了）",
         needTrk: "🚚 运单号", trkOk: "✅ 已扫", trkMiss: "扫追踪号", carrier: "运输公司", pick: "— 选 —", trkNo: "运单号", trkPh: "扫追踪号条码",
         url: "查询链接", urlPh: "https://…（选好公司会自动生成）", needPh: "📷 照片", phOk: "✅ 已拍", phMiss: "拍一张包裹照片", phDel: "✕ 删掉", phRe: "重拍", phShot: "📷 拍照",
@@ -371,7 +375,7 @@
       },
       en: {
         title: "🧺 Packing", back: "Back to console", rangeTitle: "Today's parcels: orders placed in which time range", reload: "Reload",
-        qPh: "Scan order no. / tracking no.", kbTitle: "⌨️ Keyboard: turn off so tapping the box won't open the keyboard (PDA scanner)", cam: "📷 Scan", loading: "Loading…", close: "Close",
+        qPh: "Scan order no. / tracking no.", kbTitle: "⌨️ Keyboard: 🔒 locked = tapping the box won't open the keyboard (PDA scanner); tap to 🔓 unlock", cam: "📷 Scan", loading: "Loading…", close: "Close",
         tabScan: "Scan", tabList: "List", tabPrep: "Prepare", fdToday: "📦 Ship today", fdAll: "🗂️ All pending",
         rangeH: "📅 Today's parcels", rangeSub: "Orders placed in which time range. Scanning isn't affected: any order you scan shows everything that member is still owed.",
         optLive: "🎥 Live session", optDay: "📆 One day", optCustom: "✏️ Custom", optCustomS: "Pick your own start and end", ok: "OK", liveHint: " (8 pm to 8 am)",
@@ -395,7 +399,7 @@
         trkDup: "This tracking no. is already filled in",
         secPut: "Put in this parcel (untick = not this time, keep for next order)", secSent: "Already added", sentSmall: "✅ Added",
         others: (n, l) => `💡 This member has ${n} more parcel(s) today (${l}). Unticked items show up again when you scan that parcel.`, sep: ", ",
-        nmElse: (g, no) => `🎉 ${g} does NOT go in this parcel. Put it in order …${no} (that's the order the member sees).`, nmOrder: no => `📦 Goes in order …${no}`,
+        nmElse: (g, no) => `🎁 This member has ${g}. It goes in parcel #${no}.`, nmOrder: no => `📦 Goes in #${no}`,
         undoBtn: "↩️ Undo this parcel (order cancelled / ticked wrongly)",
         needTrk: "🚚 Tracking no.", trkOk: "✅ Scanned", trkMiss: "Scan tracking", carrier: "Courier", pick: "— Pick —", trkNo: "Tracking no.", trkPh: "Scan tracking barcode",
         url: "Tracking link", urlPh: "https://… (auto-filled after picking courier)", needPh: "📷 Photo", phOk: "✅ Taken", phMiss: "Take one parcel photo", phDel: "✕ Delete", phRe: "Retake", phShot: "📷 Take photo",
@@ -563,9 +567,10 @@
     }
 
     // ---------- ⌨️ 键盘开关（PDA 扫描枪）----------
-    let kbOn = store.get("pkKb") !== "off";
-    function paintKb() { $("q").inputMode = kbOn ? "text" : "none"; $("kbBtn").classList.toggle("off", !kbOn); }
-    $("kbBtn").onclick = () => { kbOn = !kbOn; store.set("pkKb", kbOn ? "on" : "off"); paintKb(); $("q").blur(); setTimeout(focusQ, 50); };
+    // 每次打开页面都先锁住（🔒，点输入框不跳键盘）；手动按一下才解锁（🔓）并跳出键盘
+    let kbOn = false;
+    function paintKb() { $("q").inputMode = kbOn ? "text" : "none"; $("kbBtn").classList.toggle("off", !kbOn); $("kbBtn").classList.toggle("on", kbOn); }
+    $("kbBtn").onclick = () => { kbOn = !kbOn; paintKb(); $("q").blur(); setTimeout(focusQ, 50); };
     function focusQ() {
       if (!$("cam").hidden || !$("rangeModal").hidden || !$("setModal").hidden || busy) return;
       const a = document.activeElement; if (a && a !== $("q") && (a.tagName === "INPUT" || a.tagName === "SELECT")) return;
@@ -623,7 +628,8 @@
     async function load() {
       try {
         const r = (await pkAdmin({ op: "batch", from: range.from, to: range.to })).data;
-        all = r.parcels || [];
+        const extra = all.filter(x => x.outside && !(r.parcels || []).some(y => y.orderNo === x.orderNo));
+        all = (r.parcels || []).concat(extra);
         pending = r.pending || []; loaded = true;
         all.forEach(p => { attachClaims(p); addSent(p); });
         render();
@@ -633,11 +639,24 @@
         $("list").innerHTML = "";
       }
     }
+    // 不在时间段内的单：打包后单独再查一次（清单读取不会包含它）
+    async function refreshOne(no) {
+      try {
+        const r = (await pkAdmin({ op: "lookup", orderNo: no })).data;
+        if (!r || !r.found) return;
+        const x = r.parcel; x.outside = true;
+        attachClaims(x); addSent(x);
+        const i = all.findIndex(y => y.orderNo === no);
+        if (i >= 0) all[i] = x; else all.push(x);
+      } catch (e) { console.warn("refresh", e); }
+    }
     const left = p => p.items.filter(i => !i.sent);
     function addSent(p) { (sentLog.get(p.orderNo) || []).forEach(i => { if (!p.items.some(j => j.id === i.id)) p.items.push({ ...i, sent: true }); }); }
     const canLeft = p => left(p).filter(i => i.can);
     // 迎新礼已关联订单：固定在那一包（不跟「同会员第一包」走）
     const pinned = i => i.kind === "nm" && !!i.linkedOrder;
+    // 单号：后四位加大加粗（打包时一般对最后四位）
+    const noHtml = no => { const s = String(no || ""); return esc(s.slice(0, -4)) + `<b class="t4">${esc(s.slice(-4))}</b>`; };
     const freeLeft = p => canLeft(p).filter(i => !pinned(i));
     const pinLeft = p => canLeft(p).filter(pinned);
     const warns = p => left(p).filter(i => !i.can);
@@ -711,7 +730,7 @@
     function renderPrep(todayItems) {
       // 全部待寄：每位顾客还没寄的（可以寄的；含今天没单的）
       const allItems = [];
-      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: pinned(i) ? { ...w, order: "", warn: t("nmOrder", i.linkedOrder.slice(-6)) } : w })); });
+      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: pinned(i) ? { ...w, order: "", warn: t("nmOrder", i.linkedOrder.slice(-4)) } : w })); });
       claimItems.forEach(c => {
         if (c.uid) {   // 会员得主（会员系统还没有这笔奖品）
           const g = pending.find(x => x.uid === c.uid);
@@ -790,9 +809,9 @@
       // 这位会员的迎新礼固定在别的单：提醒不要放这包
       const pg = pending.find(g => g.key === buyerKey(p));
       const nmElse = ((pg && pg.items) || []).filter(i => pinned(i) && i.can && i.linkedOrder !== p.orderNo && !c.some(j => j.id === i.id))
-        .map(i => `<div class="note">${esc(t("nmElse", tr(i, "title"), i.linkedOrder.slice(-6)))}</div>`).join("");
+        .map(i => `<div class="note">${esc(t("nmElse", tr(i, "title"), "\u0000")).replace("\u0000", `<b class="t4">${esc(i.linkedOrder.slice(-4))}</b>`)}</div>`).join("");
       const who = [esc(p.username || "-"), PLAT[p.platform] || "", p.uid ? "🎫 " + esc(p.member || t("member")) : ""].filter(Boolean).join(" · ");
-      const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="hr"><div class="no">${esc(p.orderNo)}</div><div class="who">${who}</div></div></div>`;
+      const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="hr"><div class="no">${noHtml(p.orderNo)}</div><div class="who">${who}</div></div></div>`;
       const warnHtml = i => `<div class="warn">⚠️ ${i.icon} <b>${esc(tr(i, "title"))}</b>：${esc(tr(i, "warn") || tr(i, "sub"))}</div>`;
       const big = p.done && !c.length ? t("bigDone") : c.length ? t("bigPut", m === "view" ? c.length : sel.on.size) : w.length ? t("bigFirst") : t("bigNone");
       const cls = p.done && !c.length ? "ok" : c.length ? "" : w.length ? "warn" : "none";
@@ -919,7 +938,7 @@
         if (!r.found) { beep("bad");
           $("result").innerHTML = `<div class="res err"><div class="res-head"><div class="big">${esc(t("notFound"))}</div><div class="no">${esc(q)}</div></div>
             <div class="res-body"><div class="note" style="margin-top:10px">${esc(t("notFoundNote"))}</div></div></div>`; return; }
-        const x = r.parcel;
+        const x = r.parcel; x.outside = true;   // 不在这个时间段（重新读取清单时要保留、另外更新）
         attachClaims(x); addSent(x);
         if (!all.some(y => y.orderNo === x.orderNo)) all.push(x);
         beep(canLeft(x).length ? "items" : "ok");
@@ -1000,6 +1019,7 @@
       else { beep("ok"); toast(t("savedOk")); }
       if (ship.photo) photoCache.set(p.orderNo, ship.photo); else photoCache.delete(p.orderNo);
       if (sel && sel.p.orderNo === p.orderNo) sel.redo = false;
+      if (p.outside) await refreshOne(p.orderNo);
       await load();
       focusQ();
     }
