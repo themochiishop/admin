@@ -6,7 +6,7 @@
 
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
@@ -218,3 +218,16 @@ exports.ptDaily = onSchedule({ schedule: "10 3 * * *", timeZone: "Asia/Kuala_Lum
 const PT_OPS = { status: points.ptStatus, compare: points.ptCompare, enable: points.ptEnable, disable: points.ptDisable, fullCheck: points.ptFullCheck };
 exports.ptAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 2, timeoutSeconds: 540, memory: "512MiB" },
   req => run(pick(PT_OPS, req), req));
+
+
+// ===== 🔗 分享网址预览（2026-11-13）：club.themochiishop.com/u/{代码}、/p/{帖子}、/i/...jpg =====
+// Firebase Hosting rewrite 到这里（firebase.json）；部署后要跑 gcloud ... sharelink --no-invoker-iam-check
+const share = require("./src/share");
+async function toJpeg(buf, square) {
+  const sharp = require("sharp");   // 只有预览图才载入
+  const img = sharp(buf).rotate();
+  return (square ? img.resize(600, 600, { fit: "cover" }) : img.resize(1200, 1200, { fit: "inside", withoutEnlargement: true }))
+    .flatten({ background: "#ffffff" }).jpeg({ quality: 82 }).toBuffer();
+}
+exports.shareLink = onRequest({ region: CALL_REGION, maxInstances: 3, memory: "512MiB", timeoutSeconds: 30 },
+  (req, res) => share.handle(db, req, res, toJpeg));
