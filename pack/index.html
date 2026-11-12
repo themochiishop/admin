@@ -100,6 +100,7 @@
     .ship .mini { background: var(--card); border: 1px solid var(--line2); color: var(--text2); border-radius: 8px; padding: 7px 10px; font-size: .8rem; cursor: pointer; }
     .pthumb { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 2px solid #16a34a; cursor: zoom-in; margin-left: auto; }
     .pthumb.big { width: 120px; height: 120px; display: block; margin: 6px 0 0; }
+    .undone { font-size: .82rem; color: var(--amber-tx); background: var(--amber-bg, #fef3c7); border-radius: 10px; padding: 7px 11px; margin-top: 8px; line-height: 1.5; }
     .packed { font-size: .84rem; color: var(--blue-tx); background: var(--blue-bg); border-radius: 10px; padding: 9px 11px; margin-top: 8px; line-height: 1.6; }
     .packed a { text-decoration: none; }
     .editbtn { display: block; width: 100%; margin-top: 10px; border: 2px solid #db2777; background: var(--card); color: #db2777; border-radius: 10px; padding: 11px; font-weight: 800; font-size: .95rem; cursor: pointer; }
@@ -367,7 +368,7 @@
         searching: "查找中…", notFound: "❌ 找不到", notFoundNote: "订单要先录入（订单录入页或表格提交），同步后才查得到。", errBig: "❌ 出错了",
         trkWord: "运单号", phFail: e => `照片读取失败：${e}`, partFail: "有些没成功：", savedOk: "✅ 这一包打包好了",
         undoConfirm: (no, u) => `↩️ 撤销 ${no}（${u}）这一包？\n\n这一包用打包清单寄出的东西会全部退回：\n• 小礼物 → 待寄\n• 中奖奖品、兑换、签到达人礼物 → 待发货\n运单号、照片也会一起清掉。\n\n会员已经确认收到的不会动。迎新礼要到「新会员奖励」处理。`,
-        undone: n => `↩️ 已撤销：退回 ${n} 样`, undoWelcome: n => `\n\n⚠️ 这一包有 ${n} 份迎新礼已寄出，要到「新会员奖励」处理`, undoKept: n => `\n\nℹ️ ${n} 样会员已确认收到 / 已完成，没有退回`,
+        undone: n => `↩️ 已撤销：退回 ${n} 样`, undoneBy: (b, tm, n) => `↩️ ${b} · ${tm} 撤销了打包（退回 ${n} 样）`, undoWelcome: n => `\n\n⚠️ 这一包有 ${n} 份迎新礼已寄出，要到「新会员奖励」处理`, undoKept: n => `\n\nℹ️ ${n} 样会员已确认收到 / 已完成，没有退回`,
         claimHint: '🏆 非会员抽奖得主的奖品也要一起列出：<button type="button" class="btn-claim" data-claim="login">🔑 连接领奖追踪</button>（用你的 Google 账号登录一次，这台手机会记住）',
         claimDenied: e => `🏆 读不到领奖追踪的名单（${e}）：请店主到「👥 管理员」按「立即同步」，或确认登录的是对的账号。<button type="button" class="btn-claim" data-claim="switch">换账号</button>`,
         noClaimLogin: "没有登录领奖追踪", claimPrize: "奖品", claimTitle: r => `领奖追踪「${r}」`, claimSub: "非会员得主", claimMemSub: "会员得主",
@@ -411,7 +412,7 @@
         searching: "Searching…", notFound: "❌ Not found", notFoundNote: "The order must be entered first (order entry page or sheet submit); it shows up after syncing.", errBig: "❌ Something went wrong",
         trkWord: "Tracking no.", phFail: e => `Couldn't read photo: ${e}`, partFail: "Some failed:", savedOk: "✅ Parcel packed",
         undoConfirm: (no, u) => `↩️ Undo parcel ${no} (${u})?\n\nEverything shipped with this parcel via Packing goes back:\n• Small gifts → pending\n• Prizes, redemptions, check-in gifts → to ship\nTracking no. and photo are cleared too.\n\nItems the member already confirmed received stay as they are. Welcome gifts are handled in New member rewards.`,
-        undone: n => `↩️ Undone: ${n} item(s) returned`, undoWelcome: n => `\n\n⚠️ ${n} welcome gift(s) in this parcel were shipped — handle them in New member rewards`, undoKept: n => `\n\nℹ️ ${n} item(s) already received / completed, not returned`,
+        undone: n => `↩️ Undone: ${n} item(s) returned`, undoneBy: (b, tm, n) => `↩️ Packing undone by ${b} · ${tm} (${n} item(s) returned)`, undoWelcome: n => `\n\n⚠️ ${n} welcome gift(s) in this parcel were shipped — handle them in New member rewards`, undoKept: n => `\n\nℹ️ ${n} item(s) already received / completed, not returned`,
         claimHint: '🏆 List prizes of non-member draw winners too: <button type="button" class="btn-claim" data-claim="login">🔑 Connect Claim tracking</button> (sign in once with your Google account; this phone remembers it)',
         claimDenied: e => `🏆 Can't read the Claim tracking list (${e}): ask the owner to press "Sync now" in 👥 Staff, or check you signed in with the right account. <button type="button" class="btn-claim" data-claim="switch">Switch account</button>`,
         noClaimLogin: "Not signed in to Claim tracking", claimPrize: "Prize", claimTitle: r => `Claim "${r}"`, claimSub: "non-member winner", claimMemSub: "member winner",
@@ -836,6 +837,8 @@
       } else {   // pack：没东西放（或已打包后修改）
         body = w.map(warnHtml).join("") + nmElse + shipForm();
       }
+      const ud = p.undone;
+      if (ud && ud.at) body += `<div class="undone">${esc(t("undoneBy", ud.byName || (ud.by || "").split("@")[0], fmtT(ud.at), ud.returned || 0))}</div>`;
       $("result").innerHTML = `<div class="res ${cls}">${head(big)}<div class="res-body">${body}</div></div>`;
       if (fresh) { $("result").firstElementChild.classList.add("flash"); addHist(p); }
       paintHint(); paintAct();
@@ -1039,6 +1042,8 @@
         alert(t("undone", n) + (r.welcome ? t("undoWelcome", r.welcome) : "") + (r.kept ? t("undoKept", r.kept) : ""));
       } catch (e) { alert("❌ " + errText(e)); }
       busy = false;
+      if (p.outside) await refreshOne(p.orderNo);
+      if (sel && sel.p.orderNo === p.orderNo) { sel.view = false; sel.redo = false; }
       await load();
     }
 
