@@ -104,6 +104,8 @@
     .todo-row:not(.has) { color: var(--faint); }
     .todo-row.pack { border-style: dashed; border-color: #db2777; color: var(--text2); }
     .todo-row.pack.has .n { background: #db2777; }
+    .todo-row.pack { grid-column: 1 / -1; }
+    .todo-row.pack .tx small { display: block; font-size: .72rem; color: var(--muted); font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
     .todo-done { font-size: .82rem; color: var(--green-tx); font-weight: 600; grid-column: 1 / -1; margin-top: 2px; }
 
     /* 等级分布 */
@@ -260,6 +262,7 @@
   <script type="module">
     import { app, db } from "./js/firebase-config.js";
     import { can } from "/js/admin-guard.js";
+    import { packIssues, issueSummary, liveRange } from "./js/pack-issues.js";   // 🧺 打包管理「需要处理」（和打包管理页同一套算法）
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
     import { ciStockState, ciStockBannerHTML, bindCiStockBanner, refreshCiStockBadge } from "./js/ci-stock.js";   // 🏅 签到达人礼物库存提醒
     import {
@@ -310,7 +313,7 @@
     };
     function renderTodo() {
       const rows = Object.values(todo);
-      const total = rows.reduce((s, r) => s + (r.n || 0), 0);
+      const total = rows.reduce((s, r) => s + (r.n || 0), 0) + (packIss ? packIss.n : 0);
       const loaded = rows.filter(r => r.n !== null).length;
       $("todoTotal").textContent = loaded ? total : "–";
       $("todoLbl").textContent = total ? "件事要处理" : (loaded === rows.length ? "全部处理完了" : "件事要处理");
@@ -323,11 +326,28 @@
           <span class="n">${r.n === null ? "…" : r.n}</span>
         </a>`).join("") +
         (loaded === rows.length && !total ? `<div class="todo-done" style="grid-column:1/-1">✓ 目前没有要处理的事，休息一下 ☕</div>` : "") +
-        // 🧺 随单寄出的东西：和上面「待发货」有重叠，所以不算进总数；只是捷径到打包清单
-        (packN !== null ? `<a class="todo-row pack ${packN ? "has" : ""}" href="../pack/#all" title="打包时扫单号会自动列出；这里是所有还没寄的（含还没下单的会员）">
-          <span class="ic">🧺</span><span class="tx">待随单寄出（打包清单）</span><span class="n">${packN}</span></a>` : "");
+        // 🧺 打包管理：数字 = 打包管理「⚠️ 需要处理」（黄色）；下面小字 = 哪几类 + 待随单寄出几件（和「待发货」有重叠，不算进总数）
+        (packIss !== undefined ? `<a class="todo-row pack ${packIss && packIss.n ? "has" : ""}" href="pack.html#issues" title="打包管理 › ⚠️ 需要处理（这一场：${packIss && packIss.range ? esc(packIss.range) : "-"}）">
+          <span class="ic">🧺</span><span class="tx">打包管理<small>${packIss === null ? "计算中…" : packIss.err ? esc(packIss.err)
+            : [packIss.text || "没有要处理的事 ✓", packIss.notes ? `提醒 ${packIss.notes}` : "", packN ? `待随单寄出 ${packN} 件` : ""].filter(Boolean).join(" · ")}</small></span>
+          <span class="n">${packIss === null || packIss.err ? "…" : packIss.n}</span></a>` : "");
     }
-    let packN = null;   // null = 没有「🧺 打包清单」权限 → 不显示
+    let packN = null;   // 待随单寄出几件（小字）
+    let packIss;        // undefined = 没有「🧺 打包清单」权限 → 不显示；null = 计算中；{ n, text, notes, range } / { err }
+    // 🧺 打包管理「需要处理」：打开总览 / 按 🔄 时算一次（要读这一场的包裹，不做实时）
+    async function loadPackIssues() {
+      if (!can(window.msAccess, "pack")) { packIss = undefined; return; }
+      packIss = null; renderTodo();
+      try {
+        const range = liveRange();
+        const pk = httpsCallable(getFunctions(app, "asia-southeast1"), "pkAdmin");
+        const b = (await pk({ op: "batch", from: range.from, to: range.to })).data || {};
+        const d = new Date(range.from), e = new Date(range.to), p2 = n => String(n).padStart(2, "0");
+        packIss = { ...issueSummary(packIssues({ parcels: b.parcels || [], pending: b.pending || [], shift: b.shift || null, range })),
+          range: `${d.getDate()}/${d.getMonth() + 1} ${p2(d.getHours())}:00 – ${e.getDate()}/${e.getMonth() + 1} ${p2(e.getHours())}:00` };
+      } catch (err) { packIss = { err: "读取失败：" + (err.message || err) }; }
+      renderTodo();
+    }
     // 🔴 待处理：实时（2026-11-12）— 和侧边栏红点共用同一组监听，有变动马上更新，不用按重新整理
     function startLiveTodo() {
       onLive(["redeem", "prize", "feed", "reports", "nm", "sg"], L => {
@@ -617,6 +637,7 @@
     function run() {
       loadCiStock();
       loadCardStats();
+      loadPackIssues();
       $("reloadBtn").disabled = true;
       load().catch(e => {
         $("errBox").textContent = "载入失败：" + e.message;
