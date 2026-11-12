@@ -152,7 +152,9 @@ function packedOf(d) {
   const s = d.ship || {};
   return { at: toMs(d.at), by: d.by || "", carrierName: s.carrierName || "", trackingNo: s.trackingNo || "", trackingUrl: s.trackingUrl || "", photo: !!s.photo };
 }
-function parcel(o, buyer, pend, names, done) {
+// 撤销记录（packUndone）→ 回传给页面的摘要
+function undoneOf(d) { return d ? { at: toMs(d.at), by: d.by || "", byName: d.byName || "", returned: d.returned || 0 } : null; }
+function parcel(o, buyer, pend, names, done, undone = null) {
   const keys = [buyer.uid ? "u:" + buyer.uid : null, userKey(buyer.platform, buyer.username)].filter(Boolean);
   const items = [], seen = new Set();
   keys.forEach(k => (pend.by.get(k) || []).forEach(it => {
@@ -162,7 +164,7 @@ function parcel(o, buyer, pend, names, done) {
   }));
   return {
     orderNo: o.no, platform: buyer.platform, username: buyer.username, uid: buyer.uid || null,
-    member: buyer.uid ? (names.get(buyer.uid) || "会员") : null, orderTime: toMs(o.orderTime), done: !!done, packed: packedOf(done), items,
+    member: buyer.uid ? (names.get(buyer.uid) || "会员") : null, orderTime: toMs(o.orderTime), done: !!done, packed: packedOf(done), undone: undoneOf(undone), items,
   };
 }
 
@@ -181,11 +183,13 @@ async function pkBatch(db, ctx, data = {}) {
     .filter(o => o.status !== "refunded" && (toMs(o.orderTime) || 0) <= to);
   const doneSnap = await db.collection("packDone").where("at", ">=", tsOf(from - 7 * DAY)).get();
   const done = new Map(doneSnap.docs.map(d => [d.id, d.data() || {}]));
+  const undoSnap = await db.collection("packUndone").where("at", ">=", tsOf(from - 7 * DAY)).get();
+  const undone = new Map(undoSnap.docs.map(d => [d.id, d.data() || {}]));
   const cache = new Map(), out = [];
   const buyers = [];
   for (const o of orders) { const b = await buyerOf(db, o, cache); buyers.push([o, b]); }
   await memberNames(db, [...new Set(buyers.map(([, b]) => b.uid).filter(Boolean))], pend.names);
-  for (const [o, b] of buyers) out.push(parcel(o, b, pend, pend.names, done.get(o.no) || null));
+  for (const [o, b] of buyers) out.push(parcel(o, b, pend, pend.names, done.get(o.no) || null, undone.get(o.no) || null));
   out.sort((a, b) => (a.orderTime || 0) - (b.orderTime || 0));
   // 🗂️ 全部待寄：每位顾客还没寄的东西（含还没下单的会员）
   const uids = [...pend.by.keys()].filter(k => k.startsWith("u:")).map(k => k.slice(2));
@@ -262,7 +266,8 @@ async function pkLookup(db, ctx, data = {}) {
   if (b.uid) await memberNames(db, [b.uid], pend.names);
   const ds = await db.collection("packDone").doc(o.no).get();
   const done = ds.exists ? (ds.data() || {}) : null;
-  return { ok: true, found: true, parcel: parcel(o, b, pend, pend.names, done) };
+  const us = await db.collection("packUndone").doc(o.no).get();
+  return { ok: true, found: true, parcel: parcel(o, b, pend, pend.names, done, us.exists ? us.data() : null) };
 }
 
 // ---------- ✅ 勾选：放进这一包 ----------
@@ -422,7 +427,7 @@ async function pkDone(db, ctx, data = {}) {
 //   打包清单寄出的东西（随这张单）全部退回：小礼物 → 待寄；中奖奖品 / 兑换 → 待发货；这一包的「打包完成」也取消
 //   只退还没完成的（会员按了确认收到 / 已自动完成的不动）；迎新礼要到「新会员奖励」处理
 async function pkUndo(db, ctx, data = {}) {
-  await requirePack(db, ctx);
+  const who = await requirePack(db, ctx);
   const orderNo = normNo(data.orderNo);
   if (!noOk(orderNo)) fail("pk/bad-order", "订单号不正确", "invalid-argument");
   const r = { smallGifts: 0, prizes: 0, redemptions: 0, welcome: 0, kept: 0 };
@@ -441,6 +446,19 @@ async function pkUndo(db, ctx, data = {}) {
       r[key]++;
     }
   }
+  // 撤销戳记：这一包（打包页看得到）+ 管理员操作记录（后台总览「最近动态 › 管理员」看得到）
+  const at = tsOf(nowMs(ctx));
+  const prev = await db.collection("packDone").doc(orderNo).get();
+  const pd = prev.exists ? (prev.data() || {}) : {};
+  const os = await db.collection("orders").doc(orderNo).get();
+  const uname = os.exists ? String(os.data().username || "") : "";
+  const ss = who.owner ? null : await db.collection("staff").doc(who.email).get();
+  const byName = String((ss && ss.exists && ss.data().name) || "").slice(0, 60);
+  const returned = r.smallGifts + r.prizes + r.redemptions;
+  await db.collection("packUndone").doc(orderNo).set({ at, by: who.email, byName, returned,
+    prevAt: pd.at || null, prevBy: pd.by || "", prevTrackingNo: (pd.ship && pd.ship.trackingNo) || "" });
+  await db.collection("adminLog").doc().set({ type: "pack", by: who.email, byName, at, link: "../pack/",
+    text: `撤销了打包 ${orderNo}${uname ? `（${uname}）` : ""}：退回 ${returned} 样${r.welcome ? `；迎新礼 ${r.welcome} 份要到「新会员奖励」处理` : ""}`.slice(0, 300) });
   await db.collection("packDone").doc(orderNo).delete();
   return { ok: true, ...r };
 }
