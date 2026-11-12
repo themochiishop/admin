@@ -87,6 +87,10 @@
     .add-panel > summary::after { content: "展开 ▾"; margin-left: auto; font-size: .8rem; color: var(--muted); font-weight: 600; }
     .add-panel[open] > summary::after { content: "收起 ▴"; }
     .add-panel[open] > summary { margin-bottom: 12px; }
+    /* ➕ 添加中奖：期数那一排一直显示，点了期数才展开下面 */
+    .add-head { font-weight: 700; font-size: 1.05rem; color: var(--ink); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .add-head .hint { margin-left: auto; font-size: .8rem; color: var(--muted); font-weight: 600; }
+    .periods .manual { border-style: dashed; color: var(--muted); }
     .pz-split { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 16px; align-items: start; }
     .pz-list { background: var(--card); border: 1px solid var(--line); border-radius: 12px; max-height: calc(100vh - 140px); overflow-y: auto; position: sticky; top: 16px; }
     .pz-row { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--soft); background: transparent; cursor: pointer; color: var(--ink); font-size: .86rem; }
@@ -136,14 +140,15 @@
       <!-- ⏳ 得奖者已注册并绑定中奖订单，还没发奖（放在最上面，一眼看到） -->
       <div id="readyBox" class="ready-box hidden"></div>
 
-      <!-- ➕ 添加中奖（平常收起来，按了才展开，页面不会太长） -->
-      <details class="panel add-panel" id="addPanel">
-        <summary>➕ 添加中奖</summary>
+      <!-- ➕ 添加中奖：第一排（抽奖期数）一直显示；点了期数才展开下面（再点同一期收起来） -->
+      <div class="panel" id="addPanel">
+        <div class="add-head">➕ 添加中奖 <span class="hint" id="addHint">点一个期数开始</span></div>
 
         <div class="step-h"><span class="n">1</span> 选择抽奖期数</div>
         <div class="periods" id="periods"><span class="muted">载入中…</span></div>
         <p class="msg err" id="drawErr"></p>
 
+        <div id="addRest" class="hidden">
         <div id="drawBox" class="hidden">
           <div class="step-h"><span class="n">2</span> 中奖名单（自动对应会员）</div>
           <p class="meta" style="margin:-4px 0 8px">先用订单编号找会员，找不到再用平台用户名找。按「选这位」会自动填好下面的表格。</p>
@@ -219,7 +224,8 @@
           </div>
           <p class="msg" id="addMsg"></p>
         </form>
-      </details>
+        </div>
+      </div>
 
       <!-- 📋 中奖记录 -->
       <div class="tabs" id="tabs">
@@ -409,7 +415,8 @@
       }
       $("periods").innerHTML = periods.length
         ? periods.map(p => `<button type="button" data-id="${esc(p.id)}" class="${p.id === drawId ? "on" : ""}">${esc(p.month)}</button>`).join("")
-        : `<span class="muted">还没有抽奖期数</span>`;
+          + `<button type="button" class="manual" data-manual="1" title="不选期数，直接填写中奖资料">✏️ 手动输入</button>`
+        : `<span class="muted">还没有抽奖期数</span> <button type="button" class="manual" data-manual="1">✏️ 手动输入</button>`;
     }
     async function selectPeriod(id) {
       drawId = id;
@@ -583,7 +590,7 @@
       $("fMonth").value = r.month;
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
       chooseMember(r.uid);
-      $("addPanel").open = true;
+      openAdd(true);
       $("addForm").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
@@ -597,7 +604,7 @@
       document.querySelectorAll(".prize-chip").forEach(x => x.classList.remove("on"));
       if (r.uid) chooseMember(r.uid);
       else { chooseMember(""); $("fMember").value = r.winner; searchMembers(); $("fMember").focus(); }
-      $("addPanel").open = true;
+      openAdd(true);
       $("addForm").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
@@ -1221,7 +1228,20 @@
       }
     });
 
-    $("periods").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) selectPeriod(b.dataset.id); });
+    // 展开 / 收起「添加中奖」下面的内容
+    const addOpen = () => !$("addRest").classList.contains("hidden");
+    function openAdd(on) {
+      $("addRest").classList.toggle("hidden", !on);
+      $("addHint").textContent = on ? "再点同一期可以收起" : "点一个期数开始";
+    }
+    $("periods").addEventListener("click", e => {
+      if (e.target.closest("[data-manual]")) { openAdd(!addOpen()); return; }
+      const b = e.target.closest("[data-id]");
+      if (!b) return;
+      if (b.dataset.id === drawId && addOpen()) { openAdd(false); return; }   // 再点同一期 = 收起
+      if (b.dataset.id !== drawId) selectPeriod(b.dataset.id);
+      openAdd(true);
+    });
     $("reloadBtn").addEventListener("click", async () => {
       await Promise.all([loadMembers(), loadPeriods()]);
       await loadWins();
@@ -1237,7 +1257,7 @@
         await Promise.all([loadMembers(), loadPeriods(), loadNotes()]);
         await loadWins();
         const uid = new URLSearchParams(location.search).get("uid");   // 从会员详情页过来
-        if (uid && members[uid]) chooseMember(uid);
+        if (uid && members[uid]) { chooseMember(uid); openAdd(true); }
         if (periods.length) selectPeriod(periods[0].id);
       } catch (e) {
         $("panel").innerHTML = `<p class="empty">载入失败：${esc(e.message)}</p>`;

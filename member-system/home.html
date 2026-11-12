@@ -35,6 +35,14 @@
     .nr-row.out { opacity: .5; }
     .nr-cut { font-size: .76rem; color: var(--muted); text-align: center; padding: 6px 0; border-bottom: 1px dashed var(--line2); }
     .nr-list.auto .nr-row .btn { display: none; }
+    /* 每一块默认折叠：标题 + 目前状态 */
+    .hs > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; }
+    .hs > summary::-webkit-details-marker { display: none; }
+    .hs > summary::after { content: "展开 ▾"; margin-left: auto; font-size: .8rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .hs[open] > summary::after { content: "收起 ▴"; }
+    .hs[open] > summary { margin-bottom: 12px; }
+    .hs .hs-t { font-weight: 700; font-size: 1rem; color: var(--ink); white-space: nowrap; }
+    .hs .hs-s { font-size: .8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   </style>
 </head>
 <body>
@@ -52,12 +60,18 @@
         <a class="btn btn-ghost" href="https://www.themochiishop.com/memberclub/home.html" target="_blank">👁 看会员首页</a>
       </div>
 
-      <!-- ① 区块 -->
-      <div class="panel">
-        <h3>① 区块顺序与开关</h3>
+      <!-- 首页设定：每一块默认折叠，点标题才展开；标题旁边显示目前的状态 -->
+      <!-- ① 区块顺序与开关 -->
+      <details class="panel hs">
+        <summary><span class="hs-t">① 区块顺序与开关</span><span class="hs-s" id="hsSec"></span></summary>
         <div id="secList"></div>
+        <div class="actions"><button class="btn btn-primary" id="saveSec">保存</button></div>
+        <p id="secMsg" class="msg"></p>
+      </details>
 
-        <h3 style="margin-top:18px">Feed 框（第一行右边，占 30%）</h3>
+      <!-- ② Feed 框（和 ① 是同一份设定，两个保存按钮都可以）-->
+      <details class="panel hs">
+        <summary><span class="hs-t">② Feed 框</span><span class="hs-s" id="hsFeed"></span></summary>
         <p class="meta" style="margin:-6px 0 10px">显示在「你好」框右边：小标题、一句文字、下面一个箭头。箭头导向你设定的链接（还没有链接就先留空）。</p>
         <label class="inline"><input type="checkbox" id="fOn" checked> 显示 Feed 框</label>
         <div class="grid2">
@@ -77,34 +91,15 @@
             <label>Bahasa Melayu 文字 <input id="fMsText" maxlength="40"></label>
           </div>
         </details>
-        <div class="actions"><button class="btn btn-primary" id="saveSec">保存</button></div>
-        <p id="secMsg" class="msg"></p>
-      </div>
+        <div class="actions"><button class="btn btn-primary" id="saveFeed" type="button">保存</button></div>
+        <p id="feedMsg" class="msg"></p>
+      </details>
 
-      <!-- ✨ 首页「最新上架」的排序 -->
-      <div class="panel">
-        <h3>✨ 首页「最新上架」的排序</h3>
-        <p class="meta" style="margin:-6px 0 10px">只影响会员首页的「最新上架的兑换商品」，商城的顺序照「商城奖品」页。只列出上架中的奖品。</p>
-        <div class="radio-row">
-          <label><input type="radio" name="nrMode" value="auto" checked> ⏱ 自动：按创建时间，最新的在前</label>
-          <label><input type="radio" name="nrMode" value="custom"> ✋ 自订顺序（用 ↑↓ 调整）</label>
-        </div>
-        <p class="meta" id="nrHint" style="margin:-4px 0 8px"></p>
-        <div id="nrList" class="nr-list"></div>
-        <div class="actions">
-          <button class="btn btn-primary" id="nrSave">保存排序</button>
-          <button class="btn btn-ghost hidden" id="nrReset">↺ 还原成按创建时间</button>
-        </div>
-        <p id="nrMsg" class="msg"></p>
-      </div>
-
-      <!-- ② 横幅 -->
-      <div class="panel">
+      <!-- ③ 横幅 -->
+      <details class="panel hs">
+        <summary><span class="hs-t">③ 横幅</span><span class="hs-s" id="hsBanner"></span></summary>
         <div class="page-head" style="margin-bottom:6px">
-          <div>
-            <h3 style="margin:0">② 横幅</h3>
-            <p class="meta">放在首页上方，可以左右滑动。建议用横向图片（例如 1200 × 500）。</p>
-          </div>
+          <p class="meta" style="margin:0">放在首页上方，可以左右滑动。建议用横向图片（例如 1200 × 500）。</p>
           <button class="btn btn-primary" id="newBanner">＋ 新增横幅</button>
         </div>
         <form id="bannerForm" class="hidden" style="margin-top:12px">
@@ -127,15 +122,13 @@
           <p id="bnMsg" class="msg"></p>
         </form>
         <div id="bannerList" style="margin-top:12px"></div>
-      </div>
+      </details>
 
-      <!-- ③ 首页消息 -->
-      <div class="panel">
+      <!-- ④ 首页消息 -->
+      <details class="panel hs">
+        <summary><span class="hs-t">④ 首页消息</span><span class="hs-s" id="hsNews"></span></summary>
         <div class="page-head" style="margin-bottom:6px">
-          <div>
-            <h3 style="margin:0">③ 首页消息</h3>
-            <p class="meta">只显示在会员首页（和铃铛的「📢 会员公告」分开）。可以上传图片，或直接选一个兑换商品。</p>
-          </div>
+          <p class="meta" style="margin:0">只显示在会员首页（和铃铛的「📢 会员公告」分开）。可以上传图片，或直接选一个兑换商品。</p>
           <button class="btn btn-primary" id="newNews">＋ 新增消息</button>
         </div>
         <form id="newsForm" class="hidden" style="margin-top:12px">
@@ -181,7 +174,24 @@
           <p id="nMsg" class="msg"></p>
         </form>
         <div id="newsList" style="margin-top:12px"></div>
-      </div>
+      </details>
+
+      <!-- ⑤ 首页「最新上架」的排序 -->
+      <details class="panel hs">
+        <summary><span class="hs-t">⑤ 「最新上架」的排序</span><span class="hs-s" id="hsNr"></span></summary>
+        <p class="meta" style="margin:-6px 0 10px">只影响会员首页的「最新上架的兑换商品」，商城的顺序照「商城奖品」页。只列出上架中的奖品。</p>
+        <div class="radio-row">
+          <label><input type="radio" name="nrMode" value="auto" checked> ⏱ 自动：按创建时间，最新的在前</label>
+          <label><input type="radio" name="nrMode" value="custom"> ✋ 自订顺序（用 ↑↓ 调整）</label>
+        </div>
+        <p class="meta" id="nrHint" style="margin:-4px 0 8px"></p>
+        <div id="nrList" class="nr-list"></div>
+        <div class="actions">
+          <button class="btn btn-primary" id="nrSave">保存排序</button>
+          <button class="btn btn-ghost hidden" id="nrReset">↺ 还原成按创建时间</button>
+        </div>
+        <p id="nrMsg" class="msg"></p>
+      </details>
     </div>
   </div>
 
@@ -197,6 +207,27 @@
 
     const $ = id => document.getElementById(id);
     renderAdminNav("home");
+
+    // ---------- 折叠标题旁边的状态（看画面上的资料，自动更新）----------
+    function paintSummaries() {
+      const on = [...document.querySelectorAll("#secList input[data-on]")];
+      $("hsSec").textContent = on.length ? `显示 ${on.filter(x => x.checked).length} · 隐藏 ${on.filter(x => !x.checked).length}` : "";
+      const lt = $("fLinkType"), lto = lt && lt.options[lt.selectedIndex];
+      $("hsFeed").textContent = $("fOn").checked ? `开 · 导向 ${lto ? lto.textContent.trim() : "-"}` : "关";
+      const cnt = id => { const it = [...$(id).querySelectorAll(".item")]; return { all: it.length, on: it.filter(x => x.querySelector(".tag-ok")).length }; };
+      const b = cnt("bannerList"), n = cnt("newsList");
+      $("hsBanner").textContent = b.all ? `${b.on} 张显示中${b.all > b.on ? ` · ${b.all - b.on} 张隐藏` : ""}` : "没有横幅";
+      $("hsNews").textContent = n.all ? `${n.on} 则显示中${n.all > n.on ? ` · ${n.all - n.on} 则隐藏` : ""}` : "没有消息";
+      const m = document.querySelector('input[name="nrMode"]:checked');
+      $("hsNr").textContent = m && m.value === "custom" ? "✋ 自订顺序" : "⏱ 自动（按创建时间）";
+    }
+    const watch = new MutationObserver(paintSummaries);
+    ["secList", "bannerList", "newsList", "nrList", "fLinkType"].forEach(id => watch.observe($(id), { childList: true, subtree: true }));
+    document.addEventListener("change", e => { if (e.target.closest("#secList, #fOn, #fLinkType, [name=nrMode]")) paintSummaries(); });
+    // ② Feed 框和 ① 是同一份设定：两个保存按钮做同一件事，讯息也一起显示
+    $("saveFeed").addEventListener("click", () => $("saveSec").click());
+    new MutationObserver(() => { $("feedMsg").textContent = $("secMsg").textContent; $("feedMsg").className = $("secMsg").className; })
+      .observe($("secMsg"), { childList: true, characterData: true, subtree: true, attributes: true });
 
     const LINKS = [
       ["", "不加链接"],

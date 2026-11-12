@@ -996,7 +996,8 @@ $("rimageRemove").addEventListener("click", () => {
       $("rcost").value = r ? r.cost : "";
       $("rtype").value = r ? r.type : "gift";
       $("rstock").value = r && typeof r.stock === "number" ? r.stock : "";
-      $("rsort").value = r ? (r.sortOrder ?? 10) : ((rewards.length + 1) * 10);
+      // 新增的奖品排最上面：排序数字比现在最小的再小 10（之后照样可以用 ↑↓ 调整）
+      $("rsort").value = r ? (r.sortOrder ?? 10) : (rewards.length ? Math.min(...rewards.map(x => x.sortOrder ?? 10)) - 10 : 10);
       $("rcat").innerHTML = (r ? "" : `<option value="">请选择分类</option>`)
         + cats.map(c => `<option value="${esc(c.id)}">${esc((c.icon || "") + " " + c.zh)}</option>`).join("");
       $("rcat").value = r ? catOf(r, cats) : "";

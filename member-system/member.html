@@ -256,11 +256,14 @@
       $("bMsg").textContent = be.at ? `上次修改：${fmtDate(toDate(be.at), true)}${be.by ? " · " + be.by : ""}` : "";
       $("bMsg").className = "msg";
       $("internalPtsLbl").textContent = INTERNAL_BONUS;
-      $("mName").textContent = m.name || "(未填称呼)";
+      // 标题用绑定账号（直播间看到的名字）；称呼放在下面一行（会员在俱乐部自己取的，30 天可改）
+      const accts = bS.docs.map(d => d.data()).filter(b => b.username);
+      if (accts.length) $("mName").innerHTML = accts.map(b => `${platformTag(b.platform)} @${esc(b.username)}`).join(` <span class="muted" style="font-weight:400">·</span> `);
+      else $("mName").textContent = m.name || "(未填称呼)";
       $("mName").insertAdjacentHTML("beforeend", iv.on ? ` <span class="tag tag-pink">🏷️ 内部会员</span>` : "");
       const tExp = toDate(m.tierExpires);
       const bestTxt = m.bestTier && (TIER_ORDER[m.bestTier] ?? 0) > (TIER_ORDER[m.tier] ?? 0) ? ` · 🏅 曾达 ${TIER_LABELS[m.bestTier] || m.bestTier}` : "";
-      $("mSub").textContent = `${TIER_LABELS[m.tier] || TIER_LABELS.mochii}${tExp && (m.tier || "mochii") !== "mochii" ? `（有效至 ${fmtDate(tExp)}）` : ""}${bestTxt} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
+      $("mSub").textContent = `${accts.length ? `称呼：${m.name || "(未填)"} · ` : "未绑定账号 · "}${TIER_LABELS[m.tier] || TIER_LABELS.mochii}${tExp && (m.tier || "mochii") !== "mochii" ? `（有效至 ${fmtDate(tExp)}）` : ""}${bestTxt} · 近一年消费 RM ${Number(m.spend12m || 0).toFixed(2)} · ${m.email || ""} · 加入于 ${fmtDate(toDate(m.createdAt))}`;
       $("pName").value = m.name || "";
       $("pPhone").value = m.phone ? fmtPhone(m.phone) : "";
       $("pWa").checked = !!m.waOptIn;

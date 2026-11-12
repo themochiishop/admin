@@ -23,6 +23,24 @@
     .toolbar input { flex: 1; min-width: 220px; margin: 0; }
     .wa-link { color: var(--green-tx); font-weight: 600; }
     .wa-link:hover { text-decoration: underline; }
+    /* 5 栏：会员（绑定账号为主）｜等级｜积分｜联系｜加入 */
+    td { white-space: normal; vertical-align: top; }
+    .m-acc { font-weight: 800; color: var(--ink); font-size: .95rem; line-height: 1.5; }
+    .m-acc2 { font-size: .82rem; color: var(--text2); line-height: 1.5; }
+    .m-sm { font-size: .76rem; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+    .m-pts { font-weight: 800; font-size: 1rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .toolbar select { margin: 0; width: auto; }
+    @media (max-width: 760px) {
+      /* 手机：每位会员一张卡片，不用左右滑 */
+      .table-wrap { background: none; border: 0; overflow: visible; }
+      table thead { display: none; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      tbody tr { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+      td { border: 0; padding: 0; }
+      td.c-mem { grid-column: 1; } td.c-pts { grid-column: 2; grid-row: 1; text-align: right; }
+      td.c-tier, td.c-contact, td.c-join { grid-column: 1 / -1; }
+      td.c-tier .m-sm, td.c-join .m-sm { display: inline; margin-left: 6px; }
+    }
   </style>
 </head>
 <body>
@@ -48,26 +66,30 @@
       </div>
 
       <div class="toolbar">
-        <input id="search" placeholder="🔍 搜索称呼、手机、电子邮件或平台用户名">
+        <input id="search" placeholder="🔍 搜索绑定账号、称呼、手机或电子邮件">
+        <select id="sortSel" title="排序">
+          <option value="createdAt:-1">加入日期（新 → 旧）</option>
+          <option value="createdAt:1">加入日期（旧 → 新）</option>
+          <option value="spendable:-1">可用积分（多 → 少）</option>
+          <option value="spend12m:-1">近一年消费（多 → 少）</option>
+          <option value="tierRank:-1">等级（高 → 低）</option>
+          <option value="acct:1">绑定账号（A → Z）</option>
+          <option value="name:1">称呼（A → Z）</option>
+        </select>
       </div>
 
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th data-sort="name">称呼</th>
+              <th data-sort="acct">会员（绑定账号 · 称呼）</th>
               <th data-sort="tierRank">等级</th>
-              <th data-sort="spend12m" class="num">近一年消费</th>
-              <th data-sort="phone">WhatsApp</th>
-              <th data-sort="email">电子邮件</th>
-              <th>绑定账号</th>
-              <th data-sort="spendable" class="num">可用积分</th>
-              <th data-sort="pending" class="num">待确认</th>
-              <th data-sort="birthday">生日</th>
-              <th data-sort="createdAt">加入日期</th>
+              <th data-sort="spendable" class="num">积分</th>
+              <th data-sort="phone">联系</th>
+              <th data-sort="createdAt">加入</th>
             </tr>
           </thead>
-          <tbody id="rows"><tr><td colspan="10" class="empty">载入中…</td></tr></tbody>
+          <tbody id="rows"><tr><td colspan="5" class="empty">载入中…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -123,6 +145,7 @@
           spendable: bal.spendable,
           pending: bal.pending,
           internal: !!(m.internal && m.internal.on),
+          acct: String(((bindings[d.id] || [])[0] || {}).username || "~").toLowerCase(),   // 排序用：第一个绑定账号（没绑定排最后）
         };
       });
 
@@ -145,7 +168,7 @@
           r.name.toLowerCase().includes(q) ||
           r.email.toLowerCase().includes(q) ||
           (qd.length >= 3 && r.phone.replace(/\D/g, "").includes(qd.replace(/^0/, ""))) ||
-          r.bindings.some(b => b.username.includes(q)));
+          r.bindings.some(b => String(b.username || "").toLowerCase().includes(q)));
       }
       return [...list].sort((a, b) => {
         const x = a[sortKey] ?? "", y = b[sortKey] ?? "";
@@ -153,31 +176,35 @@
       });
     }
 
+    // 一位会员一行：绑定账号（直播间看到的名字）放最前面，称呼放下面
+    const acctHTML = b => `${platformTag(b.platform)} @${esc(b.username)}${b.verifyOrder === "admin" ? ' <span class="muted" title="管理员代绑">🛠</span>' : ""}`;
     function render() {
       const list = filtered();
       $("rows").innerHTML = list.length ? list.map(r => `
         <tr data-uid="${esc(r.uid)}">
-          <td><b>${esc(r.name)}</b>${r.internal ? ` <span class="tag tag-pink" title="内部会员">🏷️ 内部</span>` : ""}</td>
-          <td>${tierHTML(r.tier)}</td>
-          <td class="num">RM ${r.spend12m.toFixed(2)}</td>
-          <td>${r.phone
+          <td class="c-mem">${r.bindings.length
+              ? `<div class="m-acc">${acctHTML(r.bindings[0])}</div>${r.bindings.slice(1).map(b => `<div class="m-acc2">${acctHTML(b)}</div>`).join("")}`
+              : `<div class="m-acc">${esc(r.name || "(未填称呼)")}</div><div class="m-sm">⚠️ 未绑定账号</div>`}
+            ${r.bindings.length || r.internal ? `<div class="m-sm">${r.bindings.length ? "称呼 " + esc(r.name || "-") : ""}${r.internal ? ` <span class="tag tag-pink" title="内部会员">🏷️ 内部</span>` : ""}</div>` : ""}</td>
+          <td class="c-tier">${tierHTML(r.tier)}<div class="m-sm">近一年 RM ${r.spend12m.toFixed(2)}</div></td>
+          <td class="c-pts num"><span class="m-pts">${r.spendable.toLocaleString()}</span> <span class="muted">分</span>${r.pending ? `<div class="m-sm">待确认 ${r.pending.toLocaleString()}</div>` : ""}</td>
+          <td class="c-contact">${r.phone
             ? `<a href="${waLink(r.phone)}" target="_blank" class="wa-link" title="打开 WhatsApp">💬 ${esc(fmtPhone(r.phone))}</a>${r.waOptIn ? ' <span class="tag tag-ok" title="同意接收优惠通知">📣</span>' : ""}`
-            : '<span class="muted">-</span>'}</td>
-          <td>${esc(r.email)}</td>
-          <td>${r.bindings.length > 1 ? `<span class="tag tag-pink">${r.bindings.length} 个</span><br>` : ""}${r.bindings.map(b => `${platformTag(b.platform)} ${esc(b.username)}${b.verifyOrder === "admin" ? ' <span class="muted" title="管理员代绑">🛠</span>' : ""}`).join("<br>") || '<span class="muted">未绑定</span>'}</td>
-          <td class="num"><b>${r.spendable.toLocaleString()}</b></td>
-          <td class="num">${r.pending.toLocaleString()}</td>
-          <td>${esc(r.birthday) || '<span class="muted">-</span>'}</td>
-          <td>${fmtDate(r.createdAt)}</td>
-        </tr>`).join("") : `<tr><td colspan="10" class="empty">没有符合的会员</td></tr>`;
+            : '<span class="muted">-</span>'}<div class="m-sm">${esc(r.email)}</div></td>
+          <td class="c-join">${fmtDate(r.createdAt)}${r.birthday ? `<div class="m-sm">🎂 ${esc(r.birthday)}</div>` : ""}</td>
+        </tr>`).join("") : `<tr><td colspan="5" class="empty">没有符合的会员</td></tr>`;
     }
 
     $("search").addEventListener("input", render);
 
+    // 排序：上方选单；按表头也可以（再按一次反过来）
+    $("sortSel").addEventListener("change", () => { const [k, d] = $("sortSel").value.split(":"); sortKey = k; sortDir = Number(d); render(); });
     document.querySelectorAll("th[data-sort]").forEach(th => {
       th.addEventListener("click", () => {
         const k = th.dataset.sort;
-        if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = ["acct", "name"].includes(k) ? 1 : -1; }
+        const o = [...$("sortSel").options].find(x => x.value === `${sortKey}:${sortDir}`);
+        $("sortSel").value = o ? o.value : $("sortSel").value;
         render();
       });
     });
@@ -204,7 +231,7 @@
     });
 
     requireAdmin(() => load().catch(e => {
-      $("rows").innerHTML = `<tr><td colspan="10" class="empty">载入失败：${esc(e.message)}</td></tr>`;
+      $("rows").innerHTML = `<tr><td colspan="5" class="empty">载入失败：${esc(e.message)}</td></tr>`;
     }));
   </script>
 </body>
