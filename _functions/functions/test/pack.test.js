@@ -548,3 +548,41 @@ test("📊 打包时记下新人卡等级（第一次买 / 买过），重新保
   await pk.pkShip(db, PACKER, { orderNo: "2611190000004", items: [], txId: "tx_lvl00003", done: true, newCard: true, newCardLevel: "hack" });
   assert.equal(db.data.get("packDone/2611190000004").newCardLevel, undefined);
 });
+
+test("⏱ 开工 / 收工：各自记录；忘了收工下次开工自动结束；最后一个收工的人才填原因", async () => {
+  const db = fakeDb(SEED());
+  const from = T0 - 14 * DAY, to = T0 + DAY;
+  const P2 = { ...PACKER, now: T0 + 60000 };
+  let s = await pk.pkSession(db, PACKER);
+  assert.equal(s.mine, null); assert.equal(s.others.length, 0);
+  await rejects(pk.pkStart(db, NOBODY, {}), "pk/no-perm");
+  const a = await pk.pkStart(db, PACKER, { from, to, label: "测试场", stats: { parcels: 4, need: 2, prep: "3" } });
+  assert.equal(a.session.active, true); assert.deepEqual(a.session.start, { parcels: 4, need: 2, prep: 3 });
+  // 重新打开：接着这一段
+  s = await pk.pkSession(db, PACKER);
+  assert.equal(s.mine.id, a.session.id);
+  // 店主也开工 → 打包员看到还有别人
+  await pk.pkStart(db, OWNER, { from, to });
+  s = await pk.pkSession(db, PACKER);
+  assert.equal(s.others.length, 1); assert.equal(s.others[0].byName, "店主");
+  // 打包员打包一包（放了东西）、再撤销另一包
+  await pk.pkShip(db, P2, { orderNo: "2611190000003", items: [], txId: "tx_ses00001", done: true });
+  // 打包员收工：店主还在 → 只结束自己这段，不用填原因
+  const f1 = await pk.pkFinish(db, { ...PACKER, now: T0 + 3600000 }, { from, to, sessionOnly: true });
+  assert.equal(f1.shift, null); assert.equal(f1.session.endKind, "finish"); assert.equal(f1.session.packed, 1);
+  assert.equal(f1.session.endedAt - f1.session.startedAt, 3600000);
+  // 店主最后收工：要填原因、记下这一场
+  await rejects(pk.pkFinish(db, { ...OWNER, now: T0 + 7200000 }, { from, to, reasons: {} }), "pk/finish-reason");
+  const f2 = await pk.pkFinish(db, { ...OWNER, now: T0 + 7200000 }, { from, to, label: "测试场",
+    reasons: { "2611190000001": "等管理员", "587000000000000002": "缺货", "2611190000004": "订单还没到" } });
+  assert.equal(f2.shift.packed, 1); assert.equal(f2.session.packed, 0); assert.equal(f2.others, 0);
+  // 忘了收工：下次开工自动结束上一段
+  const b1 = await pk.pkStart(db, { ...PACKER, now: T0 + DAY });
+  await pk.pkStart(db, { ...PACKER, now: T0 + DAY + 1000 });
+  assert.equal(db.data.get(`packSessions/${b1.session.id}`).endKind, "auto");
+  assert.equal((await pk.pkSession(db, PACKER)).last !== null, true);
+  // 后台打包记录看得到每一段
+  const lg = await pk.pkLog(db, OWNER, { from: T0 - DAY, to: T0 + 2 * DAY });
+  assert.equal(lg.sessions.length, 4);
+  assert.ok(lg.list.some(x => x.action === "start"));
+});
