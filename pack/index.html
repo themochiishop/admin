@@ -61,7 +61,17 @@
     .res.err { border-color: #dc2626; } .res.err .res-head { background: #dc2626; }
     .res-head .big { font-size: 1.45rem; font-weight: 900; line-height: 1.15; white-space: nowrap; flex-shrink: 0; }
     .res-head .no { font-family: ui-monospace, Menlo, monospace; font-size: .82rem; opacity: .92; word-break: break-all; }
-    .res-head .no .t4, .note .t4 { font-size: 1.55em; font-weight: 900; letter-spacing: .04em; opacity: 1; }
+    .res-head .no .t4 { font-size: 1.3em; font-weight: 900; letter-spacing: .04em; opacity: 1; }
+    .note .t4 { font-size: 1.15em; font-weight: 900; }
+    .it.lock .ck { background: #16a34a; border-color: #16a34a; color: #fff; }
+    .it .cant { margin-left: 8px; border: 1.5px solid var(--amber-tx); color: var(--amber-tx); background: transparent; border-radius: 10px; padding: 8px 10px; font-weight: 800; font-size: .85rem; cursor: pointer; white-space: nowrap; }
+    .it.skip { opacity: .75; } .it.skip .nm small { color: var(--amber-tx); }
+    .finrow { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding: 8px 0; font-size: .88rem; }
+    .finrow .no { font-family: ui-monospace, Menlo, monospace; min-width: 120px; flex: 1 1 auto; overflow-wrap: anywhere; } .finrow .no b { font-size: 1.15em; }
+    .finrow select { width: auto !important; flex: 0 0 auto; max-width: 52%; margin: 0; }
+    .finrow select, .modal2 select, .modal2 textarea { padding: 8px; border: 1.5px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); font-size: .88rem; }
+    .modal2 textarea { width: 100%; margin-top: 8px; min-height: 56px; box-sizing: border-box; }
+    .printbtn { margin: 8px 0 0; border: 1.5px solid var(--line2); background: var(--card); color: var(--ink); border-radius: 10px; padding: 9px 12px; font-weight: 700; cursor: pointer; }
     .scanbar #kbBtn { position: relative; }
     .scanbar #kbBtn::after { content: "🔒"; position: absolute; right: 2px; bottom: 1px; font-size: .62rem; line-height: 1; }
     .scanbar #kbBtn.on::after { content: "🔓"; }
@@ -233,6 +243,7 @@
     <button id="rangeBtn" class="range" data-tt="rangeTitle">📅 …</button>
     <div class="sp">
       <button id="setBtn" class="ico" data-tt="setH">⚙️<span class="dot" id="wakeDot" hidden></span></button>
+      <button id="finBtn" class="ico" data-tt="finH">🏁</button>
       <button id="reloadBtn" class="ico big" data-tt="reload">🔄</button>
     </div>
   </div>
@@ -261,6 +272,7 @@
         <button data-fd="all"><span data-t="fdAll">🗂️ 全部待寄</span><span class="n" id="nAll" hidden></span></button>
       </div>
       <div id="prepSub" class="sub"></div>
+      <button id="printBtn" class="printbtn" data-t="printBtn">🖨️ 印备货单</button>
       <div id="prep" class="prep"></div>
     </section>
   </main>
@@ -282,6 +294,17 @@
       <label class="opt" data-opt="custom"><b data-t="optCustom">✏️ 自定义</b><small data-t="optCustomS">自己选开始和结束</small>
         <div class="two"><input type="datetime-local" id="optFrom"><input type="datetime-local" id="optTo"></div></label>
       <button class="go" id="rangeGo" data-t="ok">确定</button>
+    </div>
+  </div>
+
+  <!-- 🏁 收工：没打包的每一包选原因，记录送到后台 -->
+  <div id="finModal" class="modal2" hidden>
+    <div class="box">
+      <h2 data-t="finH">🏁 收工</h2>
+      <div id="finBody"></div>
+      <textarea id="finNote" data-tp="finNote" placeholder="备注（选填）" maxlength="300"></textarea>
+      <button class="go" id="finGo" data-t="finGo">确认收工</button>
+      <button class="go" id="finClose" data-t="close" style="background:var(--line2);color:var(--ink)">关闭</button>
     </div>
   </div>
 
@@ -357,6 +380,12 @@
         secPut: "放进这一包（取消勾选 = 这次不寄，留到下一单）", secSent: "已放入", sentSmall: "✅ 已放入",
         others: (n, l) => `💡 这位会员今天还有 ${n} 包（${l}）。这包没勾的，扫那一包时会再出现。`, sep: "、",
         nmElse: (g, no) => `🎁 这位会员有 ${g}，得放进 #${no} 的包裹。`, nmOrder: no => `📦 放进 #${no}`,
+        nmCant: "放不了", nmCantQ: "迎新礼放不了的原因：", nmR: ["缺货", "包裹放不下", "其他"], nmOtherQ: "写下原因", nmSkipped: r => `❌ 这次放不了：${r}（会通知管理员处理）`, nmUndoSkip: "撤回",
+        nmLock: "迎新礼要放进这一包（会员看到的是这张单）", nmLateDone: (g, no) => `${g}原本要放 #${no}，但那包已经打包了，迎新礼还没寄出。不要放进这包，请通知管理员。`, skippedL: "没放：",
+        finBtn: "🏁 收工", finH: "🏁 收工", finSub: (a, b) => `这一场：已打包 ${a} / ${b} 包`, finAll: "全部打包好了 ✅", finLeft: n => `还有 ${n} 包没打包，每一包选一个原因：`,
+        finR: ["订单还没到货", "缺货", "等管理员处理", "订单取消 / 有问题", "其他"], finApply: "全部套用：", finNote: "备注（选填）", finGo: "确认收工", finNeed: "每一包都要选原因",
+        finDone: (b, tm) => `🏁 ${b} · ${tm} 已收工`, finOk: "🏁 已收工，记录已送到后台", finShift: (b, tm, a, n) => `🏁 ${b} ${tm} 收工 · 已打包 ${a}/${n}`,
+        printBtn: "🖨️ 印备货单", printH: "备货单", printNone: "没有要准备的东西",
         undoBtn: "↩️ 撤销这一包（订单取消 / 勾错了）",
         needTrk: "🚚 运单号", trkOk: "✅ 已扫", trkMiss: "扫追踪号", carrier: "运输公司", pick: "— 选 —", trkNo: "运单号", trkPh: "扫追踪号条码",
         url: "查询链接", urlPh: "https://…（选好公司会自动生成）", needPh: "📷 照片", phOk: "✅ 已拍", phMiss: "拍一张包裹照片", phDel: "✕ 删掉", phRe: "重拍", phShot: "📷 拍照",
@@ -401,6 +430,12 @@
         secPut: "Put in this parcel (untick = not this time, keep for next order)", secSent: "Already added", sentSmall: "✅ Added",
         others: (n, l) => `💡 This member has ${n} more parcel(s) today (${l}). Unticked items show up again when you scan that parcel.`, sep: ", ",
         nmElse: (g, no) => `🎁 This member has ${g}. It goes in parcel #${no}.`, nmOrder: no => `📦 Goes in #${no}`,
+        nmCant: "Can't add", nmCantQ: "Why can't the welcome gift go in?", nmR: ["Out of stock", "Doesn't fit", "Other"], nmOtherQ: "Write the reason", nmSkipped: r => `❌ Not added this time: ${r} (admin will be notified)`, nmUndoSkip: "Undo",
+        nmLock: "The welcome gift must go in this parcel (the member sees this order)", nmLateDone: (g, no) => `${g} was for #${no}, but that parcel is already packed without it. Don't add it here — tell the admin.`, skippedL: "Not added: ",
+        finBtn: "🏁 Finish", finH: "🏁 Finish shift", finSub: (a, b) => `This session: packed ${a} / ${b}`, finAll: "All parcels packed ✅", finLeft: n => `${n} parcel(s) not packed — pick a reason for each:`,
+        finR: ["Order not arrived", "Out of stock", "Waiting for admin", "Order cancelled / problem", "Other"], finApply: "Apply to all:", finNote: "Note (optional)", finGo: "Finish", finNeed: "Pick a reason for every parcel",
+        finDone: (b, tm) => `🏁 Finished by ${b} · ${tm}`, finOk: "🏁 Finished — record sent to admin", finShift: (b, tm, a, n) => `🏁 ${b} finished ${tm} · packed ${a}/${n}`,
+        printBtn: "🖨️ Print prep list", printH: "Prep list", printNone: "Nothing to prepare",
         undoBtn: "↩️ Undo this parcel (order cancelled / ticked wrongly)",
         needTrk: "🚚 Tracking no.", trkOk: "✅ Scanned", trkMiss: "Scan tracking", carrier: "Courier", pick: "— Pick —", trkNo: "Tracking no.", trkPh: "Scan tracking barcode",
         url: "Tracking link", urlPh: "https://… (auto-filled after picking courier)", needPh: "📷 Photo", phOk: "✅ Taken", phMiss: "Take one parcel photo", phDel: "✕ Delete", phRe: "Retake", phShot: "📷 Take photo",
@@ -457,6 +492,7 @@
       return "";
     }
 
+    let shift = null, lastPrep = [];
     let loaded = false, all = [], pending = [], filter = "all", folder = "today", sel = null, busy = false, access = null, range = null, curTab = "tabScan";
     const hist = [];
     const closedG = new Set();   // 准备：收起来的组
@@ -573,7 +609,7 @@
     function paintKb() { $("q").inputMode = kbOn ? "text" : "none"; $("kbBtn").classList.toggle("off", !kbOn); $("kbBtn").classList.toggle("on", kbOn); }
     $("kbBtn").onclick = () => { kbOn = !kbOn; paintKb(); $("q").blur(); setTimeout(focusQ, 50); };
     function focusQ() {
-      if (!$("cam").hidden || !$("rangeModal").hidden || !$("setModal").hidden || busy) return;
+      if (!$("cam").hidden || !$("rangeModal").hidden || !$("setModal").hidden || !$("finModal").hidden || busy) return;
       const a = document.activeElement; if (a && a !== $("q") && (a.tagName === "INPUT" || a.tagName === "SELECT")) return;
       $("q").focus({ preventScroll: true });
     }
@@ -631,7 +667,7 @@
         const r = (await pkAdmin({ op: "batch", from: range.from, to: range.to })).data;
         const extra = all.filter(x => x.outside && !(r.parcels || []).some(y => y.orderNo === x.orderNo));
         all = (r.parcels || []).concat(extra);
-        pending = r.pending || []; loaded = true;
+        pending = r.pending || []; loaded = true; shift = r.shift || null;
         all.forEach(p => { attachClaims(p); addSent(p); });
         render();
         if (sel) { const p = all.find(x => x.orderNo === sel.p.orderNo); if (p) { sel.p = p; showSel(false); } }
@@ -687,7 +723,7 @@
         <span class="pill pk">${t("statTodo", nTodo)}</span>
         <span class="pill gn">${t("statDone", nDone)}</span>
         ${nWarn ? `<span class="pill am">⚠️ <b>${nWarn}</b></span>` : ""}
-        <span class="pill">${t("statPrep", todayItems.length)}</span>`;
+        <span class="pill">${t("statPrep", todayItems.length)}</span>${shift ? `<span class="pill gn">${esc(t("finShift", shift.byName || (shift.by || "").split("@")[0], fmtT(shift.finishedAt), shift.packed, shift.total))}</span>` : ""}`;
       $("rangeInfo").textContent = t("rangeInfo", fmtT(range.from), fmtT(range.to));
       // 清单
       const F = { all: [t("fAll"), rows.length], todo: [t("fTodo"), nTodo], none: [t("fNone"), rows.filter(r => r.st === "none" || r.st === "other").length], done: [t("fDone"), nDone] };
@@ -731,7 +767,7 @@
     function renderPrep(todayItems) {
       // 全部待寄：每位顾客还没寄的（可以寄的；含今天没单的）
       const allItems = [];
-      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: pinned(i) ? { ...w, order: "", warn: t("nmOrder", i.linkedOrder.slice(-4)) } : w })); });
+      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: pinned(i) ? { ...w, order: "", warn: t("nmOrder", i.linkedOrder) } : w })); });
       claimItems.forEach(c => {
         if (c.uid) {   // 会员得主（会员系统还没有这笔奖品）
           const g = pending.find(x => x.uid === c.uid);
@@ -751,6 +787,7 @@
       const G = new Map();
       src.forEach(x => { const nm = tr(x.i, "prep") || tr(x.i, "title"); const k = x.i.icon + nm; const g = G.get(k) || { icon: x.i.icon, k, nm, list: [] }; g.list.push(x); G.set(k, g); });
       const P = [...G.values()].sort((a, b) => b.list.length - a.list.length);
+      lastPrep = P;
       $("prep").innerHTML = P.length ? P.map(g => `<details class="pg" data-g="${esc(folder + "|" + g.k)}" ${closedG.has(folder + "|" + g.k) ? "" : "open"}>
         <summary><div><span class="ic">${g.icon}</span><span class="nm">${esc(g.nm)}</span><span class="n">×${g.list.length}</span><span class="arr">▶</span></div></summary>
         <ul>${g.list.map(x => whoHtml(x.i, x.who, folder === "all")).join("")}</ul></details>`).join("")
@@ -772,7 +809,7 @@
     const photoCache = new Map(), photoLoading = new Set();
     function openParcel(p, view = false) {
       const c = canLeft(p);
-      sel = { p, on: new Set(c.map(i => i.id)), ship: { carrier: "", trackingNo: "", trackingUrl: "", photo: "" }, needTrk: true, needPh: true, view, redo: false, urlEdit: false };
+      sel = { p, on: new Set(c.map(i => i.id)), ship: { carrier: "", trackingNo: "", trackingUrl: "", photo: "" }, needTrk: true, needPh: true, view, redo: false, urlEdit: false, nmSkip: null, nmAsk: null };
       if (!view && heldTrk && modeOf(p) !== "view") { const h = heldTrk; heldTrk = ""; fillTracking(h); }
       showSel(true);
     }
@@ -810,17 +847,22 @@
       // 这位会员的迎新礼固定在别的单：提醒不要放这包
       const pg = pending.find(g => g.key === buyerKey(p));
       const nmElse = ((pg && pg.items) || []).filter(i => pinned(i) && i.can && i.linkedOrder !== p.orderNo && !c.some(j => j.id === i.id))
-        .map(i => `<div class="note">${esc(t("nmElse", tr(i, "title"), "\u0000")).replace("\u0000", `<b class="t4">${esc(i.linkedOrder.slice(-4))}</b>`)}</div>`).join("");
+        .map(i => { const lp = all.find(x => x.orderNo === i.linkedOrder);
+          // 那一包已经打包了，迎新礼却还没寄出：不要叫打包员放别包，请找管理员
+          return lp && lp.done ? `<div class="warn">⚠️ ${esc(t("nmLateDone", tr(i, "title"), "\u0000")).replace("\u0000", noHtml(i.linkedOrder))}</div>`
+            : `<div class="note">${esc(t("nmElse", tr(i, "title"), "\u0000")).replace("\u0000", noHtml(i.linkedOrder))}</div>`; }).join("");
       const who = [esc(p.username || "-"), PLAT[p.platform] || "", p.uid ? "🎫 " + esc(p.member || t("member")) : ""].filter(Boolean).join(" · ");
       const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="hr"><div class="no">${noHtml(p.orderNo)}</div><div class="who">${who}</div></div></div>`;
       const warnHtml = i => `<div class="warn">⚠️ ${i.icon} <b>${esc(tr(i, "title"))}</b>：${esc(tr(i, "warn") || tr(i, "sub"))}</div>`;
-      const big = p.done && !c.length ? t("bigDone") : c.length ? t("bigPut", m === "view" ? c.length : sel.on.size) : w.length ? t("bigFirst") : t("bigNone");
-      const cls = p.done && !c.length ? "ok" : c.length ? "" : w.length ? "warn" : "none";
+      const doneV = p.done && (!c.length || m === "view");   // 查看已打包的一包：标题显示「已打包」
+      const big = doneV ? t("bigDone") : c.length ? t("bigPut", m === "view" ? c.length : sel.on.size) : w.length ? t("bigFirst") : t("bigNone");
+      const cls = doneV ? "ok" : c.length ? "" : w.length ? "warn" : "none";
       let body;
       if (m === "view") {
         if (p.done) loadPhoto(p);
         const pk = p.packed, ph = photoCache.get(p.orderNo);
-        const packedHtml = p.done ? `<div class="packed">${esc(t("packedBy", pk && pk.by ? pk.by.split("@")[0] : "", pk && pk.at ? fmtT(pk.at) : ""))}
+        const packedHtml = p.done ? `<div class="packed">${esc(t("packedBy", pk && (pk.byName || (pk.by ? pk.by.split("@")[0] : "")), pk && pk.at ? fmtT(pk.at) : ""))}
+            ${pk && pk.skipped && pk.skipped.length ? `<div style="color:var(--amber-tx)">${esc(t("skippedL") + pk.skipped.map(x => x.title + (x.reason ? "（" + x.reason + "）" : "")).join("、"))}</div>` : ""}
             ${pk && pk.trackingNo ? `<div>🚚 ${esc(pk.carrierName || "")} <b>${esc(pk.trackingNo)}</b>${pk.trackingUrl ? ` <a href="${esc(pk.trackingUrl)}" target="_blank" rel="noopener">🔗</a>` : ""}</div>` : ""}
             ${pk && pk.photo ? (ph ? `<img class="pthumb big" src="${esc(ph)}" data-zoom alt="">` : ph === "" ? "" : `<div>📷 …</div>`) : ""}</div>` : "";
         body = (c.length ? `<div class="sec-t">${esc(t("secTodo"))}</div>` + c.map(i => item(i, "ro")).join("") : "")
@@ -829,7 +871,7 @@
           + `<button class="editbtn" data-edit>${esc(modeOf(p) === "view" ? t("editRedo") : t("editPack"))}</button>`
           + (p.done || sent.length ? undoLink(p) : "");
       } else if (m === "items") {
-        body = `<div class="sec-t">${esc(t("secPut"))}</div>` + c.map(i => item(i, sel.on.has(i.id) ? "on" : "off")).join("")
+        body = `<div class="sec-t">${esc(t("secPut"))}</div>` + c.map(i => pinned(i) ? nmItem(i) : item(i, sel.on.has(i.id) ? "on" : "off")).join("")
           + (sent.length ? `<div class="sec-t">${esc(t("secSent"))}</div>` + sent.map(i => item(i, "sent")).join("") : "")
           + w.map(warnHtml).join("")
           + (others.length ? `<div class="note">${esc(t("others", others.length, others.map(o => "…" + o.slice(-6)).join(t("sep"))))}</div>` : "")
@@ -846,6 +888,15 @@
     }
     const item = (i, st) => `<div class="it ${st}" ${st === "sent" || st === "ro" ? "" : `data-item="${esc(i.id)}"`}><span class="ic">${i.icon}</span>
       <span class="nm"><b>${esc(tr(i, "title"))}</b><small>${esc(st === "sent" ? t("sentSmall") : tr(i, "sub") || "")}</small></span>${st === "ro" ? "" : `<span class="ck">${st === "on" || st === "sent" ? "✓" : ""}</span>`}</div>`;
+    // 迎新礼（固定在这一包）：不能取消勾选；放不了要按「放不了」选原因
+    const nmItem = i => {
+      const head = `<span class="ic">${i.icon}</span><span class="nm"><b>${esc(tr(i, "title"))}</b>`;
+      if (sel.nmSkip && sel.nmSkip.id === i.id)
+        return `<div class="it skip">${head}<small>${esc(t("nmSkipped", sel.nmSkip.reason))}</small></span><button type="button" class="cant" data-nmundo>${esc(t("nmUndoSkip"))}</button></div>`;
+      if (sel.nmAsk === i.id)
+        return `<div class="it">${head}<small>${esc(t("nmCantQ"))}</small><span class="seg" style="margin-top:6px">${t("nmR").map((x, k) => `<button type="button" data-nmr="${k}">${esc(x)}</button>`).join("")}</span></span></div>`;
+      return `<div class="it lock">${head}<small>${esc(tr(i, "sub") || "")} · ${esc(t("nmLock"))}</small></span><button type="button" class="cant" data-nmcant="${esc(i.id)}">${esc(t("nmCant"))}</button><span class="ck">✓</span></div>`;
+    };
     const undoLink = p => `<button class="linkbtn" data-undo="${esc(p.orderNo)}">${esc(t("undoBtn"))}</button>`;
     // 运单 + 照片（紧凑：公司和单号一行；链接一行小字，要改才按 ✏️；照片和勾选同一行）
     function shipForm() {
@@ -1006,7 +1057,9 @@
       busy = true; paintAct();
       const failed = [];
       try {
-        const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id })), txId: txId(), done: true, ship })).data;
+        const nmSkip = sel.nmSkip && sel.nmSkip.id ? { ...sel.nmSkip } : null;
+        const skipped = canLeft(p).filter(i => !sel.on.has(i.id) && !(nmSkip && nmSkip.id === i.id)).map(i => ({ kind: i.kind, id: i.id, title: i.title }));
+        const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id, title: i.title })), skipped, nmSkip, txId: txId(), done: true, ship })).data;
         (r.results || []).forEach(x => {
           const it = svr.find(i => i.id === x.id);
           if (!x.ok) failed.push(`${it ? tr(it, "title") : x.id}：${errMsg(x.error)}`);
@@ -1024,8 +1077,65 @@
       if (sel && sel.p.orderNo === p.orderNo) sel.redo = false;
       if (p.outside) await refreshOne(p.orderNo);
       await load();
+      // 保存好了：显示这一包的打包结果（没勾的东西还在，要放的话按「✏️ 打包这一包」）
+      if (!failed.length && sel && sel.p.orderNo === p.orderNo && sel.p.done) { sel.view = true; showSel(false); }
       focusQ();
     }
+
+    // ---------- 🏁 收工 ----------
+    function openFin() {
+      if (!loaded) return;
+      const inRange = all.filter(p => !p.outside), left = inRange.filter(p => !p.done);
+      const opts = t("finR");
+      const sel1 = no => `<select data-fin="${esc(no)}"><option value="">—</option>${opts.map(o => `<option>${esc(o)}</option>`).join("")}</select>`;
+      $("finBody").innerHTML = `<div class="sub" style="margin:0">${esc(rangeLabel(range))} · ${esc(t("finSub", inRange.length - left.length, inRange.length))}</div>`
+        + (shift ? `<div class="packed">${esc(t("finDone", shift.byName || (shift.by || "").split("@")[0], fmtT(shift.finishedAt)))}</div>` : "")
+        + (!left.length ? `<div class="packed" style="margin-top:10px">${esc(t("finAll"))}</div>`
+          : `<div class="sub" style="margin:10px 0 4px">${esc(t("finLeft", left.length))}</div>
+             <div class="finrow"><span class="no">${esc(t("finApply"))}</span>${sel1("*")}</div>`
+            + left.map(p => `<div class="finrow"><span class="no">${noHtml(p.orderNo)}<br><small>${esc(p.username || "")}</small></span>${sel1(p.orderNo)}</div>`).join(""));
+      $("finNote").value = "";
+      $("finModal").hidden = false;
+    }
+    $("finBtn").onclick = openFin;
+    $("finClose").onclick = () => { $("finModal").hidden = true; focusQ(); };
+    $("finModal").addEventListener("click", e => { if (e.target === $("finModal")) { $("finModal").hidden = true; focusQ(); } });
+    $("finModal").addEventListener("change", e => {
+      const el = e.target; if (!el.dataset || !el.dataset.fin) return;
+      const opts = t("finR");
+      if (el.value === opts[opts.length - 1]) { const x = prompt(t("nmOtherQ")); if (x && x.trim()) { const o = document.createElement("option"); o.textContent = opts[opts.length - 1] + "：" + x.trim().slice(0, 100); el.appendChild(o); el.value = o.textContent; } else el.value = ""; }
+      if (el.dataset.fin === "*") { const v = el.value; document.querySelectorAll("#finModal select[data-fin]").forEach(x => { if (x !== el) { if (![...x.options].some(o => o.value === v)) { const o = document.createElement("option"); o.textContent = v; x.appendChild(o); } x.value = v; } }); }
+    });
+    $("finGo").onclick = async () => {
+      if (busy) return;
+      const reasons = {};
+      let miss = 0;
+      document.querySelectorAll("#finModal select[data-fin]").forEach(x => { if (x.dataset.fin === "*") return; if (x.value) reasons[x.dataset.fin] = x.value; else miss++; });
+      if (miss) { beep("bad"); toast(t("finNeed")); return; }
+      busy = true; $("finGo").disabled = true;
+      try {
+        const r = (await pkAdmin({ op: "finish", from: range.from, to: range.to, label: rangeLabel(range), reasons, note: $("finNote").value })).data;
+        shift = r.shift || shift; $("finModal").hidden = true; beep("ok"); toast(t("finOk"));
+      } catch (e) { beep("bad"); alert("❌ " + errText(e)); }
+      busy = false; $("finGo").disabled = false;
+      await load(); focusQ();
+    };
+
+    // ---------- 🖨️ 备货单（只用来拿货；放不放、放哪包以扫描为准）----------
+    $("printBtn").onclick = () => {
+      const P = lastPrep || [];
+      const w = window.open("", "_blank");
+      if (!w) return alert("请允许弹出视窗 / Allow pop-ups");
+      const rows = P.map(g => `<tr><td class="c">☐</td><td><b>${esc(g.icon + " " + g.nm)}</b><div class="w">${g.list.map(x => esc(x.who.name) + (x.who.order ? " #" + esc(x.who.order.slice(-4)) : "")).join("、")}</div></td><td class="n">× ${g.list.length}</td></tr>`).join("");
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(t("printH"))}</title><style>
+        body{font-family:system-ui,sans-serif;margin:18px;color:#111} h1{font-size:18px;margin:0 0 4px} .s{color:#555;font-size:12px;margin-bottom:12px}
+        table{width:100%;border-collapse:collapse} td{border-bottom:1px solid #ccc;padding:8px 6px;vertical-align:top;font-size:14px}
+        .c{width:22px;font-size:18px} .n{text-align:right;font-weight:800;font-size:16px;white-space:nowrap} .w{color:#555;font-size:12px;margin-top:2px}
+      </style></head><body><h1>🖨️ ${esc(t("printH"))} · ${esc(folder === "today" ? t("fdToday") : t("fdAll"))}</h1>
+      <div class="s">${esc(rangeLabel(range))} · ${esc(fmtT(Date.now()))}</div>
+      ${rows ? `<table>${rows}</table>` : `<p>${esc(t("printNone"))}</p>`}</body></html>`);
+      w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+    };
 
     // ---------- ↩️ 撤销这一包 ----------
     async function undo(p) {
@@ -1217,7 +1327,18 @@
     $("result").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset && e.target.dataset.sf) { e.preventDefault(); e.target.blur(); } });
     document.addEventListener("click", e => {
       const el = e.target;
-      if (el.closest("#setModal")) return;
+      if (el.closest("#setModal") || el.closest("#finModal")) return;
+      const nc = el.closest("[data-nmcant]");
+      if (nc && sel && !busy) { sel.nmAsk = nc.dataset.nmcant; showSel(false); return; }
+      const nr = el.closest("[data-nmr]");
+      if (nr && sel && sel.nmAsk && !busy) {
+        const k = Number(nr.dataset.nmr), opts = t("nmR");
+        let why = opts[k];
+        if (k === opts.length - 1) { const x = prompt(t("nmOtherQ")); if (!x || !x.trim()) return; why = x.trim().slice(0, 200); }
+        const i = canLeft(sel.p).find(j => j.id === sel.nmAsk);
+        sel.nmSkip = { id: sel.nmAsk, reason: why, title: i ? i.title : "" }; sel.on.delete(sel.nmAsk); sel.nmAsk = null; showSel(false); return;
+      }
+      if (el.closest("[data-nmundo]") && sel && !busy) { if (sel.nmSkip) sel.on.add(sel.nmSkip.id); sel.nmSkip = null; showSel(false); return; }
       const it = el.closest("[data-item]");
       if (it && sel && !busy) { const id = it.dataset.item; sel.on.has(id) ? sel.on.delete(id) : sel.on.add(id); showSel(false); return; }
       const ph = el.closest("[data-ph]");
