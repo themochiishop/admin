@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>积分引擎 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    .st { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700; color: var(--ink); }
+    .lamp { width: 12px; height: 12px; border-radius: 50%; background: var(--line2); }
+    .lamp.on { background: #16a34a; box-shadow: 0 0 0 4px rgba(22,163,74,.18); }
+    .steps { margin: 6px 0 0 18px; line-height: 1.9; font-size: .9rem; color: var(--text); }
+    .tbl { width: 100%; border-collapse: collapse; font-size: .84rem; margin-top: 6px; }
+    .tbl th, .tbl td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+    .tbl th { color: var(--muted); font-size: .76rem; }
+    .ok-big { font-size: 1.05rem; font-weight: 700; color: var(--green-tx); }
+    .warn-big { font-size: 1.05rem; font-weight: 700; color: var(--amber-tx); }
+    code { font-size: .82rem; }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>💰 积分引擎</h2>
+          <p class="muted">积分、会员等级、生日积分、积分过期、自动完成，从 Google 表格的 Apps Script 搬到 Cloud Functions：订单有变动才算那一张单，不再每 30 分钟读全部订单。只有店主看得到这一页。</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="st"><span class="lamp" id="lamp"></span><span id="stText">读取中…</span></div>
+        <p class="meta" id="stSub" style="margin-top:4px"></p>
+      </div>
+
+      <div class="panel">
+        <h3>① 比对（上线前 / 怀疑对不上时）</h3>
+        <p class="meta">用新的算法把全部订单、会员算一次，<b>只算不写</b>，列出和现在资料不一样的地方。会读一次全部订单、会员、绑定、积分记录，平常不用按。</p>
+        <div class="actions"><button class="btn btn-primary" id="cmpBtn">🔍 开始比对</button></div>
+        <div id="cmpOut"></div>
+      </div>
+
+      <div class="panel" id="onPanel">
+        <h3>② 打开 Cloud Functions 积分计算</h3>
+        <ol class="steps">
+          <li>上面「比对」没有不一样的（或你确认那些差异是对的）</li>
+          <li>在 Google 表格的 Apps Script 换上新的 <code>member-system-sync.gs</code>（拿掉积分计算的版本），并执行一次 <code>msInstallSchedule</code></li>
+          <li>回来这里勾选确认，按「打开」：会补算每位会员的余额，并把最近 2 天同步过的订单算一次（换 Apps Script 那几分钟里进来的单不会漏）</li>
+        </ol>
+        <label class="inline"><input type="checkbox" id="confirmOff"> 我已经在 Apps Script 停掉积分计算（两边同时算会重复给分）</label>
+        <div class="actions"><button class="btn btn-primary" id="onBtn">✅ 打开</button></div>
+        <p class="msg" id="onMsg"></p>
+      </div>
+
+      <div class="panel hidden" id="runPanel">
+        <h3>③ 打开以后</h3>
+        <p class="meta">「全量核对」= 每张单、每位会员都重新算一次并写入（取代 Apps Script 菜单的「🔧 全量核对」积分部分），偶尔用。「关闭」= 停止 Cloud Functions 积分计算（要改回 Apps Script 时用）。</p>
+        <div class="actions">
+          <button class="btn btn-ghost" id="fullBtn">🔧 全量核对</button>
+          <button class="btn btn-bad" id="offBtn">⏸ 关闭</button>
+        </div>
+        <p class="msg" id="runMsg"></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { app } from "./js/firebase-config.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
+    import { requireAdmin, renderAdminNav, esc, logAdmin } from "./js/admin-common.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("points");
+    const fn = httpsCallable(getFunctions(app, "asia-southeast1"), "ptAdmin", { timeout: 540000 });
+    const call = async (op, data = {}) => (await fn({ op, ...data })).data || {};
+    const errText = e => (e && e.message ? e.message.replace(/^FirebaseError:\s*/, "") : String(e));
+    const fmt = ms => ms ? new Date(ms).toLocaleString("zh-CN", { hour12: false }) : "-";
+    const TIER = { mochii: "Mochii", silver: "银卡", gold: "金卡", diamond: "钻石", black: "Black Elite" };
+
+    async function status() {
+      try {
+        const s = await call("status");
+        $("lamp").classList.toggle("on", s.on);
+        $("stText").textContent = s.on ? "Cloud Functions 正在计算积分" : "目前由 Apps Script 计算（Cloud Functions 关着）";
+        $("stSub").textContent = s.on ? `打开于 ${fmt(s.since)} · 上次每日检查 ${fmt(s.lastDaily)}` : "部署好后先「比对」，确认没问题再照 ② 打开。";
+        $("onPanel").classList.toggle("hidden", s.on); $("runPanel").classList.toggle("hidden", !s.on);
+      } catch (e) { $("stText").textContent = "读取失败：" + errText(e) + "（ptAdmin 部署了吗？）"; }
+    }
+
+    $("cmpBtn").onclick = async () => {
+      $("cmpBtn").disabled = true; $("cmpOut").innerHTML = `<p class="meta">比对中…（订单多的话要等一下）</p>`;
+      try {
+        const r = await call("compare");
+        const t = r.total, c = r.counts;
+        const head = `<p class="meta">读了：订单 ${c.orders} · 会员 ${c.members} · 绑定 ${c.bindings} · 积分记录 ${c.ledger}</p>`;
+        if (!t.orders && !t.tiers && !t.bal) { $("cmpOut").innerHTML = head + `<p class="ok-big">✅ 完全一样，可以打开</p>`; return; }
+        let h = head + `<p class="warn-big">⚠️ 有 ${t.orders} 张订单、${t.tiers} 位会员等级、${t.bal} 位会员余额不一样</p>`;
+        if (t.orders) h += `<h4 style="margin-top:12px">订单（现在 → 新算法）</h4><table class="tbl"><tr><th>单号</th><th>买家</th><th>会员</th><th>积分</th></tr>`
+          + r.diffs.orders.map(x => `<tr><td><code>${esc(x.no)}</code></td><td>${esc(x.username || "")}</td><td>${esc(x.uid || "-")} → ${esc(x.newUid || "-")}</td><td>${x.points} → <b>${x.newPoints}</b></td></tr>`).join("") + `</table>`;
+        if (t.tiers) h += `<h4 style="margin-top:12px">会员等级 / 近一年消费</h4><table class="tbl"><tr><th>会员</th><th>等级</th><th>近一年消费</th></tr>`
+          + r.diffs.tiers.map(x => `<tr><td><a href="member.html?uid=${encodeURIComponent(x.uid)}">${esc(x.name || x.uid)}</a></td><td>${TIER[x.tier] || x.tier} → <b>${TIER[x.newTier] || x.newTier}</b></td><td>RM ${x.spend} → <b>RM ${x.newSpend}</b></td></tr>`).join("") + `</table>`;
+        if (t.bal) h += `<h4 style="margin-top:12px">余额（网页现在算的 → members.bal）</h4><table class="tbl"><tr><th>会员</th><th>余额</th></tr>`
+          + r.diffs.bal.map(x => `<tr><td>${esc(x.name || x.uid)}</td><td>${x.web} → <b>${x.bal}</b></td></tr>`).join("") + `</table>`;
+        h += `<p class="meta" style="margin-top:8px">常见原因：Apps Script 还没跑到最新的订单（等半小时再比对）、会员刚绑定、或「近一年消费」每天才更新。把截图传给 Claude 一起看。</p>`;
+        $("cmpOut").innerHTML = h;
+      } catch (e) { $("cmpOut").innerHTML = `<p class="msg err">比对失败：${esc(errText(e))}</p>`; }
+      finally { $("cmpBtn").disabled = false; }
+    };
+
+    $("onBtn").onclick = async () => {
+      if (!$("confirmOff").checked) { $("onMsg").textContent = "请先确认已经在 Apps Script 停掉积分计算"; $("onMsg").className = "msg err"; return; }
+      if (!confirm("打开 Cloud Functions 积分计算？\n\n确定 Apps Script 已经换成拿掉积分计算的版本，并执行过 msInstallSchedule。")) return;
+      $("onBtn").disabled = true; $("onMsg").textContent = "补算余额中…"; $("onMsg").className = "msg";
+      try {
+        const r = await call("enable", { confirm: "APPS_SCRIPT_OFF" });
+        $("onMsg").textContent = `✅ 已打开：补算 ${r.members} 位会员的余额，最近的订单 ${r.recent} 张（${r.changed} 张有更新）`; $("onMsg").className = "msg ok";
+        logAdmin("points", "打开 Cloud Functions 积分计算", "points.html");
+        status();
+      } catch (e) { $("onMsg").textContent = "失败：" + errText(e); $("onMsg").className = "msg err"; }
+      finally { $("onBtn").disabled = false; }
+    };
+    $("fullBtn").onclick = async () => {
+      if (!confirm("全量核对：每张订单、每位会员都重新算一次并写入。会读全部订单，偶尔用就好。要继续吗？")) return;
+      $("fullBtn").disabled = true; $("runMsg").textContent = "核对中…"; $("runMsg").className = "msg";
+      try { const r = await call("fullCheck"); $("runMsg").textContent = `✅ 完成：更新 ${r.orders} 张订单，${r.members} 位会员`; $("runMsg").className = "msg ok"; }
+      catch (e) { $("runMsg").textContent = "失败：" + errText(e); $("runMsg").className = "msg err"; }
+      finally { $("fullBtn").disabled = false; }
+    };
+    $("offBtn").onclick = async () => {
+      if (!confirm("关闭 Cloud Functions 积分计算？\n\n关闭后要换回有积分计算的 Apps Script，不然新订单不会给分。")) return;
+      try { await call("disable"); logAdmin("points", "关闭 Cloud Functions 积分计算", "points.html"); status(); }
+      catch (e) { $("runMsg").textContent = "失败：" + errText(e); $("runMsg").className = "msg err"; }
+    };
+
+    requireAdmin(() => status());
+  </script>
+</body>
+</html>
