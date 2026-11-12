@@ -510,7 +510,7 @@
 
     // ---------- 🕒 最近动态 ----------
     let recent = [], extra = [], recentFilter = "all", logNote = "";
-    const ICON_ADMIN = { redeem: "🎁", prize: "🏆", member: "👤", points: "➕", feed: "📰", content: "📝", settings: "⚙️" };
+    const ICON_ADMIN = { redeem: "🎁", prize: "🏆", member: "👤", points: "➕", feed: "📰", content: "📝", settings: "⚙️", pack: "🧺" };
     function renderRecent() {
       const list = [...recent, ...extra].filter(e => recentFilter === "all" || e.cat === recentFilter).sort((a, b) => b.d - a.d).slice(0, 40);
       let html = list.map(e => `<li><span class="ic">${e.ic}</span><span class="nm">${e.html}</span><span class="rt">${ago(e.d)}</span></li>`).join("");
