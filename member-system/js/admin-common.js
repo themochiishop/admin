@@ -360,6 +360,7 @@ export const NAV_GROUPS = [
   { label: "设定", items: [
     ["notify", "notify.html", "📧", "邮件提醒"],
     ["shipping", "shipping.html", "🚚", "运输公司"],
+    ["points", "points.html", "💰", "积分引擎"],
   ] },
   { label: "参考", items: [
     ["faq", "faq.html", "📖", "客服 FAQ"],
@@ -574,7 +575,7 @@ const NAV_PERM = {
   shipping: ["member.redeem", "member.prizes"],
   gifts: ["member.prizes", "draw.claims"],   // 🎁 指定小礼物：中奖奖品或领奖追踪权限
   pack: "pack",
-  faq: "member", changelog: "_owner",   // _owner：没有人会被勾这一项 = 只有店主
+  faq: "member", changelog: "_owner", points: "_owner",   // _owner：没有人会被勾这一项 = 只有店主
 };
 // 权限可以是一个，或一组（有其中一项就可以）
 const canAny = (access, k) => Array.isArray(k) ? k.some(x => can(access, x)) : can(access, k);
