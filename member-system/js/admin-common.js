@@ -327,6 +327,17 @@ export function computeBalance(ledger, redemptions, excludeId) {
   return { available, pending, reserved, spendable: available - reserved };
 }
 
+// 💰 积分引擎（Cloud Functions）存好的余额 members.bal = { sum, reserved, pend: [{ at, d }] }
+// 算法和 computeBalance 一样；没有 bal（引擎关着 / 还没算过）回传 null → 改读积分记录
+export function balOf(m) {
+  const b = m && m.bal;
+  if (!b || typeof b.sum !== "number") return null;
+  const now = Date.now();
+  const pending = (b.pend || []).reduce((s, p) => { const at = toDate(p.at); return at && at.getTime() > now ? s + (Number(p.d) || 0) : s; }, 0);
+  const available = b.sum - pending, reserved = Number(b.reserved) || 0;
+  return { available, pending, reserved, spendable: available - reserved };
+}
+
 // ---------- 侧边栏导航（分组） ----------
 // active：页面代号；Feed 页面网址带 #pending 时，亮「Feed 审核」
 export const NAV_GROUPS = [
