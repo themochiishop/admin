@@ -448,3 +448,31 @@ test("🆕 新人卡：第一次买 = 放；买过非会员 = 建议；会员不
   db.data.set("bindings/shopee_newbie", { uid: "u3" });
   assert.equal(await nc("2611190000102"), null);
 });
+
+test("✋ 店主指定的小礼物：随单的出现在打包清单；指定订单只在那一包；单独寄的不出现", async () => {
+  const db = fakeDb({
+    ...SEED(),
+    "orders/2611190000007": { username: "aqmar", platform: "shopee", uid: "u1", orderTime: ts(T0 - DAY) },
+    "smallGifts/manual__1_a": { status: "pending", manual: true, batchId: "manual", uid: "u1", giftName: "钥匙圈", note: "谢谢推荐", delivery: "withOrder", linkedOrder: "2611190000007" },
+    "smallGifts/manual__1_b": { status: "pending", manual: true, batchId: "manual", uid: "u1", giftName: "大抱枕", delivery: "separate", linkedOrder: null },
+    "smallGifts/manual__1_c": { status: "pending", manual: true, batchId: "manual", uid: "u3", giftName: "贴纸", delivery: "withOrder", linkedOrder: null },
+  });
+  const look = async no => (await pk.pkLookup(db, PACKER, { orderNo: no })).parcel.items;
+  const a1 = await look("2611190000001"), a7 = await look("2611190000007"), c4 = await look("2611190000004");
+  assert.equal(a1.some(i => i.id === "manual__1_a"), false);                 // 指定 #007：别包不出现
+  const it = a7.find(i => i.id === "manual__1_a");
+  assert.ok(it); assert.equal(it.linkedOrder, "2611190000007"); assert.equal(it.src, "店主指定"); assert.ok(it.sub.includes("谢谢推荐"));
+  assert.equal([...a1, ...a7].some(i => i.id === "manual__1_b"), false);   // 单独寄出不随单
+  assert.ok(c4.some(i => i.id === "manual__1_c"));                          // 没指定：任何一包都可以
+  // 寄错包裹会挡；对的包裹可以
+  const r1 = await pk.pkShip(db, PACKER, { orderNo: "2611190000001", items: [{ kind: "sg", id: "manual__1_a" }], txId: "tx_man00001" });
+  assert.equal(r1.results[0].ok, false);
+  const r2 = await pk.pkShip(db, PACKER, { orderNo: "2611190000001", items: [{ kind: "sg", id: "manual__1_b" }], txId: "tx_man00002" });
+  assert.equal(r2.results[0].ok, false);
+  const r3 = await pk.pkShip(db, PACKER, { orderNo: "2611190000007", items: [{ kind: "sg", id: "manual__1_a" }], txId: "tx_man00003" });
+  assert.equal(r3.results[0].ok, true);
+  assert.equal(db.data.get("smallGifts/manual__1_a").sentOrder, "2611190000007");
+  // 全部待寄：单独寄的不列
+  const b = await pk.pkBatch(db, PACKER, {});
+  assert.equal(JSON.stringify(b.pending).includes("manual__1_b"), false);
+});

@@ -253,3 +253,110 @@ test("中过奖的人这期不送小礼物：同一位会员的其他平台账�
   await rejects(create(fakeDb(SEED), OWNER, { batchId: "b2", winners: [{ orderNo: "2610082JN7CQR9", name: "aqmar" }],
     list: [{ orderNo: "587070631390577755", name: "aqmar77" }] }), "sg/all-won");
 });
+
+// ---------------------------------------------------------------- ✋ 手动指定
+const MSEED = () => ({
+  ...SEED,
+  "staff/prize@x.com": { perms: { member: { prizes: true } } },
+  "members/u1": { name: "Aqmar" },
+  "members/u2": { name: "Bella" },
+  "orders/261120MINE0001": { username: "aqmar", platform: "shopee", uid: "u1", orderTime: T0 + DAY },
+  "orders/261120NOTME001": { username: "buyer2", platform: "shopee", orderTime: T0 + DAY },
+  "orders/261120GONE0001": { username: "aqmar", platform: "shopee", uid: "u1", orderTime: T0 + DAY, status: "refunded" },
+});
+const PRIZE = { uid: "s4", email: "prize@x.com", emailVerified: true, now: T0 };
+const mc = (db, ctx, extra = {}) => sg.sgManualCreate(db, { ...ctx, now: T0 }, { uids: ["u1"], giftName: "钥匙圈", ...extra });
+
+test("✋ 手动新增：权限、一次多位、铃铛通知（三语）、默认随单 30 天", async () => {
+  const db = fakeDb(MSEED());
+  await rejects(mc(db, STAFF_PACK), "sg/no-perm");
+  await rejects(mc(db, { uid: "x" }), "sg/no-perm");
+  await rejects(mc(db, OWNER, { giftName: "" }), "sg/bad-name");
+  await rejects(mc(db, OWNER, { uids: [] }), "sg/no-member");
+  await rejects(mc(db, OWNER, { uids: ["nobody"] }), "sg/no-member");
+  await rejects(mc(db, OWNER, { days: 400 }), "sg/bad-days");
+  const r = await mc(db, PRIZE, { uids: ["u1", "u2", "u1"], note: "谢谢你推荐朋友！", noteI18n: { en: "Thanks for the referral!" } });
+  assert.equal(r.ids.length, 2);
+  const g = db.data.get("smallGifts/" + r.ids[0]);
+  assert.equal(g.manual, true); assert.equal(g.batchId, "manual"); assert.equal(g.status, "pending"); assert.equal(g.delivery, "withOrder");
+  assert.equal(g.uid, "u1"); assert.equal(g.name, "Aqmar"); assert.equal(g.note, "谢谢你推荐朋友！");
+  assert.equal(g.deadline.toMillis(), T0 + 30 * DAY); assert.equal(g.noExpire, false);
+  assert.equal(JSON.stringify(g).includes("@"), false);                 // 会员读得到：没有员工 email
+  const m = msgs(db);
+  assert.equal(m.length, 2);
+  assert.ok(m[0].i18n.zh.body.includes("钥匙圈") && m[0].i18n.zh.body.includes("谢谢你推荐朋友"));
+  assert.ok(m[0].i18n.en.body.includes("Thanks for the referral"));
+  assert.ok(m[0].i18n.ms.body.includes("pesanan"));
+  await mc(db, OWNER, { uids: ["u2"], notify: false, days: 0 });
+  assert.equal(msgs(db).length, 2);                                      // 不通知
+  assert.equal(gifts(db).find(x => x.uid === "u2" && x.noExpire).deadline, null);
+});
+
+test("✋ 指定订单：只能是这位会员、没取消的单；单独寄出不用指定", async () => {
+  const db = fakeDb(MSEED());
+  await rejects(mc(db, OWNER, { linkedOrder: "261120NOTME001" }), "sg/not-member-order");
+  await rejects(mc(db, OWNER, { linkedOrder: "261120GONE0001" }), "sg/order-refunded");
+  await rejects(mc(db, OWNER, { linkedOrder: "261199XXXXXX" }), "sg/no-order");
+  await rejects(mc(db, OWNER, { uids: ["u1", "u2"], linkedOrder: "261120MINE0001" }), "sg/link-one");
+  await rejects(mc(db, OWNER, { delivery: "separate", linkedOrder: "261120MINE0001" }), "sg/link-dlv");
+  const { ids: [id] } = await mc(db, OWNER, { linkedOrder: "261120mine0001" });
+  let g = db.data.get("smallGifts/" + id);
+  assert.equal(g.linkedOrder, "261120MINE0001"); assert.equal(g.orderFound, true);
+  // 绑定的平台账号的单也算这位会员的
+  db.data.set("orders/587120AQMAR00001", { username: "aqmar77", platform: "tiktok", orderTime: T0 + DAY });
+  await sg.sgManualUpdate(db, { ...OWNER, now: T0 }, { id, linkedOrder: "587120AQMAR00001" });
+  assert.equal(db.data.get("smallGifts/" + id).linkedOrder, "587120AQMAR00001");
+  // 取消指定
+  await sg.sgManualUpdate(db, { ...OWNER, now: T0 }, { id, linkedOrder: "" });
+  g = db.data.get("smallGifts/" + id);
+  assert.equal(g.linkedOrder, null); assert.equal(g.orderFound, false);
+});
+
+test("✋ 改配送方式 / 留言 / 期限；随单寄出要对订单；单独寄要运单号和地址", async () => {
+  const db = fakeDb(MSEED());
+  const ctx = { ...OWNER, now: T0 };
+  const { ids: [id] } = await mc(db, OWNER, { linkedOrder: "261120MINE0001" });
+  await rejects(sg.sgManualShip(db, ctx, { id, orderNo: "587070631390577755" }), "sg/linked");   // 指定了别张单
+  await rejects(sg.sgManualShip(db, ctx, { id, orderNo: "261120NOTME001" }), "sg/not-member-order");
+  // 改成单独寄出：指定订单自动取消，不会过期
+  await sg.sgManualUpdate(db, ctx, { id, delivery: "separate", note: "太大了，单独寄" });
+  let g = db.data.get("smallGifts/" + id);
+  assert.equal(g.delivery, "separate"); assert.equal(g.linkedOrder, null); assert.equal(g.note, "太大了，单独寄");
+  await rejects(sg.sgManualShip(db, ctx, { id, ship: { trackingNo: "" } }), "sg/bad-ship");
+  await rejects(sg.sgManualShip(db, ctx, { id, ship: { trackingNo: "SPX1", trackingUrl: "http://x" } }), "sg/bad-ship");
+  await rejects(sg.sgManualShip(db, ctx, { id, ship: { trackingNo: "SPX1" } }), "sg/bad-addr");
+  await sg.sgManualShip(db, ctx, { id, ship: { carrier: "spx", carrierName: "SPX Express", trackingNo: "spxmy123", trackingUrl: "https://spx.com.my/x",
+    address: { name: "Aqmar", phone: "0123456789", line1: "1 Jalan A", postcode: "05460", city: "Alor Setar", state: "Kedah" } } });
+  g = db.data.get("smallGifts/" + id);
+  assert.equal(g.status, "sent"); assert.equal(g.shipping.trackingNo, "SPXMY123"); assert.equal(g.shipping.address.city, "Alor Setar"); assert.equal(g.sentOrder, null);
+  await rejects(sg.sgManualUpdate(db, ctx, { id, note: "x" }), "sg/state");                     // 寄出后不能改
+  await sg.sgUnship(db, { ...STAFF_CLAIMS, now: T0 }, { id });                                   // 取消寄出：运单资料清掉
+  assert.equal(db.data.get("smallGifts/" + id).shipping, null);
+  // 改回随单 + 期限，随单手动标记寄出
+  await sg.sgManualUpdate(db, ctx, { id, delivery: "withOrder", days: 10 });
+  g = db.data.get("smallGifts/" + id);
+  assert.equal(g.delivery, "withOrder"); assert.equal(g.deadline.toMillis(), T0 + 10 * DAY);
+  await sg.sgManualShip(db, ctx, { id, orderNo: "261120mine0001" });
+  g = db.data.get("smallGifts/" + id);
+  assert.equal(g.sentOrder, "261120MINE0001"); assert.equal(g.shipping.via, "admin");
+  // 抽奖的小礼物不能用手动的指令
+  await create(db, OWNER);
+  const drawId = gifts(db).find(x => !x.manual).id;
+  await rejects(sg.sgManualUpdate(db, ctx, { id: drawId, note: "x" }), "sg/not-manual");
+  await rejects(sg.sgManualCreate(db, { ...STAFF_PACK, now: T0 }, { uids: ["u1"], giftName: "x" }), "sg/no-perm");
+  // 中奖奖品权限的人也可以作废 / 恢复
+  const { ids: [id2] } = await mc(db, PRIZE);
+  await sg.sgVoid(db, PRIZE, { id: id2 });
+  await sg.sgRestore(db, PRIZE, { id: id2 });
+});
+
+test("✋ 每日：单独寄出的不过期；随单的过期通知不提抽奖", async () => {
+  const db = fakeDb(MSEED());
+  const { ids: [a] } = await mc(db, OWNER, { uids: ["u2"], days: 5, notify: false });
+  const { ids: [b] } = await mc(db, OWNER, { uids: ["u2"], delivery: "separate", notify: false });
+  await sg.sgDaily(db, { now: T0 + 10 * DAY });
+  assert.equal(db.data.get("smallGifts/" + a).status, "voided");
+  assert.equal(db.data.get("smallGifts/" + b).status, "pending");
+  const m = msgs(db).find(x => x.i18n.zh.title === "小礼物已作废");
+  assert.ok(m && !m.i18n.zh.body.includes("抽奖"));
+});
