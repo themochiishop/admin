@@ -666,12 +666,13 @@
     }
 
     // ---------- 读取 ----------
+    let lastFull = 0;   // 上次整批读取的时间（省读取：保存一包后只更新那一位买家的包裹，10 分钟才整批重读一次）
     async function load() {
       try {
         const r = (await pkAdmin({ op: "batch", from: range.from, to: range.to })).data;
         const extra = all.filter(x => x.outside && !(r.parcels || []).some(y => y.orderNo === x.orderNo));
         all = (r.parcels || []).concat(extra);
-        pending = r.pending || []; loaded = true; shift = r.shift || null;
+        pending = r.pending || []; loaded = true; shift = r.shift || null; lastFull = Date.now();
         all.forEach(p => { attachClaims(p); attachCard(p); addSent(p); });
         render();
         if (sel) { const p = all.find(x => x.orderNo === sel.p.orderNo); if (p) { sel.p = p; showSel(false); } }
@@ -685,9 +686,9 @@
       try {
         const r = (await pkAdmin({ op: "lookup", orderNo: no })).data;
         if (!r || !r.found) return;
-        const x = r.parcel; x.outside = true;
-        attachClaims(x); attachCard(x); addSent(x);
         const i = all.findIndex(y => y.orderNo === no);
+        const x = r.parcel; x.outside = i >= 0 ? !!all[i].outside : true;   // 本来在清单里的维持原样
+        attachClaims(x); attachCard(x); addSent(x);
         if (i >= 0) all[i] = x; else all.push(x);
       } catch (e) { console.warn("refresh", e); }
     }
@@ -1083,11 +1084,25 @@
       else { beep("ok"); toast(t("savedOk")); }
       if (ship.photo) photoCache.set(p.orderNo, ship.photo); else photoCache.delete(p.orderNo);
       if (sel && sel.p.orderNo === p.orderNo) sel.redo = false;
-      if (p.outside) await refreshOne(p.orderNo);
-      await load();
+      // 💰 省读取：只重新查这一位买家今天的包裹（不用整批重读）；出错或超过 10 分钟才整批重读
+      if (failed.length || Date.now() - lastFull > 10 * 60000) {
+        if (p.outside) await refreshOne(p.orderNo);
+        await load();
+      } else await refreshBuyer(p, items);
       // 保存好了：显示这一包的打包结果（没勾的东西还在，要放的话按「✏️ 打包这一包」）
       if (!failed.length && sel && sel.p.orderNo === p.orderNo && sel.p.done) { sel.view = true; showSel(false); }
       focusQ();
+    }
+
+    // 保存后只更新这一位买家的包裹 + 从「全部待寄」拿掉刚放进去的东西
+    async function refreshBuyer(p, sentItems) {
+      const key = buyerKey(p);
+      const nos = [...new Set([p.orderNo, ...all.filter(x => buyerKey(x) === key).map(x => x.orderNo)])];
+      await Promise.all(nos.map(no => refreshOne(no)));
+      const gone = new Set(sentItems.map(i => i.id));
+      pending = pending.map(g => ({ ...g, items: g.items.filter(i => !gone.has(i.id)) })).filter(g => g.items.length);
+      render();
+      if (sel) { const q = all.find(x => x.orderNo === sel.p.orderNo); if (q) { sel.p = q; showSel(false); } }
     }
 
     // ---------- 🏁 收工 ----------
