@@ -3,14 +3,58 @@
     {
       "source": "functions",
       "codebase": "default",
-      "ignore": ["node_modules", "test", ".git", "firebase-debug.log"]
+      "ignore": [
+        "node_modules",
+        "test",
+        ".git",
+        "firebase-debug.log"
+      ]
     }
   ],
   "firestore": {
     "rules": "firestore.rules"
   },
+  "hosting": {
+    "public": "hosting",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "redirects": [
+      {
+        "source": "/",
+        "destination": "https://www.themochiishop.com/memberclub/",
+        "type": 302
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/u/**",
+        "function": {
+          "functionId": "shareLink",
+          "region": "asia-southeast1"
+        }
+      },
+      {
+        "source": "/p/**",
+        "function": {
+          "functionId": "shareLink",
+          "region": "asia-southeast1"
+        }
+      },
+      {
+        "source": "/i/**",
+        "function": {
+          "functionId": "shareLink",
+          "region": "asia-southeast1"
+        }
+      }
+    ]
+  },
   "emulators": {
-    "firestore": { "port": 8080 },
+    "firestore": {
+      "port": 8080
+    },
     "singleProjectMode": true
   }
 }
