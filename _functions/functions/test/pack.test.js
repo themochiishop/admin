@@ -393,3 +393,58 @@ test("不用放的包裹：没有东西也能「已打包好」，记下运单�
   await pk.pkUndo(db, PACKER, { orderNo: "2611190000003" });
   assert.equal(db.data.get("packDone/2611190000003"), undefined);
 });
+
+test("🆕 新人卡：第一次买 = 放；买过非会员 = 建议；会员不用；30 天内放过 = 显示放在哪一包", async () => {
+  const db = fakeDb({
+    ...SEED(),
+    // newbie：第一次买，同一场直播两单（相差 3 小时）
+    "orders/2611190000101": { username: "newbie", platform: "shopee", orderTime: ts(T0 - DAY) },
+    "orders/2611190000102": { username: "newbie", platform: "shopee", orderTime: ts(T0 - DAY + 3 * 3600000) },
+    // regular：9 天前买过，这次又买，还不是会员
+    "orders/2611100000201": { username: "regular", platform: "shopee", orderTime: ts(T0 - 9 * DAY) },
+    "orders/2611190000202": { username: "regular", platform: "shopee", orderTime: ts(T0 - DAY) },
+    // 同名不同平台不算同一人
+    "orders/587000000000000301": { username: "newbie", platform: "tiktok", orderTime: ts(T0 - 20 * DAY) },
+  });
+  const nc = async no => (await pk.pkLookup(db, PACKER, { orderNo: no })).parcel.newCard;
+  assert.deepEqual(await nc("2611190000101"), { level: "must" });
+  assert.deepEqual(await nc("2611190000102"), { level: "must" });          // 同一场直播的第二单也算第一次
+  assert.deepEqual(await nc("2611190000202"), { level: "suggest" });
+  assert.equal(await nc("2611190000001"), null);                            // 会员（订单有 uid）
+  assert.equal(await nc("587000000000000002"), null);                       // 会员（账号绑定）
+  // buyer2 的取消单不算：只剩一单 → 第一次
+  assert.deepEqual(await nc("2611190000003"), { level: "must" });
+
+  // 放进第一包 → 第二包显示「已放在 #101」；第一包 here
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000101", items: [], txId: "tx_card0001", done: true, newCard: true });
+  assert.equal(db.data.get("packDone/2611190000101").newCard, true);
+  assert.deepEqual(await nc("2611190000101"), { level: "must", here: true });
+  const other = await nc("2611190000102");
+  assert.equal(other.level, "placed"); assert.equal(other.inOrder, "2611190000101");
+  // 重新保存（修改运单号）没勾也保留
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000101", items: [], txId: "tx_card0002", done: true });
+  assert.equal(db.data.get("packDone/2611190000101").newCard, true);
+  // 清单（batch）结果一样，打包记录也有
+  const b = await pk.pkBatch(db, PACKER, {});
+  const by = no => b.parcels.find(x => x.orderNo === no);
+  assert.equal(by("2611190000102").newCard.level, "placed");
+  assert.equal(by("2611190000101").packed.newCard, true);
+  assert.equal(by("2611190000202").newCard.level, "suggest");
+  assert.equal(by("2611190000001").newCard, null);
+  const log = await pk.pkLog(db, PACKER, { orderNo: "2611190000101" });
+  assert.equal(log.list[0].newCard, true);
+
+  // 超过 30 天：再提醒（regular 30 多天前放过）
+  db.data.set("packDone/2611100000201", { at: ts(T0 - 31 * DAY), by: "pack@x.com", newCard: true });
+  assert.deepEqual(await nc("2611190000202"), { level: "suggest" });
+  db.data.set("packDone/2611100000201", { at: ts(T0 - 9 * DAY), by: "pack@x.com", newCard: true });
+  assert.equal((await nc("2611190000202")).level, "placed");
+
+  // 撤销这一包 → 新人卡记录跟着取消
+  await pk.pkUndo(db, PACKER, { orderNo: "2611190000101" });
+  assert.deepEqual(await nc("2611190000102"), { level: "must" });
+
+  // 绑定后变会员 → 不再提醒
+  db.data.set("bindings/shopee_newbie", { uid: "u3" });
+  assert.equal(await nc("2611190000102"), null);
+});
