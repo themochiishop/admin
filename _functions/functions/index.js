@@ -63,6 +63,7 @@ const ADMIN_OPS = {
   packed: core.nmPacked,
   unpack: core.nmUnpack,
   shipped: core.nmShipped,
+  clearIssue: core.nmClearIssue,
   extend: core.nmExtend,
   cancel: core.nmCancelReward,
   refund: core.nmRefund,
@@ -105,7 +106,7 @@ exports.sgAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5, 
 
 // 🧺 打包清单（后台）：{ op: "batch", from, to } / { op: "lookup", orderNo | username } / { op: "ship", orderNo, items, txId, done?, ship? } / { op: "done", orderNos, undo? } / { op: "undo", orderNo }
 //    店主或「🧺 打包清单」权限；只回传打包需要的资料
-const PK_OPS = { batch: pack.pkBatch, lookup: pack.pkLookup, claims: pack.pkClaims, photo: pack.pkPhoto, ship: pack.pkShip, done: pack.pkDone, undo: pack.pkUndo };
+const PK_OPS = { batch: pack.pkBatch, lookup: pack.pkLookup, claims: pack.pkClaims, photo: pack.pkPhoto, ship: pack.pkShip, done: pack.pkDone, undo: pack.pkUndo, finish: pack.pkFinish, log: pack.pkLog };
 exports.pkAdmin = onCall({ region: CALL_REGION, cors: ORIGINS, maxInstances: 5, timeoutSeconds: 120 },
   req => run(pick(PK_OPS, req), req));
 
