@@ -1066,7 +1066,7 @@
       try {
         const nmSkip = sel.nmSkip && sel.nmSkip.id ? { ...sel.nmSkip } : null;
         const skipped = canLeft(p).filter(i => i.kind !== "card" && !sel.on.has(i.id) && !(nmSkip && nmSkip.id === i.id)).map(i => ({ kind: i.kind, id: i.id, title: i.title }));
-        const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id, title: i.title })), skipped, nmSkip, txId: txId(), done: true, ship, newCard: !!card })).data;
+        const r = (await pkAdmin({ op: "ship", orderNo: p.orderNo, items: svr.map(i => ({ kind: i.kind, id: i.id, title: i.title })), skipped, nmSkip, txId: txId(), done: true, ship, newCard: !!card, newCardLevel: card ? card.level : undefined })).data;
         if (card) sentLog.set(p.orderNo, (sentLog.get(p.orderNo) || []).concat([card]));
         (r.results || []).forEach(x => {
           const it = svr.find(i => i.id === x.id);
