@@ -48,6 +48,15 @@ a { color: #db2777; text-decoration: none; }
 .side-brand { color: #fff; font-weight: 700; font-size: .95rem; display: block; }
 .side-brand small { display: block; color: #94a3b8; font-weight: 500; font-size: .76rem; margin-top: 2px; }
 .side-burger, .side-dot { display: none; }
+/* 🟢 实时小标（2026-11-12） */
+.live-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 2px 9px 2px 7px; border-radius: 999px;
+  font-size: .72rem; font-weight: 700; background: rgba(34,197,94,.14); color: #4ade80; cursor: default; user-select: none; }
+.live-pill[hidden] { display: none; }
+.live-pill i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.live-pill.on i { animation: livePulse 1.6s ease-out infinite; }
+.live-pill.off { background: rgba(148,163,184,.16); color: #94a3b8; }
+.live-pill.err { background: rgba(244,63,94,.16); color: #fb7185; }
+@keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,.7); } 70% { box-shadow: 0 0 0 6px rgba(74,222,128,0); } 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); } }
 .side-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 16px; }
 .side-group { margin-top: 12px; }
 .side-group:first-child { margin-top: 2px; }
@@ -76,6 +85,7 @@ body.has-side #app { padding-left: 228px; }
   .side-top { height: 54px; display: flex; align-items: center; gap: 12px; padding: 0 14px; border: 0; }
   .side-brand { font-size: .9rem; }
   .side-brand small { display: inline; margin: 0 0 0 6px; }
+  .live-pill { margin: 0 0 0 auto; }
   .side-burger {
     display: inline-flex; align-items: center; justify-content: center; position: relative;
     width: 38px; height: 38px; border-radius: 8px; border: 1px solid #334155; background: #1e293b;
