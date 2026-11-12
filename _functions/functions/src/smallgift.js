@@ -157,7 +157,8 @@ async function sgCreate(db, ctx, data) {
 
   if (!groups.size) fail("sg/all-won", "没得奖的订单都是这一期中过奖的人，不用送小礼物");
   const deadline = now + days * DAY;
-  const base = { batchId, label, giftName, mode, status: "pending", deadline: tsOf(deadline), createdAt: tsOf(now), by: who.email };
+  // 会员读得到自己的小礼物：不写员工 email（批次那一笔有记录）
+  const base = { batchId, label, giftName, mode, status: "pending", deadline: tsOf(deadline), createdAt: tsOf(now) };
   let members = 0;
   await batchRef.set({ label, month, giftName, mode, days, deadline: tsOf(deadline), count: groups.size, orders: list.length - skipped, skippedWinners: skipped,
     members: 0, createdAt: tsOf(now), by: who.email });
@@ -184,7 +185,7 @@ async function sgVoid(db, ctx, data) {
   const { ref, g } = await loadGift(db, data.id);
   if (g.status !== "pending") fail("sg/state", "只有待寄的小礼物可以作废");
   const note = String(data.note || "").trim().slice(0, 100);
-  await ref.update({ status: "voided", voidReason: "manual", voidNote: note, voidedAt: tsOf(nowMs(ctx)), voidedBy: who.email });
+  await ref.update({ status: "voided", voidReason: "manual", voidNote: note, voidedAt: tsOf(nowMs(ctx)), voidedBy: "staff" });
   return { ok: true };
 }
 // 恢复：作废 → 待寄；之后每日检查不再自动作废（noExpire）
@@ -193,7 +194,7 @@ async function sgRestore(db, ctx, data) {
   const { ref, g } = await loadGift(db, data.id);
   if (g.status !== "voided") fail("sg/state", "只有已作废的小礼物可以恢复");
   await ref.update({ status: "pending", voidReason: null, voidNote: null, voidedAt: null, voidedBy: null,
-    noExpire: true, restoredBy: who.email, restoredAt: tsOf(nowMs(ctx)) });
+    noExpire: true, restoredBy: "staff", restoredAt: tsOf(nowMs(ctx)) });
   return { ok: true };
 }
 // 寄出：打包清单勾选 ✅（orderNo = 随哪一张单寄出）
@@ -204,7 +205,7 @@ async function sgShip(db, ctx, data) {
   const { ref, g } = await loadGift(db, data.id);
   if (g.status === "sent") return { ok: true, already: true };
   if (g.status !== "pending") fail("sg/state", "这份小礼物已作废，要先恢复");
-  await ref.update({ status: "sent", sentAt: tsOf(nowMs(ctx)), sentOrder: orderNo || null, sentBy: who.email });
+  await ref.update({ status: "sent", sentAt: tsOf(nowMs(ctx)), sentOrder: orderNo || null, sentBy: "staff" });
   return { ok: true };
 }
 async function sgUnship(db, ctx, data) {

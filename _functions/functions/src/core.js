@@ -449,8 +449,9 @@ function finishCancel(tx, db, ctx, o) {
   const at = ts(nowMs(ctx));
   const { ref, reward, red, settingsRef, settings, to } = o;
   const rid = ref.id;
-  const upd = { status: to, updatedAt: at, cancelledAt: at, cancelledBy: o.by, cancelReason: o.reason || "" };
-  if (o.refundLedgerId) upd.refund = { ledgerId: o.refundLedgerId, by: o.by, at };
+  // 会员读得到这一笔：不写员工 email，只分「会员本人 / 店方」（谁做的看操作历史）
+  const upd = { status: to, updatedAt: at, cancelledAt: at, cancelledBy: o.by === reward.uid ? "member" : "staff", cancelReason: o.reason || "" };
+  if (o.refundLedgerId) upd.refund = { ledgerId: o.refundLedgerId, at };
   // 释放订单锁
   if (reward.linkedOrder && reward.linkedOrder.orderNo) {
     tx.delete(db.collection(COL.locks).doc(reward.linkedOrder.orderNo));
@@ -502,7 +503,7 @@ async function nmApprove(db, ctx, data = {}) {
     });
     tx.update(ref, {
       status, approvedAt: nowTs, originalDeadline: deadline, deadline, candidates,
-      reviewedBy: staff.email, reviewedAt: nowTs, updatedAt: nowTs,
+      reviewedAt: nowTs, updatedAt: nowTs,   // 谁批准的只记在操作历史（会员读不到）
     });
     syncRedemption(tx, red, status, { decidedAt: nowTs });
     syncMember(tx, db, reward.uid, { rid: data.rid, status, deadline, updatedAt: nowTs });
@@ -538,7 +539,7 @@ async function nmLinkOrder(db, ctx, data = {}) {
     const at = ts(nowMs(ctx));
     const early = toMs(c.info.orderTime) < toMs(reward.requestedAt);
     const list = (reward.candidates || []).filter(x => x.orderNo !== data.orderNo);
-    list.push({ ...c.info, source: "manual", ignoreDeadline, allowEarly: early, foundAt: at, by: staff.email });
+    list.push({ ...c.info, source: "manual", ignoreDeadline, allowEarly: early, foundAt: at });
     const status = S.REVIEW;
     tx.update(ref, { candidates: list, status, updatedAt: at });
     if (reward.status !== status) {
@@ -585,13 +586,44 @@ async function nmConfirmOrder(db, ctx, data = {}) {
     if (!c.ok) fail("nm/order-" + c.reason, orderReasonText(c.reason));
     const at = ts(nowMs(ctx));
     tx.set(db.collection(COL.locks).doc(data.orderNo), { rid: data.rid, uid: reward.uid, at });
-    const linkedOrder = { ...c.info, by: staff.email, at, ignoreDeadline: cand.ignoreDeadline === true, allowEarly: cand.allowEarly === true };
-    tx.update(ref, { status: S.READY, linkedOrder, orderIssue: null, reviewedBy: staff.email, reviewedAt: at, updatedAt: at });
+    const linkedOrder = { ...c.info, at, ignoreDeadline: cand.ignoreDeadline === true, allowEarly: cand.allowEarly === true };
+    tx.update(ref, { status: S.READY, linkedOrder, orderIssue: null, reviewedAt: at, updatedAt: at });
     syncRedemption(tx, red, S.READY);
     syncMember(tx, db, reward.uid, { rid: data.rid, status: S.READY, deadline: reward.deadline, updatedAt: at });
     addHistory(tx, db, data.rid, { action: "confirmOrder", from: reward.status, to: S.READY, by: staff.email,
       detail: { orderNo: data.orderNo }, txId: data.txId }, ctx);
     return { rid: data.rid, status: S.READY };
+  });
+}
+
+// 打包员放不了迎新礼（打包清单按「放不了」）：状态不变，标记 orderIssue 等管理员处理
+//   data: { rid, orderNo, reason, txId }；店主、新会员奖励权限或打包清单权限
+async function nmPackSkip(db, ctx, data = {}) {
+  return adminAction(db, ctx, "packSkip", data, { pack: true }, async (tx, staff) => {
+    const reason = cleanReason(data.reason);
+    const { ref, reward } = await loadReward(tx, db, data.rid);
+    if (![S.READY, S.PACKED].includes(reward.status)) fail("nm/bad-move", "这份迎新礼不是待打包");
+    const lo = reward.linkedOrder && reward.linkedOrder.orderNo;
+    if (!lo || lo !== String(data.orderNo || "")) fail("nm/other-order", `迎新礼要放进订单 ${lo || "-"} 的包裹`);
+    const at = ts(nowMs(ctx));
+    tx.update(ref, { orderIssue: { type: "not-packed", orderNo: lo, reason, at }, updatedAt: at });   // 打包员是谁：看操作历史
+    addHistory(tx, db, data.rid, { action: "packSkip", from: reward.status, to: reward.status, by: staff.email, reason,
+      detail: { orderNo: lo }, txId: data.txId }, ctx);
+    return { rid: data.rid, status: reward.status };
+  });
+}
+
+// 清除订单问题标记（例如已补放进去、另外安排好了）
+async function nmClearIssue(db, ctx, data = {}) {
+  return adminAction(db, ctx, "clearIssue", data, {}, async (tx, staff) => {
+    const reason = cleanReason(data.reason);
+    const { ref, reward } = await loadReward(tx, db, data.rid);
+    if (!reward.orderIssue) fail("nm/no-issue", "这笔没有需要处理的标记");
+    const at = ts(nowMs(ctx));
+    tx.update(ref, { orderIssue: null, updatedAt: at });
+    addHistory(tx, db, data.rid, { action: "clearIssue", from: reward.status, to: reward.status, by: staff.email, reason,
+      detail: { issue: reward.orderIssue.type || "" }, txId: data.txId }, ctx);
+    return { rid: data.rid, status: reward.status };
   });
 }
 
@@ -604,7 +636,7 @@ async function nmUnlinkOrder(db, ctx, data = {}) {
     const at = ts(nowMs(ctx));
     if (reward.linkedOrder) tx.delete(db.collection(COL.locks).doc(reward.linkedOrder.orderNo));
     const keep = (reward.candidates || []).filter(x => !reward.linkedOrder || x.orderNo !== reward.linkedOrder.orderNo || data.keepCandidate === true);
-    tx.update(ref, { status: S.REVIEW, linkedOrder: null, candidates: keep, updatedAt: at });
+    tx.update(ref, { status: S.REVIEW, linkedOrder: null, candidates: keep, orderIssue: null, updatedAt: at });
     syncMember(tx, db, reward.uid, { rid: data.rid, status: S.REVIEW, deadline: reward.deadline, updatedAt: at });
     syncRedemption(tx, red, S.REVIEW);
     addHistory(tx, db, data.rid, { action: "unlinkOrder", from: reward.status, to: S.REVIEW, by: staff.email, reason,
@@ -622,7 +654,7 @@ function simpleMove(name, from, to, { needReason = false, field, pack = false } 
     assertMove(from, to);
     const at = ts(nowMs(ctx));
     const upd = { status: to, updatedAt: at };
-    if (field) { upd[field + "By"] = staff.email; upd[field + "At"] = at; }
+    if (field) upd[field + "At"] = at;   // 谁打包 / 寄出：看操作历史
     tx.update(ref, upd);
     // 寄出：和一般随单寄送的兑换一样，写入「随订单寄出 + 订单编号」，会员的兑换记录才看得到
     const redExtra = to === S.SHIPPED ? {
@@ -688,7 +720,7 @@ async function nmCancelReward(db, ctx, data = {}) {
     return finishCancel(tx, db, ctx, { ...o, to, by: staff.email, reason, refundLedgerId, restoreStock: true,
       redExtra: r.status === S.APPROVAL
         ? { status: "rejected", decidedAt: at }
-        : { adminCancelled: true, cancelledAt: at, cancelNote: reason, cancelledBy: staff.email },
+        : { adminCancelled: true, cancelledAt: at, cancelNote: reason },
       action: wantRefund ? "cancelRefund" : "cancel", txId: data.txId });
   });
 }
@@ -714,7 +746,7 @@ async function nmRefund(db, ctx, data = {}) {
     if (lSnap.exists || r.refund) fail("nm/already-refunded", "已经退过分");
     writeRefund(tx, db, ctx, r, data.rid, lRef.id);
     const at = ts(nowMs(ctx));
-    tx.update(o.ref, { status: S.REFUNDED, refund: { ledgerId: lRef.id, by: staff.email, at }, updatedAt: at });
+    tx.update(o.ref, { status: S.REFUNDED, refund: { ledgerId: lRef.id, at }, updatedAt: at });
     syncMember(tx, db, r.uid, { rid: data.rid, status: S.REFUNDED, deadline: r.deadline, updatedAt: at });
     addHistory(tx, db, data.rid, { action: "refund", from: r.status, to: S.REFUNDED, by: staff.email, reason,
       detail: { refund: r.cost }, txId: data.txId }, ctx);
@@ -818,7 +850,8 @@ async function nmSaveSettings(db, ctx, data = {}) {
     const snap = await tx.get(ref);
     const cur = snap.exists ? snap.data() : {};
     const at = ts(nowMs(ctx));
-    const upd = { ...clean, version: (cur.version || 0) + 1, updatedAt: at, updatedBy: staff.email };
+    // settings/newMember 是公开读取的：不写修改人 email（后台「最近动态」有记录）
+    const upd = { ...clean, version: (cur.version || 0) + 1, updatedAt: at, updatedBy: FieldValue.delete() };
     // 第一次启用时写入活动开始时间（之后不再改，旧会员不会因为重新启用变成新会员）
     if (clean.active === true && !cur.startAt) upd.startAt = at;
     tx.set(ref, upd, { merge: true });
@@ -955,8 +988,37 @@ async function onRedemptionWritten(db, redId, before, after, ctx = {}) {
   return markReceived(db, after, redId, ctx);
 }
 
+// 清掉会员读得到的资料里，以前写进去的员工 email（只清有「@」的；谁做的仍在操作历史 / 打包记录）
+const EMAIL_FIELDS = ["reviewedBy", "packedBy", "shippedBy", "cancelledBy"];
+const hasAt = v => typeof v === "string" && v.includes("@");
+async function scrubEmails(db) {
+  let n = 0;
+  for (const d of (await db.collection(COL.rewards).get()).docs) {
+    const r = d.data() || {}, upd = {};
+    EMAIL_FIELDS.forEach(f => { if (hasAt(r[f])) upd[f] = f === "cancelledBy" ? "staff" : FieldValue.delete(); });
+    if (r.linkedOrder && hasAt(r.linkedOrder.by)) upd["linkedOrder.by"] = FieldValue.delete();
+    if (r.orderIssue && hasAt(r.orderIssue.by)) upd["orderIssue.by"] = FieldValue.delete();
+    if (r.refund && hasAt(r.refund.by)) upd["refund.by"] = FieldValue.delete();
+    if (Array.isArray(r.candidates) && r.candidates.some(c => c && hasAt(c.by)))
+      upd.candidates = r.candidates.map(c => { if (!c || !hasAt(c.by)) return c; const { by, ...rest } = c; return rest; });
+    if (Object.keys(upd).length) { await d.ref.update(upd); n++; }
+  }
+  for (const d of (await db.collection("redemptions").where("newMember", "==", true).get()).docs) {
+    const x = d.data() || {}, upd = {};
+    if (hasAt(x.cancelledBy)) upd.cancelledBy = FieldValue.delete();
+    if (x.shipping && hasAt(x.shipping.by)) upd["shipping.by"] = FieldValue.delete();
+    if (Object.keys(upd).length) { await d.ref.update(upd); n++; }
+  }
+  const sRef = db.doc(SETTINGS_PATH.join("/"));
+  const s = await sRef.get();
+  if (s.exists && hasAt(s.data().updatedBy)) { await sRef.update({ updatedBy: FieldValue.delete() }); n++; }
+  return n;
+}
+
 async function daily(db, ctx = {}) {
   const at = nowMs(ctx);
+  let scrubbed = 0;
+  try { scrubbed = await scrubEmails(db); } catch (e) { console.warn("scrubEmails", e.message); }
   const sSnap = await db.doc(SETTINGS_PATH.join("/")).get();
   const settings = mergeSettings(sSnap.exists ? sSnap.data() : null);
   const snap = await db.collection(COL.rewards).where("status", "==", S.ORDER).get();
@@ -1000,7 +1062,7 @@ async function daily(db, ctx = {}) {
       if (res.completed) completed++;
     }
   }
-  return { expired, reminded, completed };
+  return { expired, reminded, completed, scrubbed };
 }
 
 function orderReasonText(reason) {
@@ -1023,7 +1085,7 @@ module.exports = {
   ensureEligibility,
   nmEnsure, nmDismissPopup, nmRedeem, nmMemberCancel,
   nmApprove, nmReject, nmLinkOrder, nmRejectCandidate, nmConfirmOrder, nmUnlinkOrder,
-  nmPacked, nmUnpack, nmShipped, nmExtend, nmCancelReward, nmRefund, nmNote, nmException,
+  nmPacked, nmUnpack, nmShipped, nmPackSkip, nmClearIssue, nmExtend, nmCancelReward, nmRefund, nmNote, nmException,
   nmSaveSettings,
-  onOrderWritten, onRedemptionWritten, daily,
+  onOrderWritten, onRedemptionWritten, daily, scrubEmails,
 };

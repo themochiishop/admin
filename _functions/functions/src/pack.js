@@ -48,6 +48,26 @@ async function requirePack(db, ctx) {
   return { owner: false, email };
 }
 
+// 员工显示名称（店主 = 店主）
+async function staffName(db, who) {
+  if (who.owner) return "店主";
+  const ss = await db.collection("staff").doc(who.email).get();
+  return String((ss.exists && ss.data().name) || "").slice(0, 60);
+}
+// 📒 打包记录（后台「打包管理」看）：90 天后由 Firestore TTL（expireAt）自动删除
+const LOG_KEEP = 90 * DAY;
+const cleanTitle = t => String(t || "").slice(0, 80);
+async function writeLog(db, ctx, who, byName, rec) {
+  const at = nowMs(ctx);
+  await db.collection("packLog").doc().set({ ...rec, by: who.email, byName, at: tsOf(at), expireAt: tsOf(at + LOG_KEEP) });
+}
+function logOut(id, d) {
+  return { id, action: d.action || "", orderNo: d.orderNo || "", username: d.username || "", by: d.by || "", byName: d.byName || "", at: toMs(d.at),
+    sent: d.sent || [], skipped: d.skipped || [], trackingNo: d.trackingNo || "", carrierName: d.carrierName || "", photo: !!d.photo,
+    reason: d.reason || "", returned: d.returned ?? null, welcome: d.welcome ?? null, total: d.total ?? null, packed: d.packed ?? null,
+    remaining: d.remaining || [], label: d.label || "", note: d.note || "", redo: d.redo === true };
+}
+
 async function byStatus(db, col, statuses) {
   const out = [];
   for (const s of statuses) (await db.collection(col).where("status", "==", s).get()).docs.forEach(d => out.push({ id: d.id, ...d.data() }));
@@ -60,8 +80,11 @@ async function loadPending(db) {
   const by = new Map();
   const add = (key, it) => { if (!by.has(key)) by.set(key, []); by.get(key).push(it); };
   const names = new Map();      // uid → 会员名字（迎新礼、兑换才有）
+  const sinceOf = new Map();    // kind:id → 开始等的时间
+  const since = (k, x) => sinceOf.set(k + ":" + x.id, toMs(x.approvedAt || x.claimedAt || x.createdAt || x.requestedAt || x.at || x.updatedAt));
 
   for (const g of await byStatus(db, "smallGifts", ["pending"])) {
+    since("sg", g);
     const key = g.uid ? "u:" + g.uid : userKey(g.platform, g.username);
     add(key, { kind: "sg", id: g.id, icon: "🎁", title: `小礼物「${g.giftName || ""}」`, uname: g.username || "",
       sub: `${g.label || ""}抽奖没得奖${g.deadline ? " · 期限到 " + fmt(toMs(g.deadline)) : ""}`, prep: g.giftName || "小礼物", can: true,
@@ -71,6 +94,7 @@ async function loadPending(db) {
   }
   for (const w of await byStatus(db, "prizeWins", ["unclaimed", "claimed", "approved"])) {
     if (!w.uid || w.delivery === "separate") continue;
+    since("prize", w);
     const base = { kind: "prize", id: w.id, icon: "🏆", title: `中奖奖品「${w.prizeName || ""}」`, prep: w.prizeName || "中奖奖品",
       src: `${w.drawMonth || ""} 抽奖`.trim() };
     const en = { title: `Prize "${w.prizeName || ""}"`, prep: w.prizeName || "Prize", src: `${w.drawMonth || ""} draw`.trim() };
@@ -83,6 +107,7 @@ async function loadPending(db) {
     if (!r.uid || r.kind !== "gift" || r.newMember === true) continue;
     const dlv = r.delivery || (r.address ? "separate" : "withOrder");
     if (dlv !== "withOrder") continue;
+    since("red", r);
     if (r.ciGift === true) {
       add("u:" + r.uid, { kind: "red", id: r.id, icon: "🏅", title: `签到达人礼物「${r.rewardName || ""}」`, prep: r.rewardName || "签到达人礼物",
         sub: r.status === "pending" ? (r.backorder ? "补货中 · 勾选会扣 1 个库存" : "勾选 = 批准 + 已寄出") : "待发货", can: true, src: "签到达人",
@@ -100,17 +125,26 @@ async function loadPending(db) {
   for (const n of await byStatus(db, "newMemberRewards", ["ready_to_pack", "packed", "pending_order", "order_review"])) {
     if (!n.uid) continue;
     if (n.memberName) names.set(n.uid, n.memberName);
+    since("nm", n);
     const g = (n.gift && n.gift.name) || "迎新礼";
     const gEn = (n.gift && n.gift.name) || "Welcome gift";
     const base = { kind: "nm", id: n.id, icon: "🎉", title: `迎新礼「${g}」`, prep: "迎新礼 " + g, src: "新会员奖励" };
     const en = { title: `Welcome gift "${gEn}"`, prep: "Welcome gift " + gEn, src: "New member reward" };
     const lo = (n.linkedOrder && n.linkedOrder.orderNo) || "";
-    if (n.status === "ready_to_pack" || n.status === "packed")
+    const iss = n.orderIssue && n.orderIssue.type === "not-packed" ? n.orderIssue : null;
+    if (iss && (n.status === "ready_to_pack" || n.status === "packed"))
+      // 打包时没放入：每一包都只提醒，等管理员处理（不能自己改放别包）
+      add("u:" + n.uid, { ...base, sub: `原本要放 #${lo}，打包时没放入${iss.reason ? "（" + iss.reason + "）" : ""}`, can: false, issueOrder: lo,
+        warn: `那包没放入，等管理员到「新会员奖励」处理`,
+        en: { ...en, sub: `was for #${lo}, not packed${iss.reason ? " (" + iss.reason + ")" : ""}`, warn: "Not packed in that parcel — wait for admin (New member rewards)" } });
+    else if (n.status === "ready_to_pack" || n.status === "packed")
       add("u:" + n.uid, { ...base, sub: `订单 ${lo || "-"}${n.test ? " · 🧪 测试" : ""}`, can: true, linkedOrder: lo,
         en: { ...en, sub: `order ${lo || "-"}${n.test ? " · 🧪 test" : ""}` } });
     else if (n.status === "order_review") add("u:" + n.uid, { ...base, sub: "有候选订单待确认", can: false, warn: "要先到「新会员奖励」确认订单",
       en: { ...en, sub: "candidate order to confirm", warn: "Confirm the order in New member rewards first" } });
   }
+  // 每一样加上「从什么时候开始等」（后台「待寄礼物」用）
+  for (const list of by.values()) for (const it of list) if (it.since == null) it.since = sinceOf.get(it.kind + ":" + it.id) || null;
   return { by, names };
 }
 function fmt(ms) { if (!ms) return ""; const d = new Date(ms + 8 * 3600000); return `${d.getUTCDate()}/${d.getUTCMonth() + 1}`; }
@@ -150,7 +184,8 @@ async function memberAccounts(db, uids) {
 function packedOf(d) {
   if (!d) return null;
   const s = d.ship || {};
-  return { at: toMs(d.at), by: d.by || "", carrierName: s.carrierName || "", trackingNo: s.trackingNo || "", trackingUrl: s.trackingUrl || "", photo: !!s.photo };
+  return { at: toMs(d.at), by: d.by || "", byName: d.byName || "", carrierName: s.carrierName || "", trackingNo: s.trackingNo || "", trackingUrl: s.trackingUrl || "", photo: !!s.photo,
+    sent: Array.isArray(d.sent) ? d.sent : [], skipped: Array.isArray(d.skipped) ? d.skipped : [] };
 }
 // 撤销记录（packUndone）→ 回传给页面的摘要
 function undoneOf(d) { return d ? { at: toMs(d.at), by: d.by || "", byName: d.byName || "", returned: d.returned || 0 } : null; }
@@ -201,7 +236,8 @@ async function pkBatch(db, ctx, data = {}) {
     return { key, uid: isU ? key.slice(2) : null, member: isU ? (pend.names.get(key.slice(2)) || "会员") : null,
       username: uname, platform: isU ? "" : key.split(":")[1], accounts: isU ? (accts.get(key.slice(2)) || []) : [], items };
   });
-  return { ok: true, now, from, to, parcels: out, pending };
+  const sh = await db.collection("packShift").doc(shiftId(from, to)).get();
+  return { ok: true, now, from, to, parcels: out, pending, shift: sh.exists ? shiftOut(sh.data()) : null };
 }
 
 // ---------- 🏆 领奖追踪（每月抽奖得主，资料在另一个 RTDB）：哪些其实是会员 / 已经在会员系统处理 ----------
@@ -274,7 +310,8 @@ async function pkLookup(db, ctx, data = {}) {
 //   data: { orderNo, items: [{ kind, id }], txId }   每样各自处理，一样失败不影响其他
 async function shipOne(db, ctx, who, orderNo, it, txBase, ship = {}) {
   const at = tsOf(nowMs(ctx));
-  const shipping = { withOrder: true, orderNo, by: who.email, via: "pack", ...ship };
+  // 会员读得到寄送资料：不写打包员 email（谁打包的看打包记录）
+  const shipping = { withOrder: true, orderNo, via: "pack", ...ship };
   if (it.kind === "sg") {
     const ref = db.collection("smallGifts").doc(it.id);
     return db.runTransaction(async tx => {
@@ -283,7 +320,7 @@ async function shipOne(db, ctx, who, orderNo, it, txBase, ship = {}) {
       const g = s.data();
       if (g.status === "sent") return "already";
       if (g.status !== "pending") fail("pk/state", "小礼物已作废");
-      tx.update(ref, { status: "sent", sentAt: at, sentOrder: orderNo, sentBy: who.email, shipping });
+      tx.update(ref, { status: "sent", sentAt: at, sentOrder: orderNo, shipping });
       return "ok";
     });
   }
@@ -377,7 +414,26 @@ async function pkShip(db, ctx, data = {}) {
   const ship = cleanShip(data.ship);
   const items = Array.isArray(data.items) ? data.items.slice(0, 30) : [];
   const txBase = /^[A-Za-z0-9_-]{8,64}$/.test(data.txId || "") ? data.txId : fail("pk/bad-txid", "缺少事务 ID", "invalid-argument");
+  // 没放的东西（取消勾选）：只记录；迎新礼没放要原因，并标记给管理员处理
+  const skipped = (Array.isArray(data.skipped) ? data.skipped.slice(0, 30) : [])
+    .filter(x => x && typeof x.id === "string" && /^[A-Za-z0-9_-]{1,260}$/.test(x.id))
+    .map(x => ({ kind: String(x.kind || "").slice(0, 10), id: x.id, title: cleanTitle(x.title) }));
+  const nmSkip = data.nmSkip && typeof data.nmSkip.id === "string" ? data.nmSkip : null;
   const results = [];
+  if (nmSkip) {
+    const reason = String(nmSkip.reason || "").trim().slice(0, 300);
+    if (!reason) fail("pk/reason", "迎新礼放不了，要选原因", "invalid-argument");
+    try {
+      await core.nmPackSkip(db, ctx, { rid: nmSkip.id, orderNo, reason, txId: `${txBase.slice(0, 24)}_k_${nmSkip.id}`.slice(0, 64) });
+      results.push({ kind: "nm", id: nmSkip.id, ok: true, result: "skipped" });
+      const k = skipped.find(x => x.id === nmSkip.id);
+      if (k) k.reason = reason; else skipped.push({ kind: "nm", id: nmSkip.id, title: cleanTitle(nmSkip.title) || "迎新礼", reason });
+    } catch (e) {
+      // 迎新礼的「放不了」没记下来：整包不保存，免得包裹已打包、迎新礼却还绑着这张单
+      fail("pk/nm-skip", "迎新礼「放不了」没有记下来：" + (e instanceof NmError ? e.message : "系统错误") + "。请再按一次保存，或先找管理员。");
+    }
+  }
+  if (skipped.some(x => x.kind === "nm" && !x.reason)) fail("pk/reason", "迎新礼放不了，要选原因", "invalid-argument");
   for (const it of items) {
     if (!it || !["sg", "prize", "red", "nm"].includes(it.kind) || typeof it.id !== "string" || !/^[A-Za-z0-9_-]{1,260}$/.test(it.id)) {
       results.push({ id: it && it.id, ok: false, error: "资料不正确" }); continue;
@@ -387,12 +443,20 @@ async function pkShip(db, ctx, data = {}) {
   }
   // 打包完成：连「不用放」的包裹也记下运单号、照片（打包的证据）
   if (data.done === true) {
-    const rec = { at: tsOf(nowMs(ctx)), by: who.email };
+    const byName = await staffName(db, who);
+    const titleOf = id => { const x = items.find(i => i && i.id === id); return cleanTitle(x && x.title) || id; };
+    const sent = results.filter(x => x.ok && x.result !== "skipped").map(x => ({ kind: x.kind, id: x.id, title: titleOf(x.id) }));
+    const prev = await db.collection("packDone").doc(orderNo).get();
+    const pd = prev.exists ? (prev.data() || {}) : null;
+    const rec = { at: tsOf(nowMs(ctx)), by: who.email, byName, sent: pd && Array.isArray(pd.sent) ? [...pd.sent, ...sent.filter(x => !pd.sent.some(y => y.id === x.id))] : sent, skipped };
     const s = {};
     if (ship.trackingNo) Object.assign(s, { carrier: ship.carrier || "", carrierName: ship.carrierName || "", trackingNo: ship.trackingNo, trackingUrl: ship.trackingUrl || "" });
     if (ship.photos && ship.photos[0]) s.photo = ship.photos[0];
     if (Object.keys(s).length) rec.ship = s;
     await db.collection("packDone").doc(orderNo).set(rec);
+    const os = await db.collection("orders").doc(orderNo).get();
+    await writeLog(db, ctx, who, byName, { action: "pack", redo: !!pd, orderNo, username: os.exists ? String(os.data().username || "") : "",
+      sent, skipped, trackingNo: s.trackingNo || "", carrierName: s.carrierName || "", photo: !!s.photo });
   }
   return { ok: results.every(r => r.ok), results };
 }
@@ -452,15 +516,62 @@ async function pkUndo(db, ctx, data = {}) {
   const pd = prev.exists ? (prev.data() || {}) : {};
   const os = await db.collection("orders").doc(orderNo).get();
   const uname = os.exists ? String(os.data().username || "") : "";
-  const ss = who.owner ? null : await db.collection("staff").doc(who.email).get();
-  const byName = String((ss && ss.exists && ss.data().name) || "").slice(0, 60);
+  const byName = await staffName(db, who);
   const returned = r.smallGifts + r.prizes + r.redemptions;
   await db.collection("packUndone").doc(orderNo).set({ at, by: who.email, byName, returned,
     prevAt: pd.at || null, prevBy: pd.by || "", prevTrackingNo: (pd.ship && pd.ship.trackingNo) || "" });
   await db.collection("adminLog").doc().set({ type: "pack", by: who.email, byName, at, link: "../pack/",
     text: `撤销了打包 ${orderNo}${uname ? `（${uname}）` : ""}：退回 ${returned} 样${r.welcome ? `；迎新礼 ${r.welcome} 份要到「新会员奖励」处理` : ""}`.slice(0, 300) });
+  await writeLog(db, ctx, who, byName, { action: "undo", orderNo, username: uname, returned, welcome: r.welcome,
+    trackingNo: (pd.ship && pd.ship.trackingNo) || "" });
   await db.collection("packDone").doc(orderNo).delete();
   return { ok: true, ...r };
 }
 
-module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo };
+// ---------- 🏁 收工：这一场（时间段）打包结束 ----------
+//   data: { from, to, label?, reasons: { orderNo: 原因 }, note? }   没打包的包裹每一包都要有原因
+const shiftId = (from, to) => `${from}_${to}`;
+async function pkFinish(db, ctx, data = {}) {
+  const who = await requirePack(db, ctx);
+  const b = await pkBatch(db, ctx, { from: data.from, to: data.to });
+  const reasons = data.reasons && typeof data.reasons === "object" ? data.reasons : {};
+  const left = b.parcels.filter(p => !p.done);
+  const remaining = left.map(p => ({ orderNo: p.orderNo, username: p.username || "", items: p.items.filter(i => i.can).length,
+    reason: String(reasons[p.orderNo] || "").trim().slice(0, 120) }));
+  const miss = remaining.filter(x => !x.reason).map(x => x.orderNo);
+  if (miss.length) fail("pk/finish-reason", `还有 ${miss.length} 包没打包，每一包都要选原因`, "failed-precondition");
+  const byName = await staffName(db, who);
+  const label = String(data.label || "").slice(0, 60), note = String(data.note || "").trim().slice(0, 300);
+  const rec = { from: tsOf(b.from), to: tsOf(b.to), label, finishedAt: tsOf(nowMs(ctx)), by: who.email, byName,
+    total: b.parcels.length, packed: b.parcels.length - left.length, remaining, note };
+  await db.collection("packShift").doc(shiftId(b.from, b.to)).set(rec);
+  await writeLog(db, ctx, who, byName, { action: "finish", label, total: rec.total, packed: rec.packed, remaining, note });
+  return { ok: true, shift: shiftOut(rec) };
+}
+function shiftOut(d) {
+  return d ? { from: toMs(d.from), to: toMs(d.to), label: d.label || "", finishedAt: toMs(d.finishedAt), by: d.by || "", byName: d.byName || "",
+    total: d.total || 0, packed: d.packed || 0, remaining: d.remaining || [], note: d.note || "" } : null;
+}
+
+// ---------- 📒 打包记录（后台）：时间段内的全部操作，或某一包的时间轴 ----------
+//   data: { from, to } 或 { orderNo }
+async function pkLog(db, ctx, data = {}) {
+  await requirePack(db, ctx);
+  const no = normNo(data.orderNo);
+  if (no) {
+    if (!noOk(no)) fail("pk/bad-order", "订单号不正确", "invalid-argument");
+    const snap = await db.collection("packLog").where("orderNo", "==", no).get();
+    const list = snap.docs.map(d => logOut(d.id, d.data() || {})).sort((a, b) => (b.at || 0) - (a.at || 0));
+    return { ok: true, list };
+  }
+  let from = Number(data.from), to = Number(data.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !(to > from) || to - from > MAX_RANGE) fail("pk/bad-range", "时间段不正确（最长 62 天）", "invalid-argument");
+  const snap = await db.collection("packLog").where("at", ">=", tsOf(from)).get();
+  const list = snap.docs.map(d => logOut(d.id, d.data() || {})).filter(x => (x.at || 0) <= to)
+    .sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 1500);
+  const sh = await db.collection("packShift").where("finishedAt", ">=", tsOf(from - 7 * DAY)).get();
+  const shifts = sh.docs.map(d => shiftOut(d.data() || {})).sort((a, b) => (b.from || 0) - (a.from || 0));
+  return { ok: true, list, shifts };
+}
+
+module.exports = { BATCH_DAYS, platformOf, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog };
