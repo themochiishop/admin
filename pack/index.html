@@ -698,8 +698,10 @@
     const pinned = i => i.kind === "nm" && !!i.linkedOrder;
     // 单号：后四位加大加粗（打包时一般对最后四位）
     const noHtml = no => { const s = String(no || ""); return esc(s.slice(0, -4)) + `<b class="t4">${esc(s.slice(-4))}</b>`; };
-    const freeLeft = p => canLeft(p).filter(i => !pinned(i));
-    const pinLeft = p => canLeft(p).filter(pinned);
+    // ✋ 店主指定订单的小礼物也固定在那一包（显示照一般东西，不用迎新礼的「放不了」）
+    const pinnedAny = i => pinned(i) || (i.kind === "sg" && !!i.linkedOrder);
+    const freeLeft = p => canLeft(p).filter(i => !pinnedAny(i));
+    const pinLeft = p => canLeft(p).filter(pinnedAny);
     const warns = p => left(p).filter(i => !i.can);
     const buyerKey = p => p.uid ? "u:" + p.uid : `p:${p.platform}:${String(p.username || "").toLowerCase()}`;
     // 同一位会员今天有几包：东西显示在第一包（还没放好的、下单最早的）
@@ -771,7 +773,7 @@
     function renderPrep(todayItems) {
       // 全部待寄：每位顾客还没寄的（可以寄的；含今天没单的）
       const allItems = [];
-      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: pinned(i) ? { ...w, order: "", warn: t("nmOrder", i.linkedOrder) } : w })); });
+      pending.forEach(g => { const w = whoOfPending(g); g.items.filter(i => i.can).forEach(i => allItems.push({ i, who: pinnedAny(i) ? { ...w, order: "", warn: t("nmOrder", i.linkedOrder) } : w })); });
       claimItems.forEach(c => {
         if (c.uid) {   // 会员得主（会员系统还没有这笔奖品）
           const g = pending.find(x => x.uid === c.uid);
