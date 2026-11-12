@@ -739,13 +739,21 @@ async function pkCardStats(db, ctx, data = {}) {
     if (byBuyer.has(key)) { byBuyer.get(key).cards++; continue; }
     byBuyer.set(key, { key, platform, username, orderNo: c.no, orderTime: toMs(o.orderTime), at: toMs(c.at) || 0, level: c.newCardLevel || null, cards: 1 });
   }
+  // 📥 补登（2026-11-12）：打包时没勾新人卡（或打包清单上线前放的），店主在统计页补登 → 当作放了卡
+  const addedSnap = await db.collection("cardMarks").where("added", "==", true).get();
+  for (const d of addedSnap.docs) {
+    const x = d.data() || {}, at = toMs(x.placedAt);
+    if (byBuyer.has(d.id) || at == null || at < from || at > to) continue;
+    const [platform, ...rest] = d.id.split("_");
+    byBuyer.set(d.id, { key: d.id, platform, username: rest.join("_"), orderNo: x.orderNo || "", orderTime: null, at, level: "added", cards: 1 });
+  }
   const rows = [];
   for (const b of byBuyer.values()) {
     const row = { ...b, joined: false, joinedAt: null, member: null, uid: null, mark: null, auto: null, manual: null, reorders: 0, lastReorder: null };
     const bs = await db.collection("bindings").doc(b.key).get();
     if (bs.exists && bs.data().uid) {
       const x = bs.data(), jt = toMs(x.createdAt);
-      if (jt == null || jt >= b.at - DAY) {
+      if (jt == null || jt >= b.at - DAY || b.level === "added") {
         Object.assign(row, { joined: true, joinedAt: jt, uid: x.uid });
         const ms = await db.collection("members").doc(x.uid).get();
         const m = ms.exists ? (ms.data() || {}) : {};
@@ -771,15 +779,66 @@ async function pkCardStats(db, ctx, data = {}) {
   const cardJoin = R.filter(r => r.mark === "card");
   const days = cardJoin.filter(r => r.joinedAt).map(r => (r.joinedAt - r.at) / DAY);
   const lv = l => { const g = R.filter(r => (r.level || "none") === l); return { cards: g.length, card: g.filter(r => r.mark === "card").length, joined: g.filter(r => r.joined).length }; };
+  // 📥 已加入、但没有放卡记录：这段时间绑定的会员（统计页才算，总览不用）
+  let extra = [];
+  if (data.summary !== true) {
+    const bs = await db.collection("bindings").where("createdAt", ">=", tsOf(from)).get();
+    const seen = new Set(byBuyer.keys());
+    for (const d of bs.docs) {
+      const x = d.data() || {}, jt = toMs(x.createdAt);
+      if (!x.uid || seen.has(d.id) || jt == null || jt > to || !cardKeyOk(d.id)) continue;
+      seen.add(d.id);
+      const mk = await db.collection("cardMarks").doc(d.id).get();
+      if (mk.exists) continue;   // 标过「不是」（或已补登在别的时间段）
+      const ms = await db.collection("members").doc(x.uid).get();
+      const m = ms.exists ? (ms.data() || {}) : {};
+      if (m.internal && m.internal.on) continue;   // 内部会员不算
+      const js = m.joinSource;
+      const last = await lastOrderBefore(db, x.platform, x.username, jt);
+      extra.push({ key: d.id, platform: x.platform, username: x.username, uid: x.uid, member: String(m.name || "").slice(0, 60) || "会员", joinedAt: jt,
+        auto: js && js.type === "card" && (toMs(js.seenAt) || 0) <= jt + DAY ? "card" : null, lastOrder: last ? { orderNo: last.no, at: last.packedAt || last.orderTime } : null });
+    }
+    extra.sort((a, b) => b.joinedAt - a.joinedAt);
+  }
   const summary = {
     cards: R.length, joined: cnt(r => r.joined), card: cardJoin.length, unsure: cnt(r => r.mark === "unsure"), other: cnt(r => r.mark === "other"),
     rate: pct(cardJoin.length, R.length), joinRate: pct(cnt(r => r.joined), R.length),
     avgDays: days.length ? Math.round(days.reduce((a, b) => a + Math.max(0, b), 0) / days.length * 10) / 10 : null,
     reordered: cnt(r => r.reorders > 0), reorderRate: pct(cnt(r => r.reorders > 0), R.length),
-    byLevel: { must: lv("must"), suggest: lv("suggest"), none: lv("none") }, skippedMembers: rows.length - R.length,
+    byLevel: { must: lv("must"), suggest: lv("suggest"), none: lv("none"), added: lv("added") }, skippedMembers: rows.length - R.length, extra: extra.length,
   };
   rows.sort((a, b) => b.at - a.at);
-  return { ok: true, from, to, summary, rows: data.summary === true ? [] : rows };
+  return { ok: true, from, to, summary, rows: data.summary === true ? [] : rows, extra };
+}
+// 加入会员之前最后一张订单（没取消），和它的打包时间
+async function lastOrderBefore(db, platform, username, beforeMs) {
+  const os = (await db.collection("orders").where("username", "==", username).get()).docs
+    .map(d => ({ no: d.id, ...d.data() }))
+    .filter(x => (x.platform || platformOf(x.no)) === platform && x.status !== "refunded" && (toMs(x.orderTime) || 0) <= beforeMs + DAY)
+    .sort((a, b) => (toMs(b.orderTime) || 0) - (toMs(a.orderTime) || 0));
+  if (!os.length) return null;
+  const pd = await db.collection("packDone").doc(os[0].no).get();
+  return { no: os[0].no, orderTime: toMs(os[0].orderTime), packedAt: pd.exists ? toMs(pd.data().at) : null };
+}
+// 📥 补登新人卡：data { key, add: true | false }（false = 取消补登）
+//   放卡时间 = 加入前最后一张订单的打包时间（没有就用下单时间，再没有就用加入前一天）
+async function pkCardAdd(db, ctx, data = {}) {
+  const who = await requirePack(db, ctx);
+  if (!cardKeyOk(data.key)) fail("pk/bad-key", "买家不正确", "invalid-argument");
+  const ref = db.collection("cardMarks").doc(data.key);
+  if (data.add === false) {
+    const cur = await ref.get();
+    if (cur.exists && cur.data().added === true) await ref.delete();
+    return { ok: true };
+  }
+  const bs = await db.collection("bindings").doc(data.key).get();
+  if (!bs.exists || !bs.data().uid) fail("pk/not-member", "这个账号还没有绑定会员", "failed-precondition");
+  const b = bs.data(), jt = toMs(b.createdAt) || nowMs(ctx);
+  const last = await lastOrderBefore(db, b.platform, b.username, jt);
+  const placedAt = last ? (last.packedAt || last.orderTime || jt - DAY) : jt - DAY;
+  await ref.set({ mark: "card", added: true, placedAt: tsOf(placedAt), orderNo: last ? last.no : "",
+    by: who.email, byName: await staffName(db, who), at: tsOf(nowMs(ctx)) });
+  return { ok: true, placedAt, orderNo: last ? last.no : "" };
 }
 // 店主手动标记：data { key: "shopee_用户名", mark: "card" | "other" | "unsure" | "" }（"" = 清掉，回到系统判断）
 async function pkCardMark(db, ctx, data = {}) {
@@ -788,9 +847,11 @@ async function pkCardMark(db, ctx, data = {}) {
   const mark = data.mark || "";
   if (!["card", "other", "unsure", ""].includes(mark)) fail("pk/bad-mark", "标记不正确", "invalid-argument");
   const ref = db.collection("cardMarks").doc(data.key);
-  if (!mark) { await ref.delete(); return { ok: true }; }
-  await ref.set({ mark, by: who.email, byName: await staffName(db, who), at: tsOf(nowMs(ctx)) });
+  const cur = await ref.get();
+  const added = cur.exists && cur.data().added === true;   // 📥 补登的：保留补登资料，只改标记
+  if (!mark && !added) { await ref.delete(); return { ok: true }; }
+  await ref.set({ mark: mark || "card", by: who.email, byName: await staffName(db, who), at: tsOf(nowMs(ctx)) }, { merge: true });
   return { ok: true };
 }
 
-module.exports = { BATCH_DAYS, platformOf, newCardOf, pkCardStats, pkCardMark, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog, pkSession, pkStart };
+module.exports = { BATCH_DAYS, platformOf, newCardOf, pkCardStats, pkCardMark, pkCardAdd, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog, pkSession, pkStart };
