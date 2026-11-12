@@ -22,7 +22,7 @@
 //   pointsMeta/state：每日检查做到哪里（积分过期、消费滑出）
 "use strict";
 
-const { Timestamp } = require("firebase-admin/firestore");
+const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const { NmError, OWNER_EMAIL } = require("./core");
 
 const DAY = 86400000;
@@ -577,7 +577,12 @@ async function ptDisable(db, ctx) {
   requireOwner(ctx);
   await db.collection("pointsMeta").doc("engine").set({ on: false, offAt: ts(nowMs(ctx)), by: ctx.email }, { merge: true });
   onCache = null;
-  return { ok: true };
+  // 关掉后 members.bal 不会再更新 → 删掉，后台、会员网页自动改回读积分记录（不会显示旧的余额）
+  let cleared = 0;
+  for (const d of (await db.collection("members").get()).docs) {
+    if (d.data().bal) { await d.ref.update({ bal: FieldValue.delete() }); cleared++; }
+  }
+  return { ok: true, cleared };
 }
 // 全量核对（取代 Apps Script 的「🔧 全量核对」的积分部分）：每张单、每位会员都重算并写入（开关要开着）
 async function ptFullCheck(db, ctx) {
