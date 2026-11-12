@@ -336,6 +336,7 @@ export const NAV_GROUPS = [
   { label: "待处理", items: [
     ["redeem", "redeem.html", "🔔", "兑换审核", "redeemBadge"],
     ["prizes", "prizes.html", "🏆", "中奖奖品", "prizeBadge"],
+    ["gifts", "gifts.html", "🎁", "指定小礼物"],
     ["feedReview", "feed.html#pending", "⏳", "Feed 审核", "feedBadge"],
     ["pack", "pack.html", "🧺", "打包管理"],
   ] },
@@ -571,6 +572,7 @@ const NAV_PERM = {
   home: "member.content", feed: "feed", announce: "member.content", storehelp: "member.content",
   notify: "member.settings", tiers: "member.settings", couponCheck: "member.shop",
   shipping: ["member.redeem", "member.prizes"],
+  gifts: ["member.prizes", "draw.claims"],   // 🎁 指定小礼物：中奖奖品或领奖追踪权限
   pack: "pack",
   faq: "member", changelog: "_owner",   // _owner：没有人会被勾这一项 = 只有店主
 };
