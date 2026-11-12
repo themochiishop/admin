@@ -594,8 +594,79 @@ async function pkUndo(db, ctx, data = {}) {
 // ---------- 🏁 收工：这一场（时间段）打包结束 ----------
 //   data: { from, to, label?, reasons: { orderNo: 原因 }, note? }   没打包的包裹每一包都要有原因
 const shiftId = (from, to) => `${from}_${to}`;
+
+// ---------- ⏱ 开工 / 收工（2026-11-12）：每个人各自记一段 packSessions ----------
+//   { by, byName, active, startedAt, endedAt, endKind: "finish" | "auto"（下次开工时自动结束 = 忘了收工）,
+//     label, from, to, start: { parcels, need, prep }, packed, items }
+//   打包员网页：没开工不能扫描 / 保存（网页锁）；没打包的原因只有最后一个收工的人要填（packShift）
+const SESS = "packSessions";
+const cleanNum = v => Math.max(0, Math.min(100000, Math.floor(Number(v) || 0)));
+function sessOut(id, d) {
+  return d ? { id, by: d.by || "", byName: d.byName || "", active: d.active === true, startedAt: toMs(d.startedAt), endedAt: toMs(d.endedAt),
+    endKind: d.endKind || "", label: d.label || "", start: d.start || {}, packed: d.packed ?? null, items: d.items ?? null } : null;
+}
+async function activeSessions(db) {
+  const snap = await db.collection(SESS).where("active", "==", true).get();
+  return snap.docs.map(d => ({ id: d.id, ref: d.ref, d: d.data() || {} }));
+}
+// 这一段时间里这个人打包了几包、放了几样（撤销的不算）
+async function sessionStats(db, email, fromMs, toMs_) {
+  const snap = await db.collection("packLog").where("at", ">=", tsOf(fromMs)).get();
+  const last = new Map();
+  snap.docs.map(d => d.data() || {}).filter(x => x.by === email && (toMs(x.at) || 0) <= toMs_ && (x.action === "pack" || x.action === "undo"))
+    .sort((a, b) => toMs(a.at) - toMs(b.at)).forEach(x => last.set(x.orderNo, x));
+  let packed = 0, items = 0;
+  last.forEach(x => { if (x.action === "pack") { packed++; items += (x.sent || []).length; } });
+  return { packed, items };
+}
+async function closeSession(db, ctx, ses, kind) {
+  const now = nowMs(ctx);
+  const st = await sessionStats(db, ses.d.by, toMs(ses.d.startedAt) || now, now);
+  const upd = { active: false, endedAt: tsOf(now), endKind: kind, packed: st.packed, items: st.items };
+  await ses.ref.update(upd);
+  return sessOut(ses.id, { ...ses.d, ...upd });
+}
+// 打开打包页：我有没有开工中的、还有谁在打包、上一次收工
+async function pkSession(db, ctx) {
+  const who = await requirePack(db, ctx);
+  const act = await activeSessions(db);
+  const mine = act.find(x => x.d.by === who.email);
+  const recent = await db.collection(SESS).where("startedAt", ">=", tsOf(nowMs(ctx) - 7 * DAY)).get();
+  const last = recent.docs.map(d => sessOut(d.id, d.data() || {})).filter(x => !x.active && x.endedAt)
+    .sort((a, b) => b.endedAt - a.endedAt)[0] || null;
+  return { ok: true, now: nowMs(ctx), mine: mine ? sessOut(mine.id, mine.d) : null,
+    others: act.filter(x => x.d.by !== who.email).map(x => ({ byName: x.d.byName || "", by: x.d.by || "", startedAt: toMs(x.d.startedAt) })), last };
+}
+// ▶ 开工：上一次忘了收工的先自动结束
+async function pkStart(db, ctx, data = {}) {
+  const who = await requirePack(db, ctx);
+  const byName = await staffName(db, who);
+  for (const x of (await activeSessions(db)).filter(x => x.d.by === who.email)) await closeSession(db, ctx, x, "auto");
+  const now = nowMs(ctx), st = data.stats || {};
+  const rec = { by: who.email, byName, active: true, startedAt: tsOf(now), endedAt: null, endKind: "",
+    label: String(data.label || "").slice(0, 60),
+    from: Number.isFinite(Number(data.from)) ? tsOf(Number(data.from)) : null, to: Number.isFinite(Number(data.to)) ? tsOf(Number(data.to)) : null,
+    start: { parcels: cleanNum(st.parcels), need: cleanNum(st.need), prep: cleanNum(st.prep) }, packed: null, items: null };
+  const ref = db.collection(SESS).doc();
+  await ref.set(rec);
+  await writeLog(db, ctx, who, byName, { action: "start", label: rec.label, total: rec.start.parcels });
+  return { ok: true, session: sessOut(ref.id, rec) };
+}
+
+// 🏁 收工：结束自己这一段；还有别人在打包 → 不用填没打包的原因（最后一个收工的人才填，记下这一场）
 async function pkFinish(db, ctx, data = {}) {
   const who = await requirePack(db, ctx);
+  const act = await activeSessions(db);
+  const mine = act.filter(x => x.d.by === who.email);
+  const others = act.filter(x => x.d.by !== who.email);
+  const byName = await staffName(db, who);
+  const label = String(data.label || "").slice(0, 60), note = String(data.note || "").trim().slice(0, 300);
+  if (others.length && data.sessionOnly === true) {
+    let session = null;
+    for (const x of mine) session = await closeSession(db, ctx, x, "finish");
+    await writeLog(db, ctx, who, byName, { action: "finish", label, note, packed: session ? session.packed : null });
+    return { ok: true, shift: null, session, others: others.length };
+  }
   const b = await pkBatch(db, ctx, { from: data.from, to: data.to });
   const reasons = data.reasons && typeof data.reasons === "object" ? data.reasons : {};
   const left = b.parcels.filter(p => !p.done);
@@ -603,13 +674,13 @@ async function pkFinish(db, ctx, data = {}) {
     reason: String(reasons[p.orderNo] || "").trim().slice(0, 120) }));
   const miss = remaining.filter(x => !x.reason).map(x => x.orderNo);
   if (miss.length) fail("pk/finish-reason", `还有 ${miss.length} 包没打包，每一包都要选原因`, "failed-precondition");
-  const byName = await staffName(db, who);
-  const label = String(data.label || "").slice(0, 60), note = String(data.note || "").trim().slice(0, 300);
   const rec = { from: tsOf(b.from), to: tsOf(b.to), label, finishedAt: tsOf(nowMs(ctx)), by: who.email, byName,
     total: b.parcels.length, packed: b.parcels.length - left.length, remaining, note };
   await db.collection("packShift").doc(shiftId(b.from, b.to)).set(rec);
+  let session = null;
+  for (const x of mine) session = await closeSession(db, ctx, x, "finish");
   await writeLog(db, ctx, who, byName, { action: "finish", label, total: rec.total, packed: rec.packed, remaining, note });
-  return { ok: true, shift: shiftOut(rec) };
+  return { ok: true, shift: shiftOut(rec), session, others: others.length };
 }
 function shiftOut(d) {
   return d ? { from: toMs(d.from), to: toMs(d.to), label: d.label || "", finishedAt: toMs(d.finishedAt), by: d.by || "", byName: d.byName || "",
@@ -634,7 +705,11 @@ async function pkLog(db, ctx, data = {}) {
     .sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 1500);
   const sh = await db.collection("packShift").where("finishedAt", ">=", tsOf(from - 7 * DAY)).get();
   const shifts = sh.docs.map(d => shiftOut(d.data() || {})).sort((a, b) => (b.from || 0) - (a.from || 0));
-  return { ok: true, list, shifts };
+  // ⏱ 开工 / 收工记录
+  const ss = await db.collection(SESS).where("startedAt", ">=", tsOf(from - DAY)).get();
+  const sessions = ss.docs.map(d => sessOut(d.id, d.data() || {})).filter(x => (x.startedAt || 0) <= to)
+    .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0)).slice(0, 300);
+  return { ok: true, list, shifts, sessions };
 }
 
 // ---------- 📊 新人卡效果统计（后台「打包管理 › 🆕 新人卡」、总览）----------
@@ -718,4 +793,4 @@ async function pkCardMark(db, ctx, data = {}) {
   return { ok: true };
 }
 
-module.exports = { BATCH_DAYS, platformOf, newCardOf, pkCardStats, pkCardMark, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog };
+module.exports = { BATCH_DAYS, platformOf, newCardOf, pkCardStats, pkCardMark, loadPending, pkBatch, pkLookup, pkClaims, pkPhoto, pkShip, pkDone, pkUndo, pkFinish, pkLog, pkSession, pkStart };
