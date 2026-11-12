@@ -41,7 +41,7 @@ function fakeDb(seed = {}) {
     const r = { kind: "doc", path, id: path.split("/").pop(),
       collection: sub => coll(path + "/" + sub),
       async get() { return snapOf(r); },
-      async set(p) { data.set(path, p); },
+      async set(p, o) { data.set(path, o && o.merge ? { ...(data.get(path) || {}), ...p } : p); },
       async update(p) { if (!data.has(path)) throw new Error("NOT_FOUND " + path); data.set(path, applyPatch(data.get(path), p)); },
       async delete() { data.delete(path); } };
     return r;
@@ -585,4 +585,63 @@ test("⏱ 开工 / 收工：各自记录；忘了收工下次开工自动结束�
   const lg = await pk.pkLog(db, OWNER, { from: T0 - DAY, to: T0 + 2 * DAY });
   assert.equal(lg.sessions.length, 4);
   assert.ok(lg.list.some(x => x.action === "start"));
+});
+
+test("📥 新人卡补登：已加入但没有放卡记录 → 列出、补登算进统计、不是 → 拿掉", async () => {
+  const db = fakeDb({
+    ...SEED(),
+    "members/uA": { name: "Amy" }, "members/uB": { name: "Ben", joinSource: { type: "card", seenAt: ts(T0 - 3 * DAY), at: ts(T0 - 3 * DAY) } },
+    "members/uI": { name: "Ivy", internal: { on: true } },
+    // amy：有放卡记录（不会出现在补登）
+    "orders/2611050000801": { username: "amy", platform: "shopee", orderTime: ts(T0 - 6 * DAY) },
+    "packDone/2611050000801": { at: ts(T0 - 5 * DAY), by: "pack@x.com", newCard: true, newCardLevel: "must" },
+    "bindings/shopee_amy": { uid: "uA", platform: "shopee", username: "amy", createdAt: ts(T0 - 4 * DAY) },
+    // ben：打包时没勾新人卡，扫码加入（系统认出）
+    "orders/2611050000802": { username: "ben", platform: "shopee", orderTime: ts(T0 - 6 * DAY) },
+    "packDone/2611050000802": { at: ts(T0 - 5 * DAY), by: "pack@x.com" },
+    "bindings/shopee_ben": { uid: "uB", platform: "shopee", username: "ben", createdAt: ts(T0 - 3 * DAY) },
+    // cat：没打包记录（订单时间当放卡时间）
+    "members/uC": { name: "Cat" },
+    "orders/2611050000803": { username: "cat", platform: "shopee", orderTime: ts(T0 - 7 * DAY) },
+    "bindings/shopee_cat": { uid: "uC", platform: "shopee", username: "cat", createdAt: ts(T0 - 2 * DAY) },
+    // ivy：内部会员不列
+    "bindings/shopee_ivy": { uid: "uI", platform: "shopee", username: "ivy", createdAt: ts(T0 - 2 * DAY) },
+  });
+  const R = () => pk.pkCardStats(db, PACKER, { from: T0 - 30 * DAY, to: T0 });
+  let r = await R();
+  const keys = r.extra.map(x => x.key);
+  assert.ok(keys.includes("shopee_ben") && keys.includes("shopee_cat"));
+  assert.ok(!keys.includes("shopee_amy") && !keys.includes("shopee_ivy"));
+  const ben = r.extra.find(x => x.key === "shopee_ben");
+  assert.equal(ben.auto, "card"); assert.equal(ben.lastOrder.orderNo, "2611050000802"); assert.equal(ben.lastOrder.at, T0 - 5 * DAY);
+  assert.equal(r.summary.cards, 1); assert.equal(r.summary.extra, keys.length);
+  await rejects(pk.pkCardAdd(db, NOBODY, { key: "shopee_ben" }), "pk/no-perm");
+  await rejects(pk.pkCardAdd(db, OWNER, { key: "shopee_nobody" }), "pk/not-member");
+  // 补登 ben、cat；cat 没打包记录 → 用下单时间
+  assert.equal((await pk.pkCardAdd(db, OWNER, { key: "shopee_ben" })).placedAt, T0 - 5 * DAY);
+  assert.equal((await pk.pkCardAdd(db, OWNER, { key: "shopee_cat" })).placedAt, T0 - 7 * DAY);
+  r = await R();
+  assert.equal(r.summary.cards, 3); assert.equal(r.summary.card, 2);   // amy ❓（没来源），ben 🆕，cat 🆕
+  assert.deepEqual(r.summary.byLevel.added, { cards: 2, card: 2, joined: 2 });
+  assert.ok(!r.extra.some(x => x.key === "shopee_ben"));
+  const benRow = r.rows.find(x => x.key === "shopee_ben");
+  assert.equal(benRow.level, "added"); assert.equal(benRow.joined, true); assert.equal(benRow.mark, "card");
+  // 补登的改标记（❓）→ 补登资料保留；清掉标记 → 回到 🆕
+  await pk.pkCardMark(db, OWNER, { key: "shopee_cat", mark: "unsure" });
+  assert.equal(db.data.get("cardMarks/shopee_cat").added, true);
+  assert.equal((await R()).summary.card, 1);
+  await pk.pkCardMark(db, OWNER, { key: "shopee_cat", mark: "" });
+  assert.equal(db.data.get("cardMarks/shopee_cat").mark, "card");
+  // 取消补登 → 回到「没有放卡记录」
+  await pk.pkCardAdd(db, OWNER, { key: "shopee_cat", add: false });
+  r = await R();
+  assert.equal(r.summary.cards, 2); assert.ok(r.extra.some(x => x.key === "shopee_cat"));
+  // 「不是」= 标 👥 → 从补登清单拿掉，也不算进统计
+  await pk.pkCardMark(db, OWNER, { key: "shopee_cat", mark: "other" });
+  r = await R();
+  assert.ok(!r.extra.some(x => x.key === "shopee_cat")); assert.equal(r.summary.cards, 2);
+  // 放卡时间不在这段时间 → 补登的不算
+  assert.equal((await pk.pkCardStats(db, PACKER, { from: T0 - 4 * DAY, to: T0 })).summary.cards, 0);
+  // 总览（summary）不算补登清单
+  assert.deepEqual((await pk.pkCardStats(db, PACKER, { from: T0 - 30 * DAY, to: T0, summary: true })).extra, []);
 });
