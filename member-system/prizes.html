@@ -102,6 +102,10 @@
     .bundle-box { background: var(--blue-bg); border: 1px solid var(--blue-bg2); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: .86rem; }
     .bundle-box ul { list-style: none; margin: 6px 0 0; }
     .bundle-box li { padding: 3px 0; }
+    .mg-list { margin: 8px 0 0; display: grid; gap: 6px; }
+    .mg-list label { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 400; cursor: pointer; }
+    .mg-list label.off { opacity: .5; cursor: not-allowed; }
+    .mg-list code { font-size: .78rem; }
     .merge-box { background: var(--amber-bg); border: 1px solid var(--amber-bg2); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: .86rem; color: var(--ink); }
     .merge-box label { margin: 8px 0 0; }
     @media (max-width: 899px) {
@@ -892,6 +896,63 @@
         <div class="actions" style="margin-top:6px"><button class="btn btn-ghost" data-act="unbundle">✂️ 这件拆开，单独处理</button></div></div>`;
     }
 
+    // ---------- 🔗 已存在的奖品之后再合并（新增） ----------
+    // 可以合并的：同一位会员、还没寄出（待领取 / 待审核 / 待发货）、还不在同一组
+    const mergeCandidates = w => !w.uid || !OPEN_ST.includes(w.status) ? []
+      : openWinsOf(w.uid).filter(x => x.id !== w.id && !(w.bundleId && x.bundleId === w.bundleId));
+    function mergeBtnHTML(w) {
+      return mergeCandidates(w).length ? `<button class="btn btn-ghost" data-act="merge">🔗 合并寄出</button>` : "";
+    }
+    function mergeBoxHTML(w) {
+      const list = mergeCandidates(w);
+      return `<div class="addr-edit inline-box" data-mode="merge">
+          <b>🔗 跟这位会员其他没寄出的奖品合并</b>
+          <div class="meta" style="margin:4px 0 0">合并后发货、运单号、审核会一起处理；之后可以用「✂️ 这件拆开」分开。配送方式不同的要先改成一样（目前这件：${DLV[w.delivery] || "-"}）</div>
+          <div class="mg-list">${list.map(x => {
+            const same = x.delivery === w.delivery;
+            return `<label class="${same ? "" : "off"}"><input type="checkbox" data-mg="${esc(x.id)}" ${same ? "checked" : "disabled"}>
+              <span>${esc(x.prizeName)} · ${ST[x.status] || x.status} · ${DLV[x.delivery] || ""}${x.drawMonth ? " · " + esc(x.drawMonth) : ""}
+              <code>${redeemCode(x.id)}</code>${x.bundleId ? " · 🔗 已在另一组（整组一起并进来）" : ""}${same ? "" : " · ⚠️ 配送方式不同，先改成一样"}</span></label>`;
+          }).join("")}</div>
+          <div class="actions" style="margin-top:8px">
+            <button class="btn btn-primary" data-act="doMerge">🔗 确认合并</button>
+            <button class="btn btn-ghost" data-act="closeBox">取消</button>
+          </div></div>`;
+    }
+    async function doMerge(w, item) {
+      const ids = [...item.querySelectorAll("[data-mg]:checked")].map(x => x.dataset.mg);
+      const picked = mergeCandidates(w).filter(x => ids.includes(x.id) && x.delivery === w.delivery);
+      if (!picked.length) { alert("请至少勾选一件"); return; }
+      // 组编号：这件已有的组 → 勾选里已有的组 → 这件的 ID
+      const target = w.bundleId || (picked.find(x => x.bundleId) || {}).bundleId || w.id;
+      const set = new Map([[w.id, w]]);
+      picked.forEach(x => {
+        set.set(x.id, x);
+        // 勾选的这件如果在别的组里，那一组还没寄出的也一起并进来，免得原本的组被拆散
+        if (x.bundleId && x.bundleId !== target)
+          wins.filter(y => y.bundleId === x.bundleId && y.uid === w.uid && OPEN_ST.includes(y.status) && y.delivery === w.delivery)
+            .forEach(y => set.set(y.id, y));
+      });
+      // 这件原本所在组的其他成员 bundleId 不变，本来就是 target
+      const todo = [...set.values()].filter(x => x.bundleId !== target);
+      if (!todo.length) { alert("这几件已经在同一组了"); return; }
+      const total = new Set([...wins.filter(x => x.bundleId === target && x.status !== "cancelled").map(x => x.id), ...set.keys()]).size;
+      if (!await previewSend({ title: "合并寄出", to: (members[w.uid] || {}).name || "会员", okText: "🔗 确认合并",
+        rows: [...[...set.values()].map((x, i) => [i ? "" : "奖品", `${x.prizeName} · ${redeemCode(x.id)}`]), ["合并后", `这一组共 ${total} 件`]]
+          .map(([k, v]) => [k || "　", v]) })) return;
+      item.querySelectorAll("button").forEach(b => b.disabled = true);
+      try {
+        const b = writeBatch(db);
+        todo.forEach(x => b.update(doc(db, "prizeWins", x.id), { bundleId: target }));
+        await b.commit();
+        logAdmin("prize", `合并寄出：${(members[w.uid] || {}).name || "会员"} 的 ${total} 件奖品（${[...set.values()].map(x => redeemCode(x.id)).join("、")}）`, "prizes.html");
+        await loadWins();
+      } catch (err) {
+        alert("合并失败：" + err.message);
+        item.querySelectorAll("button").forEach(b => b.disabled = false);
+      }
+    }
+
     // ---------- ✏️ 行内小框：修改留言 / 改配送方式（连留言一起）/ 取消原因 ----------
     function noteEditHTML(w, mode) {
       const cur = noteFromDoc(w.note, w.noteI18n);
@@ -966,7 +1027,8 @@
         let body = "";
         const cancelBtn = `<button class="btn btn-bad" data-act="cancel">取消这个中奖</button>`;
         const switchBtn = `<button class="btn btn-ghost" data-act="switchDlv">🔁 改为${DLV[w.delivery === "separate" ? "withOrder" : "separate"]}</button>`
-          + `<button class="btn btn-ghost" data-act="editNote">✏️ 修改留言</button>`;
+          + `<button class="btn btn-ghost" data-act="editNote">✏️ 修改留言</button>`
+          + mergeBtnHTML(w);
         if (w.status === "unclaimed") {
           const end = deadlineOf(w);
           const left = end ? Math.ceil((end - Date.now()) / 86400000) : null;
@@ -1059,6 +1121,8 @@
       if (act === "editNote") { openBox(item, e.target, noteEditHTML(w, "note")); return; }
       if (act === "switchDlv") { openBox(item, e.target, noteEditHTML(w, "dlv")); return; }
       if (act === "cancel") { openBox(item, e.target, cancelBoxHTML(w)); return; }
+      if (act === "merge") { openBox(item, e.target, mergeBoxHTML(w)); return; }
+      if (act === "doMerge") { await doMerge(w, item); return; }
       const box = item.querySelector(".ship-form");
       const ship = box ? readShip(box) : null;
       let upd = null;
