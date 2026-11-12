@@ -85,8 +85,18 @@ async function loadPending(db) {
   const since = (k, x) => sinceOf.set(k + ":" + x.id, toMs(x.approvedAt || x.claimedAt || x.createdAt || x.requestedAt || x.at || x.updatedAt));
 
   for (const g of await byStatus(db, "smallGifts", ["pending"])) {
+    if (g.delivery === "separate") continue;   // ✋ 手动指定、单独寄出的不随单
     since("sg", g);
     const key = g.uid ? "u:" + g.uid : userKey(g.platform, g.username);
+    if (g.manual === true) {   // ✋ 店主指定的小礼物（可以指定随哪一张单）
+      const note = g.note || "", noteEn = (g.noteI18n && g.noteI18n.en) || note;
+      add(key, { kind: "sg", id: g.id, icon: "🎁", title: `小礼物「${g.giftName || ""}」`, uname: g.username || "", can: true,
+        linkedOrder: g.linkedOrder || "", prep: g.giftName || "小礼物", src: "店主指定",
+        sub: `✋ 店主指定${g.linkedOrder ? " · 放进 #" + g.linkedOrder : ""}${note ? " · " + note : ""}${g.deadline ? " · 期限到 " + fmt(toMs(g.deadline)) : ""}`,
+        en: { title: `Small gift "${g.giftName || ""}"`, prep: g.giftName || "Small gift", src: "From the shop",
+          sub: `✋ From the shop${g.linkedOrder ? " · goes in #" + g.linkedOrder : ""}${noteEn ? " · " + noteEn : ""}${g.deadline ? " · until " + fmt(toMs(g.deadline)) : ""}` } });
+      continue;
+    }
     add(key, { kind: "sg", id: g.id, icon: "🎁", title: `小礼物「${g.giftName || ""}」`, uname: g.username || "",
       sub: `${g.label || ""}抽奖没得奖${g.deadline ? " · 期限到 " + fmt(toMs(g.deadline)) : ""}`, prep: g.giftName || "小礼物", can: true,
       src: g.label ? `${g.label}抽奖` : "抽奖",
@@ -232,7 +242,7 @@ function parcel(o, buyer, pend, names, done, undone = null) {
   const items = [], seen = new Set();
   keys.forEach(k => (pend.by.get(k) || []).forEach(it => {
     // 迎新礼已确认关联订单：只出现在那一包，扫这位会员的其他包裹不会出现
-    if (it.kind === "nm" && it.linkedOrder && it.linkedOrder !== o.no) return;
+    if ((it.kind === "nm" || it.kind === "sg") && it.linkedOrder && it.linkedOrder !== o.no) return;   // ✋ 指定订单的小礼物也一样
     if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
   }));
   return {
@@ -365,6 +375,8 @@ async function shipOne(db, ctx, who, orderNo, it, txBase, ship = {}) {
       const g = s.data();
       if (g.status === "sent") return "already";
       if (g.status !== "pending") fail("pk/state", "小礼物已作废");
+      if (g.delivery === "separate") fail("pk/state", "这份小礼物要单独寄出，不随单");
+      if (g.linkedOrder && g.linkedOrder !== orderNo) fail("pk/wrong-order", `这份小礼物指定放进 #${g.linkedOrder}`);
       tx.update(ref, { status: "sent", sentAt: at, sentOrder: orderNo, shipping });
       return "ok";
     });

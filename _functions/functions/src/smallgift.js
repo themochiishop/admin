@@ -11,6 +11,12 @@
 // 认人：先看 orders/{单号}.uid，再看 bindings/{platform}_{username}.uid；认不到 = 非会员（每日检查会再试）
 // 期限：看「下单时间」——期限内有新订单就不作废，等打包时寄出
 // 只有后端写这两个集合（规则 write: false）；会员只能读自己的
+//
+// ✋ 手动指定的小礼物（2026-11-12）：smallGifts/manual__{时间}_{随机}
+//   { batchId: "manual", manual: true, uid, name, giftName, note, noteI18n, delivery: "withOrder"|"separate",
+//     linkedOrder|null（指定随哪一张单寄）, deadline|null, noExpire, status, createdAt, … }
+//   寄出：随单 → sentOrder + shipping { withOrder, orderNo, via }；单独寄 → shipping { carrier…, trackingNo, trackingUrl, address, via: "admin" }
+//   每日检查：单独寄的不会过期；过期通知用「店主送的」文字（不是抽奖）
 "use strict";
 
 const { Timestamp } = require("firebase-admin/firestore");
@@ -55,8 +61,10 @@ async function requirePerm(db, ctx, need) {
   const p = d && d.active !== false && d.perms ? d.perms : null;
   const claims = !!p && (p.draw === true || (p.draw && typeof p.draw === "object" && p.draw.claims === true));
   const pack = !!p && p.pack === true;
-  const ok = need.some(n => (n === "claims" && claims) || (n === "pack" && pack));
-  if (!ok) fail("sg/no-perm", "没有「领奖追踪」或「打包清单」权限", "permission-denied");
+  // 会员系统「🏆 中奖奖品」权限（手动指定小礼物用）
+  const prizes = !!p && (p.member === true || (p.member && typeof p.member === "object" && p.member.prizes === true));
+  const ok = need.some(n => (n === "claims" && claims) || (n === "pack" && pack) || (n === "prizes" && prizes));
+  if (!ok) fail("sg/no-perm", "没有「领奖追踪」「中奖奖品」或「打包清单」权限", "permission-denied");
   return { owner: false, email };
 }
 
@@ -84,6 +92,16 @@ const MSG = {
     en: ["⏰ Your little gift expires soon", "Place an order before {d} and \"{g}\" will ship with it."],
     ms: ["⏰ Hadiah kecil anda hampir tamat", "Buat pesanan sebelum {d} dan \"{g}\" akan dihantar bersamanya."],
   },
+  manual: {
+    zh: ["🎁 你有一份小礼物", "「{g}」{w}{n}"],
+    en: ["🎁 A little gift for you", "\"{g}\" {w}{n}"],
+    ms: ["🎁 Hadiah kecil untuk anda", "\"{g}\" {w}{n}"],
+  },
+  mExpired: {
+    zh: ["小礼物已作废", "「{g}」超过下单期限（{d}），已经作废。"],
+    en: ["Little gift expired", "\"{g}\" passed its order deadline ({d}) and has expired."],
+    ms: ["Hadiah kecil tamat", "\"{g}\" melepasi tarikh akhir pesanan ({d}) dan telah tamat."],
+  },
   expired: {
     zh: ["小礼物已作废", "「{g}」超过下单期限（{d}），已经作废。下次抽奖再接再厉！"],
     en: ["Little gift expired", "\"{g}\" passed its order deadline ({d}) and has expired. Better luck next draw!"],
@@ -91,8 +109,9 @@ const MSG = {
   },
 };
 function message(uid, kind, vars, at) {
-  const fill = s => String(s).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
-  const one = l => ({ title: fill(MSG[kind][l][0]), body: fill(MSG[kind][l][1]) });
+  // vars 的值可以是 { zh, en, ms }（每种语言不同的文字）
+  const fill = (s, l) => String(s).replace(/\{(\w+)\}/g, (_, k) => { const v = vars[k]; return v && typeof v === "object" ? (v[l] ?? v.zh ?? "") : (v ?? ""); });
+  const one = l => ({ title: fill(MSG[kind][l][0], l), body: fill(MSG[kind][l][1], l) });
   const zh = one("zh");
   return { uids: [uid], title: zh.title, body: zh.body, link: "rewards.html",
     i18n: { zh, en: one("en"), ms: one("ms") }, by: "system", createdAt: tsOf(at) };
@@ -181,7 +200,7 @@ async function loadGift(db, id) {
   return { ref, g: snap.data() };
 }
 async function sgVoid(db, ctx, data) {
-  const who = await requirePerm(db, ctx, ["claims", "pack"]);
+  const who = await requirePerm(db, ctx, ["claims", "pack", "prizes"]);
   const { ref, g } = await loadGift(db, data.id);
   if (g.status !== "pending") fail("sg/state", "只有待寄的小礼物可以作废");
   const note = String(data.note || "").trim().slice(0, 100);
@@ -190,7 +209,7 @@ async function sgVoid(db, ctx, data) {
 }
 // 恢复：作废 → 待寄；之后每日检查不再自动作废（noExpire）
 async function sgRestore(db, ctx, data) {
-  const who = await requirePerm(db, ctx, ["claims", "pack"]);
+  const who = await requirePerm(db, ctx, ["claims", "pack", "prizes"]);
   const { ref, g } = await loadGift(db, data.id);
   if (g.status !== "voided") fail("sg/state", "只有已作废的小礼物可以恢复");
   await ref.update({ status: "pending", voidReason: null, voidNote: null, voidedAt: null, voidedBy: null,
@@ -209,10 +228,10 @@ async function sgShip(db, ctx, data) {
   return { ok: true };
 }
 async function sgUnship(db, ctx, data) {
-  await requirePerm(db, ctx, ["pack", "claims"]);
+  await requirePerm(db, ctx, ["pack", "claims", "prizes"]);
   const { ref, g } = await loadGift(db, data.id);
   if (g.status !== "sent") fail("sg/state", "这份小礼物还没寄出");
-  await ref.update({ status: "pending", sentAt: null, sentOrder: null, sentBy: null });
+  await ref.update({ status: "pending", sentAt: null, sentOrder: null, sentBy: null, shipping: null });
   return { ok: true };
 }
 
@@ -246,14 +265,14 @@ async function sgDaily(db, ctx = {}) {
         if (b.uid) { g.uid = b.uid; await d.ref.update({ uid: b.uid }); r.linked++; break; }
       }
     }
-    if (g.orderFound === true || g.noExpire === true) continue;
+    if (g.orderFound === true || g.noExpire === true || g.delivery === "separate") continue;
     const created = toMs(g.createdAt), deadline = toMs(g.deadline);
     if (!created || !deadline) continue;
     const found = await hasNewOrder(db, g, created, deadline);
     if (found) { await d.ref.update({ orderFound: true, foundOrder: found }); r.hasOrder++; continue; }
     if (now > deadline) {
       await d.ref.update({ status: "voided", voidReason: "expired", voidedAt: tsOf(now), voidedBy: "system" });
-      if (g.uid) await db.collection("memberMessages").add(message(g.uid, "expired", { g: g.giftName, d: fmtMy(deadline) }, now));
+      if (g.uid) await db.collection("memberMessages").add(message(g.uid, g.manual ? "mExpired" : "expired", { g: g.giftName, d: fmtMy(deadline) }, now));
       r.expired++;
     } else if (g.uid && deadline - now <= REMIND_DAYS * DAY && !g.remindedAt) {
       await db.collection("memberMessages").add(message(g.uid, "remind", { g: g.giftName, d: fmtMy(deadline) }, now));
@@ -264,7 +283,151 @@ async function sgDaily(db, ctx = {}) {
   return r;
 }
 
+// ---------- ✋ 手动指定的小礼物（会员系统后台「🎁 指定小礼物」）----------
+//   权限：店主，或有「领奖追踪」「中奖奖品」权限的人
+const MAX_MANUAL = 200;   // 一次最多送几位会员
+const DLV = ["withOrder", "separate"];
+function cleanNote(data) {
+  const note = String(data.note || "").trim().slice(0, 200);
+  const i = data.noteI18n && typeof data.noteI18n === "object" ? data.noteI18n : {};
+  const noteI18n = {};
+  ["zh", "en", "ms"].forEach(l => { const v = String(i[l] || "").trim().slice(0, 200); if (v) noteI18n[l] = v; });
+  return { note, noteI18n: Object.keys(noteI18n).length ? noteI18n : null };
+}
+// 这张单是不是这位会员的（订单上的 uid，或买家账号绑定了这位会员），而且没取消
+async function orderOfMember(db, uid, orderNo) {
+  const no = normNo(orderNo);
+  if (!/^[A-Z0-9]{6,40}$/.test(no)) fail("sg/bad-order", "订单号不正确", "invalid-argument");
+  const s = await db.collection("orders").doc(no).get();
+  if (!s.exists) fail("sg/no-order", `找不到订单 ${no}（订单要先录入、同步）`, "not-found");
+  const o = s.data() || {};
+  if (o.status === "refunded") fail("sg/order-refunded", `订单 ${no} 已取消 / 退货`);
+  let owner = o.uid || null;
+  if (!owner && o.platform && o.username) {
+    const b = await db.collection("bindings").doc(`${o.platform}_${o.username}`).get();
+    owner = b.exists ? b.data().uid || null : null;
+  }
+  if (owner !== uid) fail("sg/not-member-order", `订单 ${no} 不是这位会员的`);
+  return no;
+}
+// 新增：data { uids: [...], giftName, note?, noteI18n?, days?（没给 = 30 天；null / 0 = 不过期）, delivery?, linkedOrder?（只限一位会员）, notify? }
+async function sgManualCreate(db, ctx, data = {}) {
+  await requirePerm(db, ctx, ["claims", "prizes"]);
+  const now = nowMs(ctx);
+  const uids = [...new Set((Array.isArray(data.uids) ? data.uids : []).map(String))].filter(u => /^[A-Za-z0-9_-]{1,128}$/.test(u));
+  if (!uids.length) fail("sg/no-member", "请选择会员", "invalid-argument");
+  if (uids.length > MAX_MANUAL) fail("sg/too-many", `一次最多 ${MAX_MANUAL} 位会员`, "invalid-argument");
+  const giftName = String(data.giftName || "").trim();
+  if (!giftName || giftName.length > 60) fail("sg/bad-name", "请填写礼物名称（60 字以内）", "invalid-argument");
+  const delivery = data.delivery == null ? "withOrder" : DLV.includes(data.delivery) ? data.delivery : fail("sg/bad-dlv", "配送方式不正确", "invalid-argument");
+  // 期限：没给 = 预设 30 天；0 或 null = 不过期；单独寄出不会过期
+  const noExp = data.days === 0 || data.days === null || delivery === "separate";
+  const days = noExp ? null : data.days === undefined ? DEFAULT_DAYS : Number(data.days);
+  if (!noExp && (!Number.isInteger(days) || days < 1 || days > 365)) fail("sg/bad-days", "期限要 1–365 天", "invalid-argument");
+  const { note, noteI18n } = cleanNote(data);
+  let linkedOrder = null;
+  if (data.linkedOrder) {
+    if (uids.length !== 1) fail("sg/link-one", "指定订单只限一位会员", "invalid-argument");
+    if (delivery !== "withOrder") fail("sg/link-dlv", "单独寄出不用指定订单", "invalid-argument");
+    linkedOrder = await orderOfMember(db, uids[0], data.linkedOrder);
+  }
+  const names = new Map();
+  for (const uid of uids) {
+    const m = await db.collection("members").doc(uid).get();
+    if (!m.exists) fail("sg/no-member", "找不到会员 " + uid, "not-found");
+    names.set(uid, String((m.data() || {}).name || "").slice(0, 60));
+  }
+  const deadline = noExp ? null : now + days * DAY;
+  const ids = [];
+  for (const uid of uids) {
+    const id = `manual__${now}_${Math.random().toString(36).slice(2, 8)}`;
+    // 会员读得到自己的小礼物：不写员工 email（后台操作记录有）
+    await db.collection(COL.gifts).doc(id).set({
+      batchId: "manual", manual: true, label: "", giftName, mode: "person", status: "pending",
+      uid, name: names.get(uid), platform: "", username: "", orderNos: [],
+      note, noteI18n, delivery, linkedOrder, deadline: deadline ? tsOf(deadline) : null, noExpire: noExp,
+      ...(linkedOrder ? { orderFound: true, foundOrder: linkedOrder } : {}),
+      createdAt: tsOf(now),
+    });
+    ids.push(id);
+    if (data.notify !== false) {
+      const w = delivery === "separate"
+        ? { zh: "会单独寄给你，寄出后这里会显示运单号。", en: "will be shipped to you separately — the tracking no. will show here once it's sent.", ms: "akan dihantar berasingan — nombor penjejakan akan dipaparkan di sini selepas dihantar." }
+        : linkedOrder ? { zh: `会随订单 …${linkedOrder.slice(-6)} 一起寄出。`, en: `will ship with order …${linkedOrder.slice(-6)}.`, ms: `akan dihantar bersama pesanan …${linkedOrder.slice(-6)}.` }
+        : deadline ? { zh: `会随你的下一张订单一起寄出，${fmtMy(deadline)} 前下单就能拿到。`, en: `will ship with your next order — order by ${fmtMy(deadline)} to get it.`, ms: `akan dihantar bersama pesanan seterusnya — buat pesanan sebelum ${fmtMy(deadline)}.` }
+        : { zh: "会随你的下一张订单一起寄出。", en: "will ship with your next order.", ms: "akan dihantar bersama pesanan seterusnya." };
+      const n = noteI18n || note ? { zh: (noteI18n && noteI18n.zh) || note ? "\n" + ((noteI18n && noteI18n.zh) || note) : "",
+        en: (noteI18n && noteI18n.en) || note ? "\n" + ((noteI18n && noteI18n.en) || note) : "",
+        ms: (noteI18n && noteI18n.ms) || note ? "\n" + ((noteI18n && noteI18n.ms) || note) : "" } : "";
+      await db.collection("memberMessages").add(message(uid, "manual", { g: giftName, w, n }, now));
+    }
+  }
+  return { ok: true, ids };
+}
+// 只能改手动指定、还没寄出的
+async function loadManual(db, id) {
+  const r = await loadGift(db, id);
+  if (r.g.manual !== true) fail("sg/not-manual", "这份小礼物不是手动指定的（抽奖的小礼物到领奖追踪处理）");
+  return r;
+}
+// 修改：data { id, delivery?, linkedOrder?（"" = 取消指定）, note?, noteI18n?, days?（重新算期限；0 = 不过期）}
+async function sgManualUpdate(db, ctx, data = {}) {
+  await requirePerm(db, ctx, ["claims", "prizes"]);
+  const { ref, g } = await loadManual(db, data.id);
+  if (g.status !== "pending") fail("sg/state", "只有待寄的小礼物可以修改");
+  const upd = {};
+  const dlv = data.delivery === undefined ? g.delivery || "withOrder" : DLV.includes(data.delivery) ? data.delivery : fail("sg/bad-dlv", "配送方式不正确", "invalid-argument");
+  if (dlv !== (g.delivery || "withOrder")) upd.delivery = dlv;
+  if (data.linkedOrder !== undefined || dlv === "separate") {
+    const want = dlv === "separate" ? "" : String(data.linkedOrder === undefined ? g.linkedOrder || "" : data.linkedOrder || "");
+    const lo = want ? await orderOfMember(db, g.uid, want) : null;
+    if (lo !== (g.linkedOrder || null)) {
+      upd.linkedOrder = lo;
+      if (lo) { upd.orderFound = true; upd.foundOrder = lo; } else if (g.foundOrder === g.linkedOrder) { upd.orderFound = false; upd.foundOrder = null; }
+    }
+  }
+  if (data.note !== undefined || data.noteI18n !== undefined) Object.assign(upd, cleanNote(data));
+  if (data.days !== undefined) {
+    if (data.days === 0 || data.days === null) Object.assign(upd, { deadline: null, noExpire: true });
+    else {
+      const days = Number(data.days);
+      if (!Number.isInteger(days) || days < 1 || days > 365) fail("sg/bad-days", "期限要 1–365 天", "invalid-argument");
+      Object.assign(upd, { deadline: tsOf(nowMs(ctx) + days * DAY), noExpire: false, remindedAt: null });
+    }
+  }
+  if (!Object.keys(upd).length) return { ok: true, changed: false };
+  await ref.update(upd);
+  return { ok: true, changed: true };
+}
+// 后台手动标记寄出：data { id, orderNo }（随单）或 { id, ship: { carrier, carrierName, trackingNo, trackingUrl, address } }（单独寄）
+const str = (v, n) => String(v || "").trim().slice(0, n);
+async function sgManualShip(db, ctx, data = {}) {
+  const who = await requirePerm(db, ctx, ["claims", "prizes"]);
+  const { ref, g } = await loadManual(db, data.id);
+  if (g.status === "sent") return { ok: true, already: true };
+  if (g.status !== "pending") fail("sg/state", "这份小礼物已作废，要先恢复");
+  const at = tsOf(nowMs(ctx));
+  if ((g.delivery || "withOrder") === "withOrder") {
+    const no = await orderOfMember(db, g.uid, data.orderNo);
+    if (g.linkedOrder && g.linkedOrder !== no) fail("sg/linked", `这份小礼物指定随 ${g.linkedOrder} 寄出`);
+    await ref.update({ status: "sent", sentAt: at, sentOrder: no, sentBy: "staff", shipping: { withOrder: true, orderNo: no, via: "admin" } });
+    return { ok: true };
+  }
+  const s = data.ship && typeof data.ship === "object" ? data.ship : {};
+  const trackingNo = str(s.trackingNo, 60).toUpperCase(), trackingUrl = str(s.trackingUrl, 300);
+  if (!trackingNo) fail("sg/bad-ship", "请填写运单号", "invalid-argument");
+  if (trackingUrl && !/^https:\/\//i.test(trackingUrl)) fail("sg/bad-ship", "查询链接要 https://", "invalid-argument");
+  const a = s.address && typeof s.address === "object" ? s.address : null;
+  const address = a ? { name: str(a.name, 60), phone: str(a.phone, 30), line1: str(a.line1, 120), line2: str(a.line2, 120),
+    postcode: str(a.postcode, 10), city: str(a.city, 60), state: str(a.state, 60), country: str(a.country, 40) || "Malaysia" } : null;
+  if (!address || !address.name || !address.line1) fail("sg/bad-addr", "请选择或填写收货地址", "invalid-argument");
+  await ref.update({ status: "sent", sentAt: at, sentOrder: null, sentBy: "staff",
+    shipping: { carrier: str(s.carrier, 30), carrierName: str(s.carrierName, 60), trackingNo, trackingUrl, address, via: "admin" } });
+  return { ok: true };
+}
+
 module.exports = {
   COL, DEFAULT_DAYS, REMIND_DAYS, platformOf, resolveBuyer,
   sgCreate, sgVoid, sgRestore, sgShip, sgUnship, sgDaily,
+  sgManualCreate, sgManualUpdate, sgManualShip,
 };
