@@ -262,6 +262,53 @@
 
     footer { text-align: center; margin-top: 40px; padding: 20px; color: var(--faint); font-size: 0.85rem; }
 
+    /* ===== ✏️ 自订排列（存在这台电脑的浏览器：localStorage mochiiDashLayout）===== */
+    .dashboard-header::after { content: ""; display: block; clear: both; }
+    .arr-btn { float: right; margin: 4px 0 0 10px; border: 1px solid var(--line2); background: var(--card); color: var(--ink); border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: .82rem; cursor: pointer; font-family: inherit; }
+    .arr-btn:hover { background: var(--soft); }
+    .arr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: color-mix(in srgb, #db2777 10%, var(--card)); border: 1px dashed #db2777; border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; font-size: .82rem; color: var(--text); }
+    .arr-bar[hidden] { display: none; }
+    .arr-tip { margin-right: auto; }
+    .arr-hidden { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .arr-hidden button, .arr-bar .arr-reset, .arr-bar .arr-done { border: 1px solid var(--line2); background: var(--card); color: var(--ink); border-radius: 999px; padding: 4px 10px; font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .arr-bar .arr-done { background: #db2777; border-color: #db2777; color: #fff; }
+    .card.user-hide { display: none !important; }
+    .arr-ctl { display: none; }
+    body.arranging .arr-ctl { display: flex; gap: 4px; position: absolute; top: 8px; right: 8px; z-index: 3; }
+    .arr-ctl button { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--ink); cursor: pointer; font-size: .8rem; padding: 0; }
+    body.arranging .card { position: relative; cursor: grab; animation: arrWiggle .32s ease-in-out infinite alternate; }
+    body.arranging .card:nth-child(even) { animation-delay: .16s; }
+    body.arranging .card a, body.arranging .card .card-btn { pointer-events: none; }
+    body.arranging .arr-ctl button { pointer-events: auto; }
+    body.arranging .card.dragging { opacity: .4; animation: none; }
+    body.arranging .action-grid { min-height: 90px; border: 1px dashed var(--line2); border-radius: 12px; padding: 6px; }
+    body.arranging .group[hidden] { display: block; }
+    @keyframes arrWiggle { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
+    @media (prefers-reduced-motion: reduce) { body.arranging .card { animation: none; } }
+
+    /* ===== 🖥 电脑：整个控制台刚好一个屏幕，不用滑 ===== */
+    @media (min-width: 1100px) and (min-height: 620px) {
+      body.fit { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+      body.fit .admin-container { flex: 1; min-height: 0; width: 100%; max-width: 1600px; margin: 0 auto; padding: 12px 18px; display: flex; flex-direction: column; }
+      body.fit .dashboard-header { padding: 8px 16px; margin-bottom: 10px; display: flex; align-items: baseline; gap: 12px; flex-shrink: 0; }
+      body.fit .dashboard-header h3 { font-size: 1.05rem; margin: 0; white-space: nowrap; }
+      body.fit .dashboard-header p { margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      body.fit .arr-btn { float: none; order: 3; margin: 0; }
+      body.fit .arr-bar { flex-shrink: 0; }
+      body.fit .groups { flex: 1; min-height: 0; display: grid; gap: 16px; }
+      body.fit .group { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+      body.fit .group-title, body.fit .group:first-of-type .group-title { margin: 0 0 8px; }
+      body.fit .action-grid { flex: 1; min-height: 0; gap: 12px; }
+      body.fit .card { padding: 14px 16px; min-height: 0; overflow: hidden; }
+      body.fit .card:hover { transform: translateY(-2px); }
+      body.fit .card-icon { width: 36px; height: 36px; font-size: 1.15rem; margin-bottom: 8px; }
+      body.fit .card-title { font-size: 1rem; margin-bottom: 4px; }
+      body.fit .card-desc { font-size: .8rem; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      body.fit .card-btn { padding: 8px 12px; }
+      body.fit footer, body.fit #emptyAll[hidden] { display: none; }
+      body.fit.arranging .action-grid { padding: 6px; }
+    }
+
     @media (max-width: 640px) {
       header { padding: 10px 14px; }
       .user-chip .em, .nav-links a.home .tx, .hd-btn .tx { display: none; }
@@ -296,12 +343,21 @@
 
   <div class="admin-container">
     <div class="dashboard-header">
+      <button type="button" id="arrBtn" class="arr-btn" title="自订卡片位置、隐藏不常用的卡片（只存在这台电脑的浏览器）">✏️ 排列</button>
       <h3>工具与控制台 Dashboard</h3>
       <p id="welcome">欢迎回来！工具按用途分成「直播」「订单」「会员与内容」三组；手机上开播和查看待处理，用 Mochii Hub。</p>
     </div>
 
+    <!-- ✏️ 排列模式的工具列 -->
+    <div class="arr-bar" id="arrBar" hidden>
+      <span class="arr-tip">✋ 拖拉卡片换位置（也可以拖到别的分组）· 手机用 ↑↓ · 👁 隐藏不常用的</span>
+      <span class="arr-hidden" id="arrHidden"></span>
+      <button type="button" class="arr-reset" id="arrReset">↺ 还原预设</button>
+      <button type="button" class="arr-done" id="arrDone">✅ 完成</button>
+    </div>
+    <div class="groups" id="groups">
     <!-- ===== 直播 ===== -->
-    <section class="group">
+    <section class="group" data-g="live">
       <div class="group-title">🎥 直播</div>
       <div class="action-grid">
         <!-- Mochii Hub：手机开播、开播通知、今天要处理 -->
@@ -340,7 +396,7 @@
     </section>
 
     <!-- ===== 订单 ===== -->
-    <section class="group">
+    <section class="group" data-g="order">
       <div class="group-title">🧾 订单</div>
       <div class="action-grid">
         <!-- 订单录入 Order Entry -->
@@ -396,7 +452,7 @@
     </section>
 
     <!-- ===== 会员与内容 ===== -->
-    <section class="group">
+    <section class="group" data-g="member">
       <div class="group-title">🎫 会员与内容</div>
       <div class="action-grid">
         <!-- 会员系统 member-system -->
@@ -439,6 +495,145 @@
         </div>
       </div>
     </section>
+
+    </div>
+
+    <script>
+    // ===== ✏️ 自订卡片位置 + 🖥 一屏显示 =====
+    //   排列存在这台电脑的浏览器（localStorage mochiiDashLayout）：{ groups: { live: [卡片…], order: […], member: […] }, hidden: [卡片…] }
+    //   卡片 = class 里的 card-xxx（例 card-hub → hub）；以后新增的卡片没在记录里 → 留在原本的分组最后面
+    //   不改任何按钮、链接、权限：只搬动卡片的位置，权限照旧由 applyPerms 决定（el.hidden）
+    window.dashLayout = (function () {
+      const KEY = "mochiiDashLayout";
+      const $ = id => document.getElementById(id);
+      const groups = () => [...document.querySelectorAll("section.group[data-g]")];
+      const gridOf = g => g.querySelector(".action-grid");
+      const keyOf = c => ([...c.classList].find(x => x.startsWith("card-") && x !== "card-btn") || "").slice(5);
+      const cards = () => [...document.querySelectorAll("section.group .card")];
+      const nameOf = c => (c.querySelector(".card-title") || {}).textContent || keyOf(c);
+      // 预设（HTML 原本的顺序）
+      const DEFAULT = {};
+      groups().forEach(g => { DEFAULT[g.dataset.g] = [...gridOf(g).querySelectorAll(":scope > .card")].map(keyOf); });
+      let state = { groups: null, hidden: [] };
+      try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && typeof s === "object") state = { groups: s.groups || null, hidden: Array.isArray(s.hidden) ? s.hidden : [] }; } catch (e) {}
+      const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+      let arranging = false;
+
+      // 照记录搬动卡片
+      function apply() {
+        const byKey = {}; cards().forEach(c => byKey[keyOf(c)] = c);
+        if (state.groups) groups().forEach(g => (state.groups[g.dataset.g] || []).forEach(k => { if (byKey[k]) gridOf(g).appendChild(byKey[k]); }));
+        // 记录里没有的（以后新增的）留在原本分组，不动
+        cards().forEach(c => c.classList.toggle("user-hide", state.hidden.includes(keyOf(c))));
+      }
+      function snapshot() {
+        state.groups = {};
+        groups().forEach(g => { state.groups[g.dataset.g] = [...gridOf(g).querySelectorAll(":scope > .card")].map(keyOf); });
+        save();
+      }
+      const visible = c => !c.hidden && !c.classList.contains("user-hide");
+
+      // 🖥 一屏：每组几栏，卡片高度平均分配（最多 3 排）
+      function fit() {
+        document.body.classList.add("fit");
+        const gs = groups();
+        let rows = 1;
+        const cols = gs.map(g => {
+          const n = [...gridOf(g).children].filter(c => c.classList.contains("card") && visible(c)).length;
+          const show = n > 0 || arranging;
+          g.hidden = !show;
+          const c = Math.max(1, Math.ceil(n / 3));
+          rows = Math.max(rows, Math.ceil(Math.max(n, 1) / c));
+          return show ? c : 0;
+        });
+        const wide = window.matchMedia("(min-width: 1100px) and (min-height: 620px)").matches;
+        $("groups").style.gridTemplateColumns = wide ? cols.filter(Boolean).map(c => c + "fr").join(" ") : "";
+        gs.forEach((g, i) => {
+          const grid = gridOf(g);
+          grid.style.gridTemplateColumns = wide ? `repeat(${cols[i] || 1}, minmax(0, 1fr))` : "";
+          grid.style.gridTemplateRows = wide ? `repeat(${rows}, minmax(0, 1fr))` : "";
+        });
+      }
+
+      // ✏️ 排列模式
+      function paintHidden() {
+        const hid = cards().filter(c => !c.hidden && c.classList.contains("user-hide"));
+        $("arrHidden").innerHTML = hid.length ? "已隐藏：" + hid.map(c => `<button type="button" data-show="${keyOf(c)}" title="加回来">➕ ${nameOf(c).replace(/[<>&"]/g, "")}</button>`).join("") : "";
+      }
+      function addCtl() {
+        cards().forEach(c => {
+          if (c.querySelector(":scope > .arr-ctl")) return;
+          const d = document.createElement("div");
+          d.className = "arr-ctl";
+          d.innerHTML = `<button type="button" data-mv="-1" title="往前">↑</button><button type="button" data-mv="1" title="往后">↓</button><button type="button" data-hide="1" title="隐藏这张卡片">👁</button>`;
+          c.appendChild(d);
+        });
+      }
+      function setArranging(on) {
+        arranging = on;
+        document.body.classList.toggle("arranging", on);
+        $("arrBar").hidden = !on;
+        $("arrBtn").textContent = on ? "✅ 完成排列" : "✏️ 排列";
+        cards().forEach(c => { c.draggable = on; });
+        if (on) { addCtl(); paintHidden(); } else snapshot();
+        fit();
+      }
+      // 换位置：↑↓（跨分组），拖拉
+      function move(card, dir) {
+        const list = cards().filter(visible);
+        const i = list.indexOf(card), j = i + dir;
+        if (i < 0 || j < 0 || j >= list.length) return;
+        const other = list[j];
+        if (other.parentElement !== card.parentElement) {   // 跨分组：放到下一组的最前面 / 上一组的最后面
+          if (dir < 0) other.after(card); else other.before(card);
+        } else if (dir < 0) other.before(card); else other.after(card);
+        snapshot(); fit();
+      }
+      let dragEl = null;
+      document.addEventListener("dragstart", e => { const c = arranging && e.target.closest && e.target.closest(".card"); if (!c) return; dragEl = c; c.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", keyOf(c)); } catch (er) {} });
+      document.addEventListener("dragend", () => { if (dragEl) dragEl.classList.remove("dragging"); dragEl = null; if (arranging) { snapshot(); fit(); } });
+      document.addEventListener("dragover", e => {
+        if (!arranging || !dragEl) return;
+        const grid = e.target.closest && e.target.closest(".action-grid");
+        if (!grid) return;
+        e.preventDefault();
+        const over = e.target.closest(".card");
+        if (over && over !== dragEl && over.parentElement === grid) {
+          const r = over.getBoundingClientRect();
+          const after = (e.clientY - r.top) / r.height > .5 || (e.clientX - r.left) / r.width > .5;
+          if (after) over.after(dragEl); else over.before(dragEl);
+        } else if (!over && dragEl.parentElement !== grid) grid.appendChild(dragEl);
+      });
+      document.addEventListener("drop", e => { if (arranging && dragEl) e.preventDefault(); });
+      // 排列模式时：点卡片不会打开功能
+      document.addEventListener("click", e => {
+        if (!arranging) return;
+        const b = e.target.closest("[data-mv],[data-hide],[data-show]");
+        if (b) {
+          e.preventDefault(); e.stopPropagation();
+          if (b.dataset.show) { state.hidden = state.hidden.filter(k => k !== b.dataset.show); apply(); }
+          else if (b.dataset.hide) { const c = b.closest(".card"); state.hidden = [...new Set([...state.hidden, keyOf(c)])]; apply(); }
+          else move(b.closest(".card"), Number(b.dataset.mv));
+          save(); paintHidden(); fit();
+          return;
+        }
+        if (e.target.closest("section.group .card")) { e.preventDefault(); e.stopPropagation(); }
+      }, true);
+      $("arrBtn").addEventListener("click", () => setArranging(!arranging));
+      $("arrDone").addEventListener("click", () => setArranging(false));
+      $("arrReset").addEventListener("click", () => {
+        if (!confirm("还原成预设的卡片位置，并显示所有隐藏的卡片？")) return;
+        const byKey = {}; cards().forEach(c => byKey[keyOf(c)] = c);
+        groups().forEach(g => (DEFAULT[g.dataset.g] || []).forEach(k => { if (byKey[k]) gridOf(g).appendChild(byKey[k]); }));
+        state = { groups: null, hidden: [] };
+        try { localStorage.removeItem(KEY); } catch (e) {}
+        apply(); paintHidden(); fit();
+      });
+      window.addEventListener("resize", fit);
+      apply(); fit();
+      return { refresh() { apply(); fit(); if (arranging) paintHidden(); } };
+    })();
+    </script>
 
     <div id="emptyAll" class="empty-all" hidden>
       <div style="font-size:2rem;margin-bottom:6px">🔒</div>
@@ -623,6 +818,7 @@
         any = any || has;
       });
       $("emptyAll").hidden = any;
+      if (window.dashLayout) window.dashLayout.refresh();   // ✏️ 自订排列：重新排版（权限决定哪些卡片看得到）
       // 🎫 Member Club：按钮去他能用的第一页；「🔔 兑换审核」提醒有兑换或中奖权限才显示
       const first = firstMemberPage(a);
       const mBtn = document.querySelector(".card-member .card-btn");
