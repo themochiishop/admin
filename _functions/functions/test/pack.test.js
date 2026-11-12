@@ -476,3 +476,75 @@ test("✋ 店主指定的小礼物：随单的出现在打包清单；指定订�
   const b = await pk.pkBatch(db, PACKER, {});
   assert.equal(JSON.stringify(b.pending).includes("manual__1_b"), false);
 });
+
+test("📊 新人卡统计：加入 / 标记（自动 + 手动）/ 再下单 / 第一次买 vs 买过", async () => {
+  const core = require("../src/core");
+  const db = fakeDb({
+    ...SEED(),
+    "members/uN": { name: "Nina" }, "members/uO": { name: "Olive" }, "members/uP": { name: "Pat" },
+    // 4 位买家放了新人卡
+    "orders/2611010000901": { username: "nina", platform: "shopee", orderTime: ts(T0 - 10 * DAY) },
+    "orders/2611010000902": { username: "olive", platform: "shopee", orderTime: ts(T0 - 10 * DAY) },
+    "orders/2611010000903": { username: "pat", platform: "shopee", orderTime: ts(T0 - 9 * DAY) },
+    "orders/2611010000904": { username: "quinn", platform: "shopee", orderTime: ts(T0 - 9 * DAY) },
+    "orders/2611010000905": { username: "nina", platform: "shopee", orderTime: ts(T0 - 9 * DAY) },   // nina 同一场第二包
+    "packDone/2611010000901": { at: ts(T0 - 9 * DAY), by: "pack@x.com", newCard: true, newCardLevel: "must" },
+    "packDone/2611010000905": { at: ts(T0 - 9 * DAY + 3600000), by: "pack@x.com", newCard: true },
+    "packDone/2611010000902": { at: ts(T0 - 9 * DAY), by: "pack@x.com", newCard: true, newCardLevel: "suggest" },
+    "packDone/2611010000903": { at: ts(T0 - 8 * DAY), by: "pack@x.com", newCard: true, newCardLevel: "must" },
+    "packDone/2611010000904": { at: ts(T0 - 8 * DAY), by: "pack@x.com", newCard: true, newCardLevel: "must" },
+    "packDone/2611190000003": { at: ts(T0 - DAY), by: "pack@x.com" },                                 // 没放卡
+    // 加入：nina 扫码后绑定（自动 🆕）；olive 绑定（没来源 → ❓）；pat 绑定（店主标 👥）；quinn 没加入
+    "bindings/shopee_nina": { uid: "uN", platform: "shopee", username: "nina", createdAt: ts(T0 - 5 * DAY) },
+    "bindings/shopee_olive": { uid: "uO", platform: "shopee", username: "olive", createdAt: ts(T0 - 4 * DAY) },
+    "bindings/shopee_pat": { uid: "uP", platform: "shopee", username: "pat", createdAt: ts(T0 - 3 * DAY) },
+    // 再下单
+    "orders/2611150000906": { username: "olive", platform: "shopee", orderTime: ts(T0 - 2 * DAY) },
+    "orders/2611150000907": { username: "quinn", platform: "shopee", orderTime: ts(T0 - 2 * DAY), status: "refunded" },
+  });
+  // 会员端记下来源（Welcome Hub ?from=card）：只记一次，seenAt 太旧就用现在
+  await core.nmSource(db, { uid: "uN", now: T0 - 6 * DAY }, { source: "card", seenAt: T0 - 6 * DAY - 3600000 });
+  assert.equal(db.data.get("members/uN").joinSource.type, "card");
+  assert.deepEqual(await core.nmSource(db, { uid: "uN", now: T0 }, { source: "card" }), { ok: true, already: true });
+  await assert.rejects(core.nmSource(db, { uid: "uN", now: T0 }, { source: "x" }));
+  await assert.rejects(core.nmSource(db, null, { source: "card" }));
+  // 店主标 pat = 旧顾客
+  await pk.pkCardMark(db, OWNER, { key: "shopee_pat", mark: "other" });
+  assert.equal(db.data.get("cardMarks/shopee_pat").mark, "other");
+  await rejects(pk.pkCardMark(db, OWNER, { key: "../x", mark: "card" }), "pk/bad-key");
+  await rejects(pk.pkCardMark(db, OWNER, { key: "shopee_pat", mark: "x" }), "pk/bad-mark");
+  await rejects(pk.pkCardMark(db, NOBODY, { key: "shopee_pat", mark: "card" }), "pk/no-perm");
+  await rejects(pk.pkCardStats(db, NOBODY, { from: T0 - 30 * DAY, to: T0 }), "pk/no-perm");
+  await rejects(pk.pkCardStats(db, PACKER, { from: T0, to: T0 - DAY }), "pk/bad-range");
+
+  const r = await pk.pkCardStats(db, PACKER, { from: T0 - 30 * DAY, to: T0 });
+  const s = r.summary;
+  assert.equal(s.cards, 4);                    // nina 两包只算一次
+  assert.equal(s.joined, 3); assert.equal(s.card, 1); assert.equal(s.unsure, 1); assert.equal(s.other, 1);
+  assert.equal(s.rate, 25); assert.equal(s.joinRate, 75);
+  assert.equal(s.reordered, 1);                // olive 再下单；quinn 的取消单不算；nina 第二包是放卡前下的（同一场）不算
+  const by = k => r.rows.find(x => x.key === k);
+  assert.equal(by("shopee_nina").cards, 2); assert.equal(by("shopee_nina").mark, "card"); assert.equal(by("shopee_nina").auto, "card");
+  assert.equal(by("shopee_olive").mark, "unsure"); assert.equal(by("shopee_olive").reorders, 1);
+  assert.equal(by("shopee_pat").mark, "other"); assert.equal(by("shopee_quinn").joined, false); assert.equal(by("shopee_quinn").mark, null);
+  assert.deepEqual(s.byLevel.must, { cards: 3, card: 1, joined: 2 });
+  assert.deepEqual(s.byLevel.suggest, { cards: 1, card: 0, joined: 1 });
+  // 手动改成 🆕 → 转化率跟着变；清掉标记 → 回到系统判断
+  await pk.pkCardMark(db, PACKER, { key: "shopee_olive", mark: "card" });
+  assert.equal((await pk.pkCardStats(db, PACKER, { from: T0 - 30 * DAY, to: T0 })).summary.card, 2);
+  await pk.pkCardMark(db, PACKER, { key: "shopee_olive", mark: "" });
+  const r2 = await pk.pkCardStats(db, PACKER, { from: T0 - 30 * DAY, to: T0, summary: true });
+  assert.equal(r2.summary.card, 1); assert.deepEqual(r2.rows, []);
+  // 时间段外不算
+  assert.equal((await pk.pkCardStats(db, PACKER, { from: T0 - 3 * DAY, to: T0 })).summary.cards, 0);
+});
+
+test("📊 打包时记下新人卡等级（第一次买 / 买过），重新保存保留", async () => {
+  const db = fakeDb(SEED());
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000003", items: [], txId: "tx_lvl00001", done: true, newCard: true, newCardLevel: "must" });
+  assert.equal(db.data.get("packDone/2611190000003").newCardLevel, "must");
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000003", items: [], txId: "tx_lvl00002", done: true });
+  assert.equal(db.data.get("packDone/2611190000003").newCardLevel, "must");
+  await pk.pkShip(db, PACKER, { orderNo: "2611190000004", items: [], txId: "tx_lvl00003", done: true, newCard: true, newCardLevel: "hack" });
+  assert.equal(db.data.get("packDone/2611190000004").newCardLevel, undefined);
+});
