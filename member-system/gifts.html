@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="../logo.png">
+  <title>指定小礼物 · 会员系统 Admin</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/theme.js"></script>
+  <style>
+    /* 🎁 指定小礼物：上面新增，下面左列表、右详情（和中奖奖品同一种版面） */
+    .tabs button .cnt { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #e11d48; color: #fff; font-size: .7rem; }
+    .tabs button .cnt.zero { background: var(--line2); }
+    .dlv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+    @media (max-width: 600px) { .dlv { grid-template-columns: 1fr; } }
+    .dlv label { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; margin: 0; background: var(--card); color: var(--ink); }
+    .dlv label:has(input:checked) { border-color: #db2777; background: var(--pink-bg); }
+    .dlv input { width: auto; margin: 3px 0 0; }
+    .dlv b { display: block; font-size: .92rem; }
+    .dlv span { font-size: .8rem; color: var(--muted); }
+    .g-split { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 16px; align-items: start; margin-top: 12px; }
+    .g-list { background: var(--card); border: 1px solid var(--line); border-radius: 12px; max-height: calc(100vh - 140px); overflow-y: auto; position: sticky; top: 16px; }
+    .g-row { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--soft); background: transparent; cursor: pointer; color: var(--ink); font-size: .86rem; }
+    .g-row:hover { background: var(--soft2); }
+    .g-row.on { background: var(--pink-bg); box-shadow: inset 3px 0 0 #db2777; }
+    .g-row .t { flex: 1; min-width: 0; }
+    .g-row .t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .g-row .t small { display: block; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .g-row .r { text-align: right; flex-shrink: 0; font-size: .72rem; color: var(--muted); }
+    .g-box { background: var(--card); border: 1px solid #fbcfe8; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .g-box .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .g-ship { background: var(--soft2); border-radius: 10px; padding: 10px 12px; margin-top: 8px; font-size: .88rem; line-height: 1.6; }
+    .g-back { display: none; }
+    @media (max-width: 899px) {
+      .g-split { grid-template-columns: 1fr; }
+      .g-list { position: static; max-height: none; }
+      .g-split .g-detail { display: none; }
+      .g-split.show-detail .g-list { display: none; }
+      .g-split.show-detail .g-detail { display: block; }
+      .g-back { display: inline-flex; margin-bottom: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"><div class="gate-card"><p>载入中…</p></div></div>
+
+  <div id="app" class="hidden">
+    <header id="adminHeader"></header>
+
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h2>🎁 指定小礼物</h2>
+          <p class="muted">送给指定会员的小礼物：随下一单寄出（🧺 打包清单扫到他的单会提醒），或单独寄出。会员在「中奖记录」看得到，也会收到铃铛通知。抽奖没中的小礼物在「领奖追踪」。</p>
+        </div>
+      </div>
+      <p id="pageError" class="msg err hidden"></p>
+
+      <!-- ➕ 送小礼物 -->
+      <details class="panel" id="addPanel">
+        <summary style="cursor:pointer;font-weight:700">➕ 送小礼物</summary>
+        <form id="addForm" style="margin-top:12px">
+          <label>会员（可以选好几位，或贴上一串用户名）</label>
+          <div id="picker"></div>
+          <label>礼物名称 <input id="fGift" required maxlength="60" placeholder="例如：Mochii 钥匙圈"></label>
+          <label>原因 / 给会员的留言（选填，会员看得到）</label>
+          <div id="fNote"></div>
+          <label style="margin-top:10px">配送方式</label>
+          <div class="dlv">
+            <label><input type="radio" name="fDlv" value="withOrder" checked><div><b>📦 随下一单寄出</b><span>打包清单扫到这位会员的单会提醒放进去</span></div></label>
+            <label><input type="radio" name="fDlv" value="separate"><div><b>🚚 单独寄出</b><span>不随单；寄出后在这里填运单号，会员看得到</span></div></label>
+          </div>
+          <div class="grid2" id="fWithOrder" style="margin-top:10px">
+            <label>期限（期限内要下单）
+              <select id="fDays">
+                <option value="7">7 天</option><option value="14">14 天</option><option value="30" selected>30 天</option>
+                <option value="60">60 天</option><option value="90">90 天</option><option value="0">不过期</option>
+              </select>
+            </label>
+            <label id="fLinkBox" class="hidden">📌 指定随哪一张单（选填）
+              <select id="fLink"><option value="">不指定（下一张单）</option></select>
+            </label>
+          </div>
+          <label class="inline"><input type="checkbox" id="fNotify" checked> 🔔 铃铛通知会员</label>
+          <div class="actions"><button type="submit" class="btn btn-primary" id="addBtn">🎁 送出</button></div>
+          <p id="addMsg" class="msg"></p>
+        </form>
+      </details>
+
+      <div class="tabs" id="tabs">
+        <button data-tab="pending" class="active">待寄</button>
+        <button data-tab="sent">已寄出</button>
+        <button data-tab="voided">已作废</button>
+      </div>
+      <input type="search" id="search" placeholder="🔍 搜索会员名字 / 礼物 / 单号" style="max-width:360px">
+
+      <div class="g-split" id="split">
+        <div class="g-list" id="rows"><p class="empty">载入中…</p></div>
+        <div class="g-detail">
+          <button type="button" class="btn btn-ghost g-back" id="backBtn">← 回到列表</button>
+          <div id="panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { app, db } from "./js/firebase-config.js";
+    import {
+      collection, query, where, getDocs, getDoc, doc, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js";
+    import {
+      requireAdmin, renderAdminNav, esc, toDate, fmtDate, CARRIERS, loadCarriers, carrierOptions, logAdmin
+    } from "./js/admin-common.js";
+    import { noteBoxHTML, readNoteBox, noteFields, noteBadge, noteFromDoc, bindNoteBoxes } from "./js/note-i18n.js";
+    import { previewSend, confirmSimple, memberPicker } from "./js/send-tools.js";
+
+    const $ = id => document.getElementById(id);
+    renderAdminNav("gifts");
+    bindNoteBoxes();
+
+    // ---------- 后端（所有写入都经过 sgAdmin：会员读得到自己的小礼物，规则不让网页直接写）----------
+    const sgAdmin = httpsCallable(getFunctions(app, "asia-southeast1"), "sgAdmin");
+    async function call(op, data) { return (await sgAdmin({ op, ...data })).data || {}; }
+    const errText = e => (e && e.message ? e.message.replace(/^.*?:\s*/, "") : String(e));
+
+    const DLV = { withOrder: "📦 随单寄出", separate: "🚚 单独寄出" };
+    const ST = { pending: "待寄", sent: "已寄出", voided: "已作废" };
+    const ST_TAG = { pending: "tag-pink", sent: "tag-ok", voided: "" };
+    const code = id => "#" + String(id || "").split("_").pop().slice(0, 6).toUpperCase();
+    let gifts = [], tab = "pending", selId = "", trackTpl = {};
+    const ordersCache = new Map(), memberCache = new Map();
+
+    // ---------- 会员的订单（指定订单 / 随单寄出时选）：订单上有这位会员 uid 的，最近的在前面 ----------
+    async function ordersOf(uid) {
+      if (ordersCache.has(uid)) return ordersCache.get(uid);
+      let list = [];
+      try {
+        list = (await getDocs(query(collection(db, "orders"), where("uid", "==", uid)))).docs
+          .map(d => ({ no: d.id, ...d.data() })).filter(o => o.status !== "refunded")
+          .sort((a, b) => (toDate(b.orderTime) || 0) - (toDate(a.orderTime) || 0)).slice(0, 30);
+      } catch (e) { console.warn("orders", e); }
+      ordersCache.set(uid, list);
+      return list;
+    }
+    const orderOpts = (list, sel = "") => list.map(o => `<option value="${esc(o.no)}" ${o.no === sel ? "selected" : ""}>${esc(o.no)} · ${esc(o.username || "")} · ${fmtDate(toDate(o.orderTime))}</option>`).join("");
+    async function memberOf(uid) {
+      if (memberCache.has(uid)) return memberCache.get(uid);
+      let m = {};
+      try { const s = await getDoc(doc(db, "members", uid)); m = s.exists() ? s.data() : {}; } catch (e) { console.warn("member", e); }
+      memberCache.set(uid, m);
+      return m;
+    }
+
+    // ---------- ➕ 送小礼物 ----------
+    $("fNote").innerHTML = noteBoxHTML({ placeholder: "例如：谢谢你推荐朋友！（选填）" });
+    let picked = [];
+    const picker = memberPicker($("picker"), { onChange: async uids => { picked = uids; await paintAddForm(); } });
+    const dlvOf = () => (document.querySelector('input[name="fDlv"]:checked') || {}).value || "withOrder";
+    async function paintAddForm() {
+      const dlv = dlvOf();
+      $("fWithOrder").classList.toggle("hidden", dlv !== "withOrder");
+      const one = dlv === "withOrder" && picked.length === 1;
+      $("fLinkBox").classList.toggle("hidden", !one);
+      if (one) {
+        const list = await ordersOf(picked[0]);
+        $("fLink").innerHTML = `<option value="">不指定（下一张单）</option>` + orderOpts(list);
+      } else $("fLink").value = "";
+    }
+    document.querySelectorAll('input[name="fDlv"]').forEach(r => r.addEventListener("change", paintAddForm));
+    const addMsg = (t, cls = "") => { $("addMsg").textContent = t; $("addMsg").className = "msg " + cls; };
+    $("addForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const giftName = $("fGift").value.trim();
+      if (!picked.length) return addMsg("请选择会员", "err");
+      if (!giftName) return addMsg("请填写礼物名称", "err");
+      const dlv = dlvOf(), days = Number($("fDays").value), link = dlv === "withOrder" && picked.length === 1 ? $("fLink").value : "";
+      const n = readNoteBox($("fNote"));
+      const notify = $("fNotify").checked;
+      if (!await previewSend({ title: notify ? "送小礼物并通知会员" : "送小礼物（不通知）", to: picker.names(), okText: "🎁 确认送出",
+        rows: [["礼物", giftName], ["配送方式", DLV[dlv]], ["期限", dlv === "separate" ? "" : days ? `${days} 天` : "不过期"], ["指定订单", link]],
+        note: n })) return;
+      $("addBtn").disabled = true;
+      try {
+        const nf = noteFields(n);
+        const r = await call("manualCreate", { uids: picked, giftName, note: nf.note, noteI18n: nf.noteI18n,
+          delivery: dlv, days: dlv === "separate" ? 0 : days, linkedOrder: link || undefined, notify });
+        logAdmin("prize", `送小礼物「${giftName}」给 ${picker.names()}（${DLV[dlv]}）`, "gifts.html");
+        addMsg(`✅ 已送出 ${r.ids.length} 份`, "ok");
+        picker.clear(); $("fGift").value = ""; $("fNote").innerHTML = noteBoxHTML({ placeholder: "例如：谢谢你推荐朋友！（选填）" });
+        tab = "pending"; paintTabs();
+        if (r.ids && r.ids[0]) selId = r.ids[0];
+      } catch (err) { addMsg("❌ " + errText(err), "err"); }
+      $("addBtn").disabled = false;
+    });
+
+    // ---------- 列表 + 详情 ----------
+    function paintTabs() {
+      document.querySelectorAll("#tabs button").forEach(b => {
+        const n = gifts.filter(g => g.status === b.dataset.tab).length;
+        b.classList.toggle("active", b.dataset.tab === tab);
+        b.innerHTML = b.textContent.replace(/\s*\d+$/, "") + (n ? ` <span class="cnt ${b.dataset.tab === "pending" ? "" : "zero"}">${n}</span>` : "");
+      });
+      render();
+    }
+    $("tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (!b) return; tab = b.dataset.tab; paintTabs(); });
+    $("search").addEventListener("input", render);
+    $("backBtn").addEventListener("click", () => $("split").classList.remove("show-detail"));
+    $("rows").addEventListener("click", e => {
+      const b = e.target.closest("[data-sel]"); if (!b) return;
+      selId = b.dataset.sel; render(); $("split").classList.add("show-detail");
+    });
+
+    function render() {
+      const q = $("search").value.trim().toLowerCase().replace(/^#/, "");
+      const list = (q ? gifts.filter(g => [g.name, g.giftName, g.linkedOrder, g.sentOrder, g.id, (g.shipping || {}).trackingNo].some(x => String(x || "").toLowerCase().includes(q)))
+        : gifts.filter(g => g.status === tab))
+        .sort((a, b) => (toDate(b.sentAt || b.voidedAt || b.createdAt) || 0) - (toDate(a.sentAt || a.voidedAt || a.createdAt) || 0));
+      if (!list.some(g => g.id === selId)) selId = list[0] ? list[0].id : "";
+      $("rows").innerHTML = list.length ? list.map(g => `<button type="button" class="g-row${g.id === selId ? " on" : ""}" data-sel="${esc(g.id)}">
+          <span class="t"><b>🎁 ${esc(g.giftName)}</b><small>${esc(g.name || "会员")} · ${fmtDate(toDate(g.createdAt))}</small></span>
+          <span class="r"><span class="tag ${ST_TAG[g.status] || ""}">${ST[g.status] || g.status}</span><br>${g.delivery === "separate" ? "🚚" : g.linkedOrder ? "📌" : "📦"} ${code(g.id)}</span>
+        </button>`).join("") : `<p class="empty">${q ? "找不到符合的记录" : "没有记录"}</p>`;
+      const g = list.find(x => x.id === selId);
+      $("panel").innerHTML = g ? detailHTML(g) : `<p class="empty">👈 选择左边的小礼物</p>`;
+    }
+
+    function detailHTML(g) {
+      const dlv = g.delivery || "withOrder", dl = toDate(g.deadline);
+      const left = dl ? Math.ceil((dl - Date.now()) / 86400000) : null;
+      const s = g.shipping || {};
+      let body = "";
+      if (g.status === "pending") {
+        body = `<div class="meta">${dlv === "separate" ? "🚚 单独寄出，不会过期"
+            : g.linkedOrder ? `📌 指定随 <code>${esc(g.linkedOrder)}</code> 寄出（打包清单只有扫到这张单才提醒）`
+            : g.orderFound ? `✅ 已经有新订单 <code>${esc(g.foundOrder || "")}</code>，打包时会提醒放进去`
+            : dl ? `⏰ 期限 ${fmtDate(dl)}（${left > 0 ? "剩 " + left + " 天" : "已过期，系统会自动作废"}）` : "⏰ 不过期"}</div>
+          <div class="actions">
+            <button class="btn btn-primary" data-act="ship">✅ 标记已寄出</button>
+            <button class="btn btn-ghost" data-act="dlv">🔁 改为${DLV[dlv === "separate" ? "withOrder" : "separate"]}</button>
+            ${dlv === "withOrder" ? `<button class="btn btn-ghost" data-act="link">📌 指定订单</button><button class="btn btn-ghost" data-act="days">⏰ 期限</button>` : ""}
+            <button class="btn btn-ghost" data-act="note">✏️ 修改留言</button>
+            <button class="btn btn-bad" data-act="void">作废</button>
+          </div>`;
+      } else if (g.status === "sent") {
+        const addr = s.address;
+        body = `<div class="g-ship">${s.trackingNo
+            ? `🚚 ${esc(s.carrierName || "")} <b>${esc(s.trackingNo)}</b>${s.trackingUrl ? ` <a href="${esc(s.trackingUrl)}" target="_blank" rel="noopener">🔗 查询</a>` : ""}`
+            : `📦 随订单 <code>${esc(g.sentOrder || s.orderNo || "-")}</code> 一起寄出${s.via === "pack" ? " · 🧺 打包清单" : s.via === "admin" ? " · 后台标记" : ""}`}
+          ${addr ? `<br>📍 ${esc([addr.name, addr.phone].filter(Boolean).join(" · "))}<br>${esc([addr.line1, addr.line2].filter(Boolean).join(", "))}<br>${esc([addr.postcode, addr.city, addr.state].filter(Boolean).join(" "))}` : ""}
+          <br><span class="meta">寄出 ${fmtDate(toDate(g.sentAt), true)}</span></div>
+          <div class="actions"><button class="btn btn-ghost" data-act="unship">↩️ 取消寄出（改回待寄）</button></div>`;
+      } else {
+        body = `<div class="meta">${g.voidReason === "expired" ? "⏰ 超过期限没有下单，系统自动作废" : "已作废"}${g.voidNote ? " · 原因：" + esc(g.voidNote) : ""} · ${fmtDate(toDate(g.voidedAt), true)}</div>
+          <div class="actions"><button class="btn btn-ghost" data-act="restore">↩️ 恢复为待寄（之后不会自动作废）</button></div>`;
+      }
+      return `<div class="item" data-id="${esc(g.id)}">
+        <div class="item-head"><div style="min-width:0">
+          <div class="item-title">🎁 ${esc(g.giftName)} <span class="tag ${ST_TAG[g.status] || ""}">${ST[g.status] || g.status}</span> <span class="tag">${DLV[dlv]}</span></div>
+          <div class="meta"><a href="member.html?uid=${encodeURIComponent(g.uid)}">${esc(g.name || "(会员)")}</a> · 添加 ${fmtDate(toDate(g.createdAt), true)}</div>
+          ${g.note ? `<div class="meta">留言：${noteBadge(g.note, g.noteI18n)}</div>` : ""}
+        </div><code class="rno">${code(g.id)}</code></div>
+        ${body}<div id="box"></div></div>`;
+    }
+
+    // ---------- 详情里的操作：先在下方打开小框，按确认才送出 ----------
+    const boxHTML = (head, inner, okAct, okText = "💾 确认") => `<div class="g-box"><b>${head}</b>${inner}
+      <div class="actions" style="margin-top:8px"><button class="btn btn-primary" data-act="${okAct}">${okText}</button><button class="btn btn-ghost" data-act="close">取消</button></div></div>`;
+    async function openBox(g, act) {
+      const dlv = g.delivery || "withOrder";
+      let html = "";
+      if (act === "link") {
+        const list = await ordersOf(g.uid);
+        html = boxHTML("📌 指定随哪一张单寄出", `<div class="meta" style="margin:4px 0 6px">指定后打包清单只有扫到这张单才会提醒；选「不指定」= 扫到他哪一包就放哪一包。</div>
+          <select data-f="link"><option value="">不指定（下一张单）</option>${orderOpts(list, g.linkedOrder || "")}</select>
+          <input data-f="linkNo" placeholder="或直接输入订单号" style="margin-top:6px">`, "saveLink");
+      } else if (act === "days") {
+        html = boxHTML("⏰ 期限（从今天重新算）", `<select data-f="days" style="margin-top:6px"><option value="7">7 天</option><option value="14">14 天</option><option value="30" selected>30 天</option><option value="60">60 天</option><option value="90">90 天</option><option value="0">不过期</option></select>`, "saveDays");
+      } else if (act === "note") {
+        html = boxHTML("✏️ 修改给会员的留言", `<div style="margin-top:6px">${noteBoxHTML({ value: noteFromDoc(g.note, g.noteI18n), placeholder: "留言（会员看得到，可以留空）" })}</div>`, "saveNote");
+      } else if (act === "dlv") {
+        const to = dlv === "separate" ? "withOrder" : "separate";
+        html = boxHTML(`🔁 改为${DLV[to]}`, `<div class="meta" style="margin-top:4px">${to === "separate"
+          ? "改成单独寄出后，打包清单不会再提醒；寄出时在这里选地址、填运单号。会员看到的是「单独寄出」。" + (g.linkedOrder ? "原本指定的订单会取消。" : "")
+          : "改成随单后，打包清单扫到这位会员的单会提醒放进去。期限从今天起 30 天（之后可以改）。"}</div>`, "saveDlv");
+      } else if (act === "ship" && dlv === "withOrder") {
+        const list = await ordersOf(g.uid);
+        html = boxHTML("✅ 已随哪一张单寄出", `<div class="meta" style="margin:4px 0 6px">一般由打包清单勾选；你自己打包时放进去了才在这里标记。会员会看到「已随订单 …后 6 位 一起寄出」。</div>
+          <select data-f="order">${g.linkedOrder ? orderOpts(list.filter(o => o.no === g.linkedOrder), g.linkedOrder) || `<option>${esc(g.linkedOrder)}</option>` : `<option value="">— 选订单 —</option>` + orderOpts(list)}</select>
+          ${g.linkedOrder ? "" : `<input data-f="orderNo" placeholder="或直接输入订单号" style="margin-top:6px">`}`, "doShip", "✅ 确认已寄出");
+      } else if (act === "ship") {
+        const m = await memberOf(g.uid);
+        const addrs = Array.isArray(m.addresses) ? m.addresses : [];
+        html = boxHTML("🚚 单独寄出", `
+          <label style="margin-top:6px">收货地址
+            <select data-f="addr">${addrs.map((a, i) => `<option value="${i}">${i ? "" : "⭐ 默认 · "}${esc(a.name)} · ${esc(a.city || "")}</option>`).join("")}<option value="new">✏️ 另外填写</option></select>
+          </label>
+          <div data-f="newAddr" class="${addrs.length ? "hidden" : ""}">
+            <div class="row2"><input data-a="name" placeholder="收件人"><input data-a="phone" placeholder="电话"></div>
+            <input data-a="line1" placeholder="地址第 1 行" style="margin-top:6px"><input data-a="line2" placeholder="地址第 2 行（选填）" style="margin-top:6px">
+            <div class="row2" style="margin-top:6px"><input data-a="postcode" placeholder="邮编"><input data-a="city" placeholder="城市"></div>
+            <input data-a="state" placeholder="州属" style="margin-top:6px">
+          </div>
+          <div class="row2" style="margin-top:8px"><select data-f="carrier">${carrierOptions("spx")}</select><input data-f="trackingNo" placeholder="运单号"></div>
+          <input data-f="trackingUrl" placeholder="查询链接（选好公司会自动生成）" style="margin-top:6px">`, "doShip", "🚚 确认已寄出");
+      } else if (act === "void") {
+        html = boxHTML("作废这份小礼物", `<input data-f="voidNote" maxlength="100" placeholder="原因（选填，只在后台看得到）" style="margin-top:6px">`, "doVoid", "确认作废");
+      }
+      $("box").innerHTML = html;
+      if (act === "ship" && dlv === "separate") {
+        const b = $("box"), sel = b.querySelector('[data-f="addr"]');
+        sel.addEventListener("change", () => b.querySelector('[data-f="newAddr"]').classList.toggle("hidden", sel.value !== "new"));
+        if (!sel.options.length || sel.value === "new") b.querySelector('[data-f="newAddr"]').classList.remove("hidden");
+        const fill = () => { const c = b.querySelector('[data-f="carrier"]').value, no = b.querySelector('[data-f="trackingNo"]').value.trim();
+          const tpl = trackTpl[c]; if (tpl && no) b.querySelector('[data-f="trackingUrl"]').value = tpl.replace("{no}", encodeURIComponent(no)); };
+        b.querySelector('[data-f="carrier"]').addEventListener("change", fill);
+        b.querySelector('[data-f="trackingNo"]').addEventListener("input", fill);
+      }
+    }
+
+    $("panel").addEventListener("click", async e => {
+      const btn = e.target.closest("[data-act]");
+      const item = e.target.closest(".item");
+      if (!btn || !item) return;
+      const g = gifts.find(x => x.id === item.dataset.id);
+      if (!g) return;
+      const act = btn.dataset.act, b = $("box");
+      const v = f => ((b.querySelector(`[data-f="${f}"]`) || {}).value || "").trim();
+      if (["link", "days", "note", "dlv", "ship", "void"].includes(act)) return openBox(g, act);
+      if (act === "close") { b.innerHTML = ""; return; }
+      const who = g.name || "会员";
+      let op = "", data = { id: g.id }, log = "";
+      if (act === "saveLink") { op = "manualUpdate"; data.linkedOrder = v("linkNo").toUpperCase() || v("link"); log = data.linkedOrder ? `指定随 ${data.linkedOrder} 寄出` : "取消指定订单"; }
+      if (act === "saveDays") { op = "manualUpdate"; data.days = Number(v("days")); log = data.days ? `期限改为 ${data.days} 天` : "改为不过期"; }
+      if (act === "saveNote") {
+        const n = readNoteBox(b);
+        if (!await previewSend({ title: "修改给会员的留言", to: who, rows: [["礼物", g.giftName]], note: n })) return;
+        op = "manualUpdate"; Object.assign(data, noteFields(n)); log = "修改留言";
+      }
+      if (act === "saveDlv") {
+        const to = (g.delivery || "withOrder") === "separate" ? "withOrder" : "separate";
+        op = "manualUpdate"; data.delivery = to; if (to === "withOrder") data.days = 30; log = "改为" + DLV[to];
+      }
+      if (act === "doShip") {
+        op = "manualShip";
+        if ((g.delivery || "withOrder") === "withOrder") {
+          data.orderNo = v("orderNo").toUpperCase() || v("order");
+          if (!data.orderNo) { alert("请选择或输入订单号"); return; }
+          log = `标记已随 ${data.orderNo} 寄出`;
+        } else {
+          const m = await memberOf(g.uid);
+          const i = v("addr");
+          let address;
+          if (i === "new" || !i) { address = {}; b.querySelectorAll("[data-a]").forEach(x => address[x.dataset.a] = x.value.trim()); }
+          else address = (m.addresses || [])[Number(i)];
+          const c = CARRIERS.find(x => x.id === v("carrier"));
+          data.ship = { carrier: v("carrier"), carrierName: c ? c.name : "", trackingNo: v("trackingNo"), trackingUrl: v("trackingUrl"), address };
+          if (!data.ship.trackingNo) { alert("请填写运单号"); return; }
+          if (!await previewSend({ title: "小礼物已单独寄出", to: who, okText: "🚚 确认已寄出",
+            rows: [["礼物", g.giftName], ["运输公司", data.ship.carrierName], ["运单号", data.ship.trackingNo], ["查询链接", data.ship.trackingUrl]] })) return;
+          log = `单独寄出 ${data.ship.carrierName} ${data.ship.trackingNo}`;
+        }
+      }
+      if (act === "doVoid") { op = "void"; data.note = v("voidNote"); log = "作废"; }
+      if (act === "unship") { if (!await confirmSimple(`把「${g.giftName}」改回待寄？（运单资料会清掉）`)) return; op = "unship"; log = "取消寄出"; }
+      if (act === "restore") { if (!await confirmSimple(`恢复「${g.giftName}」为待寄？之后不会自动作废。`)) return; op = "restore"; log = "恢复为待寄"; }
+      if (!op) return;
+      item.querySelectorAll("button").forEach(x => x.disabled = true);
+      try {
+        await call(op, data);
+        logAdmin("prize", `小礼物「${g.giftName}」${code(g.id)}（${who}）：${log}`, "gifts.html");
+      } catch (err) { alert("操作失败：" + errText(err)); item.querySelectorAll("button").forEach(x => x.disabled = false); }
+    });
+
+    requireAdmin(async () => {
+      trackTpl = await loadCarriers();
+      // 只看手动指定的（抽奖的小礼物在领奖追踪）；有变动会自动更新
+      onSnapshot(query(collection(db, "smallGifts"), where("batchId", "==", "manual")), snap => {
+        gifts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        paintTabs();
+      }, e => { $("pageError").textContent = "读取失败：" + e.message; $("pageError").classList.remove("hidden"); });
+      // 从会员详情页过来：打开「送小礼物」并选好这位会员
+      const uid = new URLSearchParams(location.search).get("uid");
+      if (uid) { $("addPanel").open = true; picker.set([uid]); }
+    });
+  </script>
+</body>
+</html>

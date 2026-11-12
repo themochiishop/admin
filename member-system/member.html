@@ -40,6 +40,7 @@
           <a id="waBtn" href="#" target="_blank" class="btn btn-ok hidden">💬 WhatsApp 联系</a>
           <a id="viewAsBtn" href="#" target="_blank" class="btn btn-ghost" title="开新分页，看这位会员在会员俱乐部看到的画面（只读）">👁 用会员视角查看</a>
           <a id="prizeBtn" href="prizes.html" class="btn btn-ghost">🏆 添加中奖</a>
+          <a id="giftBtn" href="gifts.html" class="btn btn-ghost">🎁 送小礼物</a>
           <a href="members.html" class="btn btn-ghost">← 会员列表</a>
         </div>
       </div>
@@ -198,6 +199,7 @@
     // 👁 会员视角：开前台，用这位会员的资料显示（只读）
     if (uid) $("viewAsBtn").href = "https://www.themochiishop.com/memberclub/home.html?viewAs=" + encodeURIComponent(uid);
     if (uid) document.getElementById("prizeBtn").href = "prizes.html?uid=" + encodeURIComponent(uid);
+    if (uid) document.getElementById("giftBtn").href = "gifts.html?uid=" + encodeURIComponent(uid);
     const now = () => new Date();
     let adminEmail = "";
 
