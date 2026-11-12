@@ -120,10 +120,128 @@ export function redeemCode(id) {
   return "#" + String(id || "").slice(0, 6).toUpperCase();
 }
 
+// ---------- 🔴 待处理：实时监听（2026-11-12）----------
+// 侧边栏红点、总览「🔔 待处理」、各页面共用同一组监听；有变动才多读那几笔
+//   redeem：兑换 pending / approved / problem · prize：中奖 claimed / approved · feed：Feed 待审核帖子
+//   reports：Feed 检举 open · nm：新会员奖励待处理 · sg：指定小礼物 pending
+const LIVE_Q = {
+  redeem:  () => query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])),
+  prize:   () => query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])),
+  feed:    () => query(collection(db, "feedPosts"), where("status", "==", "pending")),
+  reports: () => query(collection(db, "feedReports"), where("status", "==", "open")),
+  nm:      () => query(collection(db, "newMemberRewards"), where("status", "in", NM_ACTIONABLE)),
+  sg:      () => query(collection(db, "smallGifts"), where("status", "==", "pending")),
+};
+export const live = {};          // key → [{ id, ...data }]；还没读到 = undefined
+const liveSubs = new Set();
+function liveStart(key) {
+  if (key in live || !LIVE_Q[key]) return;
+  live[key] = undefined;
+  onSnapshot(LIVE_Q[key](), snap => {
+    live[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    liveEmit();
+  }, e => {   // 没有权限 / 还没加规则：当作 0
+    console.warn("live " + key, e);
+    live[key] = [];
+    liveEmit();
+  });
+}
+function liveEmit() {
+  paintBadges();
+  liveSubs.forEach(fn => { try { fn(live); } catch (e) { console.warn("live sub", e); } });
+}
+// 页面要实时资料：onLive(["redeem", "prize"], live => { ... })，有变动就会再叫一次
+export function onLive(keys, fn) {
+  keys.forEach(liveStart);
+  liveSubs.add(fn);
+  fn(live);
+  return () => liveSubs.delete(fn);
+}
+// 页面跟着实时变动（兑换审核、中奖奖品、Feed 审核）：
+//   监听到的资料（liveSig）和画面上的（pageSig）不一样 → 没在填东西就自动重新载入；
+//   正在填（scope 里的输入框改过，或游标在里面）→ 底部显示「有新变动，按这里更新」，不会把填到一半的东西洗掉
+//   pageSig 回传 null = 还没载入完，先不比
+export const liveSigOf = (list, fields = ["status"]) =>
+  list.map(x => x.id + ":" + JSON.stringify(fields.map(f => x[f] ?? null))).sort().join("|");
+export function autoReload(keys, liveSig, pageSig, reload, scope) {
+  let timer = null, busy = false;
+  const bar = document.createElement("button");
+  bar.type = "button";
+  bar.hidden = true;
+  bar.textContent = "🔔 有新变动 · 按这里更新";
+  bar.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;padding:10px 18px;"
+    + "border-radius:999px;border:0;background:#db2777;color:#fff;font-weight:700;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer";
+  document.body.appendChild(bar);
+  const run = async () => {
+    bar.hidden = true;
+    if (busy) return;
+    busy = true;
+    try { await reload(); } catch (e) { console.warn("autoReload", e); } finally { busy = false; }
+  };
+  bar.addEventListener("click", run);
+  const changed = el => {
+    if (el.id === "search" || el.type === "search" || el.type === "hidden") return false;
+    if (el.type === "checkbox" || el.type === "radio") return el.checked !== el.defaultChecked;
+    if (el.type === "file") return !!(el.files && el.files.length);
+    if (el.tagName === "SELECT") { const d = [...el.options].findIndex(o => o.defaultSelected); return el.selectedIndex !== (d < 0 ? 0 : d); }
+    return el.value !== el.defaultValue;
+  };
+  const dirty = () => {
+    const root = document.querySelector(scope);
+    if (!root) return false;
+    const a = document.activeElement;
+    if (a && root.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== "search") return true;
+    return [...root.querySelectorAll("input, textarea, select")].some(changed);
+  };
+  const check = () => {
+    timer = null;
+    let a, b;
+    try { a = liveSig(live); b = pageSig(); } catch (e) { return; }
+    if (a == null || b == null) return;
+    if (a === b) { bar.hidden = true; return; }
+    if (dirty()) bar.hidden = false; else run();
+  };
+  // 等 1.5 秒：自己按了按钮（页面会自己重读）、连续好几笔变动，都只处理一次
+  onLive(keys, () => { clearTimeout(timer); timer = setTimeout(check, 1500); });
+}
+
+// 待处理的数字（侧边栏、总览共用同一套算法）
+export const liveCount = {
+  rPending: () => live.redeem && live.redeem.filter(r => r.newMember !== true && r.status === "pending").length,
+  rShip: () => live.redeem && live.redeem.filter(r => r.newMember !== true && r.kind === "gift" && (r.status === "approved" || r.status === "problem")).length,
+  pClaimed: () => live.prize && live.prize.filter(p => p.status === "claimed").length,
+  pShip: () => live.prize && live.prize.filter(p => p.status === "approved").length,
+  feed: () => live.feed && live.feed.length,
+  reports: () => live.reports && new Set(live.reports.map(r => r.targetKey)).size,
+  nm: () => live.nm && live.nm.length,
+};
+const badgeKeys = new Set();     // 这位管理员有权限、正在显示的红点
+function setBadge(id, n) {
+  const el = document.getElementById(id);
+  if (!el || n == null) return;
+  el.textContent = n > 99 ? "99+" : n;
+  el.hidden = !n;
+}
+function paintBadges() {
+  if (badgeKeys.has("redeem")) setBadge("redeemBadge", live.redeem && liveCount.rPending() + liveCount.rShip());
+  if (badgeKeys.has("prize")) setBadge("prizeBadge", live.prize && live.prize.length);
+  if (badgeKeys.has("feed")) setBadge("feedBadge", live.feed && live.reports && live.feed.length + liveCount.reports());
+  if (badgeKeys.has("nm")) setBadge("nmBadge", live.nm && live.nm.length);
+  updateSideDot();
+}
+function startBadges(keys) {
+  keys.forEach(k => badgeKeys.add(k));
+  const need = [...keys].flatMap(k => k === "feed" ? ["feed", "reports"] : [k]);
+  need.forEach(liveStart);
+  paintBadges();
+}
+
 // 导航「兑换审核」旁边的红色数字：待审核 + 待发货（含配送异常）
+// 实时监听开着时，只要重画就好（页面操作后还会叫这个，不用再读一次）
 export async function refreshRedeemBadge() {
   const el = document.getElementById("redeemBadge");
   if (!el) return;
+  if (badgeKeys.has("redeem")) return paintBadges();
   try {
     const snap = await getDocs(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])));
     const n = snap.docs.filter(d => {
@@ -142,6 +260,7 @@ export const NM_ACTIONABLE = ["pending_approval", "order_review", "expired_revie
 export async function refreshNmBadge() {
   const el = document.getElementById("nmBadge");
   if (!el) return;
+  if (badgeKeys.has("nm")) return paintBadges();
   try {
     const snap = await getCountFromServer(query(collection(db, "newMemberRewards"), where("status", "in", NM_ACTIONABLE)));
     const n = snap.data().count;
@@ -155,6 +274,7 @@ export async function refreshNmBadge() {
 export async function refreshPrizeBadge() {
   const el = document.getElementById("prizeBadge");
   if (!el) return;
+  if (badgeKeys.has("prize")) return paintBadges();
   try {
     const snap = await getDocs(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])));
     const n = snap.size;
@@ -454,6 +574,7 @@ export async function openReportCount() {
 export async function refreshFeedBadge() {
   const el = document.getElementById("feedBadge");
   if (!el) return;
+  if (badgeKeys.has("feed")) return paintBadges();
   try {
     const [snap, nr] = await Promise.all([
       getDocs(query(collection(db, "feedPosts"), where("status", "==", "pending"))),
@@ -568,10 +689,13 @@ export function requireAdmin(onReady) {
     app.classList.remove("hidden");
     onReady(user);
     initClubSwitch(user, access);
-    if (can(access, "member.redeem")) refreshRedeemBadge();
-    if (can(access, "member.prizes")) refreshPrizeBadge();
-    if (can(access, "feed")) refreshFeedBadge();
-    if (can(access, "member.newMember")) refreshNmBadge();
+    // 🔴 红点改成实时（2026-11-12）
+    const bk = [];
+    if (can(access, "member.redeem")) bk.push("redeem");
+    if (can(access, "member.prizes")) bk.push("prize");
+    if (can(access, "feed")) bk.push("feed");
+    if (can(access, "member.newMember")) bk.push("nm");
+    startBadges(bk);
     if (can(access, "member.shop")) refreshCiStockBadge().then(updateSideDot);
   });
 }
