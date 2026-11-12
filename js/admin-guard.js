@@ -66,6 +66,7 @@ export const MEMBER_PAGE_PERM = {
   "index.html": "member.overview", "": "member.overview",
   "redeem.html": "member.redeem",
   "prizes.html": "member.prizes",
+  "gifts.html": ["member.prizes", "draw.claims"],   // 🎁 指定小礼物（后端 sgAdmin 同样检查）
   "members.html": "member.members", "member.html": "member.members", "checkin.html": "member.members",
   "newmember.html": "member.newMember",
   "rewards.html": "member.shop", "perks.html": "member.shop",
