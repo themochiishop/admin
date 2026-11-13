@@ -165,6 +165,10 @@
       <div class="msg" id="msg" aria-live="polite"></div>
     </div>
 
+    <div class="card" id="todoCard">
+      <div class="todo-h"><h2>今天要处理</h2><span class="todo-total" id="todoTotal">读取中…</span></div>
+      <div class="todo" id="todoList"></div>
+      <div class="todo-done" id="todoDone" hidden>✓ 都处理完了</div>
     </div>
        <details class="card fold" id="noticeBox">
       <summary>开播通知</summary>
@@ -226,9 +230,10 @@
       <h2>入口</h2>
       <a href="https://admin.themochiishop.com/" target="_blank" rel="noopener"><span>工具与控制台 Dashboard</span><span>→</span></a>
             <a class="owner-only" href="https://www.themochiishop.com/home-editor/"><span>网站后台编辑</span><span>→</span></a>
+      <a data-perm="member" hidden href="https://admin.themochiishop.com/member-system/index.html"><span>Mochiishop/admin · 会员系统</span><span>→</span></a>
       <a href="https://www.themochiishop.com/" target="_blank" rel="noopener"><span>查看网站</span><span>→</span></a>    
+    <a data-perm="invoice" hidden href="https://admin.themochiishop.com/invoice/" target="_blank" rel="noopener"><span>Purchase Order & Invoice </span><span>→</span></a>   
     </div>
-  </div>
   </div>
 </div>
 <!-- 🧠 智能下线：快到时间时问「还在直播吗？」；没人按就照时间自动下线 -->
