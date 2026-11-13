@@ -44,6 +44,10 @@
     .stats .pk { background: var(--pink-bg); color: var(--pink-tx); }
     .stats .gn { background: var(--green-bg); color: var(--green-tx); }
     .stats .am { background: var(--amber-bg); color: var(--amber-tx); }
+    .stats .full { background: #16a34a; color: #fff; font-size: .9rem; font-weight: 800; padding: 1px 11px; } .stats .full b { color: #fff; }
+    .chips button.full { background: #16a34a; color: #fff; border-color: #16a34a; font-size: .95rem; font-weight: 800; }
+    .alldone { background: #16a34a; color: #fff; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; font-weight: 800; font-size: 1.05rem; line-height: 1.45; }
+    .alldone small { display: block; font-weight: 600; font-size: .82rem; opacity: .92; }
 
     main { flex: 1; min-height: 0; display: flex; }
     .tab { flex: 1; min-width: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; }
@@ -271,6 +275,7 @@
 
   <main>
     <section id="tabScan" class="tab on">
+      <div id="allDone" class="alldone" hidden></div>
       <div id="result"></div>
       <div id="hist" class="hist"></div>
     </section>
@@ -403,9 +408,10 @@
         wakeOnToast: w => `🔆 屏幕常亮 ${w === 30 ? "30 分钟" : "1 小时"}（有操作会延长）`, wakeOffToast: "🌙 屏幕常亮已关闭", wakeIdleToast: w => `🌙 ${w === 30 ? "30 分钟" : "1 小时"}没有操作，屏幕常亮已关闭`,
         camAim: "把条码对准框框", camOrder: "扫「订单号」条码", camTrk: "扫「追踪号」条码", camErr: e => `❌ 打不开相机：${e}（请允许使用相机，或直接输入）`,
         loadFail: e => `❌ 读取失败：${e}`,
-        statToday: n => `今天 <b>${n}</b> 包`, statTodo: n => `要放东西 <b>${n}</b>`, statDone: n => `已打包 <b>${n}</b>`, statPrep: n => `准备 <b>${n}</b> 件`,
+        statToday: n => `今天 <b>${n}</b> 包`, statTodo: n => `要放东西 <b>${n}</b>`, statDone: (n, all) => `已打包 <b>${n}/${all}</b>`, statPrep: n => `准备 <b>${n}</b> 件`,
         rangeInfo: (a, b) => `今天要寄出的包裹：${a} – ${b} 下的单（点上面 📅 可以换）`,
         fAll: "全部", fTodo: "🎁 要放东西", fNone: "⭕ 不用放", fDone: "✅ 已打包",
+        allDone: (n, m) => `🎉 已打包 ${n}/${m}：这一场全部打包好了！`, allDoneSub: "记得按上面的 🏁 收工。", allDoneFin: "已经收工 ✅",
         noneHere: "没有", noOrders: "这个时间段没有订单", inOther: "↪ 东西在同会员的另一包", stTodo: n => `🎁 ${n} 样`, stDone: "✅ 已打包", stNone: "⭕ 不用放",
         prepToday: "今天这些包裹要放的东西，打包前先拿齐", prepAll: "所有还存着、还没寄出的东西（含还没下单的会员）",
         todayOrder: no => `📦 今天有单 …${no}`, waitOrder: "⏳ 等下单", member: "会员", nonMember: "非会员",
@@ -463,9 +469,10 @@
         wakeOnToast: w => `🔆 Screen stays on for ${w === 30 ? "30 min" : "1 hour"} (activity extends it)`, wakeOffToast: "🌙 Keep screen on is off", wakeIdleToast: w => `🌙 No activity for ${w === 30 ? "30 min" : "1 hour"}, keep screen on turned off`,
         camAim: "Point the barcode at the frame", camOrder: "Scan the ORDER NO. barcode", camTrk: "Scan the TRACKING NO. barcode", camErr: e => `❌ Can't open camera: ${e} (allow camera access, or type it in)`,
         loadFail: e => `❌ Failed to load: ${e}`,
-        statToday: n => `Today <b>${n}</b> parcels`, statTodo: n => `To add <b>${n}</b>`, statDone: n => `Packed <b>${n}</b>`, statPrep: n => `Prepare <b>${n}</b>`,
+        statToday: n => `Today <b>${n}</b> parcels`, statTodo: n => `To add <b>${n}</b>`, statDone: (n, all) => `Packed <b>${n}/${all}</b>`, statPrep: n => `Prepare <b>${n}</b>`,
         rangeInfo: (a, b) => `Today's parcels: orders placed ${a} – ${b} (tap 📅 above to change)`,
         fAll: "All", fTodo: "🎁 Add items", fNone: "⭕ Nothing", fDone: "✅ Packed",
+        allDone: (n, m) => `🎉 Packed ${n}/${m}: every parcel in this session is done!`, allDoneSub: "Remember to tap 🏁 Finish at the top.", allDoneFin: "Shift finished ✅",
         noneHere: "None", noOrders: "No orders in this time range", inOther: "↪ Items are in this member's other parcel", stTodo: n => `🎁 ${n}`, stDone: "✅ Packed", stNone: "⭕ Nothing",
         prepToday: "Items for today's parcels — gather them before packing", prepAll: "Everything still stored and not shipped yet (incl. members with no order yet)",
         todayOrder: no => `📦 Order today …${no}`, waitOrder: "⏳ Waiting for order", member: "Member", nonMember: "Non-member",
@@ -549,7 +556,7 @@
       return "";
     }
 
-    let shift = null, lastPrep = [];
+    let shift = null, lastPrep = [], wasAllDone = null;   // wasAllDone：上一次是否已全部打包（null = 还没载入）
     let sess = null, sessOthers = [], sessLast = null, sessChecked = false, curStats = { parcels: 0, need: 0, prep: 0 };   // ⏱ 开工 / 收工
     let loaded = false, all = [], pending = [], filter = "all", folder = "today", sel = null, busy = false, access = null, range = null, curTab = "tabScan";
     const hist = [];
@@ -781,16 +788,23 @@
       $("nList").hidden = !all.length; $("nList").textContent = all.length;
       $("nPrep").hidden = !todayItems.length; $("nPrep").textContent = todayItems.length;
       curStats = { parcels: all.length, need: nTodo, prep: todayItems.length };
-      $("stats").innerHTML = `<span class="pill sess" id="sessPill"></span><span class="pill">${t("statToday", all.length)}</span>
+      // 已打包 X/N（这个时间段的包裹）；全部打包好 → 高亮、大一号
+      const inR = rows.filter(r => !r.p.outside), nDoneR = inR.filter(r => r.p.done).length, full = inR.length > 0 && nDoneR === inR.length;
+      $("stats").innerHTML = `<span class="pill sess" id="sessPill"></span><span class="pill ${full ? "full" : "gn"}">${full ? "🎉 " : ""}${t("statDone", nDoneR, inR.length)}</span>
+        <span class="pill">${t("statToday", all.length)}</span>
         <span class="pill pk">${t("statTodo", nTodo)}</span>
-        <span class="pill gn">${t("statDone", nDone)}</span>
         ${nWarn ? `<span class="pill am">⚠️ <b>${nWarn}</b></span>` : ""}
         <span class="pill">${t("statPrep", todayItems.length)}</span>${shift ? `<span class="pill gn">${esc(t("finShift", shift.byName || (shift.by || "").split("@")[0], fmtT(shift.finishedAt), shift.packed, shift.total))}</span>` : ""}`;
       paintSess();
       $("rangeInfo").textContent = t("rangeInfo", fmtT(range.from), fmtT(range.to));
       // 清单
-      const F = { all: [t("fAll"), rows.length], todo: [t("fTodo"), nTodo], none: [t("fNone"), rows.filter(r => r.st === "none" || r.st === "other").length], done: [t("fDone"), nDone] };
-      $("chips").innerHTML = Object.entries(F).map(([k, [tx, n]]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}">${esc(tx)} ${n}</button>`).join("");
+      const F = { all: [t("fAll"), rows.length], todo: [t("fTodo"), nTodo], none: [t("fNone"), rows.filter(r => r.st === "none" || r.st === "other").length], done: [t("fDone"), `${nDoneR}/${inR.length}`] };
+      $("chips").innerHTML = Object.entries(F).map(([k, [tx, n]]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}${k === "done" && full ? " full" : ""}">${esc(tx)} ${n}</button>`).join("");
+      // 扫描页：全部打包好就显示提示；刚刚完成最后一包时响一声
+      $("allDone").hidden = !full;
+      if (full) $("allDone").innerHTML = `${esc(t("allDone", nDoneR, inR.length))}<small>${esc(shift ? t("allDoneFin") : t("allDoneSub"))}</small>`;
+      if (full && wasAllDone === false) { beep("ok"); toast(t("allDone", nDoneR, inR.length)); }
+      wasAllDone = loaded ? full : null;
       const list = rows.filter(r => filter === "all" || r.st === filter || (filter === "none" && r.st === "other"));
       const chip = (i, w) => `<i${w ? ' class="w"' : ""}>${i.icon} ${esc(tr(i, "prep") || tr(i, "title"))}${w ? " ⚠️" : ""}</i>`;
       $("list").innerHTML = !list.length ? `<div class="empty">${esc(all.length ? t("noneHere") : t("noOrders"))}</div>` : list.map(r => {
@@ -918,7 +932,9 @@
       const head = big => `<div class="res-head"><div class="big">${esc(big)}</div><div class="hr"><div class="no">${noHtml(p.orderNo)}</div><div class="who">${who}</div></div></div>`;
       const warnHtml = i => `<div class="warn">⚠️ ${i.icon} <b>${esc(tr(i, "title"))}</b>：${esc(tr(i, "warn") || tr(i, "sub"))}</div>`;
       const doneV = p.done && (!c.length || m === "view");   // 查看已打包的一包：标题显示「已打包」
-      const big = doneV ? t("bigDone") : c.length ? t("bigPut", m === "view" ? c.length : sel.on.size) : w.length ? t("bigFirst") : t("bigNone");
+      // 要放 N 样：勾了的 + 建议放的新人卡（新人卡默认没勾，但也算一样要放的东西）
+      const nPut = m === "view" ? c.length : c.filter(i => sel.on.has(i.id) || (i.kind === "card" && i.level !== "must")).length;
+      const big = doneV ? t("bigDone") : c.length ? t("bigPut", nPut) : w.length ? t("bigFirst") : t("bigNone");
       const cls = doneV ? "ok" : c.length ? "" : w.length ? "warn" : "none";
       let body;
       if (m === "view") {
