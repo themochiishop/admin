@@ -29,7 +29,9 @@
     .top { background: #1c1722; color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 2px solid #c9a45c; }
     .top h1 { font-size: 1rem; }
     .top .r { display: flex; gap: 10px; align-items: center; font-size: .78rem; color: #cfc6d4; min-width: 0; }
-    #who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+    .ids { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; line-height: 1.35; }
+    #who, #gwho { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
+    #gwho { font-size: .7rem; color: #c9a45c; }
     .logout { background: none; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
     .wrap { max-width: 520px; margin: 0 auto; padding: 16px 14px 40px; }
     .card { background: #fff; border: 1px solid #e9e2e6; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
@@ -135,7 +137,7 @@
 <div id="mainView" hidden>
   <div class="top">
     <h1>Mochii Hub</h1>
-    <div class="r"><span id="who"></span><button class="logout" id="logout">退出</button></div>
+    <div class="r"><div class="ids"><span id="who"></span><span id="gwho"></span></div><button class="logout" id="logout">退出</button></div>
   </div>
 
   <div class="wrap">
@@ -663,13 +665,15 @@
     catch (e) { m.textContent = '登录失败:邮箱或密码不正确'; }
   }
   $('#logout').onclick = () => signOut(auth);
+  // 控制台的 Google 账号（决定能不能进 Hub、是不是店主）
+  window.hubAccess.then(a => { $('#gwho').textContent = '控制台：' + (a.email || '') + (a.owner ? ' · 店主' : ''); });
   let authReady;
   Promise.all([window.hubAccess, new Promise(r => { authReady = r; })]).then(() => { const b = $('#boot'); if (b) b.remove(); });
   onAuthStateChanged(auth, u => {
     authReady();
     document.body.classList.remove('loading');    $('#loginView').hidden = !!u;
     $('#mainView').hidden = !u;
-    $('#who').textContent = u ? (u.email || '') : '';
+    $('#who').textContent = u ? 'Hub：' + (u.email || '') : '';
     if (u) loadRemote();
   });
   setTimeout(() => document.body.classList.remove('loading'), 4000);</script>
