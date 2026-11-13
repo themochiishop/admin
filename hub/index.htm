@@ -103,21 +103,6 @@
     .cfm-row span { color: #8b8190; flex-shrink: 0; }
     .cfm-row strong { text-align: right; font-weight: 600; word-break: break-word; }
     .cfm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
-    /* 今天要处理 */
-    .todo-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .todo-h h2 { margin-bottom: 0; }
-    .todo-total { font-size: .8rem; font-weight: 700; color: #8b8190; }
-    .todo-total.has { color: #e11d48; }
-    .todo a { display: flex; align-items: center; gap: 10px; padding: 11px 2px; border-top: 1px solid #f0eaee; color: #2b2430; text-decoration: none; font-weight: 600; font-size: .92rem; }
-    .todo a:first-child { border-top: 0; }
-    .todo .ic { width: 22px; text-align: center; }
-    .todo .tx { flex: 1; min-width: 0; }
-    .todo .tx small { display: block; font-weight: 400; font-size: .74rem; color: #8b8190; }
-    .todo .n { min-width: 28px; padding: 1px 8px; border-radius: 999px; text-align: center; font-weight: 800; font-size: .85rem; background: #f4f1f5; color: #9a909f; }
-    .todo a.has .n { background: #e11d48; color: #fff; }
-    .todo a:not(.has):not(.login) { color: #9a909f; }
-    .todo a.login .n { background: none; color: #c9a45c; }
-    .todo-done { font-size: .84rem; color: #1d8a38; font-weight: 600; padding-top: 8px; }
   </style>
 </head>
 <body class="loading">
@@ -165,11 +150,6 @@
       <div class="msg" id="msg" aria-live="polite"></div>
     </div>
 
-    <div class="card" id="todoCard">
-      <div class="todo-h"><h2>今天要处理</h2><span class="todo-total" id="todoTotal">读取中…</span></div>
-      <div class="todo" id="todoList"></div>
-      <div class="todo-done" id="todoDone" hidden>✓ 都处理完了</div>
-    </div>
        <details class="card fold" id="noticeBox">
       <summary>开播通知</summary>
       <select id="tpl" aria-label="使用的通知模板"></select>
@@ -230,9 +210,7 @@
       <h2>入口</h2>
       <a href="https://admin.themochiishop.com/" target="_blank" rel="noopener"><span>工具与控制台 Dashboard</span><span>→</span></a>
             <a class="owner-only" href="https://www.themochiishop.com/home-editor/"><span>网站后台编辑</span><span>→</span></a>
-      <a data-perm="member" hidden href="https://admin.themochiishop.com/member-system/index.html"><span>Mochiishop/admin · 会员系统</span><span>→</span></a>
       <a href="https://www.themochiishop.com/" target="_blank" rel="noopener"><span>查看网站</span><span>→</span></a>    
-    <a data-perm="invoice" hidden href="https://admin.themochiishop.com/invoice/" target="_blank" rel="noopener"><span>Purchase Order & Invoice </span><span>→</span></a>   
     </div>
   </div>
 </div>
@@ -680,130 +658,6 @@
     if (u) loadRemote();
   });
   setTimeout(() => document.body.classList.remove('loading'), 4000);</script>
-  <!-- 今天要处理：会员系统（兑换、中奖、Feed）+ 每月抽奖（领奖追踪）
-       在这台设备登录过会员系统后台、抽奖后台就会显示数字；没登录会显示「去登录」 -->
-  <script type="module">
-    const list = document.getElementById("todoList");
-    // 👥 按控制台的管理员权限：只显示这个人有权限的项目和入口
-    const { can, firstMemberPage } = await import("/js/admin-guard.js");
-    const acc = await window.hubAccess;
-    document.querySelectorAll("[data-perm]").forEach(el => { el.hidden = !can(acc, el.dataset.perm); });
-    const msLink = document.querySelector('a[data-perm="member"]');
-    const msFirst = firstMemberPage(acc);
-    if (msLink && msFirst) msLink.href = "https://admin.themochiishop.com/member-system/" + msFirst;
-    const ROWS = [
-      { k: "rPending", ic: "🎁", t: "兑换待审核",     href: "/member-system/redeem.html#pending", src: "ms", perm: "member.redeem" },
-      { k: "rShip",    ic: "📦", t: "兑换待发货",     href: "/member-system/redeem.html#toShip",  src: "ms", perm: "member.redeem" },
-      { k: "pClaimed", ic: "🏆", t: "中奖待审核",     href: "/member-system/prizes.html#claimed", src: "ms", perm: "member.prizes" },
-      { k: "pShip",    ic: "🚚", t: "中奖待发货",     href: "/member-system/prizes.html#approved", src: "ms", perm: "member.prizes" },
-      { k: "feed",     ic: "⏳", t: "Feed 投稿待审核", href: "/member-system/feed.html#pending",   src: "ms", perm: "feed" },
-      { k: "reports",  ic: "🚩", t: "Feed 检举待处理", href: "/member-system/feed.html#reports",   src: "ms", perm: "feed" },
-      { k: "claims",   ic: "🎀", t: "领奖追踪未寄出", href: "/draw_tournament/claims.html",       src: "draw", perm: "draw.claims" },
-    ].filter(r => can(acc, r.perm));
-    const useMs = ROWS.some(r => r.src === "ms"), useDraw = ROWS.some(r => r.src === "draw");
-    if (!ROWS.length) document.getElementById("todoCard").hidden = true;
-    const n = {};             // 数字；null = 读取中
-    const login = {};   // true 已登录、false 没登录、null 读取中（只放有权限的系统）
-    if (useMs) login.ms = null;
-    if (useDraw) login.draw = null;
-    ROWS.forEach(r => n[r.k] = null);
-
-    function render() {
-      let total = 0, html = "";
-      const shownLogin = {};
-      ROWS.forEach(r => {
-        if (login[r.src] === false) {
-          if (shownLogin[r.src]) return;
-          shownLogin[r.src] = true;
-          const url = r.src === "ms" ? "/member-system/" : "/draw_tournament/admin.html";
-          const name = r.src === "ms" ? "会员系统" : "抽奖后台";
-          html += `<a class="login" href="${url}"><span class="ic">🔑</span><span class="tx">${name}还没登录<small>在这台设备登录一次，就会显示要处理的数字</small></span><span class="n">登录 →</span></a>`;
-          return;
-        }
-        const v = n[r.k];
-        total += v || 0;
-        html += `<a class="${v ? "has" : ""}" href="${r.href}"><span class="ic">${r.ic}</span><span class="tx">${r.t}</span><span class="n">${v === null ? "…" : v}</span></a>`;
-      });
-      list.innerHTML = html;
-      const loading = ROWS.some(r => login[r.src] !== false && n[r.k] === null);
-      const el = document.getElementById("todoTotal");
-      el.textContent = loading ? "读取中…" : total ? `${total} 件` : "";
-      el.classList.toggle("has", total > 0);
-      document.getElementById("todoDone").hidden = loading || total > 0 || Object.values(login).includes(false);
-    }
-    render();
-
-    // ---------- 会员系统（Firestore） ----------
-    if (useMs) (async () => {
-      try {
-        const { auth, db } = await import("/member-system/js/firebase-config.js");
-        const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js");
-        const { doc, getDoc, collection, query, where, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js");
-        let started = false;
-        onAuthStateChanged(auth, async user => {
-          let ok = false;
-          if (user) { try { ok = (await getDoc(doc(db, "admins", user.uid))).exists(); } catch (e) {} }
-          login.ms = ok;
-          if (!ok || started) { render(); return; }
-          started = true;
-          onSnapshot(query(collection(db, "redemptions"), where("status", "in", ["pending", "approved", "problem"])), snap => {
-            const l = snap.docs.map(d => d.data());
-            n.rPending = l.filter(r => r.status === "pending").length;
-            n.rShip = l.filter(r => r.kind === "gift" && r.status !== "pending").length;
-            render();
-          }, () => { n.rPending = n.rShip = 0; render(); });
-          onSnapshot(query(collection(db, "prizeWins"), where("status", "in", ["claimed", "approved"])), snap => {
-            const l = snap.docs.map(d => d.data());
-            n.pClaimed = l.filter(p => p.status === "claimed").length;
-            n.pShip = l.filter(p => p.status === "approved").length;
-            render();
-          }, () => { n.pClaimed = n.pShip = 0; render(); });
-          onSnapshot(query(collection(db, "feedPosts"), where("status", "==", "pending")), snap => {
-            n.feed = snap.size; render();
-          }, () => { n.feed = 0; render(); });
-          onSnapshot(query(collection(db, "feedReports"), where("status", "==", "open")), snap => {
-            n.reports = new Set(snap.docs.map(d => d.data().targetKey)).size; render();
-          }, () => { n.reports = 0; render(); });
-        });
-      } catch (e) { console.warn("会员系统提醒载入失败", e); login.ms = false; render(); }
-    })();
-
-    // ---------- 每月抽奖：领奖追踪（Realtime Database） ----------
-    if (useDraw) (async () => {
-      try {
-        const V = "https://www.gstatic.com/firebasejs/10.14.1/";
-        const { initializeApp } = await import(V + "firebase-app.js");
-        const { getAuth, onAuthStateChanged } = await import(V + "firebase-auth.js");
-        const { getDatabase, ref, onValue, get } = await import(V + "firebase-database.js");
-        const app = initializeApp({
-          apiKey: "AIzaSyBu5yd5-pbO82_g8mgIx-faUzuzd0NaRZQ",
-          authDomain: "draw-tournament.firebaseapp.com",
-          databaseURL: "https://draw-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
-          projectId: "draw-tournament",
-        });
-        // 抽奖系统的名单：店主 + draw_staff（由「👥 管理员」页面同步）
-        const key = e => String(e || "").toLowerCase().replace(/\./g, ",");
-        let started = false;
-        onAuthStateChanged(getAuth(app), async u => {
-          let ok = !!(u && !u.isAnonymous);
-          if (ok && String(u.email || "").toLowerCase() !== "mail@themochiishop.com") {
-            try { const v = (await get(ref(getDatabase(app), "draw_staff/" + key(u.email)))).val(); ok = !!(v && (v.claims || v.console)); }
-            catch (e) { ok = false; }
-          }
-          login.draw = ok;
-          if (!ok || started) { render(); return; }
-          started = true;
-          onValue(ref(getDatabase(app), "draw_private/claimBatches"), snap => {
-            let left = 0;
-            Object.values(snap.val() || {}).forEach(b => {
-              left += Object.values((b && b.items) || {}).filter(x => x && !x.removed && !x.voided && !x.shipped).length;
-            });
-            n.claims = left; render();
-          }, () => { n.claims = 0; render(); });
-        });
-      } catch (e) { console.warn("领奖追踪提醒载入失败", e); login.draw = false; render(); }
-    })();
-  </script>
   <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/hub/sw.js', { scope: '/hub/' }).catch(function () {});
