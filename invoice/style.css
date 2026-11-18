@@ -241,3 +241,10 @@ body.exporting .party:hover { background: none; }
   .rec { grid-template-columns: auto 1fr; }
   .rec .act { grid-column: 1 / -1; justify-content: flex-end; }
 }
+/* 快捷地址按钮与导出时自动隐藏 0 元定金行 */
+.preset-bar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 10px; padding: 6px 8px; background: #f1f5f9; border-radius: 8px; font-size: 12px;
+}
+.sm-btn { padding: 4px 10px !important; font-size: 12px !important; }
+body.exporting .zero-dep { display: none !important; }
