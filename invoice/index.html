@@ -33,6 +33,7 @@
     <button type="button" id="btnRecords">📂 记录</button>
     <span class="spacer"></span>
     <button type="button" id="btnShare" class="hidden">📤 分享</button>
+    <button type="button" id="btnPreview">👁️ 打印预览</button>
     <button type="button" id="btnDownload" class="primary">⬇️ 下载 PDF</button>
   </div>
 </header>
@@ -44,6 +45,23 @@
   <section class="page" id="page-po"><div class="sheet-wrap"><div class="sheet" id="sheet-po"></div></div></section>
   <section class="page hidden" id="page-inv"><div class="sheet-wrap"><div class="sheet" id="sheet-inv"></div></div></section>
 </main>
+
+<!-- ========== 弹窗：打印预览 ========== -->
+<div id="previewModal" class="modal hidden">
+  <div class="modal-card pv-modal">
+    <div class="modal-head">
+      <h3>👁️ 打印预览（A4 实际效果）</h3>
+      <div class="pv-actions">
+        <button type="button" class="btn" id="btnDoPrint">🖨️ 打印</button>
+        <button type="button" class="btn primary" id="btnPvDownload">⬇️ 下载 PDF</button>
+        <button type="button" class="x" data-close>✕</button>
+      </div>
+    </div>
+    <div class="pv-stage-wrap" id="pvStageWrap">
+      <div id="pvStage"></div>
+    </div>
+  </div>
+</div>
 
 <!-- ========== 弹窗：客户 / 供应商资料 ========== -->
 <div id="partyModal" class="modal hidden">
@@ -68,7 +86,7 @@
       <div class="g3">
         <label>邮编<input id="pm_postcode" autocomplete="off"></label>
         <label>城市<input id="pm_city" autocomplete="off"></label>
-        <label id="pm_state">州属 / 省份<select id="pm_state"></select></label>
+        <label>州属 / 省份<select id="pm_state"></select></label>
       </div>
       <label id="pmAttnRow">联系人 Attn（选填）<input id="pm_attn" autocomplete="off"></label>
       <label>电话 / WhatsApp<input id="pm_phone" inputmode="tel" autocomplete="off"></label>
