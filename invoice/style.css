@@ -248,3 +248,48 @@ body.exporting .party:hover { background: none; }
 }
 .sm-btn { padding: 4px 10px !important; font-size: 12px !important; }
 body.exporting .zero-dep { display: none !important; }
+/* 快捷地址按钮与导出时自动隐藏 0 元定金行 */
+.preset-bar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 10px; padding: 6px 8px; background: #f1f5f9; border-radius: 8px; font-size: 12px;
+}
+.sm-btn { padding: 4px 10px !important; font-size: 12px !important; }
+body.exporting .zero-dep, #pvStage .zero-dep { display: none !important; }
+
+/* ================= 打印预览弹窗 ================= */
+.pv-modal {
+  width: min(820px, 100%); max-height: 94vh; display: flex; flex-direction: column; padding: 12px 16px;
+}
+.pv-actions { display: flex; align-items: center; gap: 8px; }
+.pv-actions .btn { padding: 6px 12px; font-size: 13px; }
+.pv-stage-wrap {
+  flex: 1; overflow: auto; background: #cbd5e1; border-radius: 10px; padding: 12px;
+  display: flex; justify-content: center; align-items: flex-start;
+}
+#pvStage { transform-origin: top left; }
+#pvStage .sheet {
+  transform: none !important; height: 1060px; min-height: 0; overflow: hidden;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, .25);
+}
+#pvStage .no-pdf, #pvStage .row-del, #pvStage .pv-hide { display: none !important; }
+#pvStage .party .ph { visibility: hidden; }
+#pvStage .party:hover { background: none; }
+
+/* 浏览器直接打印（Ctrl+P / 点击「🖨️ 打印」） */
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+  body { background: #fff !important; }
+  .toolbar, .warn, main, .modal:not(#previewModal), #toast { display: none !important; }
+  #previewModal {
+    position: static !important; background: none !important; padding: 0 !important; display: block !important;
+  }
+  .pv-modal {
+    box-shadow: none !important; max-height: none !important; width: 100% !important; padding: 0 !important;
+  }
+  .pv-modal .modal-head { display: none !important; }
+  .pv-stage-wrap {
+    background: none !important; padding: 0 !important; overflow: visible !important; display: block !important;
+  }
+  #pvStage { transform: none !important; width: 750px !important; height: 1060px !important; }
+  #pvStage .sheet { box-shadow: none !important; }
+}
