@@ -1,10 +1,8 @@
 // =====================================================================
 //  MOCHII SHOP · PO / Invoice
-//  - 资料先存在这台设备（草稿），登录管理员后：客户/供应商名单、常用货品、
-//    单据记录存到 Firebase（member-system 项目），手机和电脑同步
 // =====================================================================
 
-// ---------- 店铺资料（改这里，两张单都会一起改） ----------
+// ---------- 店铺资料 ----------
 const COMPANY = {
   name: "MOCHII SHOP",
   reg: "202503305565",
@@ -18,7 +16,6 @@ const DELIVER_DEFAULT = {
   name: "MOCHII SHOP", a1: "36 JALAN SS 8/4", a2: "TAMAN SRI SAUJANA",
   postcode: "81900", city: "KOTA TINGGI", state: "JOHOR", attn: "MAH KIEN LOONG", phone: "017-750 3767",
 };
-// 中国集运仓默认模板（点击「🇨🇳 中国集运仓模板」时填入，可随时在弹窗修改）
 const DELIVER_CN_DEFAULT = {
   name: "中国集运仓（请修改为实际仓库名）", a1: "广东省广州市白云区（请填详细仓址）", a2: "进仓编号 / 唛头：MOCHII",
   postcode: "510000", city: "GUANGZHOU", state: "GUANGDONG (CHINA)", attn: "仓库收件人 (转 MOCHII SHOP)", phone: "+86 138-0000-0000",
@@ -35,9 +32,9 @@ const STATES = ["JOHOR", "MELAKA", "NEGERI SEMBILAN", "SELANGOR", "KUALA LUMPUR"
   "GUANGDONG (CHINA)", "ZHEJIANG (CHINA)", "FUJIAN (CHINA)", "JIANGSU (CHINA)", "SHANGHAI (CHINA)", "CHINA (OTHER)"];
 
 const PREFIX = { po: "PO-", inv: "INV-" };
-const SAFE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";   // 不用 0 O 1 I L
+const SAFE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const STORE_KEY = "mochii_docs_v12";
-const SHEET_H = 1060;                              // A4 比例（750 宽）
+const SHEET_H = 1060;
 const FB = "https://www.gstatic.com/firebasejs/11.0.2/";
 
 // ---------- 小工具 ----------
@@ -62,6 +59,7 @@ const randNo = t => PREFIX[t] + Array.from(crypto.getRandomValues(new Uint32Arra
 let toastTimer;
 function toast(msg, ms = 2600) {
   const el = $("#toast");
+  if (!el) return;
   el.textContent = msg; el.classList.add("show");
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), ms);
 }
@@ -243,7 +241,7 @@ function syncBinds(t) {
   if (t === state.tab) {
     $$("#currTabs [data-curr]").forEach(b => b.classList.toggle("on", b.dataset.curr === curr));
   }
-  if (t === "inv") $("#paid-inv").classList.toggle("on", !!state.inv.paid);
+  if (t === "inv" && $("#paid-inv")) $("#paid-inv").classList.toggle("on", !!state.inv.paid);
 }
 function setField(t, f, v) {
   state[t][f] = v;
@@ -310,7 +308,6 @@ function calc(t) {
   checkOverflow();
 }
 
-// 手机：纸张缩小到刚好放得下；超过一页 A4 时提醒
 function fitSheets() {
   const s = Math.min(1, (Math.min(window.innerWidth, 800) - 16) / 750);
   $$(".sheet-wrap").forEach(w => {
@@ -396,7 +393,6 @@ function bindSheet(t) {
       renderRows(t); calc(t); persist();
     }
   });
-  // Enter：品项里跳下一格，最后一格自动加新行
   sh.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.isComposing) return;
     const el = e.target;
@@ -413,7 +409,7 @@ function bindSheet(t) {
   });
 }
 
-// ---------- Firebase（登录管理员才用） ----------
+// ---------- Firebase ----------
 let fb = null, user = null, isAdmin = false;
 let contacts = [], products = [];
 
@@ -432,7 +428,6 @@ async function initFirebase() {
   }
   fb.onAuthStateChanged(fb.auth, async u => {
     user = u; isAdmin = false;
-    // 👥 看控制台「👥 管理员」里的「PO / Invoice」权限（不再需要是会员系统管理员）
     if (u) { try { const g = await import("/js/admin-guard.js"); isAdmin = g.can(await g.getAccess(u), "invoice"); } catch (e) {} }
     renderAuth();
     if (isAdmin) loadLists();
@@ -479,7 +474,6 @@ async function uniqueNo(t) {
 }
 function partyName(t) { return ((t === "po" ? state.po.vendor : state.inv.bill) || {}).name || ""; }
 
-// 下载 / 分享时存到记录；单号被别张用过就停下
 async function saveRecord(t) {
   if (!isAdmin) { toast("没有登录管理员，这张单没有存到记录"); return true; }
   const s = state[t];
@@ -531,7 +525,6 @@ const PARTY = {
 const PF = ["name", "regNo", "a1", "a2", "postcode", "city", "state", "attn", "phone", "bank", "acct", "acctName"];
 const BANK_FIELDS = ["bank", "acct", "acctName"];
 const UPPER = ["name", "a1", "a2", "city", "acctName"];
-// 跨境支付 + 马来西亚银行 + 电子钱包（不在名单里的选「其他」自己输入）
 const BANKS = {
   "中国跨境收款 (WorldFirst 直付)": ["Alipay (支付宝)", "WeChat Pay (微信支付)", "China Bank Account (中国大陆银行卡)"],
   "马来西亚银行": ["Maybank", "CIMB Bank", "Public Bank", "RHB Bank", "Hong Leong Bank", "AmBank", "UOB Malaysia",
@@ -571,7 +564,6 @@ function fillPartyForm(p) {
   setStateOptions(p.state || "");
   setBank(p.bank || "");
 }
-// PO「PAYMENT TO VENDOR」的 To: 那一行
 function vendorToLine(p) {
   const who = p.acctName || p.name || "";
   return `To: ${who}${p.bank ? ` (${p.bank})` : ""}${p.acct ? ` ${p.acct}` : ""}`.trimEnd();
@@ -614,7 +606,7 @@ $("#pmPick").addEventListener("change", () => {
   $("#pmDel").classList.toggle("hidden", !c);
 });
 $("#pmDel").addEventListener("click", async () => {
-  if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以从名单删除
+  if (!window.ownerOnly || !window.ownerOnly()) return;
   const c = contacts.find(x => x.id === $("#pmPick").value);
   if (!c || !confirm(`从名单删除「${c.name}」？（已经开过的单不会受影响）`)) return;
   try {
@@ -642,7 +634,6 @@ $("#pmSave").addEventListener("click", async () => {
       if (!confirm(`供应商名字是「${p.name}」，和自己的店名一样。\n确定没有填错吗？`)) return;
     }
     state[t][key] = p;
-    // 供应商：用供应商的名字和收款户口，自动更新 PO 付款资料的 "To:" 那一行
     if (cfg.bank && p.name) {
       const lines = state.po.payNote.split("\n");
       const i = lines.findIndex(l => /^to:/i.test(l.trim()));
@@ -713,7 +704,7 @@ $("#recList").addEventListener("click", async e => {
     build(r.type); switchTab(r.type); persist(); closeModals();
     toast(`已打开 ${r.no}`);
   } else {
-    if (!window.ownerOnly || !window.ownerOnly()) return; // 只有店主可以永久删除记录
+    if (!window.ownerOnly || !window.ownerOnly()) return;
     if (!confirm(`永久删除记录 ${r.no}？\n（已经下载或传出去的 PDF 不受影响）`)) return;
     try {
       await fb.deleteDoc(fb.doc(fb.db, "invoiceDocs", r.id));
@@ -724,7 +715,6 @@ $("#recList").addEventListener("click", async e => {
   }
 });
 
-// 关闭弹窗：✕、取消、点外面、Esc
 $$(".modal").forEach(m => m.addEventListener("click", e => {
   if (e.target === m || e.target.closest("[data-close]")) closeModals();
 }));
@@ -735,7 +725,6 @@ function fileName(t) {
   const name = partyName(t).replace(/[\\/:*?"<>|]/g, "").trim();
   return `${state[t].no}${name ? "_" + name : ""}.pdf`;
 }
-// html2canvas 画输入框不准：下载前把输入框换成文字
 function prepareExport(sh) {
   document.body.classList.add("exporting");
   $$("input:not([type=checkbox]), textarea", sh).forEach(el => {
@@ -785,7 +774,6 @@ async function exportPdf(mode) {
     const name = fileName(t);
     window.scrollTo(0, 0);
     prepareExport(sh);
-    // 复制一份到页面最左上角再生成：PDF 不会因为屏幕上纸张的位置而偏移
     const stage = document.createElement("div");
     stage.style.cssText = "position:absolute;left:0;top:0;width:750px;z-index:-1;background:#fff;";
     const copy = sh.cloneNode(true);
@@ -832,7 +820,7 @@ function openPreview() {
 }
 function fitPreview() {
   const modal = $("#previewModal");
-  if (modal.classList.contains("hidden")) return;
+  if (!modal || modal.classList.contains("hidden")) return;
   const wrap = $("#pvStageWrap"), stage = $("#pvStage");
   const avail = wrap.clientWidth - 24;
   const s = Math.min(1, avail / 750);
@@ -879,3 +867,9 @@ try {
     $("#btnShare").classList.remove("hidden");
 } catch (e) {}
 window.addEventListener("resize", () => { fitSheets(); fitPreview(); });
+
+// ---------- 开始 ----------
+loadDraft();
+["po", "inv"].forEach(t => { build(t); bindSheet(t); });
+switchTab(state.tab);
+initFirebase();
