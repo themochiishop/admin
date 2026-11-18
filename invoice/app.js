@@ -815,6 +815,32 @@ async function exportPdf(mode) {
   }
 }
 
+// ---------- 打印预览 ----------
+function openPreview() {
+  const t = state.tab, sh = sheetOf(t);
+  prepareExport(sh);
+  const copy = sh.cloneNode(true);
+  copy.removeAttribute("id");
+  $$("[id]", copy).forEach(x => x.removeAttribute("id"));
+  restoreExport(sh);
+
+  const stage = $("#pvStage");
+  stage.innerHTML = "";
+  stage.appendChild(copy);
+  $("#previewModal").classList.remove("hidden");
+  fitPreview();
+}
+function fitPreview() {
+  const modal = $("#previewModal");
+  if (modal.classList.contains("hidden")) return;
+  const wrap = $("#pvStageWrap"), stage = $("#pvStage");
+  const avail = wrap.clientWidth - 24;
+  const s = Math.min(1, avail / 750);
+  stage.style.transform = `scale(${s})`;
+  stage.style.width = "750px";
+  stage.style.height = (1060 * s) + "px";
+}
+
 // ---------- 工具栏 ----------
 $$(".tabs .tab[data-tab]").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
 $$("#currTabs [data-curr]").forEach(b => b.addEventListener("click", () => {
@@ -843,16 +869,13 @@ $("#btnCopy").addEventListener("click", async () => {
   toast(`已复制成新单 ${s.no}（日期改成今天）`);
 });
 $("#btnRecords").addEventListener("click", openRecords);
+$("#btnPreview").addEventListener("click", openPreview);
+$("#btnDoPrint").addEventListener("click", () => window.print());
+$("#btnPvDownload").addEventListener("click", () => { closeModals(); exportPdf("download"); });
 $("#btnDownload").addEventListener("click", () => exportPdf("download"));
 $("#btnShare").addEventListener("click", () => exportPdf("share"));
 try {
   if (navigator.canShare && navigator.canShare({ files: [new File(["x"], "x.pdf", { type: "application/pdf" })] }))
     $("#btnShare").classList.remove("hidden");
 } catch (e) {}
-window.addEventListener("resize", fitSheets);
-
-// ---------- 开始 ----------
-loadDraft();
-["po", "inv"].forEach(t => { build(t); bindSheet(t); });
-switchTab(state.tab);
-initFirebase();
+window.addEventListener("resize", () => { fitSheets(); fitPreview(); });
