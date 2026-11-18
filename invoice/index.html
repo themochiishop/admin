@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PO / Invoice · Mochii Admin</title>
 <link rel="icon" type="image/png" href="logo.png">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -91,4 +91,44 @@
       <label id="pmAttnRow">联系人 Attn（选填）<input id="pm_attn" autocomplete="off"></label>
       <label>电话 / WhatsApp<input id="pm_phone" inputmode="tel" autocomplete="off"></label>
       <div id="pmBankRow" class="bank-box">
-        <div class="bank-title
+        <div class="bank-title">💳 供应商收款户口（选填，会自动写进「PAYMENT TO VENDOR」）</div>
+        <div class="g2">
+          <label>银行 / 电子钱包 / 支付宝
+            <select id="pm_bankSel"></select>
+            <input id="pm_bankOther" class="hidden" placeholder="输入银行或平台名称" autocomplete="off">
+          </label>
+          <label>户口 / 支付宝账号<input id="pm_acct" placeholder="手机号 / 邮箱 / 银行卡号" autocomplete="off"></label>
+        </div>
+        <label>实名认证姓名 / 户口名字（跨境付支付宝必填）<input id="pm_acctName" placeholder="填对方支付宝实名或营业执照名" autocomplete="off"></label>
+      </div>
+      <label class="row-check" id="pmKeepRow"><input type="checkbox" id="pmKeep" checked> 保存到名单（下次可以直接选）</label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" data-close>取消</button>
+      <button type="button" class="btn primary" id="pmSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 弹窗：记录 ========== -->
+<div id="recModal" class="modal hidden">
+  <div class="modal-card wide">
+    <div class="modal-head"><h3>📂 记录</h3><button type="button" class="x" data-close>✕</button></div>
+    <div class="rec-tools">
+      <input id="recSearch" type="search" placeholder="搜索单号、名字、日期" autocomplete="off">
+      <div class="seg" id="recSeg">
+        <button type="button" data-rt="all" class="on">全部</button>
+        <button type="button" data-rt="po">PO</button>
+        <button type="button" data-rt="inv">Invoice</button>
+      </div>
+    </div>
+    <div id="recList"></div>
+  </div>
+</div>
+
+<datalist id="productList"></datalist>
+<div id="toast"></div>
+
+<script type="module" src="app.js?v=2"></script>
+</body>
+</html>
