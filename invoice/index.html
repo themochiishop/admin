@@ -24,6 +24,10 @@
       <button type="button" class="tab" data-tab="po">Purchase Order</button>
       <button type="button" class="tab" data-tab="inv">Invoice</button>
     </div>
+    <div class="tabs" id="currTabs" title="切换单据币种">
+      <button type="button" class="tab" data-curr="RM">RM</button>
+      <button type="button" class="tab" data-curr="CNY">CNY</button>
+    </div>
     <button type="button" id="btnNew">＋ 新单</button>
     <button type="button" id="btnCopy">⧉ 复制成新单</button>
     <button type="button" id="btnRecords">📂 记录</button>
@@ -46,6 +50,11 @@
   <div class="modal-card fm">
     <div class="modal-head"><h3 id="pmTitle">资料</h3><button type="button" class="x" data-close>✕</button></div>
     <label class="row-check hidden" id="pmSameRow"><input type="checkbox" id="pmSame"> 和 Bill to 一样</label>
+    <div id="pmPresetRow" class="preset-bar hidden">
+      <span>快捷地址：</span>
+      <button type="button" class="btn sm-btn" id="btnPresetMy">🇲🇾 大马店铺地址</button>
+      <button type="button" class="btn sm-btn" id="btnPresetCn">🇨🇳 中国集运仓模板</button>
+    </div>
     <div id="pmFields">
       <div id="pmPickRow">
         <label>选择已保存的名单
@@ -53,26 +62,26 @@
         </label>
       </div>
       <label>姓名 / 公司名<input id="pm_name" autocomplete="off"></label>
-      <label id="pmRegRow">IC / 注册号（选填）<input id="pm_regNo" autocomplete="off"></label>
+      <label id="pmRegRow">IC / 注册号 / 统一社会信用代码（选填）<input id="pm_regNo" autocomplete="off"></label>
       <label>地址第 1 行<input id="pm_a1" autocomplete="off"></label>
       <label>地址第 2 行<input id="pm_a2" autocomplete="off"></label>
       <div class="g3">
-        <label>邮编<input id="pm_postcode" inputmode="numeric" autocomplete="off"></label>
+        <label>邮编<input id="pm_postcode" autocomplete="off"></label>
         <label>城市<input id="pm_city" autocomplete="off"></label>
-        <label>州属<select id="pm_state"></select></label>
+        <label id="pm_state">州属 / 省份<select id="pm_state"></select></label>
       </div>
       <label id="pmAttnRow">联系人 Attn（选填）<input id="pm_attn" autocomplete="off"></label>
       <label>电话 / WhatsApp<input id="pm_phone" inputmode="tel" autocomplete="off"></label>
       <div id="pmBankRow" class="bank-box">
         <div class="bank-title">💳 供应商收款户口（选填，会自动写进「PAYMENT TO VENDOR」）</div>
         <div class="g2">
-          <label>银行 / 电子钱包
+          <label>银行 / 电子钱包 / 支付宝
             <select id="pm_bankSel"></select>
-            <input id="pm_bankOther" class="hidden" placeholder="输入银行名称" autocomplete="off">
+            <input id="pm_bankOther" class="hidden" placeholder="输入银行或平台名称" autocomplete="off">
           </label>
-          <label>户口号码<input id="pm_acct" inputmode="numeric" placeholder="1014 0000 1699 77" autocomplete="off"></label>
+          <label>户口 / 支付宝账号<input id="pm_acct" placeholder="手机号 / 邮箱 / 银行卡号" autocomplete="off"></label>
         </div>
-        <label>户口名字（选填，不填就用供应商名字）<input id="pm_acctName" autocomplete="off"></label>
+        <label>实名认证姓名 / 户口名字（跨境付支付宝必填）<input id="pm_acctName" placeholder="填对方支付宝实名或营业执照名" autocomplete="off"></label>
       </div>
       <label class="row-check" id="pmKeepRow"><input type="checkbox" id="pmKeep" checked> 保存到名单（下次可以直接选）</label>
     </div>
