@@ -18,6 +18,11 @@ const DELIVER_DEFAULT = {
   name: "MOCHII SHOP", a1: "36 JALAN SS 8/4", a2: "TAMAN SRI SAUJANA",
   postcode: "81900", city: "KOTA TINGGI", state: "JOHOR", attn: "MAH KIEN LOONG", phone: "017-750 3767",
 };
+// 中国集运仓默认模板（点击「🇨🇳 中国集运仓模板」时填入，可随时在弹窗修改）
+const DELIVER_CN_DEFAULT = {
+  name: "中国集运仓（请修改为实际仓库名）", a1: "广东省广州市白云区（请填详细仓址）", a2: "进仓编号 / 唛头：MOCHII",
+  postcode: "510000", city: "GUANGZHOU", state: "GUANGDONG (CHINA)", attn: "仓库收件人 (转 MOCHII SHOP)", phone: "+86 138-0000-0000",
+};
 const PO_PAY_DEFAULT = "From: MOCHII SHOP (Maybank) 5013 3855 4207\nTo: ";
 const PO_TNC_DEFAULT =
   "1. Goods must match the description, quantity and price stated in this purchase order.\n" +
@@ -26,7 +31,8 @@ const INV_PAY_DEFAULT =
   "Bank: Maybank\nAccount name: MOCHII SHOP\nAccount no.: 5013 3855 4207\n" +
   "Please send the payment receipt to WhatsApp 017-750 3767.\nThank you for supporting Mochii Shop!";
 const STATES = ["JOHOR", "MELAKA", "NEGERI SEMBILAN", "SELANGOR", "KUALA LUMPUR", "PUTRAJAYA", "PULAU PINANG",
-  "PERAK", "PAHANG", "KEDAH", "KELANTAN", "TERENGGANU", "PERLIS", "SABAH", "SARAWAK", "LABUAN"];
+  "PERAK", "PAHANG", "KEDAH", "KELANTAN", "TERENGGANU", "PERLIS", "SABAH", "SARAWAK", "LABUAN",
+  "GUANGDONG (CHINA)", "ZHEJIANG (CHINA)", "FUJIAN (CHINA)", "JIANGSU (CHINA)", "SHANGHAI (CHINA)", "CHINA (OTHER)"];
 
 const PREFIX = { po: "PO-", inv: "INV-" };
 const SAFE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";   // 不用 0 O 1 I L
@@ -60,7 +66,7 @@ function toast(msg, ms = 2600) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), ms);
 }
 
-// ---------- 英文大写金额 ----------
+// ---------- 英文大写金额（支持 RM 与 CNY） ----------
 const ONES = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN", "TWELVE",
   "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"];
 const TENS = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
@@ -80,19 +86,20 @@ function toWords(n) {
   if (n) out.push(under1000(n));
   return out.join(" ");
 }
-function amountWords(total) {
+function amountWords(total, curr = "RM") {
   const cents = Math.round(total * 100);
   if (cents <= 0) return "";
-  const rm = Math.floor(cents / 100), sen = cents % 100;
-  let s = "RINGGIT MALAYSIA ";
-  if (rm) s += toWords(rm);
-  if (sen) s += (rm ? " AND " : "") + "SEN " + toWords(sen);
+  const whole = Math.floor(cents / 100), frac = cents % 100;
+  const isCny = curr === "CNY";
+  let s = isCny ? "CHINESE YUAN " : "RINGGIT MALAYSIA ";
+  if (whole) s += toWords(whole);
+  if (frac) s += (whole ? " AND " : "") + (isCny ? "CENTS " : "SEN ") + toWords(frac);
   return s + " ONLY";
 }
 
 // ---------- 状态 ----------
 function newState(t) {
-  const base = { no: randNo(t), date: today(), shipping: "", other: "", rows: [blankRow()], savedNo: null };
+  const base = { no: randNo(t), date: today(), currency: "RM", shipping: "", other: "", deposit: "", rows: [blankRow()], savedNo: null };
   if (t === "po") return {
     ...base, delivery: "", req: "MAH KIEN LOONG", terms: "Bank transfer · upon delivery", ref: "",
     payNote: PO_PAY_DEFAULT, tnc: PO_TNC_DEFAULT, vendor: {}, deliver: { ...DELIVER_DEFAULT },
@@ -158,13 +165,18 @@ function sheetHTML(t) {
     </div>
 
     ${po ? `<table class="tri mt">
-      <tr><th>REQUISITIONER</th><th>PAYMENT TERMS</th><th>REFERENCE</th></tr>
-      <tr><td><input data-f="req" autocomplete="off"></td><td><input data-f="terms" autocomplete="off"></td><td><input data-f="ref" autocomplete="off"></td></tr>
-    </table>` : ""}
+      <tr><th>REQUISITIONER</th><th>PAYMENT TERMS</th><th>REFERENCE (MSMS NO.)</th></tr>
+      <tr><td><input data-f="req" autocomplete="off"></td><td><input data-f="terms" autocomplete="off"></td><td><input data-f="ref" placeholder="如 MSMS-20261119-01" autocomplete="off"></td></tr>
+    </table>
+    <div class="quick no-pdf"><span>付款阶段：</span>
+      <button type="button" data-term="30% Deposit · WorldFirst to Alipay">30% 定金</button>
+      <button type="button" data-term="70% Balance Payment · WorldFirst to Alipay">70% 尾款</button>
+      <button type="button" data-term="100% Full Payment · WorldFirst to Alipay">100% 全款</button>
+    </div>` : ""}
 
     <table class="items mt">
       <colgroup><col style="width:9%"><col style="width:49%"><col style="width:10%"><col style="width:16%"><col style="width:16%"></colgroup>
-      <thead><tr><th>NO.</th><th class="l">DESCRIPTION</th><th>QTY</th><th class="r">UNIT PRICE (RM)</th><th class="r">AMOUNT (RM)</th></tr></thead>
+      <thead><tr><th>NO.</th><th class="l">DESCRIPTION</th><th>QTY</th><th class="r">UNIT PRICE (<span data-curr-lbl>RM</span>)</th><th class="r">AMOUNT (<span data-curr-lbl>RM</span>)</th></tr></thead>
       <tbody></tbody>
     </table>
     <button type="button" class="add-row no-pdf" data-act="addRow">＋ 添加一行</button>
@@ -181,7 +193,8 @@ function sheetHTML(t) {
           <tr><th>SST <span class="na">(Not Applicable)</span></th><td>-</td></tr>
           <tr><th>SHIPPING</th><td><input data-f="shipping" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
           <tr><th>OTHER</th><td><input data-f="other" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
-          <tr class="grand"><th>TOTAL</th><td data-sum="total">RM 0.00</td></tr>
+          ${po ? `<tr id="depRow-${t}"><th>LESS: DEPOSIT PAID</th><td><input data-f="deposit" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>` : ""}
+          <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
         </table>
       </div>
     </div>
@@ -224,14 +237,19 @@ function fill(t) {
   renderParties(t); renderRows(t); syncBinds(t); calc(t);
 }
 function syncBinds(t) {
+  const curr = state[t].currency || "RM";
   $$('[data-bind="date"]', sheetOf(t)).forEach(e => { e.textContent = state[t].date || ""; });
+  $$('[data-curr-lbl]', sheetOf(t)).forEach(e => { e.textContent = curr; });
+  if (t === state.tab) {
+    $$("#currTabs [data-curr]").forEach(b => b.classList.toggle("on", b.dataset.curr === curr));
+  }
   if (t === "inv") $("#paid-inv").classList.toggle("on", !!state.inv.paid);
 }
 function setField(t, f, v) {
   state[t][f] = v;
   const el = $(`[data-f="${f}"]`, sheetOf(t));
   if (el) el.value = v;
-  syncBinds(t); persist();
+  syncBinds(t); calc(t); persist();
 }
 
 function renderParties(t) {
@@ -242,13 +260,13 @@ function renderParties(t) {
     const p = s[key] || {};
     if (!p.name && !p.a1) { box.innerHTML = '<span class="ph">（点击填写）</span>'; return; }
     const lines = [`<b>${esc(p.name)}</b>`];
-    if (p.regNo) lines.push(`IC / Reg. No.: ${esc(p.regNo)}`);
+    if (p.regNo) lines.push(`Reg. / ID No.: ${esc(p.regNo)}`);
     if (p.a1) lines.push(esc(p.a1));
     if (p.a2) lines.push(esc(p.a2));
     const loc = [[p.postcode, p.city].filter(Boolean).join(" "), p.state].filter(Boolean).join(", ");
     if (loc) lines.push(esc(loc));
     if (p.attn) lines.push(`Attn: ${esc(p.attn)}`);
-    if (p.phone) lines.push(`${key === "deliver" ? "Tel" : "WhatsApp"}: ${esc(p.phone)}`);
+    if (p.phone) lines.push(`${key === "deliver" ? "Tel" : "Contact"}: ${esc(p.phone)}`);
     box.innerHTML = lines.join("<br>");
   });
 }
@@ -269,18 +287,26 @@ function renderRows(t) {
 function totals(t) {
   const s = state[t];
   const sub = round2(s.rows.reduce((a, r) => a + num(r.qty) * num(r.price), 0));
-  return { sub, total: round2(sub + num(s.shipping) + num(s.other)) };
+  const dep = t === "po" ? round2(num(s.deposit)) : 0;
+  const total = Math.max(0, round2(sub + num(s.shipping) + num(s.other) - dep));
+  return { sub, dep, total };
 }
 function calc(t) {
   const sh = sheetOf(t), s = state[t];
+  const curr = s.currency || "RM";
   $$(".items tbody tr[data-i]", sh).forEach(tr => {
     const r = s.rows[+tr.dataset.i];
     $(".amt .v", tr).textContent = (r && (r.desc || num(r.price))) ? fmt(num(r.qty) * num(r.price)) : "";
   });
-  const { sub, total } = totals(t);
+  const { sub, dep, total } = totals(t);
   $('[data-sum="sub"]', sh).textContent = fmt(sub);
-  $('[data-sum="total"]', sh).textContent = "RM " + fmt(total);
-  $('[data-sum="words"]', sh).textContent = amountWords(total) || "-";
+  if (t === "po") {
+    const depRow = $(`#depRow-${t}`, sh);
+    if (depRow) depRow.classList.toggle("zero-dep", dep <= 0);
+    $('[data-sum="grandLbl"]', sh).textContent = dep > 0 ? "BALANCE DUE" : "TOTAL";
+  }
+  $('[data-sum="total"]', sh).textContent = `${curr} ` + fmt(total);
+  $('[data-sum="words"]', sh).textContent = amountWords(total, curr) || "-";
   checkOverflow();
 }
 
@@ -300,9 +326,10 @@ function checkOverflow() {
 
 function switchTab(t) {
   state.tab = t;
-  $$(".tabs .tab").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $$(".tabs .tab[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
   $("#page-po").classList.toggle("hidden", t !== "po");
   $("#page-inv").classList.toggle("hidden", t !== "inv");
+  syncBinds(t);
   $$("textarea", sheetOf(t)).forEach(autosize);
   checkOverflow(); persist();
 }
@@ -354,6 +381,7 @@ function bindSheet(t) {
     if (!b) return;
     if (b.dataset.party) { openParty(t, b.dataset.party); return; }
     if (b.dataset.today) { setField(t, b.dataset.today, today()); return; }
+    if (b.dataset.term != null) { setField(t, "terms", b.dataset.term); return; }
     if (b.dataset.due != null) {
       const n = +b.dataset.due;
       setField(t, "due", n ? dstr(addDays(parseD(state[t].date) || new Date(), n)) : "Due upon receipt");
@@ -439,7 +467,7 @@ async function loadLists() {
 function renderProductList() {
   $("#productList").innerHTML = products
     .sort((a, b) => String(a.desc).localeCompare(String(b.desc)))
-    .map(p => `<option value="${esc(p.desc)}">RM ${fmt(p.price)}</option>`).join("");
+    .map(p => `<option value="${esc(p.desc)}">${fmt(p.price)}</option>`).join("");
 }
 async function uniqueNo(t) {
   for (let i = 0; i < 6; i++) {
@@ -464,7 +492,7 @@ async function saveRecord(t) {
     }
     const { savedNo, ...data } = s;
     await fb.setDoc(ref, {
-      type: t, no: s.no, date: s.date, party: partyName(t), total: totals(t).total,
+      type: t, no: s.no, date: s.date, currency: s.currency || "RM", party: partyName(t), total: totals(t).total,
       data: JSON.parse(JSON.stringify(data)), by: user.email || "",
       updatedAt: fb.serverTimestamp(), ...(snap.exists() ? {} : { createdAt: fb.serverTimestamp() }),
     }, { merge: true });
@@ -496,16 +524,17 @@ async function saveProducts(t) {
 // ---------- 弹窗：客户 / 供应商 ----------
 const PARTY = {
   "po.vendor": { title: "供应商资料 · Vendor", list: "vendor", listLabel: "供应商", bank: true },
-  "po.deliver": { title: "送货地址 · Deliver to", attn: true, noReg: true },
+  "po.deliver": { title: "送货地址 · Deliver to", attn: true, noReg: true, preset: true },
   "inv.bill": { title: "客户资料 · Bill to", list: "customer", listLabel: "客户" },
   "inv.ship": { title: "收货资料 · Ship to", list: "customer", listLabel: "客户", same: true, attn: true },
 };
 const PF = ["name", "regNo", "a1", "a2", "postcode", "city", "state", "attn", "phone", "bank", "acct", "acctName"];
 const BANK_FIELDS = ["bank", "acct", "acctName"];
 const UPPER = ["name", "a1", "a2", "city", "acctName"];
-// 马来西亚银行 + 电子钱包（不在名单里的选「其他」自己输入）
+// 跨境支付 + 马来西亚银行 + 电子钱包（不在名单里的选「其他」自己输入）
 const BANKS = {
-  "银行": ["Maybank", "CIMB Bank", "Public Bank", "RHB Bank", "Hong Leong Bank", "AmBank", "UOB Malaysia",
+  "中国跨境收款 (WorldFirst 直付)": ["Alipay (支付宝)", "WeChat Pay (微信支付)", "China Bank Account (中国大陆银行卡)"],
+  "马来西亚银行": ["Maybank", "CIMB Bank", "Public Bank", "RHB Bank", "Hong Leong Bank", "AmBank", "UOB Malaysia",
     "OCBC Bank", "HSBC Bank", "Standard Chartered", "Bank Islam", "Bank Rakyat", "BSN", "Affin Bank",
     "Alliance Bank", "Bank Muamalat", "Agrobank", "MBSB Bank", "Al Rajhi Bank", "Citibank"],
   "数字银行": ["GXBank", "AEON Bank", "Boost Bank", "KAF Digital Bank", "Ryt Bank"],
@@ -542,7 +571,7 @@ function fillPartyForm(p) {
   setStateOptions(p.state || "");
   setBank(p.bank || "");
 }
-// PO「PAYMENT TO VENDOR」的 To: 那一行，例如 To: TAN SIOW JIE (RHB Bank) 1014 0000 1699 77
+// PO「PAYMENT TO VENDOR」的 To: 那一行
 function vendorToLine(p) {
   const who = p.acctName || p.name || "";
   return `To: ${who}${p.bank ? ` (${p.bank})` : ""}${p.acct ? ` ${p.acct}` : ""}`.trimEnd();
@@ -559,6 +588,7 @@ function openParty(t, key) {
   pm = { t, key, k };
   $("#pmTitle").textContent = cfg.title;
   $("#pmSameRow").classList.toggle("hidden", !cfg.same);
+  $("#pmPresetRow").classList.toggle("hidden", !cfg.preset);
   $("#pmSame").checked = !!(cfg.same && state.inv.shipSame);
   $("#pmFields").classList.toggle("hidden", $("#pmSame").checked);
   $("#pmPickRow").classList.toggle("hidden", !(cfg.list && isAdmin));
@@ -573,6 +603,9 @@ function openParty(t, key) {
   setTimeout(() => ($("#pmSame").checked ? $("#pmSave") : $("#pm_name")).focus(), 30);
 }
 function closeModals() { $$(".modal").forEach(m => m.classList.add("hidden")); pm = null; }
+
+$("#btnPresetMy").addEventListener("click", () => { fillPartyForm(DELIVER_DEFAULT); toast("已填入大马店铺地址"); });
+$("#btnPresetCn").addEventListener("click", () => { fillPartyForm(DELIVER_CN_DEFAULT); toast("已填入中国集运仓模板，请核对仓库详情"); });
 
 $("#pmSame").addEventListener("change", () => $("#pmFields").classList.toggle("hidden", $("#pmSame").checked));
 $("#pmPick").addEventListener("change", () => {
@@ -649,13 +682,16 @@ function renderRecords() {
   const q = $("#recSearch").value.trim().toLowerCase();
   const list = recCache.filter(r => (recType === "all" || r.type === recType) &&
     (!q || [r.no, r.party, r.date].some(x => String(x || "").toLowerCase().includes(q))));
-  $("#recList").innerHTML = list.length ? list.map(r => `
+  $("#recList").innerHTML = list.length ? list.map(r => {
+    const c = r.currency || (r.data && r.data.currency) || "RM";
+    return `
     <div class="rec" data-id="${esc(r.id)}">
       <span class="tg ${r.type}">${r.type === "po" ? "PO" : "INV"}</span>
       <div class="mid"><b>${esc(r.no)}</b> · ${esc(r.party || "—")}
-        <div class="sub">${esc(r.date || "")} · RM ${fmt(r.total)}${r.data && r.data.paid ? " · PAID" : ""}</div></div>
+        <div class="sub">${esc(r.date || "")} · ${esc(c)} ${fmt(r.total)}${r.data && r.data.paid ? " · PAID" : ""}</div></div>
       <div class="act"><button type="button" class="btn" data-ract="open">打开</button><button type="button" class="btn danger owner-only" data-ract="del">删除</button></div>
-    </div>`).join("") : '<p class="empty">没有记录</p>';
+    </div>`;
+  }).join("") : '<p class="empty">没有记录</p>';
 }
 $("#recSearch").addEventListener("input", renderRecords);
 $("#recSeg").addEventListener("click", e => {
@@ -780,7 +816,13 @@ async function exportPdf(mode) {
 }
 
 // ---------- 工具栏 ----------
-$$(".tabs .tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+$$(".tabs .tab[data-tab]").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+$$("#currTabs [data-curr]").forEach(b => b.addEventListener("click", () => {
+  const t = state.tab;
+  state[t].currency = b.dataset.curr;
+  syncBinds(t); calc(t); persist();
+  toast(`币种已切换为 ${b.dataset.curr}`);
+}));
 $("#btnNew").addEventListener("click", async () => {
   const t = state.tab;
   if (!confirm("开一张新的空白单？\n目前画面上没下载的内容会清掉。")) return;
