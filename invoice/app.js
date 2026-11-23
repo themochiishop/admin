@@ -16,14 +16,22 @@ const DELIVER_DEFAULT = {
   name: "MOCHII SHOP", a1: "36 JALAN SS 8/4", a2: "TAMAN SRI SAUJANA",
   postcode: "81900", city: "KOTA TINGGI", state: "JOHOR", attn: "MAH KIEN LOONG", phone: "017-750 3767",
 };
+// ESES 中国集运仓（进仓编号 S0661，一定要保留）
 const DELIVER_CN_DEFAULT = {
-  name: "中国集运仓（请修改为实际仓库名）", a1: "广东省广州市白云区（请填详细仓址）", a2: "进仓编号 / 唛头：MOCHII",
-  postcode: "510000", city: "GUANGZHOU", state: "GUANGDONG (CHINA)", attn: "仓库收件人 (转 MOCHII SHOP)", phone: "+86 138-0000-0000",
+  name: "邓述胜 (S0661)", a1: "广州市白云区白云湖街道夏花一路181号7栋4楼(S0661)", a2: "广东省 广州市 白云区 白云湖街道",
+  postcode: "510440", city: "GUANGZHOU", state: "GUANGDONG (CHINA)", attn: "ESES 中国集运仓（转 MOCHII SHOP）", phone: "15915834405",
 };
-const PO_PAY_DEFAULT = "From: MOCHII SHOP (Maybank) 5013 3855 4207\nTo: ";
+const PO_PAY_FROM = { RM: "From: MOCHII SHOP (Maybank) 5013 3855 4207", CNY: "From: MOCHII SHOP (WorldFirst)" };
+const PO_PAY_DEFAULT = PO_PAY_FROM.RM + "\nTo: ";
 const PO_TNC_DEFAULT =
   "1. Goods must match the description, quantity and price stated in this purchase order.\n" +
   "2. Defective or incorrect items may be returned for replacement or refund.";
+const PO_TNC_CNY =
+  "1. Goods must match agreed specifications and quality standards.\n" +
+  "2. Deliver to designated China consolidation warehouse (ESES - Ref: S0661) with MSMS Reference No. clearly marked.\n" +
+  "3. Payment settled in CNY via WorldFirst to supplier's authorized Alipay account.";
+const PO_TNC_BY = { RM: PO_TNC_DEFAULT, CNY: PO_TNC_CNY };
+const DEPOSIT_RATE = 0.3; // 定金固定 30%
 const INV_PAY_DEFAULT =
   "Bank: Maybank\nAccount name: MOCHII SHOP\nAccount no.: 5013 3855 4207\n" +
   "Please send the payment receipt to WhatsApp 017-750 3767.\nThank you for supporting Mochii Shop!";
@@ -193,6 +201,7 @@ function sheetHTML(t) {
           <tr><th>OTHER</th><td><input data-f="other" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
           ${po ? `<tr id="depRow-${t}"><th>LESS: DEPOSIT PAID</th><td><input data-f="deposit" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>` : ""}
           <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
+          ${po ? `<tr data-sum="nowRow" style="display:none"><th><b>THIS PAYMENT (30% DEPOSIT)</b></th><td><b data-sum="now">0.00</b></td></tr>` : ""}
         </table>
       </div>
     </div>
@@ -215,6 +224,33 @@ function sheetHTML(t) {
     <div>${po ? "" : "Goods sold are non-refundable and non-exchangeable.<br>"}For any enquiries about this ${po ? "purchase order" : "invoice"}, please contact us on WhatsApp ${C.tel}.</div>
     <div class="pg">Page 1 of 1</div>
   </div>`;
+}
+
+// ---------- 币种切换（按钮和 MSMS 导入共用） ----------
+// PO：条款和付款说明的 From 行，只有还是「默认内容」时才跟着换；自己改过的不动。
+// 送货地址不跟着换（手动切币种不会盖掉已填的地址）。
+function poDefaultsFor(s, curr) {
+  const tnc = String(s.tnc ?? "").trim();
+  if (!tnc || Object.values(PO_TNC_BY).includes(tnc)) s.tnc = PO_TNC_BY[curr] || PO_TNC_DEFAULT;
+  const lines = String(s.payNote ?? "").split("\n");
+  const fromLines = Object.values(PO_PAY_FROM);
+  if (!lines[0].trim() || fromLines.includes(lines[0].trim())) lines[0] = PO_PAY_FROM[curr] || PO_PAY_FROM.RM;
+  if (!lines.some(l => /^to:/i.test(l.trim()))) lines.push("To: ");
+  s.payNote = lines.join("\n");
+}
+function setCurrency(t, curr) {
+  if (curr !== "RM" && curr !== "CNY") return;
+  const s = state[t];
+  s.currency = curr;
+  if (t === "po") {
+    poDefaultsFor(s, curr);
+    const sh = sheetOf(t);
+    for (const f of ["tnc", "payNote"]) {
+      const el = $(`[data-f="${f}"]`, sh);
+      if (el) { el.value = s[f]; autosize(el); }
+    }
+  }
+  syncBinds(t); calc(t); persist();
 }
 
 // ---------- 画面 ----------
@@ -287,7 +323,10 @@ function totals(t) {
   const sub = round2(s.rows.reduce((a, r) => a + num(r.qty) * num(r.price), 0));
   const dep = t === "po" ? round2(num(s.deposit)) : 0;
   const total = Math.max(0, round2(sub + num(s.shipping) + num(s.other) - dep));
-  return { sub, dep, total };
+  // 30% 定金单：付款阶段是 30% 定金、还没扣过定金时，另算「本次应付」
+  const isDepositStage = t === "po" && /^\s*30%/.test(s.terms || "") && dep <= 0;
+  const now = isDepositStage ? round2(total * DEPOSIT_RATE) : total;
+  return { sub, dep, total, now, isDepositStage };
 }
 function calc(t) {
   const sh = sheetOf(t), s = state[t];
@@ -296,15 +335,21 @@ function calc(t) {
     const r = s.rows[+tr.dataset.i];
     $(".amt .v", tr).textContent = (r && (r.desc || num(r.price))) ? fmt(num(r.qty) * num(r.price)) : "";
   });
-  const { sub, dep, total } = totals(t);
+  const { sub, dep, total, now, isDepositStage } = totals(t);
   $('[data-sum="sub"]', sh).textContent = fmt(sub);
   if (t === "po") {
     const depRow = $(`#depRow-${t}`, sh);
     if (depRow) depRow.classList.toggle("zero-dep", dep <= 0);
     $('[data-sum="grandLbl"]', sh).textContent = dep > 0 ? "BALANCE DUE" : "TOTAL";
+    const nowRow = $('[data-sum="nowRow"]', sh);
+    if (nowRow) {
+      nowRow.style.display = isDepositStage ? "" : "none";
+      $('[data-sum="now"]', sh).textContent = `${curr} ` + fmt(now);
+    }
   }
   $('[data-sum="total"]', sh).textContent = `${curr} ` + fmt(total);
-  $('[data-sum="words"]', sh).textContent = amountWords(total, curr) || "-";
+  // 大写金额跟实际要付的钱走：定金单写 30% 的金额
+  $('[data-sum="words"]', sh).textContent = amountWords(now ?? total, curr) || "-";
   checkOverflow();
 }
 
@@ -832,9 +877,7 @@ function fitPreview() {
 // ---------- 工具栏 ----------
 $$(".tabs .tab[data-tab]").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
 $$("#currTabs [data-curr]").forEach(b => b.addEventListener("click", () => {
-  const t = state.tab;
-  state[t].currency = b.dataset.curr;
-  syncBinds(t); calc(t); persist();
+  setCurrency(state.tab, b.dataset.curr);
   toast(`币种已切换为 ${b.dataset.curr}`);
 }));
 $("#btnNew").addEventListener("click", async () => {
@@ -868,8 +911,82 @@ try {
 } catch (e) {}
 window.addEventListener("resize", () => { fitSheets(); fitPreview(); });
 
+// ---------- MSMS 跳转自动填单 ----------
+// 链接：/invoice/?from=msms&ref=MSMS-…&vName=…&vAcct=…&terms=…&deposit=…&items=[…]&no=PO-…
+// 只认 from=msms（付中国供应商货款）。其他情况完全照原本本地开单。
+let msmsNotice = "";
+function clearQuery() {
+  try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
+}
+function initMsmsBridge() {
+  let q;
+  try { q = new URLSearchParams(window.location.search); } catch (e) { return; }
+  if (q.get("from") !== "msms") return;
+  const str = (k, max = 200) => String(q.get(k) ?? "").trim().slice(0, max);
+
+  // 草稿保护：本地有没保存的 PO 先问
+  const cur = state.po;
+  const dirty = !cur.savedNo && (
+    (cur.vendor && (cur.vendor.name || cur.vendor.acct)) ||
+    (cur.rows || []).some(r => String(r.desc || "").trim() || num(r.price) > 0));
+  if (dirty && !confirm("检测到本地有未保存的 PO 草稿，是否覆盖为 MSMS 导入的订单数据？")) {
+    clearQuery();
+    msmsNotice = "已取消导入，保留原本的草稿";
+    return;
+  }
+
+  const curr = str("curr", 3).toUpperCase() === "RM" ? "RM" : "CNY";
+  const po = newState("po");
+  po.currency = curr;
+
+  const no = str("no", 40).toUpperCase();
+  if (/^PO-[A-Z0-9][A-Z0-9-]{2,38}$/.test(no)) po.no = no;
+  po.ref = str("ref", 60);
+  po.terms = str("terms", 120);
+  const dep = num(q.get("deposit"));
+  po.deposit = dep > 0 ? dep.toFixed(2) : "";
+
+  const vendor = {
+    name: str("vName").toUpperCase(),
+    phone: str("vPhone", 40),
+    bank: str("vBank", 60) || "Alipay (支付宝)",
+    acct: str("vAcct", 80),
+    acctName: str("vAcctName").toUpperCase(),
+  };
+  po.vendor = Object.fromEntries(Object.entries(vendor).filter(([, v]) => v));
+  po.deliver = { ...DELIVER_CN_DEFAULT };
+
+  let itemsBad = false;
+  const rawItems = q.get("items");
+  if (rawItems) {
+    try {
+      const arr = JSON.parse(rawItems);
+      if (!Array.isArray(arr)) throw new Error("not array");
+      const rows = arr.slice(0, 50).map(x => ({
+        desc: String(x && x.desc != null ? x.desc : "").trim().slice(0, 200),
+        qty: Math.max(0, Math.round(num(x && x.qty))),
+        price: num(x && x.price) > 0 ? num(x.price).toFixed(2) : "",
+      })).filter(r => r.desc || r.price);
+      if (rows.length) po.rows = rows;
+    } catch (e) { itemsBad = true; }
+  }
+
+  po.payNote = PO_PAY_FROM[curr] + "\n" + (po.vendor.name || po.vendor.acct ? vendorToLine(po.vendor) : "To: ");
+  po.tnc = PO_TNC_BY[curr];
+
+  state.po = po;
+  state.tab = "po";
+  clearQuery();
+  persist();
+  msmsNotice = itemsBad
+    ? "⚠️ 已从 MSMS 导入，但品项资料读不到，请自己填品项"
+    : `✅ 已从 MSMS 导入 ${po.ref || po.no}，请核对后再下载`;
+}
+
 // ---------- 开始 ----------
 loadDraft();
+initMsmsBridge();
 ["po", "inv"].forEach(t => { build(t); bindSheet(t); });
 switchTab(state.tab);
+if (msmsNotice) toast(msmsNotice, 4500);
 initFirebase();
