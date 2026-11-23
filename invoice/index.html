@@ -3,9 +3,9 @@
 <head>
   <!-- 🔐 权限检查：没登录或没有「invoice」权限会跳回控制台 -->
   <script type="module">import { guard } from "/js/admin-guard.js"; guard("invoice");</script>
-  <script type="module" src="app.js?v=20261123"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 手机也照电脑版（1000px 宽）显示；电脑浏览器会忽略这一行 -->
+<meta name="viewport" content="width=1000, user-scalable=yes">
 <title>PO / Invoice · Mochii Admin</title>
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="stylesheet" href="style.css?v=2">
@@ -130,6 +130,7 @@
 <datalist id="productList"></datalist>
 <div id="toast"></div>
 
-<script type="module" src="app.js?v=2"></script>
+<!-- 只引入一次 app.js；每次更新 app.js 就改一下 v= 后面的数字，浏览器才会用新版 -->
+<script type="module" src="app.js?v=20261123-8"></script>
 </body>
 </html>
