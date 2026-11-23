@@ -113,7 +113,7 @@ function message(uid, kind, vars, at) {
   const fill = (s, l) => String(s).replace(/\{(\w+)\}/g, (_, k) => { const v = vars[k]; return v && typeof v === "object" ? (v[l] ?? v.zh ?? "") : (v ?? ""); });
   const one = l => ({ title: fill(MSG[kind][l][0], l), body: fill(MSG[kind][l][1], l) });
   const zh = one("zh");
-  return { uids: [uid], title: zh.title, body: zh.body, link: "rewards.html",
+  return { uids: [uid], title: zh.title, body: zh.body, link: "prizes.html#sgCard",   // 小礼物在「中奖记录」页
     i18n: { zh, en: one("en"), ms: one("ms") }, by: "system", createdAt: tsOf(at) };
 }
 
