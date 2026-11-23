@@ -301,6 +301,8 @@ function renderParties(t) {
     if (loc) lines.push(esc(loc));
     if (p.attn) lines.push(`Attn: ${esc(p.attn)}`);
     if (p.phone) lines.push(`${key === "deliver" ? "Tel" : "Contact"}: ${esc(p.phone)}`);
+    if (key === "vendor" && p.wechat) lines.push(`WeChat: ${esc(p.wechat)}`);
+    if (key === "vendor" && (p.acct || p.acctName)) lines.push(`Payee: ${esc(vendorToLine(p).replace(/^To:\s*/, ""))}`);
     box.innerHTML = lines.join("<br>");
   });
 }
@@ -686,6 +688,7 @@ $("#pmSave").addEventListener("click", async () => {
     if (cfg.bank && p.name && p.name === COMPANY.name.toUpperCase()) {
       if (!confirm(`供应商名字是「${p.name}」，和自己的店名一样。\n确定没有填错吗？`)) return;
     }
+    if (cfg.bank) { const old = state[t][key] || {}; if (old.attn && !p.attn) p.attn = old.attn; if (old.wechat) p.wechat = old.wechat; }
     state[t][key] = p;
     if (cfg.bank && p.name) {
       const lines = state.po.payNote.split("\n");
@@ -1023,8 +1026,22 @@ function applyMsmsVendorMatch() {
 }
 
 // MSMS 直接交来的收款资料（WorldFirst 支付宝实名＋账号，或供应商收款资料）。只认 MSMS 网站、打开我的那个分页、同一个编号。
-function applyMsmsPayee(payee) {
-  if (!payee || typeof payee !== "object") { toast("MSMS 里这个供应商还没有收款资料，请点 VENDOR 填写"); return; }
+function applyMsmsContact(contact) {
+  if (!contact || typeof contact !== "object") return false;
+  const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+  const name = clean(contact.contactName, 80).toUpperCase(), phone = clean(contact.phone, 40), wechat = clean(contact.wechat, 64);
+  if (!name && !phone && !wechat) return false;
+  const p = { ...(state.po.vendor || {}) };
+  if (name) p.attn = name;
+  if (phone) p.phone = phone;
+  if (wechat) p.wechat = wechat;
+  state.po.vendor = p;
+  renderParties("po"); persist();
+  return true;
+}
+function applyMsmsPayee(payee, contact) {
+  const gotContact = applyMsmsContact(contact);
+  if (!payee || typeof payee !== "object") { toast(gotContact ? "已带入供应商联系资料；MSMS 里还没有收款资料，请点 VENDOR 填写" : "MSMS 里这个供应商还没有收款资料，请点 VENDOR 填写"); return; }
   const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
   const acct = clean(payee.acct, 300), acctName = clean(payee.acctName, 120).toUpperCase(), bank = clean(payee.bank, 60);
   if (!acct && !acctName) return;
@@ -1051,7 +1068,7 @@ function initMsmsHandoff() {
     const d = e.data;
     if (!d || d.type !== "msms-po-payee" || d.nonce !== nonce) return;
     window.removeEventListener("message", onMessage);
-    applyMsmsPayee(d.payee);
+    applyMsmsPayee(d.payee, d.contact);
   };
   window.addEventListener("message", onMessage);
   setTimeout(() => window.removeEventListener("message", onMessage), 120000);
