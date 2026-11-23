@@ -107,7 +107,7 @@ function amountWords(total, curr = "RM") {
 function newState(t) {
   const base = { no: randNo(t), date: today(), currency: "RM", shipping: "", other: "", deposit: "", rows: [blankRow()], savedNo: null };
   if (t === "po") return {
-    ...base, delivery: "", req: "MAH KIEN LOONG", terms: "Bank transfer · upon delivery", ref: "",
+    ...base, delivery: "", req: "MOCHII SHOP", terms: "Bank transfer · upon delivery", ref: "",
     payNote: PO_PAY_DEFAULT, tnc: PO_TNC_DEFAULT, vendor: {}, deliver: { ...DELIVER_DEFAULT },
   };
   return { ...base, due: "Due upon receipt", payNote: INV_PAY_DEFAULT, paid: false, bill: {}, shipSame: true, ship: {} };
