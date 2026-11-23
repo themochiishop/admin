@@ -924,6 +924,8 @@ window.addEventListener("resize", () => { fitSheets(); fitPreview(); });
 // 只认 from=msms（付中国供应商货款）。其他情况完全照原本本地开单。
 let msmsNotice = "";
 let msmsVendorMatch = ""; // 等名单载入后，按供应商名称带出收款资料
+let msmsHandoff = "";     // MSMS 一次性编号：收款资料不走网址，等 MSMS 分页直接交过来
+const MSMS_ORIGIN = "https://supply.themochiishop.com";
 function clearQuery() {
   try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
 }
@@ -986,6 +988,8 @@ function initMsmsBridge() {
   po.tnc = PO_TNC_BY[curr];
 
   if (po.vendor.name && !po.vendor.acct) msmsVendorMatch = po.vendor.name;
+  const h = str("h", 64);
+  if (/^[0-9a-f-]{36}$/i.test(h)) msmsHandoff = h;
   state.po = po;
   state.tab = "po";
   clearQuery();
@@ -1018,10 +1022,47 @@ function applyMsmsVendorMatch() {
   toast(`已从名单带出「${name}」的收款资料`);
 }
 
+// MSMS 直接交来的收款资料（WorldFirst 支付宝实名＋账号，或供应商收款资料）。只认 MSMS 网站、打开我的那个分页、同一个编号。
+function applyMsmsPayee(payee) {
+  if (!payee || typeof payee !== "object") { toast("MSMS 里这个供应商还没有收款资料，请点 VENDOR 填写"); return; }
+  const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+  const acct = clean(payee.acct, 300), acctName = clean(payee.acctName, 120).toUpperCase(), bank = clean(payee.bank, 60);
+  if (!acct && !acctName) return;
+  msmsVendorMatch = ""; // MSMS 的资料为准，名单不再盖过
+  const p = { ...(state.po.vendor || {}), acct, acctName, bank };
+  if (!bank) delete p.bank;
+  if (!acct) delete p.acct;
+  if (!acctName) delete p.acctName;
+  state.po.vendor = p;
+  const lines = String(state.po.payNote || "").split("\n");
+  const i = lines.findIndex(l => /^to:/i.test(l.trim()));
+  if (i >= 0) lines[i] = vendorToLine(p); else lines.push(vendorToLine(p));
+  state.po.payNote = lines.join("\n");
+  const el = $('[data-f="payNote"]', sheetOf("po"));
+  if (el) { el.value = state.po.payNote; autosize(el); }
+  renderParties("po"); calc("po"); persist();
+  toast(payee.source === "worldfirst" ? "✅ 已从 MSMS 带入 WorldFirst 支付宝资料" : "✅ 已从 MSMS 带入供应商收款资料");
+}
+function initMsmsHandoff() {
+  const nonce = msmsHandoff, opener = window.opener;
+  if (!nonce || !opener) return;
+  const onMessage = e => {
+    if (e.origin !== MSMS_ORIGIN || e.source !== opener) return;
+    const d = e.data;
+    if (!d || d.type !== "msms-po-payee" || d.nonce !== nonce) return;
+    window.removeEventListener("message", onMessage);
+    applyMsmsPayee(d.payee);
+  };
+  window.addEventListener("message", onMessage);
+  setTimeout(() => window.removeEventListener("message", onMessage), 120000);
+  try { opener.postMessage({ type: "msms-po-ready", nonce }, MSMS_ORIGIN); } catch (e) {}
+}
+
 // ---------- 开始 ----------
 loadDraft();
 initMsmsBridge();
 ["po", "inv"].forEach(t => { build(t); bindSheet(t); });
 switchTab(state.tab);
 if (msmsNotice) toast(msmsNotice, 4500);
+initMsmsHandoff();
 initFirebase();
