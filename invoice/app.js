@@ -14,7 +14,7 @@ const COMPANY = {
 };
 const DELIVER_DEFAULT = {
   name: "MOCHII SHOP", a1: "36 JALAN SS 8/4", a2: "TAMAN SRI SAUJANA",
-  postcode: "81900", city: "KOTA TINGGI", state: "JOHOR", attn: "MAH KIEN LOONG", phone: "017-750 3767",
+  postcode: "81900", city: "KOTA TINGGI", state: "JOHOR", phone: "017-750 3767",
 };
 // ESES 中国集运仓（进仓编号 S0661，一定要保留）
 const DELIVER_CN_DEFAULT = {
@@ -105,7 +105,7 @@ function amountWords(total, curr = "RM") {
 
 // ---------- 状态 ----------
 function newState(t) {
-  const base = { no: randNo(t), date: today(), currency: "RM", shipping: "", other: "", deposit: "", rows: [blankRow()], savedNo: null };
+  const base = { no: randNo(t), date: today(), currency: "RM", payNow: "", shipping: "", other: "", deposit: "", rows: [blankRow()], savedNo: null };
   if (t === "po") return {
     ...base, delivery: "", req: "MOCHII SHOP", terms: "Bank transfer · upon delivery", ref: "",
     payNote: PO_PAY_DEFAULT, tnc: PO_TNC_DEFAULT, vendor: {}, deliver: { ...DELIVER_DEFAULT },
@@ -201,7 +201,7 @@ function sheetHTML(t) {
           <tr><th>OTHER</th><td><input data-f="other" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
           ${po ? `<tr id="depRow-${t}"><th>LESS: DEPOSIT PAID</th><td><input data-f="deposit" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>` : ""}
           <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
-          ${po ? `<tr data-sum="nowRow" style="display:none"><th><b>THIS PAYMENT (30% DEPOSIT)</b></th><td><b data-sum="now">0.00</b></td></tr>` : ""}
+          ${po ? `<tr data-sum="nowRow" style="display:none"><th><b data-sum="nowLbl">DEPOSIT</b></th><td><b data-sum="now">0.00</b></td></tr>` : ""}
         </table>
       </div>
     </div>
@@ -324,8 +324,13 @@ function totals(t) {
   const dep = t === "po" ? round2(num(s.deposit)) : 0;
   const total = Math.max(0, round2(sub + num(s.shipping) + num(s.other) - dep));
   // 30% 定金单：付款阶段是 30% 定金、还没扣过定金时，另算「本次应付」
-  const isDepositStage = t === "po" && /^\s*30%/.test(s.terms || "") && dep <= 0;
-  const now = isDepositStage ? round2(total * DEPOSIT_RATE) : total;
+  // 定金单：付款阶段写 Deposit、还没扣过定金时，另算「本次应付」
+  // 金额以 MSMS 传来的实际定金为准（供应商自填，最多 30%）；没传就按 30% 算
+  const isDepositStage = t === "po" && /deposit/i.test(s.terms || "") && dep <= 0;
+  const payNow = num(s.payNow);
+  const pm = String(s.terms || "").match(/(\d{1,3})\s*%\s*deposit/i);
+  const rate = pm && +pm[1] > 0 && +pm[1] <= 100 ? +pm[1] / 100 : DEPOSIT_RATE;
+  const now = isDepositStage ? (payNow > 0 ? Math.min(round2(payNow), total) : round2(total * rate)) : total;
   return { sub, dep, total, now, isDepositStage };
 }
 function calc(t) {
@@ -345,6 +350,8 @@ function calc(t) {
     if (nowRow) {
       nowRow.style.display = isDepositStage ? "" : "none";
       $('[data-sum="now"]', sh).textContent = `${curr} ` + fmt(now);
+      const pct = total > 0 ? Math.round(now / total * 100) : 0;
+      $('[data-sum="nowLbl"]', sh).textContent = `DEPOSIT (${pct}%)`;
     }
   }
   $('[data-sum="total"]', sh).textContent = `${curr} ` + fmt(total);
@@ -945,6 +952,8 @@ function initMsmsBridge() {
   po.terms = str("terms", 120);
   const dep = num(q.get("deposit"));
   po.deposit = dep > 0 ? dep.toFixed(2) : "";
+  const payNow = num(q.get("payNow"));
+  po.payNow = payNow > 0 ? payNow.toFixed(2) : "";
 
   const vendor = {
     name: str("vName").toUpperCase(),

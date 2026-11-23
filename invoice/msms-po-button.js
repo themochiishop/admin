@@ -6,10 +6,10 @@
 
 const INVOICE_URL = "https://admin.themochiishop.com/invoice/";
 
-// 付款阶段：deposit 定金 30%｜balance 尾款 70%｜full 全款 100%
+// 付款阶段：deposit 定金（供应商自填，最多 30%）｜balance 尾款｜full 全款
 const STAGES = {
-  deposit: { terms: "30% Deposit · WorldFirst to Alipay", suffix: "D" },
-  balance: { terms: "70% Balance Payment · WorldFirst to Alipay", suffix: "B" },
+  deposit: { terms: "Deposit · WorldFirst to Alipay", suffix: "D" },
+  balance: { terms: "Balance Payment · WorldFirst to Alipay", suffix: "B" },
   full: { terms: "100% Full Payment · WorldFirst to Alipay", suffix: "F" },
 };
 
@@ -18,6 +18,7 @@ const STAGES = {
  *   order.no            订单号，如 "MSMS-20261119-01"
  *   order.supplier      { name, phone, alipayAccount, alipayRealName }
  *   order.items         [{ name, qty, unitPrice }]   单价用「元」
+ *   order.depositAmount 这张单的定金金额（元），开定金单时用
  *   order.depositPaid   已付定金（元），开尾款单时用
  * @param {"deposit"|"balance"|"full"} stage
  */
@@ -32,6 +33,7 @@ export function buildPoUrl(order, stage) {
   p.set("curr", "CNY");
   p.set("terms", st.terms);
   p.set("deposit", stage === "balance" ? Number(order.depositPaid || 0).toFixed(2) : "0.00");
+  if (stage === "deposit") p.set("payNow", Number(order.depositAmount || 0).toFixed(2));
 
   const s = order.supplier || {};
   if (s.name) p.set("vName", s.name);
@@ -56,15 +58,15 @@ export function openPo(order, stage) {
 }
 
 // ---------- React 用法示例 ----------
-// 定金模式：未付定金显示「生成定金 PO」，已付定金显示「生成尾款 PO」
-// 全额模式：显示「生成全款 PO」
+// 有定金的单：未付定金显示「生成定金 PO」，已付定金显示「生成尾款 PO」
+// 没有定金的单：显示「生成全款 PO」
 //
-// {order.paymentMode === "deposit" && !order.depositPaid && (
+// {order.depositAmount > 0 && !order.depositPaid && (
 //   <button onClick={() => openPo(order, "deposit")}>生成定金 PO</button>
 // )}
-// {order.paymentMode === "deposit" && order.depositPaid > 0 && (
+// {order.depositPaid > 0 && (
 //   <button onClick={() => openPo(order, "balance")}>生成尾款 PO</button>
 // )}
-// {order.paymentMode === "full" && (
+// {!(order.depositAmount > 0) && (
 //   <button onClick={() => openPo(order, "full")}>生成全款 PO</button>
 // )}
