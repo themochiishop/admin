@@ -21,16 +21,22 @@ const DELIVER_CN_DEFAULT = {
   name: "邓述胜 (S0661)", a1: "广州市白云区白云湖街道夏花一路181号7栋4楼(S0661)", a2: "广东省 广州市 白云区 白云湖街道",
   postcode: "510440", city: "GUANGZHOU", state: "GUANGDONG (CHINA)", attn: "ESES 中国集运仓（转 MOCHII SHOP）", phone: "15915834405",
 };
-const PO_PAY_FROM = { RM: "From: MOCHII SHOP (Maybank) 5013 3855 4207", CNY: "From: MOCHII SHOP (WorldFirst)" };
+// 付款来源跟着收款方式：WorldFirst 收款才写 WorldFirst；其他 CNY 单只写 MOCHII SHOP。
+const PO_PAY_FROM = { RM: "From: MOCHII SHOP (Maybank) 5013 3855 4207", CNY: "From: MOCHII SHOP" };
+const PO_PAY_FROM_WF = "From: MOCHII SHOP (WorldFirst)";
 const PO_PAY_DEFAULT = PO_PAY_FROM.RM + "\nTo: ";
 const PO_TNC_DEFAULT =
   "1. Goods must match the description, quantity and price stated in this purchase order.\n" +
   "2. Defective or incorrect items may be returned for replacement or refund.";
-const PO_TNC_CNY =
+const PO_TNC_CNY_HEAD =
   "1. Goods must match agreed specifications and quality standards.\n" +
-  "2. Deliver to designated China consolidation warehouse (ESES - Ref: S0661) with MSMS Reference No. clearly marked.\n" +
-  "3. Payment settled in CNY via WorldFirst to supplier's authorized Alipay account.";
+  "2. Deliver to designated China consolidation warehouse (ESES - Ref: S0661) with MSMS Reference No. clearly marked.\n";
+const PO_TNC_CNY = PO_TNC_CNY_HEAD + "3. Payment settled in CNY to the supplier's nominated account.";
+const PO_TNC_CNY_WF = PO_TNC_CNY_HEAD + "3. Payment settled in CNY via WorldFirst to supplier's authorized Alipay account.";
 const PO_TNC_BY = { RM: PO_TNC_DEFAULT, CNY: PO_TNC_CNY };
+const PO_TNC_ALL = [PO_TNC_DEFAULT, PO_TNC_CNY, PO_TNC_CNY_WF,
+  // 旧版默认（第 1～5 版）也当作没改过
+  PO_TNC_CNY_HEAD + "3. Payment settled in CNY via WorldFirst to supplier's authorized Alipay account."];
 const DEPOSIT_RATE = 0.3; // 定金固定 30%
 const INV_PAY_DEFAULT =
   "Bank: Maybank\nAccount name: MOCHII SHOP\nAccount no.: 5013 3855 4207\n" +
@@ -175,9 +181,9 @@ function sheetHTML(t) {
       <tr><td><input data-f="req" autocomplete="off"></td><td><input data-f="terms" autocomplete="off"></td><td><input data-f="ref" placeholder="如 MSMS-20261119-01" autocomplete="off"></td></tr>
     </table>
     <div class="quick no-pdf"><span>付款阶段：</span>
-      <button type="button" data-term="30% Deposit · WorldFirst to Alipay">30% 定金</button>
-      <button type="button" data-term="70% Balance Payment · WorldFirst to Alipay">70% 尾款</button>
-      <button type="button" data-term="100% Full Payment · WorldFirst to Alipay">100% 全款</button>
+      <button type="button" data-term="30% Deposit">30% 定金</button>
+      <button type="button" data-term="70% Balance Payment">70% 尾款</button>
+      <button type="button" data-term="100% Full Payment">100% 全款</button>
     </div>` : ""}
 
     <table class="items mt">
@@ -231,9 +237,9 @@ function sheetHTML(t) {
 // 送货地址不跟着换（手动切币种不会盖掉已填的地址）。
 function poDefaultsFor(s, curr) {
   const tnc = String(s.tnc ?? "").trim();
-  if (!tnc || Object.values(PO_TNC_BY).includes(tnc)) s.tnc = PO_TNC_BY[curr] || PO_TNC_DEFAULT;
+  if (!tnc || PO_TNC_ALL.includes(tnc)) s.tnc = PO_TNC_BY[curr] || PO_TNC_DEFAULT;
   const lines = String(s.payNote ?? "").split("\n");
-  const fromLines = Object.values(PO_PAY_FROM);
+  const fromLines = [...Object.values(PO_PAY_FROM), PO_PAY_FROM_WF];
   if (!lines[0].trim() || fromLines.includes(lines[0].trim())) lines[0] = PO_PAY_FROM[curr] || PO_PAY_FROM.RM;
   if (!lines.some(l => /^to:/i.test(l.trim()))) lines.push("To: ");
   s.payNote = lines.join("\n");
@@ -1054,6 +1060,13 @@ function applyMsmsPayee(payee, contact) {
   const lines = String(state.po.payNote || "").split("\n");
   const i = lines.findIndex(l => /^to:/i.test(l.trim()));
   if (i >= 0) lines[i] = vendorToLine(p); else lines.push(vendorToLine(p));
+  if (payee.source === "worldfirst" && state.po.currency === "CNY") {
+    // WorldFirst 收款：付款来源、付款条件、条款第 3 条都写 WorldFirst（自己改过的不动）
+    if ([...Object.values(PO_PAY_FROM), PO_PAY_FROM_WF].includes(lines[0].trim())) lines[0] = PO_PAY_FROM_WF;
+    if (state.po.terms && !/worldfirst/i.test(state.po.terms)) state.po.terms = state.po.terms + " · WorldFirst to Alipay";
+    if (PO_TNC_ALL.includes(String(state.po.tnc || "").trim())) state.po.tnc = PO_TNC_CNY_WF;
+    for (const f of ["terms", "tnc"]) { const e = $(`[data-f="${f}"]`, sheetOf("po")); if (e) { e.value = state.po[f]; autosize(e); } }
+  }
   state.po.payNote = lines.join("\n");
   const el = $('[data-f="payNote"]', sheetOf("po"));
   if (el) { el.value = state.po.payNote; autosize(el); }
