@@ -198,6 +198,8 @@
     .tabs button.on { color: #fff; }
     .tabs button.on::before { content: ""; position: absolute; top: 0; left: 25%; right: 25%; height: 3px; background: #db2777; border-radius: 0 0 3px 3px; }
     .tabs .n { position: absolute; top: 3px; left: calc(50% + 8px); background: #db2777; color: #fff; font-size: .62rem; border-radius: 99px; padding: 0 5px; }
+    #nList { font-size: .72rem; font-weight: 800; padding: 1px 6px; left: calc(50% + 4px); }
+    #nList.zero { background: #16a34a; }
 
     /* 电脑 / 平板横向：扫描 + 清单 + 准备 并排 */
     body.wide .tabs { display: none; }
@@ -430,7 +432,7 @@
         nmLock: "迎新礼要放进这一包（会员看到的是这张单）· 放不了按 ✓", nmLateDone: (g, no) => `${g}原本要放 #${no}，但那包已经打包了，迎新礼还没寄出。不要放进这包，请通知管理员。`, skippedL: "没放：",
         stH: "▶ 开工", stGo: "▶ 开工", stLater: "先看看清单（还不开工）", stToday: "今天的包裹", stNeed: "要放东西", stPrep: "准备几件",
         stRange: l => `这一场：${l}`, stWho: n => `打包员：${n}`, stOthers: l => `正在打包：${l}`, stLast: (n, tm) => `上一次：${n} ${tm} 收工`,
-        stResume: tm => `⏱ 接着 ${tm} 开工的这一段`, stOk: "▶ 已开工，加油！", stNeedFirst: "先按 ▶ 开工 才可以扫描",
+        stResume: tm => `⏱ 接着 ${tm} 开工的这一段`, stOk: "▶ 已开工，加油！", stNeedFirst: "先按 ▶ 开工 才可以扫描", stAuto: "▶ 已自动开工，加油！",
         sessLock: "🔒 还没开工 · 按这里开工", sessRun: (d, n) => `⏱ 开工 ${d} · 打包 ${n} 包`,
         finOthers: l => `还有人在打包（${l}）：这次只记你的收工，没打包的原因由最后一个收工的人填。`, finNoSess: "还没开工",
         sumH: "🏁 收工了，辛苦了！", sumBack: "回到控制台", sumAgain: "▶ 再开工", sumStart: "开工", sumEnd: "收工", sumDur: "用了",
@@ -491,7 +493,7 @@
         nmLock: "The welcome gift must go in this parcel (the member sees this order) · can't add? tap ✓", nmLateDone: (g, no) => `${g} was for #${no}, but that parcel is already packed without it. Don't add it here — tell the admin.`, skippedL: "Not added: ",
         stH: "▶ Start", stGo: "▶ Start shift", stLater: "Just look at the list (don't start yet)", stToday: "Parcels today", stNeed: "Need items", stPrep: "Items to prep",
         stRange: l => `Session: ${l}`, stWho: n => `Packer: ${n}`, stOthers: l => `Packing now: ${l}`, stLast: (n, tm) => `Last: ${n} finished ${tm}`,
-        stResume: tm => `⏱ Continuing the shift started ${tm}`, stOk: "▶ Shift started — good luck!", stNeedFirst: "Tap ▶ Start before scanning",
+        stResume: tm => `⏱ Continuing the shift started ${tm}`, stOk: "▶ Shift started — good luck!", stNeedFirst: "Tap ▶ Start before scanning", stAuto: "▶ Shift started automatically — good luck!",
         sessLock: "🔒 Not started · tap to start", sessRun: (d, n) => `⏱ On shift ${d} · packed ${n}`,
         finOthers: l => `Others are still packing (${l}): only your shift ends now. The last person to finish fills in the reasons.`, finNoSess: "Not started yet",
         sumH: "🏁 Shift finished — thank you!", sumBack: "Back to console", sumAgain: "▶ Start again", sumStart: "Started", sumEnd: "Finished", sumDur: "Duration",
@@ -713,7 +715,7 @@
         r = { mode: "custom", from: a, to: b };
       }
       range = r; store.set("pkRange", JSON.stringify({ ...r, day: ymd(new Date()) }));
-      $("rangeModal").hidden = true; paintRange(); load().then(() => { if (sessChecked && !sess) openStart(); }); focusQ();
+      $("rangeModal").hidden = true; paintRange(); load(); focusQ();
     };
     $("rangeBtn").onclick = openRange;
     function paintRange() { $("rangeBtn").textContent = range ? rangeLabel(range) : t("pickRange"); }
@@ -785,7 +787,8 @@
       const seen = new Set(), todayItems = [];
       rows.forEach(r => r.c.forEach(i => { if (!seen.has(i.id)) { seen.add(i.id); todayItems.push({ i, who: whoOfParcel(r.p) }); } }));
       const nTodo = rows.filter(r => r.st === "todo").length, nDone = rows.filter(r => r.st === "done").length, nWarn = rows.filter(r => warns(r.p).length && !r.p.done).length;
-      $("nList").hidden = !all.length; $("nList").textContent = all.length;
+      { const inR0 = all.filter(p => !p.outside), dn = inR0.filter(p => p.done).length;   // 清单按钮：还剩 / 总数（例：15/20）
+        $("nList").hidden = !inR0.length; $("nList").textContent = `${inR0.length - dn}/${inR0.length}`; $("nList").classList.toggle("zero", inR0.length > 0 && dn === inR0.length); }
       $("nPrep").hidden = !todayItems.length; $("nPrep").textContent = todayItems.length;
       curStats = { parcels: all.length, need: nTodo, prep: todayItems.length };
       // 已打包 X/N（这个时间段的包裹）；全部打包好 → 高亮、大一号
@@ -1042,7 +1045,7 @@
     async function find(raw) {
       const q = String(raw || "").trim();
       if (!q) return;
-      if (!sess) { $("q").value = ""; beep("bad"); toast(t("stNeedFirst")); openStart(); return; }   // 🔒 没开工不能扫描
+      if (!sess && !(await autoStart())) { $("q").value = ""; return; }   // 还没开工：第一次扫描自动开工（不跳弹窗）
       wakeTouch();
       const n = norm(q);
       $("q").value = ""; $("q").placeholder = q;
@@ -1128,7 +1131,7 @@
     // ---------- 💾 保存＝已放好 ----------
     async function save() {
       if (busy || !sel) return;
-      if (!sess) { beep("bad"); toast(t("stNeedFirst")); openStart(); return; }   // 🔒 没开工不能保存
+      if (!sess && !(await autoStart())) return;   // 还没开工：自动开工
       const m = missing();
       if (m.length) { beep("bad"); toast(t("still", m.join(t("sep")))); return; }
       const p = sel.p, items = canLeft(p).filter(i => sel.on.has(i.id));
@@ -1195,7 +1198,7 @@
       } catch (e) { console.warn("session", e); }
       sessChecked = true; paintSess();
       if (sess) toast(t("stResume", fmtT(sess.startedAt)));
-      else if ($("rangeModal").hidden) openStart();
+      // 没开工也不跳弹窗：第一次扫描时自动开工；要先看今天的数字可以按上面的「还没开工」
     }
     function paintSess() {
       const el = $("sessPill"); if (!el) return;
@@ -1224,6 +1227,21 @@
     }
     const closeStart = () => { $("startModal").hidden = true; clearInterval(clockT); focusQ(); };
     $("stLater").onclick = closeStart;
+    // ▶ 自动开工：还没开工就扫描 / 保存时，直接开工（不跳弹窗）
+    let autoStarting = null;
+    async function autoStart() {
+      if (sess) return true;
+      if (!autoStarting) autoStarting = (async () => {
+        try {
+          const r = (await pkAdmin({ op: "start", from: range.from, to: range.to, label: rangeLabel(range), stats: curStats })).data;
+          sess = r.session; toast(t("stAuto")); paintSess();
+          pkAdmin({ op: "session" }).then(x => { sessOthers = (x.data && x.data.others) || []; paintSess(); }).catch(() => {});
+          return true;
+        } catch (e) { beep("bad"); alert("❌ " + errText(e)); return false; }
+        finally { autoStarting = null; }
+      })();
+      return autoStarting;
+    }
     $("stGo").onclick = async () => {
       if (busy) return;
       busy = true; $("stGo").disabled = true;
@@ -1494,7 +1512,12 @@
     });
     $("camBtn").onclick = openCam;
     $("camClose").onclick = closeCam;
-    $("reloadBtn").onclick = () => { toast("🔄 " + t("loading")); load(); };
+    // 🔄 重新整理：也清掉扫描页上的这一包（画面回到空白，等下一次扫描）
+    $("reloadBtn").onclick = () => {
+      if (busy) return;
+      sel = null; $("result").innerHTML = ""; $("q").value = ""; $("q").placeholder = t("qPh");
+      toast("🔄 " + t("loading")); load(); focusQ();
+    };
     document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { tab(b.dataset.tab); if (b.dataset.tab === "tabScan") focusQ(); });
     $("chips").addEventListener("click", e => { const b = e.target.closest("button[data-f]"); if (b) { filter = b.dataset.f; render(); } });
     $("folders").addEventListener("click", e => { const b = e.target.closest("button[data-fd]"); if (b) { folder = b.dataset.fd; render(); } });
