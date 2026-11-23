@@ -509,6 +509,7 @@ async function loadLists() {
     contacts = cs.docs.map(d => ({ id: d.id, ...d.data() }));
     products = ps.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.desc);
     renderProductList();
+    applyMsmsVendorMatch();
   } catch (e) { toast("名单载入失败：" + e.message); }
 }
 function renderProductList() {
@@ -922,6 +923,7 @@ window.addEventListener("resize", () => { fitSheets(); fitPreview(); });
 // 链接：/invoice/?from=msms&ref=MSMS-…&vName=…&vAcct=…&terms=…&deposit=…&items=[…]&no=PO-…
 // 只认 from=msms（付中国供应商货款）。其他情况完全照原本本地开单。
 let msmsNotice = "";
+let msmsVendorMatch = ""; // 等名单载入后，按供应商名称带出收款资料
 function clearQuery() {
   try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
 }
@@ -983,6 +985,7 @@ function initMsmsBridge() {
   po.payNote = PO_PAY_FROM[curr] + "\n" + (po.vendor.name || po.vendor.acct ? vendorToLine(po.vendor) : "To: ");
   po.tnc = PO_TNC_BY[curr];
 
+  if (po.vendor.name && !po.vendor.acct) msmsVendorMatch = po.vendor.name;
   state.po = po;
   state.tab = "po";
   clearQuery();
@@ -991,6 +994,28 @@ function initMsmsBridge() {
   msmsNotice = itemsBad
     ? "⚠️ 已从 MSMS 导入，但品项资料读不到，请自己填品项"
     : `✅ 已从 MSMS 导入 ${po.ref || po.no}，请核对后再下载`;
+}
+
+// MSMS 只传供应商名称（不传支付宝实名／账号）；名单里有同名供应商就带出收款资料和地址。
+function applyMsmsVendorMatch() {
+  const name = msmsVendorMatch;
+  if (!name) return;
+  msmsVendorMatch = "";
+  const v = state.po.vendor || {};
+  if (String(v.name || "").toUpperCase() !== name.toUpperCase() || v.acct) return;
+  const c = contacts.find(x => x.kind === "vendor" && String(x.name || "").trim().toUpperCase() === name.toUpperCase());
+  if (!c) { toast(`名单里没有「${name}」，请点 VENDOR 填一次收款资料（勾「存到名单」下次自动带出）`, 5000); return; }
+  const p = { ...v };
+  PF.forEach(f => { if (f !== "attn" && c[f] && !p[f]) p[f] = c[f]; });
+  state.po.vendor = p;
+  const lines = String(state.po.payNote || "").split("\n");
+  const i = lines.findIndex(l => /^to:/i.test(l.trim()));
+  if (i >= 0) lines[i] = vendorToLine(p); else lines.push(vendorToLine(p));
+  state.po.payNote = lines.join("\n");
+  const el = $('[data-f="payNote"]', sheetOf("po"));
+  if (el) { el.value = state.po.payNote; autosize(el); }
+  renderParties("po"); calc("po"); persist();
+  toast(`已从名单带出「${name}」的收款资料`);
 }
 
 // ---------- 开始 ----------
