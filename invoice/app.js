@@ -977,7 +977,8 @@ function initMsmsBridge() {
   state.po = po;
   state.tab = "po";
   clearQuery();
-  persist();
+  // 马上写进草稿（不等 250ms）：就算页面把 app.js 载入两次，第二次也读得到导入的单
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
   msmsNotice = itemsBad
     ? "⚠️ 已从 MSMS 导入，但品项资料读不到，请自己填品项"
     : `✅ 已从 MSMS 导入 ${po.ref || po.no}，请核对后再下载`;
