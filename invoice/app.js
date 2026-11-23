@@ -2,6 +2,17 @@
 //  MOCHII SHOP · PO / Invoice
 // =====================================================================
 
+// ---------- 手机也照电脑版显示 ----------
+// 手机打开时把页面当成 1000px 宽的电脑画面（整页缩小显示，可以双指放大），
+// 不再用手机排版，避免放大后上面的菜单和单据对不齐。
+const DESKTOP_WIDTH = 1000;
+(function forceDesktopLayout() {
+  if (window.screen && Math.min(screen.width, screen.height) >= DESKTOP_WIDTH) return; // 电脑本来就够宽
+  let meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) { meta = document.createElement("meta"); meta.name = "viewport"; document.head.appendChild(meta); }
+  meta.setAttribute("content", `width=${DESKTOP_WIDTH}, user-scalable=yes`);
+})();
+
 // ---------- 店铺资料 ----------
 const COMPANY = {
   name: "MOCHII SHOP",
@@ -197,7 +208,7 @@ function sheetHTML(t) {
       <div>
         <div class="bar">${po ? "PAYMENT TO VENDOR" : "PAYMENT DETAILS"}</div>
         <div class="box"><textarea data-f="payNote" rows="2"></textarea></div>
-        ${po ? `<div class="bar mt-s">TERMS AND CONDITIONS</div><div class="box"><textarea data-f="tnc" rows="2"></textarea></div>` : ""}
+        ${po ? `<div class="bar mt-s">TERMS AND CONDITIONS</div><div class="box tnc-box"><div class="tnc-view" data-tnc-view tabindex="0" role="button" title="点击修改" style="cursor:text;min-height:1.4em"></div><div class="no-pdf tnc-edit" hidden><textarea data-f="tnc" rows="2"></textarea></div></div>` : ""}
       </div>
       <div>
         <table class="totals">
@@ -365,7 +376,36 @@ function calc(t) {
   $('[data-sum="total"]', sh).textContent = `${curr} ` + fmt(total);
   // 大写金额跟实际要付的钱走：定金单写 30% 的金额
   $('[data-sum="words"]', sh).textContent = amountWords(now ?? total, curr) || "-";
+  if (t === "po") renderTnc(t);
   checkOverflow();
+}
+
+// 条款：编号在左、换行的字跟第一行文字对齐（显示和 PDF 用这个；点一下才变成可修改的输入框）。
+function renderTnc(t) {
+  const view = $("[data-tnc-view]", sheetOf(t));
+  if (!view) return;
+  const text = String(state[t].tnc ?? "");
+  view.innerHTML = text.trim() ? text.split("\n").map(line => {
+    const m = line.match(/^(\s*\d+[.)])\s+(.*)$/);
+    return m ? `<div style="display:flex;gap:.35em"><span style="flex:none">${esc(m[1].trim())}</span><span style="flex:1;min-width:0">${esc(m[2])}</span></div>`
+             : `<div style="white-space:pre-wrap">${esc(line) || "&nbsp;"}</div>`;
+  }).join("") : '<span class="ph" style="opacity:.5">（点击填写）</span>';
+}
+function bindTnc(t) {
+  // 用事件委托：重开单（build）换掉内容后照样有效。
+  const sh = sheetOf(t);
+  const open = () => {
+    const view = $("[data-tnc-view]", sh), wrap = $(".tnc-edit", sh), ta = wrap && $("textarea", wrap);
+    if (!view || !ta) return;
+    view.hidden = true; wrap.hidden = false; autosize(ta); ta.focus();
+  };
+  sh.addEventListener("click", e => { if (e.target.closest("[data-tnc-view]")) open(); });
+  sh.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.closest("[data-tnc-view]")) { e.preventDefault(); open(); } });
+  sh.addEventListener("focusout", e => {
+    if (!e.target.matches('.tnc-edit textarea')) return;
+    const view = $("[data-tnc-view]", sh), wrap = $(".tnc-edit", sh);
+    wrap.hidden = true; view.hidden = false; renderTnc(t); checkOverflow();
+  });
 }
 
 function fitSheets() {
@@ -1092,6 +1132,7 @@ function initMsmsHandoff() {
 loadDraft();
 initMsmsBridge();
 ["po", "inv"].forEach(t => { build(t); bindSheet(t); });
+bindTnc("po");
 switchTab(state.tab);
 if (msmsNotice) toast(msmsNotice, 4500);
 initMsmsHandoff();
