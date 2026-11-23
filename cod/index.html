@@ -167,6 +167,42 @@
       border-color: var(--primary);
     }
 
+    /* ===== 📦 商品分类管理弹窗（存 Firebase） ===== */
+    .modal-content.cm-modal { width: 780px; max-width: 96vw; max-height: 92vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+    .cm-head { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cm-head .modal-title { flex: 1; }
+    .cm-tools { padding: 10px 16px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; }
+    .cm-tools input { flex: 1; min-width: 160px; }
+    .cm-body { flex: 1; overflow-y: auto; padding: 10px 16px; background: #f8fafc; }
+    .cm-foot { padding: 10px 16px; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cm-status { flex: 1; font-size: 11px; color: var(--text-muted); min-width: 160px; }
+    .cm-btn { padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: var(--text-main); white-space: nowrap; }
+    .cm-btn:hover { border-color: var(--primary); }
+    .cm-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .cm-btn.primary:disabled { background: #94a3b8; border-color: #94a3b8; cursor: not-allowed; }
+    .cm-btn.green { background: #059669; color: #fff; border-color: #059669; }
+    .cm-cat { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; }
+    .cm-cat.open { border-color: var(--primary-border); box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
+    .cm-cat-head { display: flex; align-items: center; gap: 6px; padding: 7px 10px; }
+    .cm-arrow { cursor: pointer; width: 18px; text-align: center; color: var(--text-muted); font-size: 11px; user-select: none; }
+    .cm-cat-name { flex: 1; font-weight: 700; font-size: 12.5px; }
+    .cm-count { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+    .cm-icon { border: 1px solid #e2e8f0; background: #fff; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 3px 6px; color: #475569; }
+    .cm-icon:hover { border-color: var(--primary); background: #eff6ff; }
+    .cm-icon:disabled { opacity: .35; cursor: default; }
+    .cm-icon.del { color: #ef4444; border-color: #fecaca; }
+    .cm-vars { padding: 4px 10px 10px 34px; display: none; }
+    .cm-cat.open .cm-vars { display: block; }
+    .cm-var { display: flex; gap: 4px; align-items: center; margin-bottom: 4px; }
+    .cm-var input { flex: 1; }
+    .cm-add-var { display: flex; gap: 4px; margin-top: 6px; }
+    .cm-add-var input { flex: 1; }
+    .cm-section-title { font-size: 12px; font-weight: 700; color: var(--text-main); margin: 14px 0 6px; }
+    .cm-empty { text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px 0; }
+    .cm-dirty { color: #b45309; font-weight: 700; }
+    .cm-import { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 10px 12px; font-size: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .cm-import span { flex: 1; }
+
     .input-msg-group { display: flex; gap: 4px; align-items: center; }
     .check-msg-label {
       font-size: 10.5px;
@@ -472,7 +508,7 @@
       <div class="panel-header">
         <div class="panel-title">
           <span>🛍️ 商品清单 Product List</span>
-          <a href="https://admin.themochiishop.com/cod/admin.html" target="_blank" class="btn-gear-link" title="前往📦 商品分类与规格可视化管理后台">⚙️</a>
+          <button type="button" class="btn-gear-link" onclick="openCatManager()" title="📦 商品分类与规格管理（存 Firebase）">⚙️</button>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <span id="syncBadge" class="sync-badge">🔄 正在同步表格分类...</span>
@@ -575,6 +611,28 @@
       <div style="display:flex; gap:6px;">
         <input type="text" id="newChannelInput" class="form-control" placeholder="输入自定义的新渠道 (如: Self Pickup)" style="flex:1;">
         <button onclick="addNewCustomChannel()" style="padding:5px 10px; background:#4f46e5; color:#fff; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:11px;">➕ 保存添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📦 商品分类与规格管理（存 Firebase：codConfig/catalog） -->
+  <div class="modal-overlay" id="catManagerModal">
+    <div class="modal-content cm-modal">
+      <div class="cm-head">
+        <span class="modal-title">📦 商品分类与规格管理</span>
+        <span class="modal-close" onclick="closeCatManager()">&times;</span>
+      </div>
+      <div class="cm-tools">
+        <input type="text" id="cmSearch" class="form-control" placeholder="🔍 搜索分类或规格..." oninput="renderCatManager()">
+        <button class="cm-btn" onclick="cmExpandAll(true)">全部展开</button>
+        <button class="cm-btn" onclick="cmExpandAll(false)">全部收起</button>
+        <button class="cm-btn green" onclick="cmAddCat()">＋ 新增分类</button>
+      </div>
+      <div class="cm-body" id="cmBody"></div>
+      <div class="cm-foot">
+        <div class="cm-status" id="cmStatus"></div>
+        <button class="cm-btn" onclick="closeCatManager()">取消</button>
+        <button class="cm-btn primary" id="cmSaveBtn" onclick="cmSave()">💾 保存到 Firebase</button>
       </div>
     </div>
   </div>
@@ -803,6 +861,8 @@
         })
         .then(data => {
           clearTimeout(timeoutId);
+          JSON_CATALOG_DATA = data;   /* 留着给「从 catalog.json 导入」用 */
+          if (CLOUD.loaded) return;   /* Firebase 已经有资料，以 Firebase 为准 */
           if (data && data.catalog) {
             applyCatalogData(data);
             syncBadge.innerText = "🟢 已同步 GitHub 资料库数据";
@@ -814,6 +874,7 @@
         })
         .catch(err => {
           clearTimeout(timeoutId);
+          if (CLOUD.loaded) return;
           console.warn("⚠️ 从 GitHub 提取失败，启动预备方案 (Google Sheets COD表单1):", err);
           syncBadge.innerText = "🟡 正在连接 COD 表单1 预备库...";
           fetchFromGoogleSheets();
@@ -825,6 +886,7 @@
       fetch(SCRIPT_URL + "?action=getCatalog")
         .then(res => res.json())
         .then(data => {
+          if (CLOUD.loaded) return;
           if (data && (data.catalog || Object.keys(data).length > 0)) {
             const catalogObj = data.catalog || data;
             applyCatalogData({ catalog: catalogObj, channels: data.channels, quantities: data.quantities });
@@ -836,6 +898,7 @@
           }
         })
         .catch(() => {
+          if (CLOUD.loaded) return;
           syncBadge.innerText = "🟠 使用本地离线数据";
         });
     }
@@ -869,7 +932,7 @@
         const div = document.createElement('div');
         div.className = 'channel-list-item';
         div.innerHTML = `
-          <span style="font-size:12px; font-weight:600;" onclick="selectChannel('${item}')">${item}</span>
+          <span style="font-size:12px; font-weight:600;" onclick="selectChannel(getStoredChannels()[${index}])">${escHtml(item)}</span>
           <button class="btn-item-del" onclick="event.stopPropagation(); deleteCustomChannel(${index});">删除</button>
         `;
         listContainer.appendChild(div);
@@ -891,6 +954,7 @@
       if (!channels.includes(val)) {
         channels.push(val);
         localStorage.setItem('custom_shipp_channels', JSON.stringify(channels));
+        cloudSaveChannels(channels);
       }
       input.value = '';
       renderChannelList();
@@ -898,8 +962,10 @@
 
     function deleteCustomChannel(index) {
       let channels = getStoredChannels();
+      if (!confirm(`删除物流选项「${channels[index]}」？`)) return;
       channels.splice(index, 1);
       localStorage.setItem('custom_shipp_channels', JSON.stringify(channels));
+      cloudSaveChannels(channels);
       renderChannelList();
     }
 
@@ -1195,6 +1261,249 @@
       closeSettingsModal();
     }
 
+    /* ===================================================================
+       📦 商品分类 / 物流 / 数量 —— 存在 Firebase（member-system 的 codConfig/catalog）
+       资料格式：{ cats: [{ id, name, vars: [...] }], catIds: [...], channels: [...],
+                   quantities: [...], updatedAt, updatedBy, updatedByName }
+       读取顺序：Firebase（即时同步）→ catalog.json → Google Sheets → 本地离线
+       =================================================================== */
+    let JSON_CATALOG_DATA = null;
+    const CLOUD = { ready: false, loaded: false, exists: false, error: '', data: null, api: null };
+    window.CLOUD = CLOUD;   /* 给下面的 Firebase module 用 */
+
+    /* 由下面的 module 呼叫：Firebase 资料来了 / 变了 */
+    window.onCloudCatalog = function (data, exists, error) {
+      CLOUD.ready = !error;
+      CLOUD.error = error || '';
+      CLOUD.exists = !!exists;
+      const badge = document.getElementById('syncBadge');
+      if (error) {
+        badge.title = 'Firebase：' + error;
+        if (CM.open) renderCatManager();
+        return;
+      }
+      if (!exists) {
+        if (CM.open) renderCatManager();
+        return;
+      }
+      CLOUD.loaded = true;
+      CLOUD.data = data;
+      const catalog = {};
+      (data.cats || []).forEach(c => { if (c && c.name) catalog[c.name] = Array.isArray(c.vars) ? c.vars.slice() : []; });
+      EXCEL_CATALOG = catalog;
+      if (Array.isArray(data.channels) && data.channels.length) localStorage.setItem('custom_shipp_channels', JSON.stringify(data.channels));
+      if (Array.isArray(data.quantities) && data.quantities.length) EXCEL_QUANTITIES = data.quantities.slice();
+      badge.innerText = '🟢 已同步 Firebase';
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#15803d';
+      badge.title = cmWho(data);
+      if (CM.open && !CM.dirty) cmLoadDraft();
+      if (CM.open) renderCatManager();
+    };
+
+    function cmWho(d) {
+      if (!d || !d.updatedAt) return '';
+      const t = d.updatedAt.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
+      const p = n => String(n).padStart(2, '0');
+      return `上次保存：${d.updatedByName || d.updatedBy || ''} · ${p(t.getDate())}/${p(t.getMonth()+1)}/${t.getFullYear()} ${p(t.getHours())}:${p(t.getMinutes())}`;
+    }
+
+    function cmNewId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+    /* 弹窗的草稿（按保存才写进 Firebase） */
+    const CM = { open: false, dirty: false, cats: [], quantities: [], openIds: new Set() };
+
+    function cmLoadDraft(source) {
+      if (source === 'json' && JSON_CATALOG_DATA && JSON_CATALOG_DATA.catalog) {
+        CM.cats = Object.keys(JSON_CATALOG_DATA.catalog).map(n => ({ id: cmNewId(), name: n, vars: (JSON_CATALOG_DATA.catalog[n] || []).slice() }));
+        CM.quantities = (JSON_CATALOG_DATA.quantities || EXCEL_QUANTITIES).slice();
+      } else if (CLOUD.loaded && CLOUD.data) {
+        CM.cats = (CLOUD.data.cats || []).map(c => ({ id: c.id || cmNewId(), name: c.name, vars: (c.vars || []).slice() }));
+        CM.quantities = (CLOUD.data.quantities || EXCEL_QUANTITIES).slice();
+      } else {
+        CM.cats = Object.keys(EXCEL_CATALOG).map(n => ({ id: cmNewId(), name: n, vars: (EXCEL_CATALOG[n] || []).slice() }));
+        CM.quantities = EXCEL_QUANTITIES.slice();
+      }
+      CM.dirty = source === 'json';
+    }
+
+    function openCatManager() {
+      CM.open = true;
+      cmLoadDraft();
+      CM.openIds = new Set();
+      document.getElementById('cmSearch').value = '';
+      document.getElementById('catManagerModal').style.display = 'flex';
+      renderCatManager();
+    }
+
+    function closeCatManager(force) {
+      if (!force && CM.dirty && !confirm('还有修改没有保存，确定关闭？（修改会丢失）')) return;
+      CM.open = false;
+      CM.dirty = false;
+      document.getElementById('catManagerModal').style.display = 'none';
+    }
+
+    function cmMark() { CM.dirty = true; cmRenderStatus(); }
+
+    function cmRenderStatus() {
+      const st = document.getElementById('cmStatus');
+      const btn = document.getElementById('cmSaveBtn');
+      let html = '';
+      if (CLOUD.error) html = `<span style="color:#dc2626">⚠️ 连不上 Firebase（${escHtml(CLOUD.error)}），暂时不能保存</span>`;
+      else if (!CLOUD.ready) html = '⏳ 正在连接 Firebase...';
+      else html = escHtml(cmWho(CLOUD.data)) || '还没有存进 Firebase';
+      if (CM.dirty) html += ' · <span class="cm-dirty">有未保存的修改</span>';
+      st.innerHTML = html;
+      btn.disabled = !CLOUD.ready || !CLOUD.api;
+    }
+
+    function renderCatManager() {
+      const body = document.getElementById('cmBody');
+      const q = document.getElementById('cmSearch').value.trim().toLowerCase();
+      const isOwner = window.__isOwner === true;
+      let html = '';
+
+      if (CLOUD.ready && !CLOUD.exists && !CM.dirty) {
+        html += `<div class="cm-import"><span>📥 Firebase 里还没有分类资料。第一次使用请先从 catalog.json 导入，检查后按「💾 保存到 Firebase」。</span>
+          <button class="cm-btn primary" onclick="cmImportJson()">📥 从 catalog.json 导入</button></div>`;
+      }
+
+      const list = CM.cats.map((c, i) => ({ c, i })).filter(({ c }) =>
+        !q || c.name.toLowerCase().includes(q) || c.vars.some(v => v.toLowerCase().includes(q)));
+
+      if (CM.cats.length === 0) html += '<div class="cm-empty">还没有分类，按「＋ 新增分类」开始</div>';
+      else if (list.length === 0) html += '<div class="cm-empty">找不到符合的分类或规格</div>';
+
+      list.forEach(({ c, i }) => {
+        const open = CM.openIds.has(c.id) || (q && c.vars.some(v => v.toLowerCase().includes(q)));
+        html += `<div class="cm-cat ${open ? 'open' : ''}">
+          <div class="cm-cat-head">
+            <span class="cm-arrow" onclick="cmToggle('${c.id}')">${open ? '▼' : '▶'}</span>
+            <input class="form-control cm-cat-name" value="${escHtml(c.name)}" onchange="cmRenameCat(${i}, this.value)" placeholder="分类名称">
+            <span class="cm-count">${c.vars.length} 个规格</span>
+            <button class="cm-icon" title="上移" onclick="cmMoveCat(${i},-1)" ${i === 0 || q ? 'disabled' : ''}>↑</button>
+            <button class="cm-icon" title="下移" onclick="cmMoveCat(${i},1)" ${i === CM.cats.length - 1 || q ? 'disabled' : ''}>↓</button>
+            ${isOwner ? `<button class="cm-icon del" title="删除分类（只有店主）" onclick="cmDelCat(${i})">🗑</button>` : ''}
+          </div>
+          <div class="cm-vars">
+            ${c.vars.map((v, j) => `<div class="cm-var">
+              <input class="form-control" value="${escHtml(v)}" onchange="cmRenameVar(${i},${j},this.value)">
+              <button class="cm-icon" title="上移" onclick="cmMoveVar(${i},${j},-1)" ${j === 0 ? 'disabled' : ''}>↑</button>
+              <button class="cm-icon" title="下移" onclick="cmMoveVar(${i},${j},1)" ${j === c.vars.length - 1 ? 'disabled' : ''}>↓</button>
+              <button class="cm-icon del" title="删除规格" onclick="cmDelVar(${i},${j})">✕</button>
+            </div>`).join('')}
+            <div class="cm-add-var">
+              <input class="form-control" id="cmNewVar_${c.id}" placeholder="新规格名称，按 Enter 加入" onkeydown="if(event.key==='Enter'){cmAddVar(${i});}">
+              <button class="cm-btn" onclick="cmAddVar(${i})">＋ 规格</button>
+            </div>
+          </div>
+        </div>`;
+      });
+
+      if (!q) {
+        html += `<div class="cm-section-title">🔢 数量选项（下拉选单，用逗号分开）</div>
+          <input class="form-control" id="cmQtyInput" value="${escHtml(CM.quantities.join(', '))}" onchange="cmSetQty(this.value)">
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">🚚 物流选项在 LOGISTICS 旁边的 ⚙️ 管理，也会一起同步。</div>`;
+      }
+      body.innerHTML = html;
+      cmRenderStatus();
+    }
+
+    function cmToggle(id) { CM.openIds.has(id) ? CM.openIds.delete(id) : CM.openIds.add(id); renderCatManager(); }
+    function cmExpandAll(on) { CM.openIds = new Set(on ? CM.cats.map(c => c.id) : []); renderCatManager(); }
+
+    function cmAddCat() {
+      const name = (prompt('新分类名称：') || '').trim();
+      if (!name) return;
+      if (CM.cats.some(c => c.name === name)) { alert('已经有同名的分类了'); return; }
+      const c = { id: cmNewId(), name, vars: [] };
+      CM.cats.unshift(c);
+      CM.openIds.add(c.id);
+      document.getElementById('cmSearch').value = '';
+      cmMark(); renderCatManager();
+      setTimeout(() => { const el = document.getElementById('cmNewVar_' + c.id); if (el) el.focus(); }, 30);
+    }
+    function cmRenameCat(i, val) {
+      val = val.trim();
+      if (!val) { alert('分类名称不能空白'); renderCatManager(); return; }
+      if (CM.cats.some((c, k) => k !== i && c.name === val)) { alert('已经有同名的分类了'); renderCatManager(); return; }
+      CM.cats[i].name = val; cmMark();
+    }
+    function cmMoveCat(i, d) {
+      const k = i + d; if (k < 0 || k >= CM.cats.length) return;
+      [CM.cats[i], CM.cats[k]] = [CM.cats[k], CM.cats[i]]; cmMark(); renderCatManager();
+    }
+    function cmDelCat(i) {
+      if (!window.ownerOnly || !window.ownerOnly()) return;
+      if (!confirm(`删除分类「${CM.cats[i].name}」和里面 ${CM.cats[i].vars.length} 个规格？\n（按保存后才会真的删除）`)) return;
+      CM.cats.splice(i, 1); cmMark(); renderCatManager();
+    }
+    function cmAddVar(i) {
+      const c = CM.cats[i];
+      const el = document.getElementById('cmNewVar_' + c.id);
+      const val = (el.value || '').trim();
+      if (!val) return;
+      if (c.vars.includes(val)) { alert('这个分类已经有这个规格了'); return; }
+      c.vars.push(val); CM.openIds.add(c.id); cmMark(); renderCatManager();
+      setTimeout(() => { const e2 = document.getElementById('cmNewVar_' + c.id); if (e2) e2.focus(); }, 30);
+    }
+    function cmRenameVar(i, j, val) {
+      val = val.trim();
+      const vars = CM.cats[i].vars;
+      if (!val) { alert('规格名称不能空白，要删除请按 ✕'); renderCatManager(); return; }
+      if (vars.some((v, k) => k !== j && v === val)) { alert('这个分类已经有这个规格了'); renderCatManager(); return; }
+      vars[j] = val; cmMark();
+    }
+    function cmMoveVar(i, j, d) {
+      const vars = CM.cats[i].vars, k = j + d; if (k < 0 || k >= vars.length) return;
+      [vars[j], vars[k]] = [vars[k], vars[j]]; cmMark(); renderCatManager();
+    }
+    function cmDelVar(i, j) {
+      if (!confirm(`删除规格「${CM.cats[i].vars[j]}」？`)) return;
+      CM.cats[i].vars.splice(j, 1); cmMark(); renderCatManager();
+    }
+    function cmSetQty(val) {
+      const list = val.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      if (!list.length) { alert('至少要有一个数量选项'); renderCatManager(); return; }
+      CM.quantities = [...new Set(list)]; cmMark();
+    }
+    function cmImportJson() {
+      if (!JSON_CATALOG_DATA || !JSON_CATALOG_DATA.catalog) { alert('读不到 catalog.json，请重新整理页面再试'); return; }
+      cmLoadDraft('json'); renderCatManager();
+    }
+
+    async function cmSave() {
+      if (!CLOUD.api) { alert('还没连上 Firebase，请稍等或重新整理页面'); return; }
+      const cats = CM.cats.map(c => ({ id: c.id, name: c.name.trim(), vars: c.vars.map(v => v.trim()).filter(Boolean) }));
+      if (cats.some(c => !c.name)) { alert('有分类名称是空白的'); return; }
+      const btn = document.getElementById('cmSaveBtn');
+      btn.disabled = true; btn.innerText = '⏳ 保存中...';
+      try {
+        await CLOUD.api.save({
+          cats,
+          catIds: cats.map(c => c.id),
+          channels: getStoredChannels(),
+          quantities: CM.quantities.length ? CM.quantities : EXCEL_QUANTITIES
+        });
+        CM.dirty = false;
+        btn.innerText = '✅ 已保存';
+        setTimeout(() => { btn.innerText = '💾 保存到 Firebase'; closeCatManager(true); }, 700);
+      } catch (e) {
+        console.error(e);
+        alert('❌ 保存失败：' + (e.code === 'permission-denied'
+          ? '没有权限（非店主不能删除分类，或 Firestore 规则还没部署）'
+          : e.message));
+        btn.innerText = '💾 保存到 Firebase';
+        cmRenderStatus();
+      }
+    }
+
+    /* LOGISTICS ⚙️ 增删物流选项 → 只更新 Firebase 的 channels */
+    function cloudSaveChannels(channels) {
+      if (!CLOUD.api || !CLOUD.exists) return;   /* Firebase 还没有资料时，先只存本机 */
+      CLOUD.api.saveChannels(channels).catch(e => alert('❌ 物流选项没有同步到 Firebase：' + e.message));
+    }
+
     function processPastedText() {
       const rawText = document.getElementById('pasteTextarea').value;
       if (!rawText || rawText.trim() === '') return;
@@ -1249,6 +1558,34 @@
       addProductRow('[NOT FOR SALE] Free Gift Zone', 'Premium Pro-Max', 'x1', false);
       renderAWB();
     };
+  </script>
+
+  <!-- 📦 Firebase：商品分类即时同步（member-system 项目，codConfig/catalog） -->
+  <script type="module">
+    import { auth, db } from "/member-system/js/firebase-config.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const ref = doc(db, "codConfig", "catalog");
+    let unsub = null;
+
+    function who() {
+      const u = auth.currentUser;
+      return { updatedAt: serverTimestamp(), updatedBy: (u.email || "").toLowerCase(), updatedByName: (u.displayName || "").slice(0, 60) };
+    }
+
+    window.CLOUD.api = {
+      save: data => setDoc(ref, { ...data, ...who() }),
+      saveChannels: channels => updateDoc(ref, { channels, ...who() })
+    };
+
+    onAuthStateChanged(auth, user => {
+      if (unsub) { unsub(); unsub = null; }
+      if (!user) return;
+      unsub = onSnapshot(ref,
+        snap => window.onCloudCatalog(snap.exists() ? snap.data() : null, snap.exists(), ""),
+        err => { console.warn("Firebase 分类读取失败：", err); window.onCloudCatalog(null, false, err.code || err.message); });
+    });
   </script>
 
   <script type="text/javascript">
