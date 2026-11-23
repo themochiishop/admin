@@ -69,7 +69,19 @@ const STATES = ["JOHOR", "MELAKA", "NEGERI SEMBILAN", "SELANGOR", "KUALA LUMPUR"
   "PERAK", "PAHANG", "KEDAH", "KELANTAN", "TERENGGANU", "PERLIS", "SABAH", "SARAWAK", "LABUAN",
   "GUANGDONG (CHINA)", "ZHEJIANG (CHINA)", "FUJIAN (CHINA)", "JIANGSU (CHINA)", "SHANGHAI (CHINA)", "CHINA (OTHER)"];
 
-const PREFIX = { po: "PO-", inv: "INV-" };
+// 推荐费单（Commission）：推荐人每月的推荐费，跟货款分开付；不是货款。
+const CM_TNC_DEFAULT =
+  "1. Referral commission only - not payment for goods.\n" +
+  "2. Based on pieces handed over (MSMS handover confirmed) in the period; defective pieces excluded, returns deducted.\n" +
+  "3. Settled monthly in CNY; balances under CNY 50.00 are carried forward to the next month.";
+const CM_BASIS_DEFAULT =
+  "Referral commission statement (MSMS). Not payment for goods.\n推荐费明细：按当月交接确认的件数计算，非货款。";
+const CM_PAY_DEFAULT = "From: MOCHII SHOP\nTo: ";
+const DOC_TYPES = ["po", "inv", "cm"];
+const DOC_LABEL = { po: "Purchase Order", inv: "Invoice", cm: "Commission" };
+const DOC_TAG = { po: "PO", inv: "INV", cm: "CM" };
+
+const PREFIX = { po: "PO-", inv: "INV-", cm: "CM-" };
 const SAFE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const STORE_KEY = "mochii_docs_v12";
 const SHEET_H = 1060;
@@ -140,16 +152,19 @@ function newState(t) {
     ...base, delivery: "", req: "MOCHII SHOP", terms: "Bank transfer · upon delivery", dterms: PO_DTERMS.RM, ref: "",
     payNote: PO_PAY_DEFAULT, tnc: PO_TNC_DEFAULT, vendor: {}, deliver: { ...DELIVER_DEFAULT },
   };
+  if (t === "cm") return {
+    ...base, currency: "CNY", ref: "", clawback: "", carry: "", basis: CM_BASIS_DEFAULT,
+    payNote: CM_PAY_DEFAULT, tnc: CM_TNC_DEFAULT, vendor: {},
+  };
   return { ...base, due: "Due upon receipt", payNote: INV_PAY_DEFAULT, paid: false, bill: {}, shipSame: true, ship: {} };
 }
-const state = { tab: "inv", po: newState("po"), inv: newState("inv") };
+const state = { tab: "inv", po: newState("po"), inv: newState("inv"), cm: newState("cm") };
 function loadDraft() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
     if (!s) return;
-    if (s.po) state.po = { ...newState("po"), ...s.po };
-    if (s.inv) state.inv = { ...newState("inv"), ...s.inv };
-    if (s.tab === "po" || s.tab === "inv") state.tab = s.tab;
+    for (const t of DOC_TYPES) if (s[t]) state[t] = { ...newState(t), ...s[t] };
+    if (DOC_TYPES.includes(s.tab)) state.tab = s.tab;
   } catch (e) { console.warn("草稿载入失败", e); }
 }
 let saveTimer;
@@ -170,7 +185,31 @@ function dateCell(f, withToday = true) {
   return `<div class="cf"><input data-f="${f}" placeholder="dd/mm/yyyy" autocomplete="off">${withToday ? `<button type="button" class="mini no-pdf" data-today="${f}">今天</button>` : ""}</div>`;
 }
 function sheetHTML(t) {
-  const po = t === "po", C = COMPANY;
+  const po = t === "po", cm = t === "cm", zh = t !== "inv", C = COMPANY;
+  const Z = (en, z) => ZH(en, z, zh);
+  const title = po ? ZH("PURCHASE ORDER", "采购订单") : cm ? ZH("COMMISSION STATEMENT", "推荐费单") : "INVOICE";
+  const noLabel = po ? ZH("PO NO.", "单号") : cm ? ZH("STATEMENT NO.", "单号") : "INVOICE NO.";
+  const thirdRow = po
+    ? `<tr data-row="delivery"><th style="white-space:nowrap">${ZH("DELIVERY DATE", "交货日期")}</th><td>${dateCell("delivery")}</td></tr>`
+    : cm ? `<tr><th>${ZH("PERIOD", "结算月份")}</th><td><input data-f="ref" placeholder="YYYY-MM" autocomplete="off"></td></tr>`
+    : `<tr><th>DUE DATE</th><td>${dateCell("due", false)}</td></tr>`;
+  const right = po ? partyCol("deliver", ZH("DELIVER TO", "收货地址"))
+    : cm ? `<div class="pcol"><div class="bar"><span>${ZH("NOTE", "说明")}</span></div><div class="box party-note"><textarea data-f="basis" rows="3"></textarea></div></div>`
+    : partyCol("ship", "SHIP TO");
+  const left = partyCol(po ? "vendor" : cm ? "vendor" : "bill", po ? ZH("VENDOR", "供应商") : cm ? ZH("PAYEE", "收款人（推荐人）") : "BILL TO");
+  const zhSmall = s => zh ? `<span class="zh" style="font-size:.8em;font-weight:normal;opacity:.85;margin-left:.35em;white-space:nowrap">${s}</span>` : "";
+  const totalsRows = cm ? `
+          <tr><th>${Z("SUBTOTAL", "小计")}</th><td data-sum="sub">0.00</td></tr>
+          <tr id="claw-${t}"><th style="white-space:nowrap">${ZH("LESS: CLAWBACK", "减：扣回")}</th><td><input data-f="clawback" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
+          <tr id="carry-${t}"><th style="white-space:nowrap">${ZH("BROUGHT FORWARD", "上月结转")}</th><td><input data-f="carry" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
+          <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">CNY 0.00</td></tr>` : `
+          <tr><th>${Z("SUBTOTAL", "小计")}</th><td data-sum="sub">0.00</td></tr>
+          <tr><th>SST <span class="na">(Not Applicable)</span></th><td>-</td></tr>
+          <tr><th>${Z("SHIPPING", "运费")}</th><td><input data-f="shipping" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
+          <tr><th>${Z("OTHER", "其他")}</th><td><input data-f="other" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
+          ${po ? `<tr id="depRow-${t}"><th style="white-space:nowrap">${ZH("LESS: DEPOSIT PAID", "减：已付定金")}</th><td><input data-f="deposit" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>` : ""}
+          <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
+          ${po ? `<tr data-sum="nowRow" style="display:none"><th><b data-sum="nowLbl">DEPOSIT</b></th><td><b data-sum="now">0.00</b></td></tr>` : ""}`;
   return `
   <div class="sheet-body">
     <div class="grid">
@@ -183,23 +222,22 @@ function sheetHTML(t) {
         </div>
       </div>
       <div>
-        <div class="doc-title">${po ? ZH("PURCHASE ORDER", "采购订单") : "INVOICE"}</div>
+        <div class="doc-title">${title}</div>
         <table class="meta">
-          <tr><th>${ZH("DATE", "日期", po)}</th><td>${dateCell("date")}</td></tr>
-          <tr><th>${po ? ZH("PO NO.", "单号") : "INVOICE NO."}</th><td><div class="cf"><input data-f="no" class="b" autocomplete="off"><button type="button" class="mini no-pdf" data-act="dice" title="重新生成单号">🎲</button></div></td></tr>
-          ${po ? `<tr data-row="delivery"><th style="white-space:nowrap">${ZH("DELIVERY DATE", "交货日期")}</th><td>${dateCell("delivery")}</td></tr>`
-               : `<tr><th>DUE DATE</th><td>${dateCell("due", false)}</td></tr>`}
+          <tr><th>${Z("DATE", "日期")}</th><td>${dateCell("date")}</td></tr>
+          <tr><th>${noLabel}</th><td><div class="cf"><input data-f="no" class="b" autocomplete="off"><button type="button" class="mini no-pdf" data-act="dice" title="重新生成单号">🎲</button></div></td></tr>
+          ${thirdRow}
         </table>
-        ${po ? "" : `<div class="quick no-pdf"><span>到期：</span>
+        ${t === "inv" ? `<div class="quick no-pdf"><span>到期：</span>
           <button type="button" data-due="0">收到即付</button><button type="button" data-due="7">+7 天</button>
           <button type="button" data-due="14">+14 天</button><button type="button" data-due="30">+30 天</button>
-          <label class="paid-chk"><input type="checkbox" data-f="paid"> 已付款（盖 PAID 章）</label></div>`}
+          <label class="paid-chk"><input type="checkbox" data-f="paid"> 已付款（盖 PAID 章）</label></div>` : ""}
       </div>
     </div>
 
     <div class="grid mt">
-      ${partyCol(po ? "vendor" : "bill", po ? ZH("VENDOR", "供应商") : "BILL TO")}
-      ${partyCol(po ? "deliver" : "ship", po ? ZH("DELIVER TO", "收货地址") : "SHIP TO")}
+      ${left}
+      ${right}
     </div>
 
     ${po ? `<table class="tri mt">
@@ -214,46 +252,39 @@ function sheetHTML(t) {
 
     <table class="items mt">
       <colgroup><col style="width:9%"><col style="width:49%"><col style="width:10%"><col style="width:16%"><col style="width:16%"></colgroup>
-      <thead><tr><th>${ZH("NO.", "序号", po)}</th><th class="l">${ZH("DESCRIPTION", "品名", po)}</th><th>${ZH("QTY", "数量", po)}</th><th class="r">UNIT PRICE (<span data-curr-lbl>RM</span>)${po ? '<span class="zh" style="font-size:.8em;font-weight:normal;opacity:.85;margin-left:.35em;white-space:nowrap">单价</span>' : ""}</th><th class="r">AMOUNT (<span data-curr-lbl>RM</span>)${po ? '<span class="zh" style="font-size:.8em;font-weight:normal;opacity:.85;margin-left:.35em;white-space:nowrap">金额</span>' : ""}</th></tr></thead>
+      <thead><tr><th>${Z("NO.", "序号")}</th><th class="l">${cm ? ZH("DESCRIPTION", "推荐的供应商／明细") : Z("DESCRIPTION", "品名")}</th><th>${cm ? ZH("PCS", "条数") : Z("QTY", "数量")}</th><th class="r">${cm ? "RATE" : "UNIT PRICE"} (<span data-curr-lbl>RM</span>)${zhSmall(cm ? "每条" : "单价")}</th><th class="r">AMOUNT (<span data-curr-lbl>RM</span>)${zhSmall("金额")}</th></tr></thead>
       <tbody></tbody>
     </table>
     <button type="button" class="add-row no-pdf" data-act="addRow">＋ 添加一行</button>
 
     <div class="grid mt">
       <div>
-        <div class="bar">${po ? ZH("PAYMENT TO VENDOR", "付款资料") : "PAYMENT DETAILS"}</div>
+        <div class="bar">${po || cm ? ZH("PAYMENT TO VENDOR", "付款资料") : "PAYMENT DETAILS"}</div>
         <div class="box"><textarea data-f="payNote" rows="2"></textarea></div>
-        ${po ? `<div class="bar mt-s">${ZH("TERMS AND CONDITIONS", "条款")}</div><div class="box tnc-box"><div class="tnc-view" data-tnc-view tabindex="0" role="button" title="点击修改" style="cursor:text;min-height:1.4em"></div><div class="no-pdf tnc-edit" hidden><textarea data-f="tnc" rows="2"></textarea></div></div>` : ""}
+        ${zh ? `<div class="bar mt-s">${ZH("TERMS AND CONDITIONS", "条款")}</div><div class="box tnc-box"><div class="tnc-view" data-tnc-view tabindex="0" role="button" title="点击修改" style="cursor:text;min-height:1.4em"></div><div class="no-pdf tnc-edit" hidden><textarea data-f="tnc" rows="2"></textarea></div></div>` : ""}
       </div>
       <div>
-        <table class="totals">
-          <tr><th>${ZH("SUBTOTAL", "小计", po)}</th><td data-sum="sub">0.00</td></tr>
-          <tr><th>SST <span class="na">(Not Applicable)</span></th><td>-</td></tr>
-          <tr><th>${ZH("SHIPPING", "运费", po)}</th><td><input data-f="shipping" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
-          <tr><th>${ZH("OTHER", "其他", po)}</th><td><input data-f="other" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
-          ${po ? `<tr id="depRow-${t}"><th style="white-space:nowrap">${ZH("LESS: DEPOSIT PAID", "减：已付定金")}</th><td><input data-f="deposit" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>` : ""}
-          <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
-          ${po ? `<tr data-sum="nowRow" style="display:none"><th><b data-sum="nowLbl">DEPOSIT</b></th><td><b data-sum="now">0.00</b></td></tr>` : ""}
+        <table class="totals">${totalsRows}
         </table>
       </div>
     </div>
-    <div class="words mt-s"><b>${po ? ZH("AMOUNT IN WORDS", "大写金额") + ":" : "AMOUNT IN WORDS:"}</b> <span data-sum="words">-</span></div>
+    <div class="words mt-s"><b>${zh ? ZH("AMOUNT IN WORDS", "大写金额") + ":" : "AMOUNT IN WORDS:"}</b> <span data-sum="words">-</span></div>
 
     <div class="sign">
       <div>
-        <div class="st">${po ? ZH("Accepted by vendor:", "供应商确认") : "Received by:"}</div>
+        <div class="st">${po ? ZH("Accepted by vendor:", "供应商确认") : cm ? ZH("Received by payee:", "收款人确认") : "Received by:"}</div>
         <div class="sp"></div><div class="sl"></div>
         <div class="sm">Name:</div><div class="sm">Date:</div>
       </div>
       <div class="sign-r">
-        <div class="st">${po ? ZH("Authorized by:", "采购方授权") : "Authorized signature:"}</div>
+        <div class="st">${zh ? ZH("Authorized by:", "采购方授权") : "Authorized signature:"}</div>
         <div class="sp stamp"><img src="signcop.png" alt=""></div><div class="sl"></div>
         <div class="sm">${C.name}</div><div class="sm">Date: <span data-bind="date"></span></div>
       </div>
     </div>
   </div>
   <div class="foot">
-    <div>${po ? "" : "Goods sold are non-refundable and non-exchangeable.<br>"}For any enquiries about this ${po ? "purchase order" : "invoice"}, please contact us on WhatsApp ${C.tel}.</div>
+    <div>${t === "inv" ? "Goods sold are non-refundable and non-exchangeable.<br>" : ""}For any enquiries about this ${po ? "purchase order" : cm ? "commission statement" : "invoice"}, please contact us on WhatsApp ${C.tel}.</div>
     <div class="pg">Page 1 of 1</div>
   </div>`;
 }
@@ -283,6 +314,15 @@ function setCurrency(t, curr) {
       const el = $(`[data-f="${f}"]`, sh);
       if (el) { el.value = s[f]; autosize(el); }
     }
+  }
+  if (t === "cm") {
+    // 推荐费单只换付款来源那一行（自己改过的不动）
+    const lines = String(s.payNote ?? "").split("\n");
+    if (!lines[0].trim() || [...Object.values(PO_PAY_FROM), PO_PAY_FROM_WF].includes(lines[0].trim())) lines[0] = PO_PAY_FROM[curr];
+    if (!lines.some(l => /^to:/i.test(l.trim()))) lines.push("To: ");
+    s.payNote = lines.join("\n");
+    const el = $('[data-f="payNote"]', sheetOf(t));
+    if (el) { el.value = s.payNote; autosize(el); }
   }
   syncBinds(t); calc(t); persist();
 }
@@ -346,7 +386,7 @@ function renderRows(t) {
   $(".items tbody", sheetOf(t)).innerHTML =
     rows.map((r, i) => `<tr data-i="${i}">
       <td>${i + 1}</td>
-      <td><input class="desc" list="productList" value="${esc(r.desc)}" autocomplete="off"></td>
+      <td><input class="desc"${t === "cm" ? "" : ' list="productList"'} value="${esc(r.desc)}" autocomplete="off"></td>
       <td><input class="qty" type="number" min="0" step="1" inputmode="numeric" value="${esc(r.qty)}"></td>
       <td><input class="price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" value="${esc(r.price)}"></td>
       <td class="amt"><span class="v"></span><button type="button" class="row-del" title="删除这一行">×</button></td>
@@ -357,6 +397,11 @@ function renderRows(t) {
 function totals(t) {
   const s = state[t];
   const sub = round2(s.rows.reduce((a, r) => a + num(r.qty) * num(r.price), 0));
+  if (t === "cm") {
+    // 推荐费：小计 − 扣回 ＋ 上月结转（结转可以是负数，例如上月扣回比推荐费多）
+    const total = Math.max(0, round2(sub - num(s.clawback) + num(s.carry)));
+    return { sub, dep: 0, total, now: total, isDepositStage: false };
+  }
   const dep = t === "po" ? round2(num(s.deposit)) : 0;
   const total = Math.max(0, round2(sub + num(s.shipping) + num(s.other) - dep));
   // 30% 定金单：付款阶段是 30% 定金、还没扣过定金时，另算「本次应付」
@@ -378,6 +423,11 @@ function calc(t) {
   });
   const { sub, dep, total, now, isDepositStage } = totals(t);
   $('[data-sum="sub"]', sh).textContent = fmt(sub);
+  if (t === "cm") {
+    $(`#claw-${t}`, sh)?.classList.toggle("zero-dep", !(num(s.clawback) > 0));
+    $(`#carry-${t}`, sh)?.classList.toggle("zero-dep", !num(s.carry));
+    $('[data-sum="grandLbl"]', sh).innerHTML = ZH("TOTAL PAYABLE", "应付合计");
+  }
   if (t === "po") {
     const depRow = $(`#depRow-${t}`, sh);
     if (depRow) depRow.classList.toggle("zero-dep", dep <= 0);
@@ -393,7 +443,7 @@ function calc(t) {
   $('[data-sum="total"]', sh).textContent = `${curr} ` + fmt(total);
   // 大写金额跟实际要付的钱走：定金单写 30% 的金额
   $('[data-sum="words"]', sh).textContent = amountWords(now ?? total, curr) || "-";
-  if (t === "po") renderTnc(t);
+  if (t !== "inv") renderTnc(t);
   checkOverflow();
 }
 
@@ -441,8 +491,7 @@ function checkOverflow() {
 function switchTab(t) {
   state.tab = t;
   $$(".tabs .tab[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
-  $("#page-po").classList.toggle("hidden", t !== "po");
-  $("#page-inv").classList.toggle("hidden", t !== "inv");
+  for (const x of DOC_TYPES) $("#page-" + x)?.classList.toggle("hidden", t !== x);
   syncBinds(t);
   $$("textarea", sheetOf(t)).forEach(autosize);
   checkOverflow(); persist();
@@ -459,6 +508,7 @@ async function newNumber(t) {
   setField(t, "no", state[t].no);
 }
 function autofillPrice(t, input) {
+  if (t === "cm") return; // 推荐费单的明细是供应商名字，不从常用货品带价钱
   const tr = input.closest("tr[data-i]");
   const r = state[t].rows[+tr.dataset.i];
   const p = products.find(x => x.desc.toUpperCase() === input.value.trim().toUpperCase());
@@ -590,7 +640,7 @@ async function uniqueNo(t) {
   }
   return randNo(t);
 }
-function partyName(t) { return ((t === "po" ? state.po.vendor : state.inv.bill) || {}).name || ""; }
+function partyName(t) { return ((t === "inv" ? state.inv.bill : state[t].vendor) || {}).name || ""; }
 
 async function saveRecord(t) {
   if (!isAdmin) { toast("没有登录管理员，这张单没有存到记录"); return true; }
@@ -609,7 +659,7 @@ async function saveRecord(t) {
       updatedAt: fb.serverTimestamp(), ...(snap.exists() ? {} : { createdAt: fb.serverTimestamp() }),
     }, { merge: true });
     s.savedNo = s.no; persist();
-    saveProducts(t);
+    if (t !== "cm") saveProducts(t); // 推荐费明细不进常用货品
     return true;
   } catch (e) {
     toast("存记录失败：" + e.message);
@@ -639,6 +689,8 @@ const PARTY = {
   "po.deliver": { title: "送货地址 · Deliver to", attn: true, noReg: true, preset: true },
   "inv.bill": { title: "客户资料 · Bill to", list: "customer", listLabel: "客户" },
   "inv.ship": { title: "收货资料 · Ship to", list: "customer", listLabel: "客户", same: true, attn: true },
+  // 推荐人本身也是供应商：用同一份供应商名单（收款资料也在名单里）
+  "cm.vendor": { title: "收款人（推荐人）· Payee", list: "vendor", listLabel: "供应商", bank: true },
 };
 const PF = ["name", "regNo", "a1", "a2", "postcode", "city", "state", "attn", "phone", "bank", "acct", "acctName"];
 const BANK_FIELDS = ["bank", "acct", "acctName"];
@@ -754,11 +806,11 @@ $("#pmSave").addEventListener("click", async () => {
     if (cfg.bank) { const old = state[t][key] || {}; if (old.attn && !p.attn) p.attn = old.attn; if (old.wechat) p.wechat = old.wechat; }
     state[t][key] = p;
     if (cfg.bank && p.name) {
-      const lines = state.po.payNote.split("\n");
+      const lines = String(state[t].payNote || "").split("\n");
       const i = lines.findIndex(l => /^to:/i.test(l.trim()));
       if (i >= 0) lines[i] = vendorToLine(p); else lines.push(vendorToLine(p));
-      setField("po", "payNote", lines.join("\n"));
-      $$("textarea", sheetOf("po")).forEach(autosize);
+      setField(t, "payNote", lines.join("\n"));
+      $$("textarea", sheetOf(t)).forEach(autosize);
     }
     if (cfg.list && isAdmin && $("#pmKeep").checked && p.name) {
       try {
@@ -796,7 +848,7 @@ function renderRecords() {
     const c = r.currency || (r.data && r.data.currency) || "RM";
     return `
     <div class="rec" data-id="${esc(r.id)}">
-      <span class="tg ${r.type}">${r.type === "po" ? "PO" : "INV"}</span>
+      <span class="tg ${esc(r.type)}">${DOC_TAG[r.type] || "INV"}</span>
       <div class="mid"><b>${esc(r.no)}</b> · ${esc(r.party || "—")}
         <div class="sub">${esc(r.date || "")} · ${esc(c)} ${fmt(r.total)}${r.data && r.data.paid ? " · PAID" : ""}</div></div>
       <div class="act"><button type="button" class="btn" data-ract="open">打开</button><button type="button" class="btn danger owner-only" data-ract="del">删除</button></div>
@@ -817,7 +869,8 @@ $("#recList").addEventListener("click", async e => {
   const r = recCache.find(x => x.id === b.closest(".rec").dataset.id);
   if (!r) return;
   if (b.dataset.ract === "open") {
-    const label = r.type === "po" ? "Purchase Order" : "Invoice";
+    if (!DOC_TYPES.includes(r.type)) return;
+    const label = DOC_LABEL[r.type];
     if (!confirm(`打开 ${r.no}？\n目前「${label}」画面上的内容会被取代。`)) return;
     state[r.type] = { ...newState(r.type), ...(r.data || {}), no: r.no, savedNo: r.no };
     build(r.type); switchTab(r.type); persist(); closeModals();
@@ -994,6 +1047,7 @@ window.addEventListener("resize", () => { fitSheets(); fitPreview(); });
 let msmsNotice = "";
 let msmsVendorMatch = ""; // 等名单载入后，按供应商名称带出收款资料
 let msmsHandoff = "";     // MSMS 一次性编号：收款资料不走网址，等 MSMS 分页直接交过来
+let msmsTarget = "po";    // MSMS 导入到哪一张：po（货款）或 cm（推荐费单）
 const MSMS_ORIGIN = "https://supply.themochiishop.com";
 function clearQuery() {
   try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
@@ -1003,6 +1057,7 @@ function initMsmsBridge() {
   try { q = new URLSearchParams(window.location.search); } catch (e) { return; }
   if (q.get("from") !== "msms") return;
   const str = (k, max = 200) => String(q.get(k) ?? "").trim().slice(0, max);
+  if (q.get("type") === "commission") { initCommissionBridge(q, str); return; }
 
   // 草稿保护：本地有没保存的 PO 先问
   const cur = state.po;
@@ -1070,50 +1125,107 @@ function initMsmsBridge() {
     : `✅ 已从 MSMS 导入 ${po.ref || po.no}，请核对后再下载`;
 }
 
+// MSMS 推荐费账单 → 推荐费单（type=commission）。
+// 链接：/invoice/?from=msms&type=commission&no=CM-…&ref=2026-12&curr=CNY&vName=…&items=[…]&clawback=…&carry=…&h=…
+// 只写进 Commission 分页，不会盖掉 PO 草稿；收款资料一样不走网址。
+function initCommissionBridge(q, str) {
+  const cur = state.cm;
+  const dirty = !cur.savedNo && (
+    (cur.vendor && (cur.vendor.name || cur.vendor.acct)) ||
+    (cur.rows || []).some(r => String(r.desc || "").trim() || num(r.price) > 0));
+  if (dirty && !confirm("检测到本地有未保存的推荐费单草稿，是否覆盖为 MSMS 导入的推荐费账单？")) {
+    clearQuery();
+    msmsNotice = "已取消导入，保留原本的推荐费单草稿";
+    return;
+  }
+  const curr = str("curr", 3).toUpperCase() === "RM" ? "RM" : "CNY";
+  const cm = newState("cm");
+  cm.currency = curr;
+  const no = str("no", 40).toUpperCase();
+  if (/^CM-[A-Z0-9][A-Z0-9_-]{2,38}$/.test(no)) cm.no = no;
+  const period = str("ref", 7);
+  cm.ref = /^\d{4}-\d{2}$/.test(period) ? period : "";
+  const claw = num(q.get("clawback"));
+  cm.clawback = claw > 0 ? claw.toFixed(2) : "";
+  const carry = num(q.get("carry"));
+  cm.carry = carry ? carry.toFixed(2) : "";
+  const name = str("vName").toUpperCase();
+  cm.vendor = name ? { name } : {};
+  let itemsBad = false;
+  const rawItems = q.get("items");
+  if (rawItems) {
+    try {
+      const arr = JSON.parse(rawItems);
+      if (!Array.isArray(arr)) throw new Error("not array");
+      const rows = arr.slice(0, 50).map(x => ({
+        desc: String(x && x.desc != null ? x.desc : "").trim().slice(0, 200),
+        qty: Math.max(0, Math.round(num(x && x.qty))),
+        price: num(x && x.price) > 0 ? num(x.price).toFixed(2) : "",
+      })).filter(r => r.desc || r.price);
+      if (rows.length) cm.rows = rows;
+    } catch (e) { itemsBad = true; }
+  }
+  cm.payNote = PO_PAY_FROM[curr] + "\n" + (name ? vendorToLine(cm.vendor) : "To: ");
+  if (name) msmsVendorMatch = name;
+  const h = str("h", 64);
+  if (/^[0-9a-f-]{36}$/i.test(h)) msmsHandoff = h;
+  msmsTarget = "cm";
+  state.cm = cm;
+  state.tab = "cm";
+  clearQuery();
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  msmsNotice = itemsBad
+    ? "⚠️ 已从 MSMS 导入推荐费账单，但明细读不到，请自己填"
+    : `✅ 已从 MSMS 导入推荐费账单 ${cm.no}，请核对后再下载`;
+}
+
 // MSMS 只传供应商名称（不传支付宝实名／账号）；名单里有同名供应商就带出收款资料和地址。
 function applyMsmsVendorMatch() {
+  const T = msmsTarget;
   const name = msmsVendorMatch;
   if (!name) return;
   msmsVendorMatch = "";
-  const v = state.po.vendor || {};
+  const v = state[T].vendor || {};
   if (String(v.name || "").toUpperCase() !== name.toUpperCase() || v.acct) return;
   const c = contacts.find(x => x.kind === "vendor" && String(x.name || "").trim().toUpperCase() === name.toUpperCase());
   if (!c) { toast(`名单里没有「${name}」，请点 VENDOR 填一次收款资料（勾「存到名单」下次自动带出）`, 5000); return; }
   const p = { ...v };
   PF.forEach(f => { if (f !== "attn" && c[f] && !p[f]) p[f] = c[f]; });
-  state.po.vendor = p;
-  const lines = String(state.po.payNote || "").split("\n");
+  state[T].vendor = p;
+  const lines = String(state[T].payNote || "").split("\n");
   const i = lines.findIndex(l => /^to:/i.test(l.trim()));
   if (i >= 0) lines[i] = vendorToLine(p); else lines.push(vendorToLine(p));
-  state.po.payNote = lines.join("\n");
-  const el = $('[data-f="payNote"]', sheetOf("po"));
-  if (el) { el.value = state.po.payNote; autosize(el); }
-  renderParties("po"); calc("po"); persist();
+  state[T].payNote = lines.join("\n");
+  const el = $('[data-f="payNote"]', sheetOf(T));
+  if (el) { el.value = state[T].payNote; autosize(el); }
+  renderParties(T); calc(T); persist();
   toast(`已从名单带出「${name}」的收款资料`);
 }
 
 // MSMS 直接交来的收款资料（WorldFirst 支付宝实名＋账号，或供应商收款资料）。只认 MSMS 网站、打开我的那个分页、同一个编号。
 function applyMsmsContact(contact) {
+  const T = msmsTarget;
   if (!contact || typeof contact !== "object") return false;
   const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
   const name = clean(contact.contactName, 80).toUpperCase(), phone = clean(contact.phone, 40), wechat = clean(contact.wechat, 64);
   if (!name && !phone && !wechat) return false;
-  const p = { ...(state.po.vendor || {}) };
+  const p = { ...(state[T].vendor || {}) };
   if (name) p.attn = name;
   if (phone) p.phone = phone;
   if (wechat) p.wechat = wechat;
-  state.po.vendor = p;
-  renderParties("po"); persist();
+  state[T].vendor = p;
+  renderParties(T); persist();
   return true;
 }
 function applyMsmsPayee(payee, contact) {
+  const T = msmsTarget;
   const gotContact = applyMsmsContact(contact);
   if (!payee || typeof payee !== "object") { toast(gotContact ? "已带入供应商联系资料；MSMS 里还没有收款资料，请点 VENDOR 填写" : "MSMS 里这个供应商还没有收款资料，请点 VENDOR 填写"); return; }
   const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
   const acct = clean(payee.acct, 300), acctName = clean(payee.acctName, 120).toUpperCase(), bank = clean(payee.bank, 60);
   if (!acct && !acctName) return;
   msmsVendorMatch = ""; // MSMS 的资料为准，名单不再盖过
-  const p = { ...(state.po.vendor || {}), acct, acctName, bank };
+  const p = { ...(state[T].vendor || {}), acct, acctName, bank };
   // 供应商名称＝收款人实名（店名放括号），和付款对象一致，方便万里汇／会计核对
   const shop = String(p.shop || p.name || "").trim();
   if (acctName && shop && shop.toUpperCase() !== acctName) { p.shop = shop; p.name = `${acctName} (${shop})`; }
@@ -1121,21 +1233,24 @@ function applyMsmsPayee(payee, contact) {
   if (!bank) delete p.bank;
   if (!acct) delete p.acct;
   if (!acctName) delete p.acctName;
-  state.po.vendor = p;
-  const lines = String(state.po.payNote || "").split("\n");
+  state[T].vendor = p;
+  const lines = String(state[T].payNote || "").split("\n");
   const i = lines.findIndex(l => /^to:/i.test(l.trim()));
   if (i >= 0) lines[i] = vendorToLine(p); else lines.push(vendorToLine(p));
-  if (payee.source === "worldfirst" && state.po.currency === "CNY") {
+  if (payee.source === "worldfirst" && T === "cm" && state.cm.currency === "CNY") {
+    if ([...Object.values(PO_PAY_FROM), PO_PAY_FROM_WF].includes(lines[0].trim())) lines[0] = PO_PAY_FROM_WF;
+  }
+  if (payee.source === "worldfirst" && T === "po" && state.po.currency === "CNY") {
     // WorldFirst 收款：付款来源、付款条件、条款第 3 条都写 WorldFirst（自己改过的不动）
     if ([...Object.values(PO_PAY_FROM), PO_PAY_FROM_WF].includes(lines[0].trim())) lines[0] = PO_PAY_FROM_WF;
-    if (state.po.terms && !/worldfirst/i.test(state.po.terms)) state.po.terms = state.po.terms + " · via WorldFirst";
-    if (PO_TNC_ALL.includes(String(state.po.tnc || "").trim())) state.po.tnc = PO_TNC_CNY_WF;
-    for (const f of ["terms", "tnc"]) { const e = $(`[data-f="${f}"]`, sheetOf("po")); if (e) { e.value = state.po[f]; autosize(e); } }
+    if (state[T].terms && !/worldfirst/i.test(state[T].terms)) state[T].terms = state[T].terms + " · via WorldFirst";
+    if (PO_TNC_ALL.includes(String(state[T].tnc || "").trim())) state[T].tnc = PO_TNC_CNY_WF;
+    for (const f of ["terms", "tnc"]) { const e = $(`[data-f="${f}"]`, sheetOf(T)); if (e) { e.value = state.po[f]; autosize(e); } }
   }
-  state.po.payNote = lines.join("\n");
-  const el = $('[data-f="payNote"]', sheetOf("po"));
-  if (el) { el.value = state.po.payNote; autosize(el); }
-  renderParties("po"); calc("po"); persist();
+  state[T].payNote = lines.join("\n");
+  const el = $('[data-f="payNote"]', sheetOf(T));
+  if (el) { el.value = state[T].payNote; autosize(el); }
+  renderParties(T); calc(T); persist();
   toast(payee.source === "worldfirst" ? "✅ 已从 MSMS 带入 WorldFirst 支付宝资料" : "✅ 已从 MSMS 带入供应商收款资料");
 }
 function initMsmsHandoff() {
@@ -1156,8 +1271,8 @@ function initMsmsHandoff() {
 // ---------- 开始 ----------
 loadDraft();
 initMsmsBridge();
-["po", "inv"].forEach(t => { build(t); bindSheet(t); });
-bindTnc("po");
+DOC_TYPES.forEach(t => { build(t); bindSheet(t); });
+bindTnc("po"); bindTnc("cm");
 switchTab(state.tab);
 if (msmsNotice) toast(msmsNotice, 4500);
 initMsmsHandoff();

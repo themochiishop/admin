@@ -293,3 +293,8 @@ body.exporting .zero-dep, #pvStage .zero-dep { display: none !important; }
   #pvStage { transform: none !important; width: 750px !important; height: 1060px !important; }
   #pvStage .sheet { box-shadow: none !important; }
 }
+
+/* 推荐费单（Commission）：记录标签、说明框 */
+.rec .tg.cm { background: #fef3c7; color: #92400e; }
+.party-note { min-height: 98px; }
+.party-note textarea { color: #333; }

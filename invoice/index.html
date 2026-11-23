@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=1000, user-scalable=yes">
 <title>PO / Invoice · Mochii Admin</title>
 <link rel="icon" type="image/png" href="logo.png">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -24,6 +24,7 @@
     <div class="tabs">
       <button type="button" class="tab" data-tab="po">Purchase Order</button>
       <button type="button" class="tab" data-tab="inv">Invoice</button>
+      <button type="button" class="tab" data-tab="cm" title="推荐费单（推荐人每月的推荐费，跟货款分开付）">Commission</button>
     </div>
     <div class="tabs" id="currTabs" title="切换单据币种">
       <button type="button" class="tab" data-curr="RM">RM</button>
@@ -45,6 +46,7 @@
 <main>
   <section class="page" id="page-po"><div class="sheet-wrap"><div class="sheet" id="sheet-po"></div></div></section>
   <section class="page hidden" id="page-inv"><div class="sheet-wrap"><div class="sheet" id="sheet-inv"></div></div></section>
+  <section class="page hidden" id="page-cm"><div class="sheet-wrap"><div class="sheet" id="sheet-cm"></div></div></section>
 </main>
 
 <!-- ========== 弹窗：打印预览 ========== -->
@@ -121,6 +123,7 @@
         <button type="button" data-rt="all" class="on">全部</button>
         <button type="button" data-rt="po">PO</button>
         <button type="button" data-rt="inv">Invoice</button>
+        <button type="button" data-rt="cm">CM</button>
       </div>
     </div>
     <div id="recList"></div>
@@ -131,6 +134,6 @@
 <div id="toast"></div>
 
 <!-- 只引入一次 app.js；每次更新 app.js 就改一下 v= 后面的数字，浏览器才会用新版 -->
-<script type="module" src="app.js?v=20261123-9"></script>
+<script type="module" src="app.js?v=20261124-1"></script>
 </body>
 </html>
