@@ -48,6 +48,8 @@ const PO_TNC_DEFAULT =
 // 交货条件：CNY（中国供应商）＝送到 ESES 广州仓、国内运费供应商负责
 const PO_DTERMS = { RM: "Delivered to Mochii Shop", CNY: "To ESES Guangzhou · freight by supplier" };
 const PO_DTERMS_OLD = ["To ESES Guangzhou warehouse · freight by supplier"];
+// 邮费补贴（MSMS 带来邮费时）：国内邮费由采购方补贴
+const PO_DTERMS_POSTAGE = "ESES Guangzhou · postage by buyer";
 const PO_TNC_CNY_HEAD_V1 =
   "1. Goods must match agreed specifications and quality standards.\n" +
   "2. Deliver to designated China consolidation warehouse (ESES - Ref: S0661) with MSMS Reference No. clearly marked.\n";
@@ -56,8 +58,13 @@ const PO_TNC_CNY_HEAD =
   "2. Supplier delivers to ESES China consolidation warehouse (Ref: S0661) at own cost; mark MSMS Reference No. on parcels.\n";
 const PO_TNC_CNY = PO_TNC_CNY_HEAD + "3. Payment settled in CNY to the supplier's nominated account.";
 const PO_TNC_CNY_WF = PO_TNC_CNY_HEAD + "3. Payment settled in CNY via WorldFirst to supplier's authorized Alipay account.";
+const PO_TNC_POSTAGE_HEAD =
+  "1. Goods must match agreed specifications and quality standards.\n" +
+  "2. Supplier delivers to ESES China consolidation warehouse (Ref: S0661); domestic postage subsidised by buyer per MSMS record (courier receipts on file). Mark MSMS Reference No. on parcels.\n";
+const PO_TNC_POSTAGE = PO_TNC_POSTAGE_HEAD + "3. Payment settled in CNY to the supplier's nominated account.";
+const PO_TNC_POSTAGE_WF = PO_TNC_POSTAGE_HEAD + "3. Payment settled in CNY via WorldFirst to supplier's authorized Alipay account.";
 const PO_TNC_BY = { RM: PO_TNC_DEFAULT, CNY: PO_TNC_CNY };
-const PO_TNC_ALL = [PO_TNC_DEFAULT, PO_TNC_CNY, PO_TNC_CNY_WF,
+const PO_TNC_ALL = [PO_TNC_DEFAULT, PO_TNC_CNY, PO_TNC_CNY_WF, PO_TNC_POSTAGE, PO_TNC_POSTAGE_WF,
   // 旧版默认也当作没改过
   PO_TNC_CNY_HEAD_V1 + "3. Payment settled in CNY via WorldFirst to supplier's authorized Alipay account.",
   PO_TNC_CNY_HEAD_V1 + "3. Payment settled in CNY to the supplier's nominated account."];
@@ -147,7 +154,7 @@ function amountWords(total, curr = "RM") {
 
 // ---------- 状态 ----------
 function newState(t) {
-  const base = { no: randNo(t), date: today(), currency: "RM", payNow: "", shipping: "", other: "", deposit: "", rows: [blankRow()], savedNo: null };
+  const base = { no: randNo(t), date: today(), currency: "RM", payNow: "", shipping: "", other: "", deposit: "", rows: [blankRow()], savedNo: null, postage: false, postageRefs: "" };
   if (t === "po") return {
     ...base, delivery: "", req: "MOCHII SHOP", terms: "Bank transfer · upon delivery", dterms: PO_DTERMS.RM, ref: "",
     payNote: PO_PAY_DEFAULT, tnc: PO_TNC_DEFAULT, vendor: {}, deliver: { ...DELIVER_DEFAULT },
@@ -205,7 +212,7 @@ function sheetHTML(t) {
           <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">CNY 0.00</td></tr>` : `
           <tr><th>${Z("SUBTOTAL", "小计")}</th><td data-sum="sub">0.00</td></tr>
           <tr><th>SST <span class="na">(Not Applicable)</span></th><td>-</td></tr>
-          <tr><th>${Z("SHIPPING", "运费")}</th><td><input data-f="shipping" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
+          <tr><th>${po && state.po.postage ? ZH("POSTAGE SUBSIDY", "邮费补贴") + (state.po.postageRefs ? `<div class="post-refs">${esc(state.po.postageRefs)}</div>` : "") : Z("SHIPPING", "运费")}</th><td><input data-f="shipping" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
           <tr><th>${Z("OTHER", "其他")}</th><td><input data-f="other" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
           ${po ? `<tr id="depRow-${t}"><th style="white-space:nowrap">${ZH("LESS: DEPOSIT PAID", "减：已付定金")}</th><td><input data-f="deposit" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>` : ""}
           <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
@@ -296,7 +303,8 @@ function poDefaultsFor(s, curr) {
   const tnc = String(s.tnc ?? "").trim();
   if (!tnc || PO_TNC_ALL.includes(tnc)) s.tnc = PO_TNC_BY[curr] || PO_TNC_DEFAULT;
   const dt = String(s.dterms ?? "").trim();
-  if (!dt || Object.values(PO_DTERMS).includes(dt) || PO_DTERMS_OLD.includes(dt)) s.dterms = PO_DTERMS[curr] || PO_DTERMS.RM;
+  if (!dt || Object.values(PO_DTERMS).includes(dt) || PO_DTERMS_OLD.includes(dt) || dt === PO_DTERMS_POSTAGE) s.dterms = s.postage && curr === "CNY" ? PO_DTERMS_POSTAGE : PO_DTERMS[curr] || PO_DTERMS.RM;
+  if (s.postage && curr === "CNY" && PO_TNC_ALL.includes(String(s.tnc ?? "").trim())) s.tnc = PO_TNC_POSTAGE;
   const lines = String(s.payNote ?? "").split("\n");
   const fromLines = [...Object.values(PO_PAY_FROM), PO_PAY_FROM_WF];
   if (!lines[0].trim() || fromLines.includes(lines[0].trim())) lines[0] = PO_PAY_FROM[curr] || PO_PAY_FROM.RM;
@@ -1111,6 +1119,14 @@ function initMsmsBridge() {
   po.payNote = PO_PAY_FROM[curr] + "\n" + (po.vendor.name || po.vendor.acct ? vendorToLine(po.vendor) : "To: ");
   po.tnc = PO_TNC_BY[curr];
   po.dterms = PO_DTERMS[curr];
+  // MSMS 邮费补贴：金额放进「邮费补贴」那一行，快递单号写在下面；条款写明邮费由采购方补贴。
+  const postage = num(q.get("postage"));
+  if (postage > 0) {
+    po.postage = true;
+    po.shipping = postage.toFixed(2);
+    po.postageRefs = str("postageRefs", 300);
+    if (curr === "CNY") { po.tnc = PO_TNC_POSTAGE; po.dterms = PO_DTERMS_POSTAGE; }
+  }
 
   if (po.vendor.name && !po.vendor.acct) msmsVendorMatch = po.vendor.name;
   const h = str("h", 64);
@@ -1244,7 +1260,7 @@ function applyMsmsPayee(payee, contact) {
     // WorldFirst 收款：付款来源、付款条件、条款第 3 条都写 WorldFirst（自己改过的不动）
     if ([...Object.values(PO_PAY_FROM), PO_PAY_FROM_WF].includes(lines[0].trim())) lines[0] = PO_PAY_FROM_WF;
     if (state[T].terms && !/worldfirst/i.test(state[T].terms)) state[T].terms = state[T].terms + " · via WorldFirst";
-    if (PO_TNC_ALL.includes(String(state[T].tnc || "").trim())) state[T].tnc = PO_TNC_CNY_WF;
+    if (PO_TNC_ALL.includes(String(state[T].tnc || "").trim())) state[T].tnc = state[T].postage ? PO_TNC_POSTAGE_WF : PO_TNC_CNY_WF;
     for (const f of ["terms", "tnc"]) { const e = $(`[data-f="${f}"]`, sheetOf(T)); if (e) { e.value = state.po[f]; autosize(e); } }
   }
   state[T].payNote = lines.join("\n");

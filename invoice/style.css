@@ -298,3 +298,6 @@ body.exporting .zero-dep, #pvStage .zero-dep { display: none !important; }
 .rec .tg.cm { background: #fef3c7; color: #92400e; }
 .party-note { min-height: 98px; }
 .party-note textarea { color: #333; }
+
+/* MSMS 邮费补贴：快递单号写在「邮费补贴」下面 */
+.totals .post-refs { font-weight: normal; font-size: 9px; color: #555; line-height: 1.3; margin-top: 1px; overflow-wrap: anywhere; }
