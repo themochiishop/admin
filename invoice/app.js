@@ -693,12 +693,12 @@ async function saveProducts(t) {
 
 // ---------- 弹窗：客户 / 供应商 ----------
 const PARTY = {
-  "po.vendor": { title: "供应商资料 · Vendor", list: "vendor", listLabel: "供应商", bank: true },
+  "po.vendor": { title: "供应商资料 · Vendor", list: "vendor", listLabel: "供应商", bank: true, attn: true },
   "po.deliver": { title: "送货地址 · Deliver to", attn: true, noReg: true, preset: true },
   "inv.bill": { title: "客户资料 · Bill to", list: "customer", listLabel: "客户" },
   "inv.ship": { title: "收货资料 · Ship to", list: "customer", listLabel: "客户", same: true, attn: true },
   // 推荐人本身也是供应商：用同一份供应商名单（收款资料也在名单里）
-  "cm.vendor": { title: "收款人（推荐人）· Payee", list: "vendor", listLabel: "供应商", bank: true },
+  "cm.vendor": { title: "收款人（推荐人）· Payee", list: "vendor", listLabel: "供应商", bank: true, attn: true },
 };
 const PF = ["name", "regNo", "a1", "a2", "postcode", "city", "state", "attn", "phone", "bank", "acct", "acctName"];
 const BANK_FIELDS = ["bank", "acct", "acctName"];
@@ -811,7 +811,8 @@ $("#pmSave").addEventListener("click", async () => {
     if (cfg.bank && p.name && p.name === COMPANY.name.toUpperCase()) {
       if (!confirm(`供应商名字是「${p.name}」，和自己的店名一样。\n确定没有填错吗？`)) return;
     }
-    if (cfg.bank) { const old = state[t][key] || {}; if (old.attn && !p.attn) p.attn = old.attn; if (old.wechat) p.wechat = old.wechat; }
+    // 供应商 Attn 现在可以在视窗里改或清空（以前视窗没有这栏、保存时又自动留回旧的，改不了）。
+    if (cfg.bank) { const old = state[t][key] || {}; if (old.wechat) p.wechat = old.wechat; }
     state[t][key] = p;
     if (cfg.bank && p.name) {
       const lines = String(state[t].payNote || "").split("\n");
