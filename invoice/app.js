@@ -84,11 +84,11 @@ const CM_TNC_DEFAULT =
 const CM_BASIS_DEFAULT =
   "Referral commission statement (MSMS). Not payment for goods.\n推荐费明细：按当月交接确认的件数计算，非货款。";
 const CM_PAY_DEFAULT = "From: MOCHII SHOP\nTo: ";
-const DOC_TYPES = ["po", "inv", "cm"];
-const DOC_LABEL = { po: "Purchase Order", inv: "Invoice", cm: "Commission" };
-const DOC_TAG = { po: "PO", inv: "INV", cm: "CM" };
+const DOC_TYPES = ["po", "pi", "inv", "cm"];
+const DOC_LABEL = { pi: "Proforma Invoice", po: "Purchase Order", inv: "Invoice", cm: "Commission" };
+const DOC_TAG = { pi: "PI", po: "PO", inv: "INV", cm: "CM" };
 
-const PREFIX = { po: "PO-", inv: "INV-", cm: "CM-" };
+const PREFIX = { pi: "PI-", po: "PO-", inv: "INV-", cm: "CM-" };
 const SAFE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const STORE_KEY = "mochii_docs_v12";
 const SHEET_H = 1060;
@@ -159,13 +159,14 @@ function newState(t) {
     ...base, delivery: "", req: "MOCHII SHOP", terms: "Bank transfer · upon delivery", dterms: PO_DTERMS.RM, ref: "",
     payNote: PO_PAY_DEFAULT, tnc: PO_TNC_DEFAULT, vendor: {}, deliver: { ...DELIVER_DEFAULT },
   };
+  if (t === "pi") return {...base,currency:'CNY',vendor:{},bill:{name:COMPANY.name,regNo:COMPANY.reg,a1:COMPANY.addr[0],a2:COMPANY.addr[1]+', MALAYSIA',phone:COMPANY.tel,tin:COMPANY.tin},deliver:{...DELIVER_CN_DEFAULT},ref:'',poNo:'',stage:'F',terms:'Full',payNote:'Payment via WorldFirst (CNY)',tnc:piTerms(''),confirmedAt:'',confirmedBy:'',confirmMethod:'',confirmDate:'',sellerConfirmed:false,confirmationDigest:'',fromMsms:false,piId:''};
   if (t === "cm") return {
     ...base, currency: "CNY", ref: "", clawback: "", carry: "", basis: CM_BASIS_DEFAULT,
     payNote: CM_PAY_DEFAULT, tnc: CM_TNC_DEFAULT, vendor: {},
   };
   return { ...base, due: "Due upon receipt", payNote: INV_PAY_DEFAULT, paid: false, bill: {}, shipSame: true, ship: {} };
 }
-const state = { tab: "inv", po: newState("po"), inv: newState("inv"), cm: newState("cm") };
+const state = { tab: "inv", pi: newState("pi"), po: newState("po"), inv: newState("inv"), cm: newState("cm") };
 function loadDraft() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
@@ -192,18 +193,18 @@ function dateCell(f, withToday = true) {
   return `<div class="cf"><input data-f="${f}" placeholder="dd/mm/yyyy" autocomplete="off">${withToday ? `<button type="button" class="mini no-pdf" data-today="${f}">今天</button>` : ""}</div>`;
 }
 function sheetHTML(t) {
-  const po = t === "po", cm = t === "cm", zh = t !== "inv", C = COMPANY;
+  const pi=t==="pi", po = t === "po" || pi, cm = t === "cm", zh = t !== "inv", C = COMPANY;
   const Z = (en, z) => ZH(en, z, zh);
-  const title = po ? ZH("PURCHASE ORDER", "采购订单") : cm ? ZH("COMMISSION STATEMENT", "推荐费单") : "INVOICE";
-  const noLabel = po ? ZH("PO NO.", "单号") : cm ? ZH("STATEMENT NO.", "单号") : "INVOICE NO.";
-  const thirdRow = po
+  const title = pi ? ZH("PROFORMA INVOICE", "形式发票") : po ? ZH("PURCHASE ORDER", "采购订单") : cm ? ZH("COMMISSION STATEMENT", "推荐费单") : "INVOICE";
+  const noLabel = pi ? "PI NO." : po ? ZH("PO NO.", "单号") : cm ? ZH("STATEMENT NO.", "单号") : "INVOICE NO.";
+  const thirdRow = pi ? `<tr><th>VALID UNTIL</th><td><span data-pi-valid></span></td></tr><tr><th>ORDER REF</th><td><input data-f="ref"></td></tr><tr><th>BUYER PO NO.</th><td><input data-f="poNo"></td></tr><tr><th>PAYMENT STAGE</th><td><select data-f="stage"><option value="D">Deposit</option><option value="B">Balance</option><option value="F">Full</option><option value="P">Postage</option></select></td></tr>` : po
     ? `<tr data-row="delivery"><th style="white-space:nowrap">${ZH("DELIVERY DATE", "交货日期")}</th><td>${dateCell("delivery")}</td></tr>`
     : cm ? `<tr><th>${ZH("PERIOD", "结算月份")}</th><td><input data-f="ref" placeholder="YYYY-MM" autocomplete="off"></td></tr>`
     : `<tr><th>DUE DATE</th><td>${dateCell("due", false)}</td></tr>`;
-  const right = po ? partyCol("deliver", ZH("DELIVER TO", "收货地址"))
+  const right = po ? partyCol("deliver", ZH(pi ? "SHIP TO" : "DELIVER TO", "收货地址"))
     : cm ? `<div class="pcol"><div class="bar"><span>${ZH("NOTE", "说明")}</span></div><div class="box party-note"><textarea data-f="basis" rows="3"></textarea></div></div>`
     : partyCol("ship", "SHIP TO");
-  const left = partyCol(po ? "vendor" : cm ? "vendor" : "bill", po ? ZH("VENDOR", "供应商") : cm ? ZH("PAYEE", "收款人（推荐人）") : "BILL TO");
+  const left = pi ? partyCol("bill", ZH("BILL TO", "买家")) : partyCol(po ? "vendor" : cm ? "vendor" : "bill", po ? ZH("VENDOR", "供应商") : cm ? ZH("PAYEE", "收款人（推荐人）") : "BILL TO");
   const zhSmall = s => zh ? `<span class="zh" style="font-size:.8em;font-weight:normal;opacity:.85;margin-left:.35em;white-space:nowrap">${s}</span>` : "";
   const totalsRows = cm ? `
           <tr><th>${Z("SUBTOTAL", "小计")}</th><td data-sum="sub">0.00</td></tr>
@@ -212,7 +213,7 @@ function sheetHTML(t) {
           <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">CNY 0.00</td></tr>` : `
           <tr><th>${Z("SUBTOTAL", "小计")}</th><td data-sum="sub">0.00</td></tr>
           <tr><th>SST <span class="na">(Not Applicable)</span></th><td>-</td></tr>
-          <tr><th>${po && state.po.postage ? ZH("POSTAGE SUBSIDY", "邮费补贴") + (state.po.postageRefs ? `<div class="post-refs">${esc(state.po.postageRefs)}</div>` : "") : Z("SHIPPING", "运费")}</th><td><input data-f="shipping" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
+          <tr><th>${po && state[t].postage ? ZH("POSTAGE SUBSIDY", "邮费补贴") + (state[t].postageRefs ? `<div class="post-refs">${esc(state[t].postageRefs)}</div>` : "") : Z("SHIPPING", "运费")}</th><td><input data-f="shipping" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>
           <tr><th>${Z("OTHER", "其他")}</th><td><input data-f="other" class="money" type="number" step="0.01" placeholder="0.00" inputmode="decimal"></td></tr>
           ${po ? `<tr id="depRow-${t}"><th style="white-space:nowrap">${ZH("LESS: DEPOSIT PAID", "减：已付定金")}</th><td><input data-f="deposit" class="money" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal"></td></tr>` : ""}
           <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
@@ -220,8 +221,8 @@ function sheetHTML(t) {
   return `
   <div class="sheet-body">
     <div class="grid">
-      <div class="co">
-        <img src="logo.png" class="logo" alt="">
+      <div class="co"${pi ? ` data-pi-seller` : ""}>
+        ${pi ? "" : `<img src="logo.png" class="logo" alt="">`}
         <div>
           <div class="co-name">${C.name}</div>
           <div class="co-sub">Reg. No. ${C.reg} · TIN: ${C.tin}</div>
@@ -247,7 +248,7 @@ function sheetHTML(t) {
       ${right}
     </div>
 
-    ${po ? `<table class="tri mt">
+    ${po && !pi ? `<table class="tri mt">
       <tr><th style="width:19%">${ZH("REQUISITIONER", "采购方")}</th><th style="width:31%">${ZH("PAYMENT TERMS", "付款条件")}</th><th style="width:30%">${ZH("DELIVERY TERMS", "交货条件")}</th><th style="width:20%">${ZH("REFERENCE", "订单编号")}</th></tr>
       <tr><td><input data-f="req" autocomplete="off"></td><td><input data-f="terms" autocomplete="off"></td><td><input data-f="dterms" autocomplete="off"></td><td><input data-f="ref" placeholder="MSMS 单号" autocomplete="off"></td></tr>
     </table>
@@ -266,7 +267,7 @@ function sheetHTML(t) {
 
     <div class="grid mt">
       <div>
-        <div class="bar">${po || cm ? ZH("PAYMENT TO VENDOR", "付款资料") : "PAYMENT DETAILS"}</div>
+        <div class="bar">${pi ? ZH("BENEFICIARY", "收款资料") : po || cm ? ZH("PAYMENT TO VENDOR", "付款资料") : "PAYMENT DETAILS"}</div>
         <div class="box"><textarea data-f="payNote" rows="2"></textarea></div>
         ${zh ? `<div class="bar mt-s">${ZH("TERMS AND CONDITIONS", "条款")}</div><div class="box tnc-box"><div class="tnc-view" data-tnc-view tabindex="0" role="button" title="点击修改" style="cursor:text;min-height:1.4em"></div><div class="no-pdf tnc-edit" hidden><textarea data-f="tnc" rows="2"></textarea></div></div>` : ""}
       </div>
@@ -279,19 +280,18 @@ function sheetHTML(t) {
 
     <div class="sign">
       <div>
-        <div class="st">${po ? ZH("Accepted by vendor:", "供应商确认") : cm ? ZH("Received by payee:", "收款人确认") : "Received by:"}</div>
-        <div class="sp"></div><div class="sl"></div>
-        <div class="sm">Name:</div><div class="sm">Date:</div>
+        <div class="st">${pi ? ZH("Issued by seller", "卖家签发") : po ? ZH("Accepted by vendor:", "供应商确认") : cm ? ZH("Received by payee:", "收款人确认") : "Received by:"}</div>
+        ${pi ? `<div class="sp pi-confirmation" data-pi-confirmation></div><div class="sl"></div>` : `<div class="sp"></div><div class="sl"></div><div class="sm">Name:</div><div class="sm">Date:</div>`}
       </div>
       <div class="sign-r">
-        <div class="st">${zh ? ZH("Authorized by:", "采购方授权") : "Authorized signature:"}</div>
+        <div class="st">${pi ? ZH("Accepted by buyer", "买家确认") : zh ? ZH("Authorized by:", "采购方授权") : "Authorized signature:"}</div>
         <div class="sp stamp"><img src="signcop.png" alt=""></div><div class="sl"></div>
         <div class="sm">${C.name}</div><div class="sm">Date: <span data-bind="date"></span></div>
       </div>
     </div>
   </div>
   <div class="foot">
-    <div>${t === "inv" ? "Goods sold are non-refundable and non-exchangeable.<br>" : ""}For any enquiries about this ${po ? "purchase order" : cm ? "commission statement" : "invoice"}, please contact us on WhatsApp ${C.tel}.</div>
+    <div>${pi ? "This is a proforma invoice issued for payment purposes, not a tax invoice.<br>" : ""}${t === "inv" ? "Goods sold are non-refundable and non-exchangeable.<br>" : ""}For any enquiries about this ${po ? "purchase order" : cm ? "commission statement" : "invoice"}, please contact us on WhatsApp ${C.tel}.</div>
     <div class="pg">Page 1 of 1</div>
   </div>`;
 }
@@ -312,6 +312,7 @@ function poDefaultsFor(s, curr) {
   s.payNote = lines.join("\n");
 }
 function setCurrency(t, curr) {
+  if(t === "pi") {toast("PI 使用 CNY 人民币");return;}
   if (curr !== "RM" && curr !== "CNY") return;
   const s = state[t];
   s.currency = curr;
@@ -410,12 +411,12 @@ function totals(t) {
     const total = Math.max(0, round2(sub - num(s.clawback) + num(s.carry)));
     return { sub, dep: 0, total, now: total, isDepositStage: false };
   }
-  const dep = t === "po" ? round2(num(s.deposit)) : 0;
+  const dep = (t === "po" || t === "pi" && s.stage === "B") ? round2(num(s.deposit)) : 0;
   const total = Math.max(0, round2(sub + num(s.shipping) + num(s.other) - dep));
   // 30% 定金单：付款阶段是 30% 定金、还没扣过定金时，另算「本次应付」
   // 定金单：付款阶段写 Deposit、还没扣过定金时，另算「本次应付」
   // 金额以 MSMS 传来的实际定金为准（供应商自填，最多 30%）；没传就按 30% 算
-  const isDepositStage = t === "po" && /deposit/i.test(s.terms || "") && dep <= 0;
+  const isDepositStage = (t === "po" && /deposit/i.test(s.terms || "") || t === "pi" && s.stage === "D") && dep <= 0;
   const payNow = num(s.payNow);
   const pm = String(s.terms || "").match(/(\d{1,3})\s*%\s*deposit/i);
   const rate = pm && +pm[1] > 0 && +pm[1] <= 100 ? +pm[1] / 100 : DEPOSIT_RATE;
@@ -436,7 +437,7 @@ function calc(t) {
     $(`#carry-${t}`, sh)?.classList.toggle("zero-dep", !num(s.carry));
     $('[data-sum="grandLbl"]', sh).innerHTML = ZH("TOTAL PAYABLE", "应付合计");
   }
-  if (t === "po") {
+  if (t === "po" || t === "pi") {
     const depRow = $(`#depRow-${t}`, sh);
     if (depRow) depRow.classList.toggle("zero-dep", dep <= 0);
     $('[data-sum="grandLbl"]', sh).innerHTML = dep > 0 ? ZH("BALANCE DUE", "应付余额") : ZH("TOTAL", "合计");
@@ -452,6 +453,7 @@ function calc(t) {
   // 大写金额跟实际要付的钱走：定金单写 30% 的金额
   $('[data-sum="words"]', sh).textContent = amountWords(now ?? total, curr) || "-";
   if (t !== "inv") renderTnc(t);
+  if(t === "pi") renderPiState();
   checkOverflow();
 }
 
@@ -501,6 +503,8 @@ function switchTab(t) {
   $$(".tabs .tab[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
   for (const x of DOC_TYPES) $("#page-" + x)?.classList.toggle("hidden", t !== x);
   syncBinds(t);
+  if(t === "pi")renderPiState();
+  const convert=$("#btnPoToPi");if(convert)convert.hidden=t!=="po";
   $$("textarea", sheetOf(t)).forEach(autosize);
   checkOverflow(); persist();
 }
@@ -662,7 +666,8 @@ async function saveRecord(t) {
     }
     const { savedNo, ...data } = s;
     await fb.setDoc(ref, {
-      type: t, no: s.no, date: s.date, currency: s.currency || "RM", party: partyName(t), total: totals(t).total,
+      type: t, no: s.no, date: s.date, currency: s.currency || "RM", party: partyName(t), total: t==="pi"?totals(t).now:totals(t).total,
+      ...(t==="pi"?{stage:s.stage,orderRef:s.ref,piId:s.piId,confirmMethod:s.confirmMethod,confirmDate:s.confirmDate}:{}),
       data: JSON.parse(JSON.stringify(data)), by: user.email || "",
       updatedAt: fb.serverTimestamp(), ...(snap.exists() ? {} : { createdAt: fb.serverTimestamp() }),
     }, { merge: true });
@@ -693,6 +698,9 @@ async function saveProducts(t) {
 
 // ---------- 弹窗：客户 / 供应商 ----------
 const PARTY = {
+  "pi.vendor": {title:"卖家资料 · Seller",list:"vendor",listLabel:"供应商",bank:true,attn:true},
+  "pi.bill": {title:"买家资料 · Bill to",list:"customer",listLabel:"买家"},
+  "pi.deliver": {title:"收货地址 · Ship to",attn:true,noReg:true,preset:true},
   "po.vendor": { title: "供应商资料 · Vendor", list: "vendor", listLabel: "供应商", bank: true, attn: true },
   "po.deliver": { title: "送货地址 · Deliver to", attn: true, noReg: true, preset: true },
   "inv.bill": { title: "客户资料 · Bill to", list: "customer", listLabel: "客户" },
@@ -805,7 +813,7 @@ $("#pmSave").addEventListener("click", async () => {
       if (BANK_FIELDS.includes(f) && !cfg.bank) return;
       if (f === "regNo" && cfg.noReg) return;
       let v = (f === "bank" ? readBank() : $("#pm_" + f).value).trim();
-      if (UPPER.includes(f)) v = v.toUpperCase();
+      if (UPPER.includes(f) && t !== "pi") v = v.toUpperCase();
       if (v) p[f] = v;
     });
     if (cfg.bank && p.name && p.name === COMPANY.name.toUpperCase()) {
@@ -813,6 +821,7 @@ $("#pmSave").addEventListener("click", async () => {
     }
     // 供应商 Attn 现在可以在视窗里改或清空（以前视窗没有这栏、保存时又自动留回旧的，改不了）。
     if (cfg.bank) { const old = state[t][key] || {}; if (old.wechat) p.wechat = old.wechat; }
+    if(t === "pi" && key === "bill") p.tin=(state.pi.bill||{}).tin||COMPANY.tin;
     state[t][key] = p;
     if (cfg.bank && p.name) {
       const lines = String(state[t].payNote || "").split("\n");
@@ -833,6 +842,7 @@ $("#pmSave").addEventListener("click", async () => {
       } catch (e) { toast("名单没存到：" + e.message); }
     }
   }
+  if(t === "pi") state.pi.payNote=piPayNote(state.pi.vendor);
   renderParties(t); calc(t); persist();
   closeModals();
 });
@@ -911,12 +921,12 @@ function prepareExport(sh) {
   // 交货日期没填：PDF 上不显示这一行
   const dRow = $('[data-row="delivery"]', sh);
   if (dRow && !String(state.po.delivery || "").trim()) dRow.classList.add("pv-hide");
-  $$("input:not([type=checkbox]), textarea", sh).forEach(el => {
+  $$("input:not([type=checkbox]), textarea, select", sh).forEach(el => {
     if (el.closest(".no-pdf")) return;
     const cs = getComputedStyle(el);
     const sp = document.createElement("span");
     sp.className = "pv";
-    let v = el.value;
+    let v = el.tagName === "SELECT" ? (el.selectedOptions[0]?.textContent || el.value) : el.value;
     if (el.classList.contains("money")) v = v === "" ? "0.00" : fmt(v);
     else if (el.classList.contains("price")) v = v === "" ? "" : fmt(v);
     sp.textContent = v;
@@ -947,6 +957,7 @@ let busy = false;
 async function exportPdf(mode) {
   if (busy) return;
   const t = state.tab, sh = sheetOf(t), s = state[t];
+  if(t === "pi" && s.fromMsms && s.requestFormal && !isPiConfirmed(s)) {alert("PI 正式版尚未完成 MSMS 资料交接，或内容已经更改，请回 MSMS 重新打开。");return;}
   if (isOverflow(t) && !confirm("内容超过一页 A4，PDF 下面会被切掉。\n还是要继续吗？")) return;
   if (!s.no.trim()) setField(t, "no", await uniqueNo(t));
   busy = true;
@@ -1035,6 +1046,7 @@ $("#btnCopy").addEventListener("click", async () => {
   s.savedNo = null;
   if (t === "inv") { s.paid = false; if (parseD(s.due)) s.due = "Due upon receipt"; }
   if (t === "po") s.delivery = "";
+  if(t === "pi"){s.fromMsms=false;s.piId="";s.confirmedAt="";s.confirmedBy="";s.confirmMethod="";s.confirmDate="";s.sellerConfirmed=false;s.confirmationDigest="";s.requestFormal=false;build(t);}
   fill(t); persist();
   toast(`已复制成新单 ${s.no}（日期改成今天）`);
 });
@@ -1066,6 +1078,7 @@ function initMsmsBridge() {
   try { q = new URLSearchParams(window.location.search); } catch (e) { return; }
   if (q.get("from") !== "msms") return;
   const str = (k, max = 200) => String(q.get(k) ?? "").trim().slice(0, max);
+  if (q.get("doc") === "pi") { initPiBridge(q,str); return; }
   if (q.get("type") === "commission") { initCommissionBridge(q, str); return; }
 
   // 草稿保护：本地有没保存的 PO 先问
@@ -1199,6 +1212,7 @@ function initCommissionBridge(q, str) {
 // MSMS 只传供应商名称（不传支付宝实名／账号）；名单里有同名供应商就带出收款资料和地址。
 function applyMsmsVendorMatch() {
   const T = msmsTarget;
+  if(T === "pi" && state.pi.fromMsms) return;
   const name = msmsVendorMatch;
   if (!name) return;
   msmsVendorMatch = "";
@@ -1236,6 +1250,7 @@ function applyMsmsContact(contact) {
 }
 function applyMsmsPayee(payee, contact) {
   const T = msmsTarget;
+  if(T === 'pi') { if(!payee || typeof payee!=='object')return;const p=state.pi;p.vendor={...p.vendor,name:String(payee.acctName||'')+' ('+p.supplierShop+')',acctName:String(payee.acctName||''),acct:String(payee.acct||''),bank:String(payee.bank||'Alipay (支付宝)'),regNo:String(payee.regNo||'')};p.payNote=piPayNote(p.vendor);p.handoffReady=true;p.confirmationDigest=piDigest(p);fill('pi');persist();return; }
   const gotContact = applyMsmsContact(contact);
   if (!payee || typeof payee !== "object") { toast(gotContact ? "已带入供应商联系资料；MSMS 里还没有收款资料，请点 VENDOR 填写" : "MSMS 里这个供应商还没有收款资料，请点 VENDOR 填写"); return; }
   const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -1276,7 +1291,7 @@ function initMsmsHandoff() {
   const onMessage = e => {
     if (e.origin !== MSMS_ORIGIN || e.source !== opener) return;
     const d = e.data;
-    if (!d || d.type !== "msms-po-payee" || d.nonce !== nonce) return;
+    if (!d || !["msms-po-payee","msms-pi-payee"].includes(d.type) || d.nonce !== nonce) return;
     window.removeEventListener("message", onMessage);
     applyMsmsPayee(d.payee, d.contact);
   };
@@ -1285,12 +1300,38 @@ function initMsmsHandoff() {
   try { opener.postMessage({ type: "msms-po-ready", nonce }, MSMS_ORIGIN); } catch (e) {}
 }
 
+// ---------- PI: supplier-issued, immutable MSMS snapshot ----------
+function piTerms(ref){return "1. Payment to be made in CNY via WorldFirst to the seller's Alipay account stated above.\n2. Goods to be delivered to ESES Guangzhou consolidation warehouse (Ref: S0661); the MSMS order no. is marked on every parcel.\n3. This proforma invoice is valid for 12 months from the date of issue.\n4. Quantities and unit prices follow MSMS order "+(ref||'—')+".";}
+function piPayNote(v){return 'Payee: '+(v.acctName||v.name||'')+' ('+(v.bank||'Alipay 支付宝')+') '+(v.acct||'')+'\nPayment via WorldFirst (CNY)';}
+function piDigest(p){return JSON.stringify([p.no,p.date,p.ref,p.poNo,p.stage,p.currency,p.rows,p.deposit,p.payNow,p.shipping,p.postageRefs,p.other,p.vendor,p.bill,p.deliver,p.tnc,p.payNote]);}
+function isPiConfirmed(p){return !!(p.confirmationDigest&&p.confirmationDigest===piDigest(p)&&(p.fromMsms? p.confirmedAt&&p.handoffReady : p.sellerConfirmed&&p.confirmMethod&&p.confirmDate));}
+function renderPiState(){const p=state.pi,sh=sheetOf('pi');if(!sh)return;const formal=isPiConfirmed(p);sh.classList.toggle('pi-draft',!formal);
+ let wm=$('[data-pi-watermark]',sh);if(!wm){wm=document.createElement('div');wm.dataset.piWatermark='';wm.className='pi-watermark';sh.appendChild(wm);}wm.textContent=formal?'':'DRAFT 草稿';
+ const seller=$('[data-pi-seller]',sh);if(seller){const v=p.vendor;seller.innerHTML='<div><div class="co-name">'+esc(v.name||'SELLER 卖家（点击填写）')+'</div><div class="co-sub">'+(v.regNo?'Reg. / ID No.: '+esc(v.regNo):'')+'</div><div class="co-addr">'+[v.a1,v.a2,v.phone?'Tel: '+v.phone:''].filter(Boolean).map(esc).join('<br>')+'</div></div>';seller.dataset.party='vendor';seller.tabIndex=0;seller.setAttribute('role','button');}
+ const bill=$('[data-party="bill"]',sh);if(bill&&p.bill.tin){bill.querySelectorAll('[data-pi-tin]').forEach(x=>x.remove());const tin=document.createElement('div');tin.dataset.piTin='';tin.textContent='TIN: '+p.bill.tin;bill.appendChild(tin);}
+ const valid=$('[data-pi-valid]',sh);if(valid){const d=parseD(p.date);if(d){d.setFullYear(d.getFullYear()+1);valid.textContent=dstr(d);}else valid.textContent='';}
+ const conf=$('[data-pi-confirmation]',sh);if(conf){conf.textContent=(p.vendor.name||'')+'\n'+(formal?(p.fromMsms?'Confirmed in MSMS by '+p.confirmedBy+' on '+new Date(p.confirmedAt).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'})+' (MYT)':'Confirmed by seller via '+p.confirmMethod+' on '+p.confirmDate):'DRAFT – NOT CONFIRMED BY SELLER');conf.classList.toggle('pi-unconfirmed',!formal);}
+ // MSMS-sourced documents cannot be edited into a different formal invoice.
+ if(p.fromMsms){$$('input,textarea,select,button',sh).forEach(el=>{el.disabled=true;});$$('[data-party]',sh).forEach(el=>{el.style.pointerEvents='none';el.tabIndex=-1;});}
+ const control=$('#piManualConfirmation');if(control)control.hidden=!!p.fromMsms;
+}
+function initPiBridge(q,str){const old=state.pi;if(!old.savedNo&&(old.vendor.name||old.rows.some(r=>r.desc||num(r.price)>0))&&!confirm('检测到本地有未保存的 PI 草稿，是否覆盖？')){clearQuery();return;}
+ const p=newState('pi');p.fromMsms=true;p.piId=str('piId',36);p.supplierShop=str('vName');p.vendor={name:p.supplierShop};p.no=str('no',100);p.ref=str('ref',60);p.stage=['D','B','F','P'].includes(str('stage'))?str('stage'):'F';p.terms={D:'Deposit',B:'Balance',F:'Full',P:'Postage'}[p.stage];p.date=q.get('issuedAt')&&Number.isFinite(Date.parse(q.get('issuedAt')))?dstr(new Date(q.get('issuedAt'))):today();p.poNo=str('poNo',100);p.deposit=str('deposit',30);p.payNow=str('payNow',30);p.shipping=str('postage',30);p.postage=num(p.shipping)>0;p.postageRefs=str('postageRefs',500);p.tnc=piTerms(p.ref);p.confirmedAt=str('confirmedAt',40);p.confirmedBy=str('confirmedBy',120);p.requestFormal=!!p.confirmedAt;p.handoffReady=false;
+ try{const rows=JSON.parse(q.get('items')||'[]');if(!Array.isArray(rows)||rows.length>100)throw Error();p.rows=rows.map(r=>({desc:String(r.desc||'').slice(0,300),qty:num(r.qty),price:String(r.price||'')}));}catch{p.rows=[];p.confirmedAt='';p.requestFormal=false;msmsNotice='PI 货品资料读取失败，请返回 MSMS 重新打开';}
+ const h=str('h',64);if(/^[0-9a-f-]{36}$/i.test(h))msmsHandoff=h;msmsTarget='pi';state.pi=p;state.tab='pi';clearQuery();try{localStorage.setItem(STORE_KEY,JSON.stringify(state));}catch{}
+}
+function initPiControls(){const controls=$('#piManualConfirmation');if(!controls)return;controls.addEventListener('input',()=>{const p=state.pi;if(p.fromMsms)return;p.sellerConfirmed=$('#piSellerConfirmed').checked;p.confirmMethod=$('#piConfirmMethod').value;p.confirmDate=$('#piConfirmDate').value;p.confirmationDigest=p.sellerConfirmed&&p.confirmMethod&&p.confirmDate?piDigest(p):'';renderPiState();persist();});
+ $('#btnPoToPi').addEventListener('click',()=>{const old=state.pi;if(!old.savedNo&&(old.vendor.name||old.rows.some(r=>r.desc||num(r.price)))&&!confirm('覆盖未保存的 PI 草稿？'))return;const po=state.po,p=newState('pi');for(const k of ['vendor','rows','deposit','payNow','shipping','postage','postageRefs','ref','deliver','other'])p[k]=JSON.parse(JSON.stringify(po[k]??p[k]));p.no=po.no.replace(/^PO-/,'PI-');p.poNo=po.no;p.currency='CNY';p.stage=/deposit/i.test(po.terms)&&!num(po.deposit)?'D':num(po.deposit)>0?'B':po.postage&&!po.rows.some(r=>r.desc)?'P':'F';p.terms={D:'Deposit',B:'Balance',F:'Full',P:'Postage'}[p.stage];p.tnc=piTerms(p.ref);p.payNote=piPayNote(p.vendor);state.pi=p;$('#piSellerConfirmed').checked=false;$('#piConfirmMethod').value='';$('#piConfirmDate').value='';build('pi');switchTab('pi');persist();});
+}
+
 // ---------- 开始 ----------
 loadDraft();
 initMsmsBridge();
 DOC_TYPES.forEach(t => { build(t); bindSheet(t); });
-bindTnc("po"); bindTnc("cm");
+bindTnc("po"); bindTnc("pi"); bindTnc("cm");
+initPiControls();
 switchTab(state.tab);
 if (msmsNotice) toast(msmsNotice, 4500);
 initMsmsHandoff();
 initFirebase();
+

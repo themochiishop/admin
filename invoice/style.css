@@ -301,3 +301,6 @@ body.exporting .zero-dep, #pvStage .zero-dep { display: none !important; }
 
 /* MSMS 邮费补贴：快递单号写在「邮费补贴」下面 */
 .totals .post-refs { font-weight: normal; font-size: 9px; color: #555; line-height: 1.3; margin-top: 1px; overflow-wrap: anywhere; }
+
+
+.pi-watermark{position:absolute;top:42%;left:5%;width:90%;text-align:center;transform:rotate(-28deg);font-size:76px;font-weight:bold;color:rgba(150,40,40,.10);pointer-events:none;z-index:5}.sheet{position:relative}.pi-confirmation{font-size:10px;line-height:1.4;white-space:pre-line;height:auto!important;min-height:65px;padding-top:8px}.pi-unconfirmed{color:#a22020}.pi-manual{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px auto;max-width:750px;padding:12px;background:#fff8e8;border:1px solid #c7ad78}.pi-manual label{display:flex;align-items:center;gap:6px}#sheet-pi .meta th{font-size:9px}#sheet-pi .meta td{font-size:10px}#sheet-pi input:disabled,#sheet-pi select:disabled,#sheet-pi textarea:disabled{color:#0f172a;opacity:1;-webkit-text-fill-color:#0f172a}#sheet-pi .quick{display:none}.tg.pi{background:#f3e8cf;color:#70561b}
