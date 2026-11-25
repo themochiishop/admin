@@ -219,7 +219,7 @@ function sheetHTML(t) {
           <tr class="grand"><th data-sum="grandLbl">TOTAL</th><td data-sum="total">RM 0.00</td></tr>
           ${po ? `<tr data-sum="nowRow" style="display:none"><th><b data-sum="nowLbl">DEPOSIT</b></th><td><b data-sum="now">0.00</b></td></tr>` : ""}`;
   return `
-  <div class="sheet-body">
+  <div class="sheet-body${pi ? " pi122-document" : ""}">
     <div class="grid">
       <div class="co"${pi ? ` data-pi-seller` : ""}>
         ${pi ? "" : `<img src="logo.png" class="logo" alt="">`}
@@ -1046,7 +1046,7 @@ $("#btnCopy").addEventListener("click", async () => {
   s.savedNo = null;
   if (t === "inv") { s.paid = false; if (parseD(s.due)) s.due = "Due upon receipt"; }
   if (t === "po") s.delivery = "";
-  if(t === "pi"){s.fromMsms=false;s.piId="";s.confirmedAt="";s.confirmedBy="";s.confirmMethod="";s.confirmDate="";s.sellerConfirmed=false;s.confirmationDigest="";s.requestFormal=false;build(t);}
+  if(t === "pi"){s.signatureImage="";s.fromMsms=false;s.piId="";s.confirmedAt="";s.confirmedBy="";s.confirmMethod="";s.confirmDate="";s.sellerConfirmed=false;s.confirmationDigest="";s.requestFormal=false;build(t);}
   fill(t); persist();
   toast(`已复制成新单 ${s.no}（日期改成今天）`);
 });
@@ -1250,7 +1250,7 @@ function applyMsmsContact(contact) {
 }
 function applyMsmsPayee(payee, contact) {
   const T = msmsTarget;
-  if(T === 'pi') { if(!payee || typeof payee!=='object')return;const p=state.pi;p.vendor={...p.vendor,name:String(payee.acctName||'')+' ('+p.supplierShop+')',acctName:String(payee.acctName||''),acct:String(payee.acct||''),bank:String(payee.bank||'Alipay (支付宝)'),regNo:String(payee.regNo||'')};p.payNote=piPayNote(p.vendor);p.handoffReady=true;p.confirmationDigest=piDigest(p);fill('pi');persist();return; }
+  if(T === 'pi') { if(!payee || typeof payee!=='object')return;const p=state.pi;p.vendor={...p.vendor,name:String(payee.acctName||'')+' ('+p.supplierShop+')',acctName:String(payee.acctName||''),acct:String(payee.acct||''),bank:String(payee.bank||'Alipay (支付宝)'),regNo:String(payee.regNo||'')};p.payNote=piPayNote(p.vendor);p.signatureImage=typeof payee.signatureImage==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(payee.signatureImage)?payee.signatureImage:'';p.handoffReady=true;p.confirmationDigest=piDigest(p);fill('pi');persist();return; }
   const gotContact = applyMsmsContact(contact);
   if (!payee || typeof payee !== "object") { toast(gotContact ? "已带入供应商联系资料；MSMS 里还没有收款资料，请点 VENDOR 填写" : "MSMS 里这个供应商还没有收款资料，请点 VENDOR 填写"); return; }
   const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -1303,14 +1303,14 @@ function initMsmsHandoff() {
 // ---------- PI: supplier-issued, immutable MSMS snapshot ----------
 function piTerms(ref){return "1. Payment to be made in CNY via WorldFirst to the seller's Alipay account stated above.\n2. Goods to be delivered to ESES Guangzhou consolidation warehouse (Ref: S0661); the MSMS order no. is marked on every parcel.\n3. This proforma invoice is valid for 12 months from the date of issue.\n4. Quantities and unit prices follow MSMS order "+(ref||'—')+".";}
 function piPayNote(v){return 'Payee: '+(v.acctName||v.name||'')+' ('+(v.bank||'Alipay 支付宝')+') '+(v.acct||'')+'\nPayment via WorldFirst (CNY)';}
-function piDigest(p){return JSON.stringify([p.no,p.date,p.ref,p.poNo,p.stage,p.currency,p.rows,p.deposit,p.payNow,p.shipping,p.postageRefs,p.other,p.vendor,p.bill,p.deliver,p.tnc,p.payNote]);}
+function piDigest(p){return JSON.stringify([p.no,p.date,p.ref,p.poNo,p.stage,p.currency,p.rows,p.deposit,p.payNow,p.shipping,p.postageRefs,p.other,p.vendor,p.bill,p.deliver,p.tnc,p.payNote,p.signatureImage||'']);}
 function isPiConfirmed(p){return !!(p.confirmationDigest&&p.confirmationDigest===piDigest(p)&&(p.fromMsms? p.confirmedAt&&p.handoffReady : p.sellerConfirmed&&p.confirmMethod&&p.confirmDate));}
 function renderPiState(){const p=state.pi,sh=sheetOf('pi');if(!sh)return;const formal=isPiConfirmed(p);sh.classList.toggle('pi-draft',!formal);
  let wm=$('[data-pi-watermark]',sh);if(!wm){wm=document.createElement('div');wm.dataset.piWatermark='';wm.className='pi-watermark';sh.appendChild(wm);}wm.textContent=formal?'':'DRAFT 草稿';
  const seller=$('[data-pi-seller]',sh);if(seller){const v=p.vendor;seller.innerHTML='<div><div class="co-name">'+esc(v.name||'SELLER 卖家（点击填写）')+'</div><div class="co-sub">'+(v.regNo?'Reg. / ID No.: '+esc(v.regNo):'')+'</div><div class="co-addr">'+[v.a1,v.a2,v.phone?'Tel: '+v.phone:''].filter(Boolean).map(esc).join('<br>')+'</div></div>';seller.dataset.party='vendor';seller.tabIndex=0;seller.setAttribute('role','button');}
  const bill=$('[data-party="bill"]',sh);if(bill&&p.bill.tin){bill.querySelectorAll('[data-pi-tin]').forEach(x=>x.remove());const tin=document.createElement('div');tin.dataset.piTin='';tin.textContent='TIN: '+p.bill.tin;bill.appendChild(tin);}
  const valid=$('[data-pi-valid]',sh);if(valid){const d=parseD(p.date);if(d){d.setFullYear(d.getFullYear()+1);valid.textContent=dstr(d);}else valid.textContent='';}
- const conf=$('[data-pi-confirmation]',sh);if(conf){conf.textContent=(p.vendor.name||'')+'\n'+(formal?(p.fromMsms?'Confirmed in MSMS by '+p.confirmedBy+' on '+new Date(p.confirmedAt).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'})+' (MYT)':'Confirmed by seller via '+p.confirmMethod+' on '+p.confirmDate):'DRAFT – NOT CONFIRMED BY SELLER');conf.classList.toggle('pi-unconfirmed',!formal);}
+ const conf=$('[data-pi-confirmation]',sh);if(conf){conf.textContent=(p.vendor.name||'')+'\n'+(formal?(p.fromMsms?'Confirmed in MSMS by '+p.confirmedBy+' on '+new Date(p.confirmedAt).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'})+' (MYT)':'Confirmed by seller via '+p.confirmMethod+' on '+p.confirmDate):'DRAFT – NOT CONFIRMED BY SELLER');conf.classList.toggle('pi-unconfirmed',!formal);if(formal&&p.signatureImage){const img=document.createElement('img');img.src=p.signatureImage;img.alt='Supplier authorized signature';img.className='pi122-seller-signature';conf.prepend(img);}}
  // MSMS-sourced documents cannot be edited into a different formal invoice.
  if(p.fromMsms){$$('input,textarea,select,button',sh).forEach(el=>{el.disabled=true;});$$('[data-party]',sh).forEach(el=>{el.style.pointerEvents='none';el.tabIndex=-1;});}
  const control=$('#piManualConfirmation');if(control)control.hidden=!!p.fromMsms;
