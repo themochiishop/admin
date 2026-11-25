@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=1000, user-scalable=yes">
 <title>PO / Invoice · Mochii Admin</title>
 <link rel="icon" type="image/png" href="logo.png">
-<link rel="stylesheet" href="style.css?v=pi122">
+<link rel="stylesheet" href="style.css?v=127">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -43,7 +43,7 @@
 
 <div id="overflowWarn" class="warn hidden">⚠️ 内容超过一页 A4，下载的 PDF 下面会被切掉。请减少品项或缩短备注。</div>
 
-<!-- ========== 纸张（内容由 app.js 生成） ========== -->
+<!-- ========== 纸张（内容由 app.js?v=127 生成） ========== -->
 <main>
   <button type="button" class="btn" id="btnPoToPi">⇄ 转成 PI</button>
   <section class="page" id="page-po"><div class="sheet-wrap"><div class="sheet" id="sheet-po"></div></div></section>
@@ -137,8 +137,8 @@
 <datalist id="productList"></datalist>
 <div id="toast"></div>
 
-<!-- 只引入一次 app.js；每次更新 app.js 就改一下 v= 后面的数字，浏览器才会用新版 -->
-<script type="module" src="app.js?v=20261125-pi122"></script>
+<!-- 只引入一次 app.js?v=127；每次更新 app.js?v=127 就改一下 v= 后面的数字，浏览器才会用新版 -->
+<script type="module" src="app.js?v=127"></script>
 </body>
 </html>
 

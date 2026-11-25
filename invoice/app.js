@@ -1,3 +1,135 @@
+// Generated from apps/web/src/pi-template.ts; do not edit this block.
+"use strict";
+var MsmsPiTemplate = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // apps/web/src/pi-template.ts
+  var pi_template_exports = {};
+  __export(pi_template_exports, {
+    maskPiId: () => maskPiId,
+    piTemplateCss: () => piTemplateCss,
+    renderPiTemplate: () => renderPiTemplate
+  });
+  function maskPiId(value) {
+    const s = String(value ?? "").trim();
+    return s.length > 8 ? s.slice(0, 4) + "****" + s.slice(-4) : s ? "****" : "";
+  }
+  var esc = (s) => String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+  );
+  var validImage = (s) => !!s && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(s);
+  function cents(s) {
+    return /^\d+(\.\d{1,2})?$/.test(String(s)) ? Math.round(Number(s) * 100) : 0;
+  }
+  function money(n) {
+    return (n / 100).toFixed(2);
+  }
+  function words(n) {
+    const small = [
+      "ZERO",
+      "ONE",
+      "TWO",
+      "THREE",
+      "FOUR",
+      "FIVE",
+      "SIX",
+      "SEVEN",
+      "EIGHT",
+      "NINE",
+      "TEN",
+      "ELEVEN",
+      "TWELVE",
+      "THIRTEEN",
+      "FOURTEEN",
+      "FIFTEEN",
+      "SIXTEEN",
+      "SEVENTEEN",
+      "EIGHTEEN",
+      "NINETEEN"
+    ];
+    if (n < 20) return small[n];
+    if (n < 100)
+      return [
+        "",
+        "",
+        "TWENTY",
+        "THIRTY",
+        "FORTY",
+        "FIFTY",
+        "SIXTY",
+        "SEVENTY",
+        "EIGHTY",
+        "NINETY"
+      ][Math.floor(n / 10)] + (n % 10 ? " " + small[n % 10] : "");
+    for (const [v, label] of [
+      [1e9, "BILLION"],
+      [1e6, "MILLION"],
+      [1e3, "THOUSAND"],
+      [100, "HUNDRED"]
+    ])
+      if (n >= v)
+        return words(Math.floor(n / v)) + " " + label + (n % v ? " " + words(n % v) : "");
+    return "";
+  }
+  var piTemplateCss = `
+.pi127-paper,.pi127-paper *{box-sizing:border-box!important;letter-spacing:normal!important;text-shadow:none!important}
+.pi127-paper{width:750px!important;min-width:750px!important;min-height:1060px!important;padding:32px 35px 26px!important;background:#fff!important;color:#111!important;font:11px/1.4 Arial,'Microsoft YaHei',sans-serif!important;text-align:left!important;position:relative!important;margin:0 auto!important;border:0!important;border-radius:0!important;box-shadow:none!important;display:flex!important;flex-direction:column!important}
+.pi127-paper :is(p,div,span,b,strong,small,td,th,h1,header,footer){color:inherit;line-height:inherit;font-family:inherit;letter-spacing:normal!important}
+.pi127-paper p{font-size:inherit!important;margin:3px 0!important}.pi127-paper b{font-weight:700!important}.pi127-paper h1{font-size:18px!important;color:#234f74!important;background:white!important;border:1px solid #234f74!important;border-bottom:3px solid #234f74!important;padding:7px!important;margin:0!important;text-align:center!important;line-height:1.3!important}.pi127-paper h1 small{font-size:10px!important;font-weight:400!important}
+.pi127-top{display:grid!important;grid-template-columns:1fr 1fr!important;gap:20px!important;align-items:start!important;margin-bottom:12px!important}.pi127-seller>b{display:block!important;font-size:16px!important;color:#234f74!important}.pi127-seller span{display:block!important;font-size:10px!important}.pi127-status{text-align:right!important;font-size:9px!important;margin-top:5px!important}
+.pi127-paper table{border-collapse:collapse!important;width:100%!important;table-layout:fixed!important;margin:0!important;background:#fff!important;color:#111!important;font-size:10px!important}.pi127-paper :is(td,th){border:1px solid #234f74!important;padding:5px 6px!important;vertical-align:top!important;white-space:normal!important;overflow-wrap:anywhere!important}.pi127-paper th{font-weight:700!important}.pi127-meta th{background:#edf3f8!important;text-align:left!important;font-size:8px!important}.pi127-meta td{font-size:9px!important}
+.pi127-parties,.pi127-bottom,.pi127-signatures{display:grid!important;grid-template-columns:1.18fr 1fr!important;gap:18px!important;margin-top:13px!important}.pi127-box{border:1px solid #234f74!important;padding:7px!important;background:#fff!important;min-height:70px!important}.pi127-bar{background:#234f74!important;color:#fff!important;padding:4px 7px!important;font-size:10px!important;font-weight:bold!important}.pi127-bar *{color:#fff!important}.pi127-items{margin-top:14px!important}.pi127-items th{background:#234f74!important;color:#fff!important;font-size:9px!important}.pi127-items td{height:33px!important;vertical-align:middle!important}.pi127-desc{white-space:pre-wrap!important;overflow-wrap:anywhere!important}.pi127-num{text-align:right!important}.pi127-center{text-align:center!important}
+.pi127-terms{margin-top:8px!important}.pi127-terms .pi127-box{font-size:9px!important;line-height:1.4!important}.pi127-term{margin-bottom:4px!important}.pi127-totals th{text-align:left!important;font-size:9px!important}.pi127-totals td{text-align:right!important;width:34%!important}.pi127-due{background:#edf3f8!important;font-weight:bold!important}.pi127-words{border:1px solid #234f74!important;background:#f6f9fc!important;padding:6px!important;font-size:10px!important;margin-top:12px!important}
+.pi127-signatures{grid-template-columns:1fr 1fr!important;gap:100px!important;margin-top:20px!important;break-inside:avoid!important}.pi127-signatures>div{min-width:0!important}.pi127-signatures b{display:block!important;font-size:10px!important}.pi127-sign-image{height:65px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important}.pi127-sign-image img{display:block!important;max-width:170px!important;width:auto!important;height:auto!important;max-height:60px!important;object-fit:contain!important;border:0!important;border-radius:0!important;margin:0!important;background:white!important}.pi127-signatures .pi127-buyer .pi127-sign-image{justify-content:center!important}.pi127-sign-details{border-top:1px solid #111!important;padding-top:4px!important;font-size:9px!important}.pi127-paper footer{margin-top:auto!important;padding-top:12px!important;font-size:9px!important;position:static!important;background:white!important;border:0!important}.pi127-foot-inner{display:flex!important;justify-content:space-between!important;gap:15px!important;border-top:1px solid #234f74!important;padding-top:7px!important}.pi127-page{white-space:nowrap!important}
+@media print{.pi127-paper{width:210mm!important;min-width:210mm!important;min-height:296mm!important;padding:10mm!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important;break-after:avoid!important}.pi127-paper tr,.pi127-signatures{break-inside:avoid!important}}
+`;
+  function renderPiTemplate(d) {
+    const rows = d.items.length ? d.items : [{ desc: "Postage subsidy / \u90AE\u8D39\u8865\u8D34", qty: 1, price: d.postage }];
+    const tr = rows.map(
+      (x, i) => `<tr><td class="pi127-center">${i + 1}</td><td class="pi127-desc">${esc(x.desc)}</td><td class="pi127-center">${esc(x.qty)}</td><td class="pi127-num">${esc(x.price)}</td><td class="pi127-num">${money(Math.round(Number(x.qty) * cents(x.price)))}</td></tr>`
+    ).join("") + Array.from(
+      { length: Math.max(0, 3 - rows.length) },
+      () => "<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>"
+    ).join("");
+    const due = cents(d.due), label = {
+      deposit: "Deposit / \u5B9A\u91D1",
+      balance: "Balance / \u5C3E\u6B3E",
+      full: "Full / \u5168\u6B3E",
+      postage: "Postage / \u90AE\u8D39"
+    }[d.stage] ?? d.stage;
+    const t = (a, b) => `<div class="pi127-term">${esc(a)}<br>${esc(b)}</div>`;
+    const total = (a, b, v, cls = "") => `<tr class="${cls}"><th>${a} / ${b}</th><td>${esc(v)}</td></tr>`;
+    return `<style>${piTemplateCss}</style><article class="pi127-paper" data-pi-template="127">
+ <div class="pi127-top"><div class="pi127-seller"><b>${esc(d.seller)}</b><span>System name / \u7CFB\u7EDF\u540D\u79F0: ${esc(d.systemName)}</span><span>Reg. / ID No. / \u6CE8\u518C\u6216\u8EAB\u4EFD\u8BC1\u53F7: ${esc(maskPiId(d.sellerId)) || "\u2014"}</span><span>Tel / \u8054\u7CFB\u7535\u8BDD: ${esc(d.phone) || "\u2014"}</span></div><div><h1>PROFORMA INVOICE <small>\u5F62\u5F0F\u53D1\u7968</small></h1><div class="pi127-status">${d.formal ? "CONFIRMED COPY / \u5DF2\u786E\u8BA4\u526F\u672C" : "DRAFT / \u8349\u7A3F \xB7 NOT CONFIRMED / \u5C1A\u672A\u786E\u8BA4"}</div></div></div>
+ <table class="pi127-meta"><tbody><tr><th>DATE \u65E5\u671F</th><td>${esc(d.date)}</td><th>PI NO. \u53D1\u7968\u7F16\u53F7</th><td>${esc(d.no)}</td><th>VALID UNTIL \u6709\u6548\u671F</th><td>${esc(d.validUntil)}</td></tr><tr><th>ORDER REF \u8BA2\u5355\u7F16\u53F7</th><td>${esc(d.orderRef)}</td><th>BUYER PO NO. \u4E70\u65B9\u8BA2\u5355\u53F7</th><td>\u2014</td><th>PAYMENT STAGE \u4ED8\u6B3E\u9636\u6BB5</th><td>${esc(label)}</td></tr></tbody></table>
+ <div class="pi127-parties"><div><div class="pi127-bar">BILL TO \u4E70\u5BB6</div><div class="pi127-box"><b>MOCHII SHOP</b><p>Reg. No. / \u6CE8\u518C\u53F7: 202503305565</p><p>Tel / \u7535\u8BDD: 017-750 3767</p></div></div><div><div class="pi127-bar">SHIP TO \u6536\u8D27\u5730\u5740</div><div class="pi127-box">${d.shipLines ? d.shipLines.map((x) => `<p>${esc(x)}</p>`).join("") : `<b>\u9093\u8FF0\u80DC (S0661)</b><p>\u5E7F\u5DDE\u5E02\u767D\u4E91\u533A\u767D\u4E91\u6E56\u8857\u9053\u590F\u82B1\u4E00\u8DEF181\u53F77\u680B4\u697C</p><p>510440 GUANGZHOU, GUANGDONG (CHINA)</p><p>Attn / \u6536\u4EF6: ESES \u4E2D\u56FD\u96C6\u8FD0\u4ED3\uFF08\u8F6C MOCHII SHOP\uFF09</p><p>Tel / \u7535\u8BDD: 15915834405</p>`}</div></div></div>
+ <div class="pi127-items"><table><colgroup><col style="width:7%"><col style="width:48%"><col style="width:10%"><col style="width:17%"><col style="width:18%"></colgroup><thead><tr><th>NO. \u5E8F\u53F7</th><th>DESCRIPTION \u54C1\u540D</th><th>QTY \u6570\u91CF</th><th>UNIT PRICE \u5355\u4EF7<br>(CNY)</th><th>AMOUNT \u91D1\u989D<br>(CNY)</th></tr></thead><tbody>${tr}</tbody></table></div>
+ <div class="pi127-bottom"><div><div class="pi127-bar">BENEFICIARY \u6536\u6B3E\u8D44\u6599</div><div class="pi127-box">${d.beneficiaryNote !== void 0 ? esc(d.beneficiaryNote).replaceAll("\n", "<br>") : `<p>Account name / \u6536\u6B3E\u4EBA: ${esc(d.seller)}</p><p>Alipay account / \u652F\u4ED8\u5B9D\u8D26\u53F7: ${esc(d.account) || "\u2014"}</p><p>Payment via / \u4ED8\u6B3E\u65B9\u5F0F: WorldFirst (CNY)</p>`}</div><div class="pi127-terms"><div class="pi127-bar">TERMS AND CONDITIONS \u6761\u6B3E</div><div class="pi127-box">${d.customTerms !== void 0 ? esc(d.customTerms).replaceAll("\n", "<br>") : `${t("1. Pay in CNY via WorldFirst to seller's Alipay above.", "\u901A\u8FC7\u4E07\u91CC\u6C47\u4EE5\u4EBA\u6C11\u5E01\u652F\u4ED8\u81F3\u4E0A\u8FF0\u5356\u5BB6\u652F\u4ED8\u5B9D\u3002")}${t("2. Deliver to ESES Guangzhou (S0661); mark MSMS order no. on every parcel.", "\u5BC4\u81F3 ESES \u5E7F\u5DDE\u96C6\u8FD0\u4ED3\uFF08S0661\uFF09\uFF0C\u6BCF\u5305\u6CE8\u660E\u7CFB\u7EDF\u8BA2\u5355\u53F7\u3002")}${t("3. Valid for 12 months from date of issue.", "\u81EA\u5F00\u5355\u65E5\u8D77\u6709\u6548\u671F\u4E3A12\u4E2A\u6708\u3002")}${t("4. Quantities and unit prices follow MSMS order " + d.orderRef + ".", "\u6570\u91CF\u548C\u5355\u4EF7\u4EE5\u7CFB\u7EDF\u8BA2\u5355 " + d.orderRef + " \u4E3A\u51C6\u3002")}`}</div></div></div><div><table class="pi127-totals"><tbody>${total("ORDER GOODS", "\u8BA2\u5355\u8D27\u6B3E", d.orderTotal)}${total("THIS PAYMENT GOODS", "\u672C\u6B21\u8D27\u6B3E", d.goods)}${total("POSTAGE", "\u672C\u6B21\u90AE\u8D39", d.postage)}${Number(d.other) ? total("OTHER", "\u5176\u4ED6", d.other) : ""}${total("PAID GOODS", "\u5DF2\u4ED8\u8D27\u6B3E", d.paid)}${total("PAYMENT DUE", "\u672C\u6B21\u5E94\u4ED8", "CNY " + d.due, "pi127-due")}</tbody></table></div></div>
+ <div class="pi127-words"><b>AMOUNT IN WORDS / \u5927\u5199\u91D1\u989D:</b> CHINESE YUAN ${words(Math.floor(due / 100))}${due % 100 ? " AND CENTS " + words(due % 100) : ""} ONLY</div>
+ <div class="pi127-signatures"><div><b>Issued by seller / \u5356\u5BB6\u7B7E\u53D1</b><div class="pi127-sign-image">${d.formal && validImage(d.signature) ? `<img src="${esc(d.signature)}" alt="Seller signature / \u5356\u5BB6\u7B7E\u540D">` : ""}</div><div class="pi127-sign-details">${esc(d.seller)} (${esc(d.systemName)})<br>${d.formal ? "Confirmed in MSMS / \u7CFB\u7EDF\u786E\u8BA4: " + esc(d.confirmedBy) + "<br>" + esc(d.confirmedAt) + " (MYT)" : "Not yet confirmed / \u5C1A\u672A\u786E\u8BA4"}</div></div><div class="pi127-buyer"><b>Accepted by buyer / \u4E70\u5BB6\u786E\u8BA4</b><div class="pi127-sign-image">${/^\/?[A-Za-z0-9_./-]+\.png$/.test(d.stampUrl) ? `<img src="${esc(d.stampUrl)}" alt="MOCHII SHOP original stamp / \u539F\u4E70\u5BB6\u76D6\u7AE0">` : ""}</div><div class="pi127-sign-details">MOCHII SHOP<br>Date / \u65E5\u671F: ${esc(d.date)}</div></div></div>
+ <footer><div class="pi127-foot-inner"><div>This is a proforma invoice for payment purposes, not a tax invoice.<br>\u672C\u5355\u7528\u4E8E\u4ED8\u6B3E\uFF0C\u975E\u7A0E\u52A1\u53D1\u7968\uFF0C\u4EA6\u975E\u5230\u8D26\u51ED\u8BC1\u3002<br>Enquiries / \u8054\u7CFB: WhatsApp 017-750 3767</div><span class="pi127-page">Page 1 of 1</span></div></footer></article>`;
+  }
+  return __toCommonJS(pi_template_exports);
+})();
+
+// END GENERATED CANONICAL PI TEMPLATE
 // =====================================================================
 //  MOCHII SHOP · PO / Invoice
 // =====================================================================
@@ -197,7 +329,7 @@ function sheetHTML(t) {
   const Z = (en, z) => ZH(en, z, zh);
   const title = pi ? ZH("PROFORMA INVOICE", "形式发票") : po ? ZH("PURCHASE ORDER", "采购订单") : cm ? ZH("COMMISSION STATEMENT", "推荐费单") : "INVOICE";
   const noLabel = pi ? "PI NO." : po ? ZH("PO NO.", "单号") : cm ? ZH("STATEMENT NO.", "单号") : "INVOICE NO.";
-  const thirdRow = pi ? `<tr><th>VALID UNTIL</th><td><span data-pi-valid></span></td></tr><tr><th>ORDER REF</th><td><input data-f="ref"></td></tr><tr><th>BUYER PO NO.</th><td><input data-f="poNo"></td></tr><tr><th>PAYMENT STAGE</th><td><select data-f="stage"><option value="D">Deposit</option><option value="B">Balance</option><option value="F">Full</option><option value="P">Postage</option></select></td></tr>` : po
+  const thirdRow = pi ? `<tr><th>VALID UNTIL 有效期</th><td><span data-pi-valid></span></td></tr><tr><th>ORDER REF 订单编号</th><td><input data-f="ref"></td></tr><tr><th>BUYER PO NO. 买方订单号</th><td><input data-f="poNo"></td></tr><tr><th>PAYMENT STAGE 付款阶段</th><td><select data-f="stage"><option value="D">Deposit 定金</option><option value="B">Balance 尾款</option><option value="F">Full 全款</option><option value="P">Postage 邮费</option></select></td></tr>` : po
     ? `<tr data-row="delivery"><th style="white-space:nowrap">${ZH("DELIVERY DATE", "交货日期")}</th><td>${dateCell("delivery")}</td></tr>`
     : cm ? `<tr><th>${ZH("PERIOD", "结算月份")}</th><td><input data-f="ref" placeholder="YYYY-MM" autocomplete="off"></td></tr>`
     : `<tr><th>DUE DATE</th><td>${dateCell("due", false)}</td></tr>`;
@@ -958,8 +1090,9 @@ async function exportPdf(mode) {
   if (busy) return;
   const t = state.tab, sh = sheetOf(t), s = state[t];
   if(t === "pi" && s.fromMsms && s.requestFormal && !isPiConfirmed(s)) {alert("PI 正式版尚未完成 MSMS 资料交接，或内容已经更改，请回 MSMS 重新打开。");return;}
-  if (isOverflow(t) && !confirm("内容超过一页 A4，PDF 下面会被切掉。\n还是要继续吗？")) return;
+  if (t !== "pi" && isOverflow(t) && !confirm("内容超过一页 A4，PDF 下面会被切掉。\n还是要继续吗？")) return;
   if (!s.no.trim()) setField(t, "no", await uniqueNo(t));
+  if(t === 'pi'){const probe=pi127ExportCopy();probe.style.position='absolute';probe.style.left='-10000px';document.body.appendChild(probe);const paper=probe.querySelector('.pi127-paper');const overflow=paper.offsetHeight>1062;probe.remove();if(overflow){alert('PI 内容超过一页 A4，请缩短商品说明后再导出；不会裁切内容。');return;}}
   busy = true;
   const btn = mode === "share" ? $("#btnShare") : $("#btnDownload");
   const old = btn.textContent;
@@ -971,7 +1104,7 @@ async function exportPdf(mode) {
     prepareExport(sh);
     const stage = document.createElement("div");
     stage.style.cssText = "position:absolute;left:0;top:0;width:750px;z-index:-1;background:#fff;";
-    const copy = sh.cloneNode(true);
+    const copy = t === "pi" ? pi127ExportCopy() : sh.cloneNode(true);
     copy.removeAttribute("id");
     $$("[id]", copy).forEach(x => x.removeAttribute("id"));
     stage.appendChild(copy);
@@ -1002,7 +1135,7 @@ async function exportPdf(mode) {
 function openPreview() {
   const t = state.tab, sh = sheetOf(t);
   prepareExport(sh);
-  const copy = sh.cloneNode(true);
+  const copy = t === "pi" ? pi127ExportCopy() : sh.cloneNode(true);
   copy.removeAttribute("id");
   $$("[id]", copy).forEach(x => x.removeAttribute("id"));
   restoreExport(sh);
@@ -1250,7 +1383,7 @@ function applyMsmsContact(contact) {
 }
 function applyMsmsPayee(payee, contact) {
   const T = msmsTarget;
-  if(T === 'pi') { if(!payee || typeof payee!=='object')return;const p=state.pi;p.vendor={...p.vendor,name:String(payee.acctName||'')+' ('+p.supplierShop+')',acctName:String(payee.acctName||''),acct:String(payee.acct||''),bank:String(payee.bank||'Alipay (支付宝)'),regNo:String(payee.regNo||'')};p.payNote=piPayNote(p.vendor);p.signatureImage=typeof payee.signatureImage==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(payee.signatureImage)?payee.signatureImage:'';p.handoffReady=true;p.confirmationDigest=piDigest(p);fill('pi');persist();return; }
+  if(T === 'pi') { if(!payee || typeof payee!=='object')return;const p=state.pi;p.vendor={...p.vendor,name:String(payee.acctName||'')+' ('+p.supplierShop+')',acctName:String(payee.acctName||''),acct:String(payee.acct||''),bank:String(payee.bank||'Alipay (支付宝)'),regNo:MsmsPiTemplate.maskPiId(payee.regNo),phone:String(payee.phone||contact?.phone||'')};p.payNote=piPayNote(p.vendor);p.signatureImage=typeof payee.signatureImage==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(payee.signatureImage)?payee.signatureImage:'';p.confirmedBy=String(payee.confirmedBy||p.confirmedBy||'');p.confirmedAt=String(payee.confirmedAt||p.confirmedAt||'');p.handoffReady=true;p.confirmationDigest=piDigest(p);fill('pi');persist();return; }
   const gotContact = applyMsmsContact(contact);
   if (!payee || typeof payee !== "object") { toast(gotContact ? "已带入供应商联系资料；MSMS 里还没有收款资料，请点 VENDOR 填写" : "MSMS 里这个供应商还没有收款资料，请点 VENDOR 填写"); return; }
   const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -1301,22 +1434,23 @@ function initMsmsHandoff() {
 }
 
 // ---------- PI: supplier-issued, immutable MSMS snapshot ----------
-function piTerms(ref){return "1. Payment to be made in CNY via WorldFirst to the seller's Alipay account stated above.\n2. Goods to be delivered to ESES Guangzhou consolidation warehouse (Ref: S0661); the MSMS order no. is marked on every parcel.\n3. This proforma invoice is valid for 12 months from the date of issue.\n4. Quantities and unit prices follow MSMS order "+(ref||'—')+".";}
+function piTerms(ref){return "1. Pay in CNY via WorldFirst to seller's Alipay above.\n通过万里汇以人民币支付至上述卖家支付宝。\n2. Deliver to ESES Guangzhou (S0661); mark MSMS order no. on every parcel.\n寄至 ESES 广州集运仓（S0661），每包注明系统订单号。\n3. Valid for 12 months from date of issue.\n自开单日起有效期为12个月。\n4. Quantities and unit prices follow MSMS order "+(ref||'—')+".\n数量和单价以系统订单为准。";}
 function piPayNote(v){return 'Payee: '+(v.acctName||v.name||'')+' ('+(v.bank||'Alipay 支付宝')+') '+(v.acct||'')+'\nPayment via WorldFirst (CNY)';}
 function piDigest(p){return JSON.stringify([p.no,p.date,p.ref,p.poNo,p.stage,p.currency,p.rows,p.deposit,p.payNow,p.shipping,p.postageRefs,p.other,p.vendor,p.bill,p.deliver,p.tnc,p.payNote,p.signatureImage||'']);}
 function isPiConfirmed(p){return !!(p.confirmationDigest&&p.confirmationDigest===piDigest(p)&&(p.fromMsms? p.confirmedAt&&p.handoffReady : p.sellerConfirmed&&p.confirmMethod&&p.confirmDate));}
 function renderPiState(){const p=state.pi,sh=sheetOf('pi');if(!sh)return;const formal=isPiConfirmed(p);sh.classList.toggle('pi-draft',!formal);
  let wm=$('[data-pi-watermark]',sh);if(!wm){wm=document.createElement('div');wm.dataset.piWatermark='';wm.className='pi-watermark';sh.appendChild(wm);}wm.textContent=formal?'':'DRAFT 草稿';
- const seller=$('[data-pi-seller]',sh);if(seller){const v=p.vendor;seller.innerHTML='<div><div class="co-name">'+esc(v.name||'SELLER 卖家（点击填写）')+'</div><div class="co-sub">'+(v.regNo?'Reg. / ID No.: '+esc(v.regNo):'')+'</div><div class="co-addr">'+[v.a1,v.a2,v.phone?'Tel: '+v.phone:''].filter(Boolean).map(esc).join('<br>')+'</div></div>';seller.dataset.party='vendor';seller.tabIndex=0;seller.setAttribute('role','button');}
- const bill=$('[data-party="bill"]',sh);if(bill&&p.bill.tin){bill.querySelectorAll('[data-pi-tin]').forEach(x=>x.remove());const tin=document.createElement('div');tin.dataset.piTin='';tin.textContent='TIN: '+p.bill.tin;bill.appendChild(tin);}
+ const seller=$('[data-pi-seller]',sh);if(seller){const v=p.vendor;seller.innerHTML='<div><div class="co-name">'+esc(v.name||'SELLER 卖家（点击填写）')+'</div><div class="co-sub">'+(v.regNo?'Reg. / ID No.: '+esc(MsmsPiTemplate.maskPiId(v.regNo)):'')+'</div><div class="co-addr">'+[v.phone?'Tel / 联系电话: '+v.phone:''].filter(Boolean).map(esc).join('<br>')+'</div></div>';seller.dataset.party='vendor';seller.tabIndex=0;seller.setAttribute('role','button');}
+ const bill=$('[data-party="bill"]',sh);if(bill)bill.innerHTML='<b>MOCHII SHOP</b><br>Reg. No. / 注册号: 202503305565<br>Tel / 电话: 017-750 3767';
  const valid=$('[data-pi-valid]',sh);if(valid){const d=parseD(p.date);if(d){d.setFullYear(d.getFullYear()+1);valid.textContent=dstr(d);}else valid.textContent='';}
  const conf=$('[data-pi-confirmation]',sh);if(conf){conf.textContent=(p.vendor.name||'')+'\n'+(formal?(p.fromMsms?'Confirmed in MSMS by '+p.confirmedBy+' on '+new Date(p.confirmedAt).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'})+' (MYT)':'Confirmed by seller via '+p.confirmMethod+' on '+p.confirmDate):'DRAFT – NOT CONFIRMED BY SELLER');conf.classList.toggle('pi-unconfirmed',!formal);if(formal&&p.signatureImage){const img=document.createElement('img');img.src=p.signatureImage;img.alt='Supplier authorized signature';img.className='pi122-seller-signature';conf.prepend(img);}}
  // MSMS-sourced documents cannot be edited into a different formal invoice.
  if(p.fromMsms){$$('input,textarea,select,button',sh).forEach(el=>{el.disabled=true;});$$('[data-party]',sh).forEach(el=>{el.style.pointerEvents='none';el.tabIndex=-1;});}
  const control=$('#piManualConfirmation');if(control)control.hidden=!!p.fromMsms;
+ sh.classList.toggle('pi127-readonly',!!p.fromMsms);let unified=sh.querySelector('.pi127-unified');if(p.fromMsms){if(!unified){unified=document.createElement('div');unified.className='pi127-unified';sh.appendChild(unified);}unified.innerHTML=MsmsPiTemplate.renderPiTemplate(pi127Data());}else unified?.remove();
 }
 function initPiBridge(q,str){const old=state.pi;if(!old.savedNo&&(old.vendor.name||old.rows.some(r=>r.desc||num(r.price)>0))&&!confirm('检测到本地有未保存的 PI 草稿，是否覆盖？')){clearQuery();return;}
- const p=newState('pi');p.fromMsms=true;p.piId=str('piId',36);p.supplierShop=str('vName');p.vendor={name:p.supplierShop};p.no=str('no',100);p.ref=str('ref',60);p.stage=['D','B','F','P'].includes(str('stage'))?str('stage'):'F';p.terms={D:'Deposit',B:'Balance',F:'Full',P:'Postage'}[p.stage];p.date=q.get('issuedAt')&&Number.isFinite(Date.parse(q.get('issuedAt')))?dstr(new Date(q.get('issuedAt'))):today();p.poNo=str('poNo',100);p.deposit=str('deposit',30);p.payNow=str('payNow',30);p.shipping=str('postage',30);p.postage=num(p.shipping)>0;p.postageRefs=str('postageRefs',500);p.tnc=piTerms(p.ref);p.confirmedAt=str('confirmedAt',40);p.confirmedBy=str('confirmedBy',120);p.requestFormal=!!p.confirmedAt;p.handoffReady=false;
+ const p=newState('pi');p.fromMsms=true;p.piId=str('piId',36);p.supplierShop=str('vName');p.vendor={name:p.supplierShop};p.no=str('no',100);p.ref=str('ref',60);p.stage=['D','B','F','P'].includes(str('stage'))?str('stage'):'F';p.terms={D:'Deposit',B:'Balance',F:'Full',P:'Postage'}[p.stage];p.date=q.get('issuedAt')&&Number.isFinite(Date.parse(q.get('issuedAt')))?dstr(new Date(q.get('issuedAt'))):today();p.poNo=str('poNo',100);p.deposit=str('deposit',30);p.payNow=str('payNow',30);p.shipping=str('postage',30);p.piAmount=str('amount',30);p.paymentGoods=str('paymentGoods',30);p.orderTotal=str('orderTotal',30);p.postage=num(p.shipping)>0;p.postageRefs=str('postageRefs',500);p.tnc=piTerms(p.ref);p.confirmedAt=str('confirmedAt',40);p.confirmedBy=str('confirmedBy',120);p.requestFormal=!!p.confirmedAt;p.handoffReady=false;
  try{const rows=JSON.parse(q.get('items')||'[]');if(!Array.isArray(rows)||rows.length>100)throw Error();p.rows=rows.map(r=>({desc:String(r.desc||'').slice(0,300),qty:num(r.qty),price:String(r.price||'')}));}catch{p.rows=[];p.confirmedAt='';p.requestFormal=false;msmsNotice='PI 货品资料读取失败，请返回 MSMS 重新打开';}
  const h=str('h',64);if(/^[0-9a-f-]{36}$/i.test(h))msmsHandoff=h;msmsTarget='pi';state.pi=p;state.tab='pi';clearQuery();try{localStorage.setItem(STORE_KEY,JSON.stringify(state));}catch{}
 }
@@ -1335,3 +1469,10 @@ if (msmsNotice) toast(msmsNotice, 4500);
 initMsmsHandoff();
 initFirebase();
 
+
+// All PI exports use the same template as MSMS (generated canonical renderer above).
+function pi127Data(){const p=state.pi,v=p.vendor||{},formal=isPiConfirmed(p),sub=p.rows.reduce((n,r)=>n+Math.round(num(r.qty)*num(r.price)*100),0)/100;const now=p.piAmount||(p.stage==='D'?p.payNow:String(sub+num(p.shipping)+num(p.other)-num(p.deposit)));
+ const issued=parseD(p.date)||new Date(),valid=new Date(issued);valid.setFullYear(valid.getFullYear()+1);
+ return {no:p.no,orderRef:p.ref,date:p.date,validUntil:dstr(valid),stage:{D:'deposit',B:'balance',F:'full',P:'postage'}[p.stage]||'full',formal,seller:v.acctName||String(v.name||'').replace(/\s*\([^)]*\)\s*$/,''),systemName:p.supplierShop||String(v.name||'').match(/\(([^)]+)\)\s*$/)?.[1]||v.name||'',sellerId:v.regNo,phone:v.phone,account:v.acct,items:p.rows.filter(r=>r.desc||num(r.qty)||num(r.price)).map(r=>({...r,price:num(r.price).toFixed(2)})),orderTotal:p.orderTotal||sub.toFixed(2),goods:p.paymentGoods||(p.stage==='D'?num(p.payNow).toFixed(2):(num(now)-num(p.shipping)).toFixed(2)),postage:num(p.shipping).toFixed(2),paid:num(p.deposit).toFixed(2),due:num(now).toFixed(2),confirmedBy:p.confirmedBy||v.name,confirmedAt:p.fromMsms&&p.confirmedAt?new Date(p.confirmedAt).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}):p.confirmDate,signature:p.signatureImage,stampUrl:'signcop.png',...(!p.fromMsms?{customTerms:p.tnc,beneficiaryNote:p.payNote,other:num(p.other).toFixed(2),shipLines:[p.deliver.name,p.deliver.a1,p.deliver.a2,[p.deliver.postcode,p.deliver.city,p.deliver.state].filter(Boolean).join(', '),p.deliver.attn?'Attn / 收件: '+p.deliver.attn:'',p.deliver.phone?'Tel / 电话: '+p.deliver.phone:''].filter(Boolean)}:{})};
+}
+function pi127ExportCopy(){const copy=document.createElement('div');copy.className='sheet pi127-export';copy.innerHTML=MsmsPiTemplate.renderPiTemplate(pi127Data());return copy;}

@@ -310,3 +310,8 @@ body.exporting .zero-dep, #pvStage .zero-dep { display: none !important; }
 
 .pi-manual[hidden]{display:none!important}
 .pi122-document .meta th,.pi122-document .meta td{width:auto!important}.pi122-document .meta tr{width:100%}.pi122-document .meta th{white-space:normal}
+
+/* Phase127: unified PI, scoped to PI only; PO/Invoice/Commission unchanged. */
+#sheet-pi.pi127-readonly,.sheet.pi127-export{padding:0!important;width:750px!important;min-height:1060px!important;height:auto!important;background:#fff!important}
+#sheet-pi.pi127-readonly>.sheet-body,#sheet-pi.pi127-readonly>.foot,#sheet-pi.pi127-readonly>.pi-watermark{display:none!important}
+@media print{#pvStage:has(.pi127-paper){width:210mm!important;height:auto!important}.sheet.pi127-export{width:210mm!important;height:auto!important;min-height:0!important}}
